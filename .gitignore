@@ -1,0 +1,7 @@
+.vscode/
+.idea/
+*.pyc
+*.log
+saved/
+*.lprof
+*.egg-info/

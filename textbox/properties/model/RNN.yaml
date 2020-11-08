@@ -1,0 +1,4 @@
+embedding_size: 64
+hidden_size: 128
+num_layers: 2
+rnn_type: "gru"

@@ -137,7 +137,7 @@ class Trainer(AbstractTrainer):
         for batch_idx, data in enumerate(train_data):
             # interaction = interaction.to(self.device)
             self.optimizer.zero_grad()
-            losses = self.model.calculate_loss(data)
+            losses = self.model.calculate_loss(data, epoch_idx=epoch_idx)
             if isinstance(losses, tuple):
                 loss = sum(losses)
                 loss_tuple = tuple(per_loss.item() for per_loss in losses)

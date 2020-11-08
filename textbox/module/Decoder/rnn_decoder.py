@@ -9,11 +9,9 @@ class BasicRNNDecoder(torch.nn.Module):
                  hidden_size,
                  output_size,
                  num_layers,
-                 rnn_type,
-                 token_embedder):
+                 rnn_type):
         super(BasicRNNDecoder, self).__init__()
 
-        self.token_embedder = token_embedder
         self.vocab_linear = nn.Linear(hidden_size, output_size)
 
         if rnn_type == "lstm":
@@ -25,8 +23,8 @@ class BasicRNNDecoder(torch.nn.Module):
         else:
             print("error")
 
-    def forward(self, hidden_states, input_seq):
-        inputs = self.token_embedder(input_seq)
+    def forward(self, hidden_states, inputs):
+        print("Decoder", hidden_states.size(), inputs.size())
         outputs, hidden_states = self.decoder(inputs, hidden_states)
         # print(outputs.size(), hidden_states.size())
         token_logits = self.vocab_linear(outputs)

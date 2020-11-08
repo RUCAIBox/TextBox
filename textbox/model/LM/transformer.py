@@ -78,11 +78,11 @@ class Transformer(UnconditionalGenerator):
         input_text = corpus['target_text'][:, :-1]
         target_text = corpus['target_text'][:, 1:]
 
-        input_embedding = self.token_embedder(input_text) + self.position_embedder(input_text).to(self.device)
+        input_embeddings = self.token_embedder(input_text) + self.position_embedder(input_text).to(self.device)
         self_padding_mask = torch.eq(input_text, self.padding_token_idx).to(self.device)
         self_attn_mask = self.self_attn_mask(input_text.size(-1)).bool().to(self.device)
 
-        token_repre = self.decoder(input_embedding,
+        token_repre = self.decoder(input_embeddings,
                                    self_padding_mask=self_padding_mask,
                                    self_attn_mask=self_attn_mask)
 

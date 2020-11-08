@@ -1,0 +1,4 @@
+embedding_size: 64
+ffn_size: 128
+num_layers: 6
+num_heads: 8

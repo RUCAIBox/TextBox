@@ -38,8 +38,8 @@ class Transformer(UnconditionalGenerator):
         self.position_embedder = SinusoidalPositionalEmbedding(self.embedding_size)
         self.self_attn_mask = SelfAttentionMask()
 
-        self.decoder = TransformerDecoder(self.embedding_size, self.ffn_size, self.vocab_size,
-                                          self.num_layers, self.num_heads)
+        self.decoder = TransformerDecoder(self.embedding_size, self.ffn_size, self.num_layers, self.num_heads)
+        self.vocab_linear = nn.Linear(self.embedding_size, self.vocab_size)
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx)
 
         # parameters initialization
@@ -78,14 +78,15 @@ class Transformer(UnconditionalGenerator):
         input_text = corpus['target_text'][:, :-1]
         target_text = corpus['target_text'][:, 1:]
 
-        input_embedding = self.token_embedder(input_text) + self.position_embedder(input_text).to(self.device)
+        input_embeddings = self.token_embedder(input_text) + self.position_embedder(input_text).to(self.device)
         self_padding_mask = torch.eq(input_text, self.padding_token_idx).to(self.device)
         self_attn_mask = self.self_attn_mask(input_text.size(-1)).bool().to(self.device)
 
-        token_logits = self.decoder(input_embedding,
-                                    self_padding_mask=self_padding_mask,
-                                    self_attn_mask=self_attn_mask)
+        token_repre = self.decoder(input_embeddings,
+                                   self_padding_mask=self_padding_mask,
+                                   self_attn_mask=self_attn_mask)
 
+        token_logits = self.vocab_linear(token_repre)
         token_logits = token_logits.view(-1, token_logits.size(-1))
         target_text = target_text.contiguous().view(-1)
 

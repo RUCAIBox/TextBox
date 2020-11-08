@@ -35,8 +35,8 @@ class RNN(UnconditionalGenerator):
 
         # define layers and loss
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
-        self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.vocab_size,
-                                       self.num_layers, self.rnn_type)
+        self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.num_layers, self.rnn_type)
+        self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx)
 
         # parameters initialization
@@ -69,15 +69,13 @@ class RNN(UnconditionalGenerator):
         target_text = corpus['target_text'][:, 1:]
         batch_size = input_text.size(0)
 
-        # print("initial", torch.cuda.memory_allocated(self.device))
         initial_states = torch.zeros(self.num_layers, batch_size, self.hidden_size).to(self.device)
-        decoder_input = self.token_embedder(input_text)
-        token_logits, hidden_states = self.decoder(initial_states, decoder_input)
-        # print("RNN", torch.cuda.memory_allocated(self.device))
+        input_embeddings = self.token_embedder(input_text)
+        outputs, hidden_states = self.decoder(initial_states, input_embeddings)
+
+        token_logits = self.vocab_linear(outputs)
         token_logits = token_logits.view(-1, token_logits.size(-1))
         target_text = target_text.contiguous().view(-1)
-        # print(token_logits.size(), target_text.size())
+
         loss = self.loss(token_logits, target_text)
-        # print("Loss", torch.cuda.memory_allocated(self.device))
-        # exit(-1)
         return loss

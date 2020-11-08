@@ -9,7 +9,6 @@ class TransformerDecoder(torch.nn.Module):
     def __init__(self,
                  input_size,
                  ffn_size,
-                 output_size,
                  num_layers,
                  num_heads,
                  dropout=0.0,
@@ -17,7 +16,6 @@ class TransformerDecoder(torch.nn.Module):
                  attn_weights_dropout=True):
         super(TransformerDecoder, self).__init__()
         
-        self.vocab_linear = nn.Linear(input_size, output_size)
         self.transformer_layers = nn.ModuleList()
         for _ in range(num_layers):
             self.transformer_layers.append(
@@ -28,8 +26,7 @@ class TransformerDecoder(torch.nn.Module):
                 external_memories=None, external_padding_mask=None):
         for idx, layer in enumerate(self.transformer_layers):
             x, _, _ = layer(x, kv, self_padding_mask, self_attn_mask, external_memories, external_padding_mask)
-        token_logits = self.vocab_linear(x)
-        return token_logits
+        return x
 
 
 class TransformerLayer(nn.Module):

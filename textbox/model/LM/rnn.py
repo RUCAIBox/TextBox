@@ -71,7 +71,7 @@ class RNN(UnconditionalGenerator):
 
         initial_states = torch.zeros(self.num_layers, batch_size, self.hidden_size).to(self.device)
         input_embeddings = self.token_embedder(input_text)
-        outputs, hidden_states = self.decoder(initial_states, input_embeddings)
+        outputs, hidden_states = self.decoder(input_embeddings=input_embeddings, hidden_states=initial_states)
 
         token_logits = self.vocab_linear(outputs)
         token_logits = token_logits.view(-1, token_logits.size(-1))

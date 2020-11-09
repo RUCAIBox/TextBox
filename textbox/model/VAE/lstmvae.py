@@ -46,10 +46,14 @@ class LSTMVAE(UnconditionalGenerator):
                                       n_layers_encoder=config['n_layers_encoder'],
                                       n_layers_highway=config['n_layers_highway'])
         # Bidirectional LSTM encoder for LSTM VAE
-        self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.vocab_size,
-                                       self.n_layers_decoder, self.rnn_type)
-        self.hidden_to_mu = nn.Linear(2 * self.hidden_size, self.hidden_size)
-        self.hidden_to_logvar = nn.Linear(2 * self.hidden_size, self.hidden_size)
+        self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.n_layers_decoder, self.rnn_type)
+        self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
+        if self.rnn_type == "lstm":
+            self.hidden_to_mu = nn.Linear(2 * self.hidden_size, 2 * self.hidden_size)
+            self.hidden_to_logvar = nn.Linear(2 * self.hidden_size, 2 * self.hidden_size)
+        else:
+            self.hidden_to_mu = nn.Linear(2 * self.hidden_size, self.hidden_size)
+            self.hidden_to_logvar = nn.Linear(2 * self.hidden_size, self.hidden_size)
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx)
 
         # parameters initialization
@@ -61,13 +65,17 @@ class LSTMVAE(UnconditionalGenerator):
         number_to_gen = 10
         idx2token = eval_data.idx2token
         for _ in range(number_to_gen):
-            hidden_states = torch.randn(size=(self.n_layers_decoder, 1, self.hidden_size), device=self.device)
+            if self.rnn_type == "lstm":
+                hidden_states = torch.randn(size=(self.n_layers_decoder, 1, 2 * self.hidden_size), device=self.device)
+                hidden_states = torch.chunk(hidden_states, 2, dim=2)
+            else:
+                hidden_states = torch.randn(size=(self.n_layers_decoder, 1, self.hidden_size), device=self.device)
             # draw noise from standard gussian distribution
             generate_tokens = []
             input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
             for gen_idx in range(100):
                 decoder_input = self.token_embedder(input_seq)
-                token_logits, hidden_states = self.decoder(hidden_states, decoder_input)
+                token_logits, hidden_states = self.decoder(input_embeddings=decoder_input, hidden_states=hidden_states)
                 topv, topi = torch.log(F.softmax(token_logits, dim=-1) + 1e-12).data.topk(k=4)
                 topi = topi.squeeze()
                 token_idx = topi[0].item()
@@ -90,15 +98,25 @@ class LSTMVAE(UnconditionalGenerator):
         # print(encoder_hidden.size())
         mu = self.hidden_to_mu(encoder_hidden)
         logvar = self.hidden_to_logvar(encoder_hidden)
-        z = torch.randn([batch_size, self.hidden_size]).to(self.device)
+        if self.rnn_type == "lstm":
+            z = torch.randn([batch_size, 2 * self.hidden_size]).to(self.device)
+        else:
+            z = torch.randn([batch_size, self.hidden_size]).to(self.device)
         z = mu + z * torch.exp(0.5 * logvar)
         kld = -0.5 * torch.sum(logvar - mu.pow(2) - logvar.exp() + 1, 1).mean()
         # print(z.size(), input_emb.size())
-        decoder_hidden = z.unsqueeze(0).expand(self.n_layers_decoder, -1, -1).contiguous()
-        # initial_states = torch.zeros(self.n_layers_decoder, batch_size, 2 * self.hidden_size).to(self.device)
-        print(decoder_hidden.size(), input_emb.size())
-        token_logits, hidden_states = self.decoder(hidden_states=decoder_hidden, inputs=input_emb)
-        # print("RNN", torch.cuda.memory_allocated(self.device))
+        if self.rnn_type == "lstm":
+            decoder_hidden = torch.chunk(z, 2, dim=-1)
+            h_0 = decoder_hidden[0].unsqueeze(0).expand(self.n_layers_decoder, -1, -1).contiguous()
+            c_0 = decoder_hidden[1].unsqueeze(0).expand(self.n_layers_decoder, -1, -1).contiguous()
+            # print(h_0.size(), c_0.size())
+            decoder_hidden = (h_0, c_0)
+        else:
+            decoder_hidden = z.unsqueeze(0).expand(self.n_layers_decoder, -1, -1).contiguous()
+
+        outputs, hidden_states = self.decoder(input_embeddings=input_emb, hidden_states=decoder_hidden)
+
+        token_logits = self.vocab_linear(outputs)
         token_logits = token_logits.view(-1, token_logits.size(-1))
         target_text = target_text.contiguous().view(-1)
         # print(token_logits.size(), target_text.size())

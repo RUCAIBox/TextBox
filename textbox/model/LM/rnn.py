@@ -52,7 +52,8 @@ class RNN(UnconditionalGenerator):
             input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
             for gen_idx in range(100):
                 decoder_input = self.token_embedder(input_seq)
-                token_logits, hidden_states = self.decoder(hidden_states, decoder_input)
+                outputs, hidden_states = self.decoder(hidden_states, decoder_input)
+                token_logits = self.vocab_linear(outputs)
                 topv, topi = torch.log(F.softmax(token_logits, dim=-1) + 1e-12).data.topk(k=4)
                 topi = topi.squeeze()
                 token_idx = topi[0].item()

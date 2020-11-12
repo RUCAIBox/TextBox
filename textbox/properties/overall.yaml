@@ -8,12 +8,12 @@ data_path: 'dataset/'
 checkpoint_dir: 'saved'
 
 # training settings
-epochs: 2
-train_batch_size: 10
+epochs: 10
+train_batch_size: 64
 learner: adam
 learning_rate: 0.001
 training_neg_sample_num: 1
-eval_step: 1
+eval_step: 2
 stopping_step: 10
 
 # evaluation settings
@@ -26,4 +26,4 @@ metrics: ["bleu", "self_bleu"]
 n_grams: [1,2,3,4]
 topk: [10]
 valid_metric: MRR@10
-eval_batch_size: 10
+eval_batch_size: 64

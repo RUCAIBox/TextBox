@@ -1,0 +1,7 @@
+embedding_size: 64
+hidden_size: 128
+n_layers_highway: 2
+n_layers_encoder: 1
+#decoder_kernel_size: [400,450,500]
+decoder_kernel_size: [200,250]
+decoder_drop_rate: 0.1

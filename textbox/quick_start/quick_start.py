@@ -52,10 +52,10 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     best_valid_score, best_valid_result = trainer.fit(train_data, valid_data, saved=saved)
 
     # model evaluation
-    # test_result = trainer.evaluate(test_data, load_best_model=saved)
+    test_result = trainer.evaluate(test_data, load_best_model=saved)
     #
-    # logger.info('best valid result: {}'.format(best_valid_result))
-    # logger.info('test result: {}'.format(test_result))
+    logger.info('best valid loss: {}, best valid ppl: {}'.format(best_valid_score, best_valid_result))
+    logger.info('test result: {}'.format(test_result))
 
     # return {
     #     'best_valid_score': best_valid_score,

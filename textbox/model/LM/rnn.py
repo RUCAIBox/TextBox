@@ -51,7 +51,9 @@ class RNN(UnconditionalGenerator):
             generate_tokens = []
             input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
             for gen_idx in range(100):
-                token_logits, hidden_states = self.decoder(hidden_states, input_seq)
+                decoder_input = self.token_embedder(input_seq)
+                outputs, hidden_states = self.decoder(hidden_states, decoder_input)
+                token_logits = self.vocab_linear(outputs)
                 topv, topi = torch.log(F.softmax(token_logits, dim=-1) + 1e-12).data.topk(k=4)
                 topi = topi.squeeze()
                 token_idx = topi[0].item()
@@ -63,14 +65,14 @@ class RNN(UnconditionalGenerator):
             generate_corpus.append(generate_tokens)
         return generate_corpus
 
-    def calculate_loss(self, corpus):
+    def calculate_loss(self, corpus, epoch_idx=0):
         input_text = corpus['target_text'][:, :-1]
         target_text = corpus['target_text'][:, 1:]
         batch_size = input_text.size(0)
 
         initial_states = torch.zeros(self.num_layers, batch_size, self.hidden_size).to(self.device)
         input_embeddings = self.token_embedder(input_text)
-        outputs, hidden_states = self.decoder(initial_states, input_embeddings)
+        outputs, hidden_states = self.decoder(input_embeddings=input_embeddings, hidden_states=initial_states)
 
         token_logits = self.vocab_linear(outputs)
         token_logits = token_logits.view(-1, token_logits.size(-1))

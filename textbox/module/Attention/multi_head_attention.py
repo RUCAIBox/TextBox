@@ -6,11 +6,10 @@ import math
 
 
 class MultiHeadAttention(torch.nn.Module):
-    def __init__(self, embedding_size, num_heads, dropout=0.0, attn_weights_dropout=True):
+    def __init__(self, embedding_size, num_heads, attn_weights_dropout=0.0):
         super(MultiHeadAttention, self).__init__()
         self.embedding_size = embedding_size
         self.num_heads = num_heads
-        self.dropout = dropout
         self.head_size = embedding_size // num_heads
 
         assert self.head_size * num_heads == self.embedding_size, "embedding size must be divisible by num_heads"
@@ -24,7 +23,7 @@ class MultiHeadAttention(torch.nn.Module):
         self.out_proj = nn.Linear(embedding_size, embedding_size)
         self.attn_weights_dropout = attn_weights_dropout
 
-        self.dropout_layer = nn.Dropout(self.dropout)
+        self.weight_dropout = nn.Dropout(attn_weights_dropout)
 
     def forward(self, query, key, value, key_padding_mask=None, attn_mask=None):
         """ Input shape: batch_size * time * embedding_size
@@ -60,15 +59,8 @@ class MultiHeadAttention(torch.nn.Module):
                 1e-10
             )
 
-        attn_weights = F.softmax(attn_weights, dim=-1)
-
-        if self.attn_weights_dropout:
-            attn_weights = self.dropout_layer(attn_weights)
-
+        attn_weights = self.weight_dropout(F.softmax(attn_weights, dim=-1))
         attn_repre = torch.matmul(attn_weights, v)  # [batch_size, num_heads, tgt_len, head_size]
-
-        if not self.attn_weights_dropout:
-            attn_repre = self.dropout_layer(attn_repre)
 
         assert list(attn_repre.size()) == [batch_size, self.num_heads, tgt_len, self.head_size]
 

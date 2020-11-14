@@ -26,7 +26,7 @@ class BahdanauMonotonicAttention(torch.nn.Module):
 
 
 class MultiHeadAttention(torch.nn.Module):
-    def __init__(self, embedding_size, num_heads, attn_weights_dropout=0.0):
+    def __init__(self, embedding_size, num_heads, attn_weights_dropout_ratio=0.0):
         super(MultiHeadAttention, self).__init__()
         self.embedding_size = embedding_size
         self.num_heads = num_heads
@@ -41,9 +41,8 @@ class MultiHeadAttention(torch.nn.Module):
         self.value_proj = nn.Linear(embedding_size, embedding_size)
 
         self.out_proj = nn.Linear(embedding_size, embedding_size)
-        self.attn_weights_dropout = attn_weights_dropout
 
-        self.weight_dropout = nn.Dropout(attn_weights_dropout)
+        self.weight_dropout = nn.Dropout(attn_weights_dropout_ratio)
 
     def forward(self, query, key, value, key_padding_mask=None, attn_mask=None):
         """ Input shape: batch_size * time * embedding_size

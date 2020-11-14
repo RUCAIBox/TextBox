@@ -6,8 +6,8 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from textbox.module.Attention.attention_mechanism import LuongAttention, BahdanauAttention, MonotonicAttention
-from textbox.module.Attention.attention_mechanism import LuongMonotonicAttention, BahdanauMonotonicAttention
+from textbox.module.Attention.attention_mechanism import (LuongAttention, BahdanauAttention, MonotonicAttention,
+                                                          LuongMonotonicAttention, BahdanauMonotonicAttention)
 
 
 class BasicRNNDecoder(torch.nn.Module):

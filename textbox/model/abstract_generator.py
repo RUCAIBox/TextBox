@@ -71,7 +71,7 @@ class ConditionalGenerator(AbstractGenerator):
     """This is a abstract general recommender. All the general model should implement this class.
     The base general recommender class provide the basic dataset and parameters information.
     """
-    type = ModelType.UNCONDITIONAL
+    type = ModelType.CONDITIONAL
 
     def __init__(self, config, dataset):
         super(AbstractGenerator, self).__init__()

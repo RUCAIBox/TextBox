@@ -15,7 +15,7 @@ from textbox.model.init import xavier_normal_initialization
 
 
 class RNNEncDec(ConditionalGenerator):
-    r"""BPR is a basic matrix factorization model that be trained in the pairwise way.
+    r"""RNN-based Encoder-Decoder architecture is a basic framework for conditional text generation.
 
     """
     input_type = InputType.NOISE
@@ -26,10 +26,14 @@ class RNNEncDec(ConditionalGenerator):
         # load parameters info
         self.embedding_size = config['embedding_size']
         self.hidden_size = config['hidden_size']
-        self.num_layers = config['num_layers']
+        self.num_enc_layers = config['num_enc_layers']
+        self.num_dec_layers = config['num_dec_layers']
         self.rnn_type = config['rnn_type']
         self.bidirectional = config['bidirectional']
         self.combine_method = config['combine_method']
+        self.dropout_ratio = config['dropout_ratio']
+        self.attention_type = config['attention_type']
+        self.context_size = config['context_size']
 
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
@@ -38,10 +42,18 @@ class RNNEncDec(ConditionalGenerator):
         # define layers and loss
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
 
-        self.encoder = BasicRNNEncoder(self.embedding_size, self.hidden_size, self.num_layers, self.rnn_type,
-                                       self.bidirectional, self.combine_method)
-        self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.num_layers, self.rnn_type)
+        self.encoder = BasicRNNEncoder(self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type,
+                                       self.dropout_ratio, self.bidirectional, self.combine_method)
 
+        if self.attention_type is not None:
+            self.decoder = AttentionalRNNDecoder(self.embedding_size, self.hidden_size, self.context_size,
+                                                 self.num_dec_layers, self.rnn_type, self.dropout_ratio,
+                                                 self.attention_type)
+        else:
+            self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.num_dec_layers,
+                                           self.rnn_type, self.dropout_ratio)
+
+        self.dropout = nn.Dropout(self.dropout_ratio)
         self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx)
 
@@ -71,18 +83,22 @@ class RNNEncDec(ConditionalGenerator):
             generate_corpus.append(generate_tokens)
         return generate_corpus
 
-    def calculate_loss(self, corpus, epoch_idx=0):
+    def calculate_loss(self, corpus):
         source_text = corpus['source_text']
         source_length = corpus['source_text_length']
 
         input_text = corpus['target_text'][:, :-1]
         target_text = corpus['target_text'][:, 1:]
 
-        source_embeddings = self.token_embedder(source_text)
-        input_embeddings = self.token_embedder(input_text)
+        source_embeddings = self.dropout(self.token_embedder(source_text))
+        input_embeddings = self.dropout(self.token_embedder(input_text))
 
-        encoder_outputs, enc_final_states = self.encoder(source_embeddings, source_length)
-        decoder_outputs, hidden_states = self.decoder(input_embeddings, enc_final_states)
+        encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
+
+        if self.attention_type is not None:
+            decoder_outputs, decoder_states = self.decoder(input_embeddings, encoder_states, encoder_outputs)
+        else:
+            decoder_outputs, decoder_states = self.decoder(input_embeddings, encoder_states)
 
         token_logits = self.vocab_linear(decoder_outputs)
         token_logits = token_logits.view(-1, token_logits.size(-1))

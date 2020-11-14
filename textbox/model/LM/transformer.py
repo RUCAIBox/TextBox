@@ -39,7 +39,10 @@ class Transformer(UnconditionalGenerator):
         self.self_attn_mask = SelfAttentionMask()
 
         self.decoder = TransformerDecoder(self.embedding_size, self.ffn_size, self.num_layers, self.num_heads)
+
         self.vocab_linear = nn.Linear(self.embedding_size, self.vocab_size)
+        self.vocab_linear.weight = self.token_embedder.weight
+        
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx)
 
         # parameters initialization

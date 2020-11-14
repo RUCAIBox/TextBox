@@ -67,4 +67,20 @@ class UnconditionalGenerator(AbstractGenerator):
         self.device = config['device']
 
 
+class ConditionalGenerator(AbstractGenerator):
+    """This is a abstract general recommender. All the general model should implement this class.
+    The base general recommender class provide the basic dataset and parameters information.
+    """
+    type = ModelType.UNCONDITIONAL
+
+    def __init__(self, config, dataset):
+        super(AbstractGenerator, self).__init__()
+
+        self.vocab_size = len(dataset.idx2token)
+
+        # load parameters info
+        self.batch_size = config['train_batch_size']
+        self.device = config['device']
+
+
 

@@ -9,8 +9,7 @@ import torch.nn.functional as F
 
 from textbox.utils import InputType
 from textbox.model.abstract_generator import UnconditionalGenerator
-# from recbole.model.loss import BPRLoss
-from textbox.module.Decoder.rnn_decoder import BasicRNNDecoder, AttentionalRNNDecoder
+from textbox.module.Decoder.rnn_decoder import BasicRNNDecoder
 from textbox.model.init import xavier_normal_initialization
 
 
@@ -26,8 +25,9 @@ class RNN(UnconditionalGenerator):
         # load parameters info
         self.embedding_size = config['embedding_size']
         self.hidden_size = config['hidden_size']
-        self.num_layers = config['num_layers']
+        self.num_dec_layers = config['num_dec_layers']
         self.rnn_type = config['rnn_type']
+        self.dropout_ratio = config['dropout_ratio']
 
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
@@ -35,8 +35,13 @@ class RNN(UnconditionalGenerator):
 
         # define layers and loss
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
-        self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.num_layers, self.rnn_type)
+
+        self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.num_dec_layers,
+                                       self.rnn_type, self.dropout_ratio)
+
+        self.dropout = nn.Dropout(self.dropout_ratio)
         self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
+
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx)
 
         # parameters initialization
@@ -47,12 +52,12 @@ class RNN(UnconditionalGenerator):
         number_to_gen = 10
         idx2token = eval_data.idx2token
         for _ in range(number_to_gen):
-            hidden_states = torch.zeros(self.num_layers, 1, self.hidden_size).to(self.device)
+            hidden_states = torch.zeros(self.num_dec_layers, 1, self.hidden_size).to(self.device)
             generate_tokens = []
             input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
             for gen_idx in range(100):
                 decoder_input = self.token_embedder(input_seq)
-                outputs, hidden_states = self.decoder(hidden_states, decoder_input)
+                outputs, hidden_states = self.decoder(decoder_input, hidden_states)
                 token_logits = self.vocab_linear(outputs)
                 topv, topi = torch.log(F.softmax(token_logits, dim=-1) + 1e-12).data.topk(k=4)
                 topi = topi.squeeze()
@@ -65,14 +70,12 @@ class RNN(UnconditionalGenerator):
             generate_corpus.append(generate_tokens)
         return generate_corpus
 
-    def calculate_loss(self, corpus, epoch_idx=0):
+    def calculate_loss(self, corpus):
         input_text = corpus['target_text'][:, :-1]
         target_text = corpus['target_text'][:, 1:]
-        batch_size = input_text.size(0)
 
-        initial_states = torch.zeros(self.num_layers, batch_size, self.hidden_size).to(self.device)
-        input_embeddings = self.token_embedder(input_text)
-        outputs, hidden_states = self.decoder(input_embeddings=input_embeddings, hidden_states=initial_states)
+        input_embeddings = self.dropout(self.token_embedder(input_text))
+        outputs, hidden_states = self.decoder(input_embeddings)
 
         token_logits = self.vocab_linear(outputs)
         token_logits = token_logits.view(-1, token_logits.size(-1))

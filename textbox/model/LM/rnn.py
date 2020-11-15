@@ -70,7 +70,7 @@ class RNN(UnconditionalGenerator):
             generate_corpus.append(generate_tokens)
         return generate_corpus
 
-    def calculate_loss(self, corpus):
+    def calculate_loss(self, corpus, epoch_idx=-1):
         input_text = corpus['target_text'][:, :-1]
         target_text = corpus['target_text'][:, 1:]
 

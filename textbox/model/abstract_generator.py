@@ -13,7 +13,6 @@ import torch
 import torch.nn as nn
 
 from textbox.utils import ModelType, InputType, FeatureSource, FeatureType
-from textbox.module.layers import FMEmbedding, FMFirstOrderLinear
 
 
 class AbstractGenerator(nn.Module):

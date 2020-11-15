@@ -11,18 +11,28 @@ import math
 
 
 class LuongAttention(torch.nn.Module):
+    def __init__(self):
+        pass
 
 
 class BahdanauAttention(torch.nn.Module):
+    def __init__(self):
+        pass
 
 
 class MonotonicAttention(torch.nn.Module):
+    def __init__(self):
+        pass
 
 
 class LuongMonotonicAttention(torch.nn.Module):
+    def __init__(self):
+        pass
 
 
 class BahdanauMonotonicAttention(torch.nn.Module):
+    def __init__(self):
+        pass
 
 
 class MultiHeadAttention(torch.nn.Module):

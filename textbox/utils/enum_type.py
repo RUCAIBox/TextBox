@@ -19,7 +19,8 @@ class ModelType(Enum):
     """
 
     UNCONDITIONAL = 1
-    SEQUENTIAL = 2
+    CONDITIONAL = 2
+    SEQUENTIAL = 3
 
 
 class DataLoaderType(Enum):

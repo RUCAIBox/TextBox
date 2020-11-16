@@ -3,6 +3,7 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 
+import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -44,7 +45,8 @@ class GPT2(UnconditionalGenerator):
                 top_p=0.95,
                 num_return_sequences=1
             )
-            generate_corpus.append(self.tokenizer.decode(sample_outputs[0], skip_special_tokens=True))
+            generated_text = self.tokenizer.decode(sample_outputs[0], skip_special_tokens=True)
+            generate_corpus.append(generated_text.lower().split())
         return generate_corpus
 
     def calculate_loss(self, corpus, epoch_idx=-1):

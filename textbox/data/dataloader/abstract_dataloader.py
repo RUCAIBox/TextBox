@@ -25,7 +25,7 @@ class AbstractDataLoader(object):
         dataset (Corpus): The corpus for partition of dataset.
         batch_size (int, optional): The batch_size of dataloader. Defaults to ``1``.
         dl_format (InputType, optional): The input type of dataloader. Defaults to
-            :obj:`~textbox.utils.enum_type.InputType.SentencePair`.
+            :obj:`~textbox.utils.enum_type.InputType.NOISE`.
         shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
 
     Attributes:
@@ -51,24 +51,34 @@ class AbstractDataLoader(object):
         self.shuffle = shuffle
         self.pr = 0
 
+        self.idx2token = dataset['idx2token']
+        self.token2idx = dataset['token2idx']
+
         self.padding_token = SpecialTokens.PAD
         self.unknown_token = SpecialTokens.UNK
         self.sos_token = SpecialTokens.SOS
         self.eos_token = SpecialTokens.EOS
 
-        self.setup()
-        self.data_preprocess(dataset)
+    def get_vocab(self, dataset):
+        if 'idx2token' in dataset:
+            self.idx2token = dataset['idx2token']
+            self.token2idx = dataset['token2idx']
+        elif 'source_idx2token' in dataset:
+            self.idx2token = dataset['source_idx2token']
+            self.token2idx = dataset['source_token2idx']
+        else:
+            raise NotImplementedError
 
-    def setup(self):
-        """This function can be used to deal with some problems after essential args are initialized,
-        such as the batch-size-adaptation when neg-sampling is needed, and so on. By default, it will do nothing.
-        """
-        pass
-
-    def get_reference(self):
-        """Return target sequence as reference, mainly for evaluation.
-        """
-        raise NotImplementedError('Method [shuffle] should be implemented.')
+    def _build_data(self, text_data, token2idx):
+        text_idx_data = []
+        idx_length_data = []
+        sos_token_idx = token2idx[self.sos_token]
+        eos_token_idx = token2idx[self.eos_token]
+        for text in text_data:
+            text_idx = [sos_token_idx] + [self._token2idx(token, token2idx) for token in text] + [eos_token_idx]
+            text_idx_data.append(text_idx)
+            idx_length_data.append(len(text_idx))
+        return text_idx_data, idx_length_data
 
     def _pad_batch_sequence(self, text_idx_data, idx_length_data):
         '''
@@ -85,18 +95,12 @@ class AbstractDataLoader(object):
         for seq, len_seq in zip(text_idx_data, idx_length_data):
             # print(seq, len_seq)
             if len_seq < max_len:
-                new_data.append(seq + [self.padding_index] * (max_len - len_seq))
+                new_data.append(seq + [self.padding_token_idx] * (max_len - len_seq))
             else:
                 new_data.append(seq)
         new_data = torch.LongTensor(new_data)
         length = torch.LongTensor(idx_length_data)
         return new_data, length
-
-    def data_preprocess(self, dataset):
-        """This function is used to do some data preprocess, such as pre-neg-sampling and pre-data-augmentation.
-        By default, it will do nothing.
-        """
-        pass
 
     def __len__(self):
         return math.ceil(self.pr_end / self.step)
@@ -112,35 +116,45 @@ class AbstractDataLoader(object):
             raise StopIteration()
         return self._next_batch_data()
 
+    def _idx2token(self, inputs, idx2token):
+        if isinstance(inputs, list):
+            return [self._idx2token[x] for x in inputs]
+        return idx2token[inputs]
+
+    def _token2idx(self, inputs, token2idx):
+        if isinstance(inputs, list):
+            return [self._token2idx[x] for x in inputs]
+        return token2idx.get(inputs, self.unknown_token_idx)
+
     @property
     def vocab_size(self):
         r"""The vocabulary size.
         """
-        return self.dataset.vocab_size
+        raise NotImplementedError('Method [vocab_size] should be implemented')
 
     @property
     def padding_token_idx(self):
         r"""The `int` index of the special token indicating the padding token.
         """
-        return self.dataset.padding_token_idx
+        return self.token2idx[self.padding_token]
 
     @property
     def unknown_token_idx(self):
         r"""The `int` index of the special token indicating the unknown token.
         """
-        return self.dataset.unknown_token_idx
+        return self.token2idx[self.unknown_token]
 
     @property
     def sos_token_idx(self):
         r"""The `int` index of the special token indicating the start of sequence.
         """
-        return self.dataset.sos_token_idx
+        return self.token2idx[self.sos_token]
 
     @property
     def eos_token_idx(self):
         r"""The `int` index of the special token indicating the end of sequence.
         """
-        return self.dataset.eos_token_idx
+        return self.token2idx[self.eos_token]
 
     @property
     def pr_end(self):

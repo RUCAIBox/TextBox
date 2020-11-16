@@ -23,7 +23,6 @@ from time import time
 from logging import getLogger
 
 from textbox.evaluator import NgramEvaluator
-from textbox.data.corpus import Corpus
 from textbox.utils import ensure_dir, get_local_time, early_stopping, calculate_valid_score, dict2str, \
     DataLoaderType, EvaluatorType
 
@@ -257,7 +256,6 @@ class Trainer(AbstractTrainer):
             self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             training_end_time = time()
             self._save_checkpoint(epoch_idx)
-            break
             train_loss_output = \
                 self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss)
             if verbose:

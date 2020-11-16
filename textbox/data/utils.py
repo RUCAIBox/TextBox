@@ -39,13 +39,12 @@ def create_dataset(config):
         return Dataset(config)
 
 
-def data_preparation(config, dataset, save=False):
+def data_preparation(config, save=False):
     """Split the dataset by :attr:`config['eval_setting']` and call :func:`dataloader_construct` to create
     corresponding dataloader.
 
     Args:
         config (Config): An instance object of Config, used to record parameter information.
-        dataset (Dataset): An instance object of Dataset, which contains all interaction records.
         save (bool, optional): If ``True``, it will call :func:`save_datasets` to save split dataset.
             Defaults to ``False``.
 
@@ -55,7 +54,16 @@ def data_preparation(config, dataset, save=False):
             - valid_data (AbstractDataLoader): The dataloader for validation.
             - test_data (AbstractDataLoader): The dataloader for testing.
     """
-    # model_type = config['MODEL_TYPE']
+    model_type = config['MODEL_TYPE']
+    if model_type == ModelType.UNCONDITIONAL:
+        from .dataset import SingleSentenceDataset
+        dataset = SingleSentenceDataset(config)
+    elif model_type == ModelType.TRANSLATION:
+        from .dataset import TranslationDataset
+        dataset = TranslationDataset(config)
+    else:
+        raise NotImplementedError("model of type {} is not implemented".format(model_type))
+
     builded_datasets = dataset.build(eval_setting=None)
     train_dataset, valid_dataset, test_dataset = builded_datasets
     phases = ['train', 'valid', 'test']
@@ -95,7 +103,7 @@ def dataloader_construct(name, config, eval_setting, dataset,
         eval_setting (EvalSetting): An instance object of EvalSetting, used to record evaluation settings.
         dataset (Dataset or list of Dataset): The split dataset for constructing dataloader.
         dl_format (InputType, optional): The input type of dataloader. Defaults to
-            :obj:`~recbole.utils.enum_type.InputType.POINTWISE`.
+            :obj:`~textbox.utils.enum_type.InputType.NOISE`.
         batch_size (int, optional): The batch_size of dataloader. Defaults to ``1``.
         shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
         **kwargs: Other input args of dataloader, such as :attr:`sampler`, :attr:`kg_sampler`

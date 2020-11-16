@@ -8,7 +8,7 @@ import collections
 import random
 import numpy as np
 from logging import getLogger
-from textbox.data.corpus import Corpus
+from textbox.data.dataloader.single_sent_dataloader import SingleSentenceDataLoader
 from textbox.data.dataset import Dataset
 
 
@@ -85,8 +85,23 @@ class SingleSentenceDataset(Dataset):
         corpus_list = []
         for start, end in zip([0] + split_ids, split_ids + [tot_cnt]):
             tp_text_data = self.text_data[start: end]
-            corpus_list.append(Corpus(idx2token=self.idx2token,
-                                      token2idx=self.token2idx,
-                                      target_text_data=tp_text_data)
-                               )
+            tp_data = {
+                'idx2token': self.idx2token,
+                'token2idx': self.token2idx,
+                'text_data': tp_text_data
+            }
+            corpus_list.append(tp_data)
+        return corpus_list
+
+    def build(self, eval_setting=None):
+        self.shuffle()
+
+        # group_field = eval_setting.group_field
+
+        # split_args = eval_setting.split_args
+        split_args = {'strategy': 'by_ratio', 'ratios': [0.8, 0.1, 0.1]}
+        if split_args['strategy'] == 'by_ratio':
+            corpus_list = self.split_by_ratio(split_args['ratios'])
+        else:
+            raise NotImplementedError()
         return corpus_list

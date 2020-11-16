@@ -51,8 +51,7 @@ class AbstractDataLoader(object):
         self.shuffle = shuffle
         self.pr = 0
 
-        self.idx2token = dataset['idx2token']
-        self.token2idx = dataset['token2idx']
+        self.get_vocab(dataset)
 
         self.padding_token = SpecialTokens.PAD
         self.unknown_token = SpecialTokens.UNK

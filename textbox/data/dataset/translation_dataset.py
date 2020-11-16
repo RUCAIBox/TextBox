@@ -13,7 +13,6 @@ from textbox.data.dataset import Dataset
 
 class TranslationDataset(Dataset):
     def __init__(self, config, saved_dataset=None):
-        super().__init__(config, saved_dataset)
         self.source_language = config['source_language']
         self.target_language = config['target_language']
         self.source_suffix = config['source_suffix']
@@ -26,6 +25,7 @@ class TranslationDataset(Dataset):
             self.target_tokenizer = nltk.data.load('tokenizers/punkt/{}.pickle'.format(self.target_language.lower()))
         except FileNotFoundError:
             print("Error occur when fetching tokenizers/punkt/{}.pickle".format(self.target_language.lower()))
+        super().__init__(config, saved_dataset)
 
     def _get_preset(self):
         """Initialization useful inside attributes.
@@ -56,7 +56,7 @@ class TranslationDataset(Dataset):
             source_text = []
             fin = open(source_file, "r")
             for line in fin:
-                words = self.source_tokenizer(line.strip())[:self.max_seq_length]
+                words = self.source_tokenizer.tokenize(line.strip())[:self.max_seq_length]
                 # words = nltk.word_tokenize(line.strip())[:self.max_seq_length]
                 source_text.append(words)
             fin.close()
@@ -66,7 +66,7 @@ class TranslationDataset(Dataset):
             target_text = []
             fin = open(target_file, "r")
             for line in fin:
-                words = self.target_tokenizer(line.strip())[:self.max_seq_length]
+                words = self.target_tokenizer.tokenize(line.strip())[:self.max_seq_length]
                 # words = nltk.word_tokenize(line.strip())[:self.max_seq_length]
                 target_text.append(words)
             fin.close()
@@ -106,6 +106,7 @@ class TranslationDataset(Dataset):
             list: List of builded :class:`Dataset`.
         """
         info_str = ''
+        corpus_list = []
         for i, prefix in enumerate(['train', 'dev', 'test']):
             source_text_data = self.source_text_data[i]
             target_text_data = self.target_text_data[i]

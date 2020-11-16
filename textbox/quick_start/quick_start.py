@@ -35,8 +35,8 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     logger.info(config)
 
     # dataset filtering
-    # dataset = create_dataset(config)
-    # logger.info(dataset)
+    dataset = create_dataset(config)
+    logger.info(dataset)
 
     # dataset splitting
     train_data, valid_data, test_data = data_preparation(config)

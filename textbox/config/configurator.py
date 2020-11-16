@@ -1,11 +1,6 @@
-# @Time   : 2020/6/28
-# @Author : Zihan Lin
-# @Email  : linzihan.super@foxmail.com
-
-# UPDATE
-# @Time   : 2020/10/04, 2020/10/9
-# @Author : Shanlei Mu, Yupeng Hou
-# @Email  : slmu@ruc.edu.cn, houyupeng@ruc.edu.cn
+# @Time   : 2020/11/14
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
 
 """
 recbole.config.configurator
@@ -19,7 +14,6 @@ import yaml
 import torch
 from logging import getLogger
 
-from textbox.evaluator import loss_metrics, topk_metrics
 from textbox.utils import get_model, Enum, EvaluatorType, ModelType, InputType, \
     general_arguments, training_arguments, evaluation_arguments, dataset_arguments
 
@@ -206,10 +200,10 @@ class Config(object):
                         self.internal_config_dict.update(config_dict)
 
         self.internal_config_dict['MODEL_TYPE'] = get_model(model).type
-        if self.internal_config_dict['MODEL_TYPE'] == ModelType.UNCONDITIONAL:
-            pass
-        else:
-            raise NotImplementedError("Unknown model type: {}".format(self.internal_config_dict['MODEL_TYPE']))
+        # if self.internal_config_dict['MODEL_TYPE'] == ModelType.UNCONDITIONAL:
+        #     pass
+        # else:
+        #     raise NotImplementedError("Unknown model type: {}".format(self.internal_config_dict['MODEL_TYPE']))
 
     def _get_final_config_dict(self):
         final_config_dict = dict()
@@ -239,17 +233,6 @@ class Config(object):
                              'or arg \'loss_type\' should exist in config.')
 
         eval_type = None
-        for metric in self.final_config_dict['metrics']:
-            if metric.lower() in loss_metrics:
-                if eval_type is not None and eval_type == EvaluatorType.RANKING:
-                    raise RuntimeError('Ranking metrics and other metrics can not be used at the same time.')
-                else:
-                    eval_type = EvaluatorType.INDIVIDUAL
-            if metric.lower() in topk_metrics:
-                if eval_type is not None and eval_type == EvaluatorType.INDIVIDUAL:
-                    raise RuntimeError('Ranking metrics and other metrics can not be used at the same time.')
-                else:
-                    eval_type = EvaluatorType.RANKING
         self.final_config_dict['eval_type'] = eval_type
 
         smaller_metric = ['rmse', 'mae', 'logloss']

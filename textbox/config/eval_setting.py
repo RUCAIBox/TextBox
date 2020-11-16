@@ -1,11 +1,6 @@
-# @Time   : 2020/7/20
-# @Author : Yupeng Hou
-# @Email  : houyupeng@ruc.edu.cn
-
-# UPDATE:
-# @Time   : 2020/10/22, 2020/8/31
-# @Author : Yupeng Hou, Yushuo Chen
-# @Email  : houyupeng@ruc.edu.cn, chenyushuo@ruc.edu.cn
+# @Time   : 2020/11/14
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
 
 
 """

@@ -28,13 +28,13 @@ class BasicRNNEncoder(torch.nn.Module):
         self.combine_method = combine_method
 
         if rnn_type == 'lstm':
-            self.encoder = nn.LSTM(embedding_size, hidden_size, num_layers,
+            self.encoder = nn.LSTM(embedding_size, hidden_size, num_enc_layers,
                                    batch_first=True, dropout=dropout_ratio, bidirectional=bidirectional)
         elif rnn_type == 'gru':
-            self.encoder = nn.GRU(embedding_size, hidden_size, num_layers,
+            self.encoder = nn.GRU(embedding_size, hidden_size, num_enc_layers,
                                   batch_first=True, dropout=dropout_ratio, bidirectional=bidirectional)
         elif rnn_type == 'rnn':
-            self.encoder = nn.RNN(embedding_size, hidden_size, num_layers,
+            self.encoder = nn.RNN(embedding_size, hidden_size, num_enc_layers,
                                   batch_first=True, dropout=dropout_ratio, bidirectional=bidirectional)
         else:
             raise ValueError("The RNN type of encoder must be in ['lstm', 'gru', 'rnn'].")
@@ -65,19 +65,20 @@ class BasicRNNEncoder(torch.nn.Module):
             hidden_states = self.init_hidden(input_embeddings)
 
         # pack_padded_sequence needs sorted sequences
-        input_sort_idx = np.argsort(-np.array(input_length)).tolist()
-        input_unsort_idx = np.argsort(input_sort_idx).tolist()
+        # input_sort_idx = np.argsort(-np.array(input_length)).tolist()
+        # input_unsort_idx = np.argsort(input_sort_idx).tolist()
+        #
+        # input_length = np.array(input_length)[input_sort_idx].tolist()
+        # input_embeddings = input_embeddings[input_sort_idx, :, :]
 
-        input_length = np.array(input_length)[input_sort_idx].tolist()
-        input_embeddings = input_embeddings[input_sort_idx, :, :]
-
-        packed_input_embeddings = torch.nn.utils.rnn.pack_padded_sequence(input_embeddings, input_length)
+        packed_input_embeddings = torch.nn.utils.rnn.pack_padded_sequence(input_embeddings, input_length,
+                                                                          batch_first=True, enforce_sorted=False)
 
         outputs, hidden_states = self.encoder(packed_input_embeddings, hidden_states)
 
-        outputs, outputs_length = torch.nn.utils.rnn.pad_packed_sequence(outputs)
+        outputs, outputs_length = torch.nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
 
-        outputs = outputs[input_unsort_idx, :, :]
+        # outputs = outputs[input_unsort_idx, :, :]
 
         if self.bidirectional:
             outputs = self.combine_outputs(outputs)

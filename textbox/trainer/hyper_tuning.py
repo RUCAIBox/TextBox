@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
-# @Time   : 2020/7/19 19:06
-# @Author : Shanlei Mu
-# @Email  : slmu@ruc.edu.cn
-# @File   : hyper_tuning.py
+# @Time   : 2020/11/14
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
 
 """
 recbole.trainer.hyper_tuning

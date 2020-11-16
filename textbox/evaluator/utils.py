@@ -1,12 +1,6 @@
-# -*- encoding: utf-8 -*-
-# @Time    :   2020/08/04
-# @Author  :   Kaiyuan Li
-# @email   :   tsotfsk@outlook.com
-
-# UPDATE
-# @Time    :   2020/09/28, 2020/08/09
-# @Author  :   Kaiyuan Li, Zhichao Feng
-# @email   :   tsotfsk@outlook.com, fzcbupt@gmail.com
+# @Time   : 2020/11/14
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
 
 """
 textbox.evaluator.utils

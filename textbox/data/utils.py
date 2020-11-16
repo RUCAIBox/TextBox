@@ -1,11 +1,6 @@
-# @Time   : 2020/7/21
-# @Author : Yupeng Hou
-# @Email  : houyupeng@ruc.edu.cn
-
-# UPDATE:
-# @Time   : 2020/10/19, 2020/9/17, 2020/8/31
-# @Author : Yupeng Hou, Yushuo Chen, Kaiyuan Li
-# @Email  : houyupeng@ruc.edu.cn, chenyushuo@ruc.edu.cn, tsotfsk@outlook.com
+# @Time   : 2020/11/14
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
 
 """
 textbox.data.utils

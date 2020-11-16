@@ -1,12 +1,6 @@
-# -*- encoding: utf-8 -*-
-# @Time    :   2020/08/04
-# @Author  :   Kaiyuan Li
-# @email   :   tsotfsk@outlook.com
-
-# UPDATE
-# @Time    :   2020/08/04, 2020/08/11
-# @Author  :   Kaiyuan Li, Yupeng Hou
-# @email   :   tsotfsk@outlook.com, houyupeng@ruc.edu.cn
+# @Time   : 2020/11/14
+# @Author : Gaole He
+# @Email  : hegaole@ruc.edu.cn
 
 """
 textbox.evaluator.ngram_evaluator

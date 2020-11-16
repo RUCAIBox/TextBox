@@ -1,6 +1,6 @@
-# @Time   : 2020/11/5
-# @Author : Junyi Li, Gaole He
-# @Email  : lijunyi@ruc.edu.cn
+# @Time   : 2020/11/16
+# @Author : Gaole He
+# @Email  : hegaole@ruc.edu.cn
 
 import os
 import nltk
@@ -8,7 +8,6 @@ import collections
 import random
 import numpy as np
 from logging import getLogger
-from textbox.data.corpus import Corpus
 from textbox.data.dataset import Dataset
 
 

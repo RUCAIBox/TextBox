@@ -23,7 +23,6 @@ from time import time
 from logging import getLogger
 
 from textbox.evaluator import NgramEvaluator
-from textbox.data.corpus import Corpus
 from textbox.utils import ensure_dir, get_local_time, early_stopping, calculate_valid_score, dict2str, \
     DataLoaderType, EvaluatorType
 

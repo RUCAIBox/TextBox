@@ -90,7 +90,7 @@ class SpecialTokens:
     These tokens will by default have token ids 0, 1, 2, 3,
     respectively.
     """
-    PAD = "<PAD>"
-    UNK = "<UNK>"
-    SOS = "<SOS>"
-    EOS = "<EOS>"
+    PAD = "<|pad|>"
+    UNK = "<|unk|>"
+    SOS = "<|startoftext|>"
+    EOS = "<|endoftext|>"

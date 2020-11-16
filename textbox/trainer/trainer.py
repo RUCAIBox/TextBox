@@ -256,6 +256,8 @@ class Trainer(AbstractTrainer):
             train_loss = self._train_epoch(train_data, epoch_idx)
             self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             training_end_time = time()
+            self._save_checkpoint(epoch_idx)
+            break
             train_loss_output = \
                 self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss)
             if verbose:

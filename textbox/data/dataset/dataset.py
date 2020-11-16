@@ -1,6 +1,6 @@
-# @Time   : 2020/11/5
-# @Author : Junyi Li, Gaole He
-# @Email  : lijunyi@ruc.edu.cn
+# @Time   : 2020/11/16
+# @Author : Gaole He
+# @Email  : hegaole@ruc.edu.cn
 
 import os
 import nltk
@@ -164,19 +164,4 @@ class Dataset(object):
         Returns:
             list: List of builded :class:`Dataset`.
         """
-        # ordering_args = eval_setting.ordering_args
-        # if ordering_args['strategy'] == 'shuffle':
-        #     self.shuffle()
-        # elif ordering_args['strategy'] == 'by':
-        #     self.sort(by=ordering_args['field'], ascending=ordering_args['ascending'])
-        self.shuffle()
-
-        # group_field = eval_setting.group_field
-
-        # split_args = eval_setting.split_args
-        split_args = {'strategy': 'by_ratio', 'ratios': [0.8, 0.1, 0.1]}
-        if split_args['strategy'] == 'by_ratio':
-            corpus_list = self.split_by_ratio(split_args['ratios'])
-        else:
-            raise NotImplementedError()
-        return corpus_list
+        raise NotImplementedError('Method [shuffle] should be implemented.')

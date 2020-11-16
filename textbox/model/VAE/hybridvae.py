@@ -94,8 +94,8 @@ class HybridVAE(UnconditionalGenerator):
         return generate_corpus
 
     def calculate_loss(self, corpus, epoch_idx=0):
-        input_text = corpus['target_text'][:, :-1]
-        target_text = corpus['target_text'][:, 1:]
+        input_text = corpus['target_idx'][:, :-1]
+        target_text = corpus['target_idx'][:, 1:]
         batch_size = input_text.size(0)
 
         input_emb = self.token_embedder(input_text)

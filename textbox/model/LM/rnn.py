@@ -71,8 +71,8 @@ class RNN(UnconditionalGenerator):
         return generate_corpus
 
     def calculate_loss(self, corpus, epoch_idx=-1):
-        input_text = corpus['target_text'][:, :-1]
-        target_text = corpus['target_text'][:, 1:]
+        input_text = corpus['target_idx'][:, :-1]
+        target_text = corpus['target_idx'][:, 1:]
 
         input_embeddings = self.dropout(self.token_embedder(input_text))
         outputs, hidden_states = self.decoder(input_embeddings)

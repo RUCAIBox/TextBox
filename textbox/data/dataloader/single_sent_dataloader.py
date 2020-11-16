@@ -44,12 +44,12 @@ class SingleSentenceDataLoader(AbstractDataLoader):
         # for dataset_attr in attr_list:
         #     setattr(self, dataset_attr, getattr(dataset, dataset_attr))
         self.idx2token = dataset.idx2token
-        self.reference_corpus = dataset.target_text_data
+        self.target_text_data = dataset.target_text_data
         self.target_text_idx_data = dataset.target_text_idx_data
         self.target_idx_length_data = dataset.target_idx_length_data
 
     def get_reference(self):
-        return self.reference_corpus
+        return self.target_text_data
 
     @property
     def pr_end(self):
@@ -64,12 +64,14 @@ class SingleSentenceDataLoader(AbstractDataLoader):
         self.target_text_idx_data[:], self.target_idx_length_data[:] = zip(*temp)
 
     def _next_batch_data(self):
+        tp_text_data = self.target_text_data[self.pr: self.pr + self.step]
         tp_text_idx_data = self.target_text_idx_data[self.pr: self.pr + self.step]
         tp_idx_length_data = self.target_idx_length_data[self.pr: self.pr + self.step]
         self.pr += self.step
-        padded_text, length = self._pad_batch_sequence(tp_text_idx_data, tp_idx_length_data)
+        padded_idx, length = self._pad_batch_sequence(tp_text_idx_data, tp_idx_length_data)
         batch_data = {
-            'target_text': padded_text.to(self.device),
+            'target_text': tp_text_data,
+            'target_idx': padded_idx.to(self.device),
             'target_length': length.to(self.device)
         }
         return batch_data

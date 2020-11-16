@@ -353,9 +353,16 @@ class Trainer(AbstractTrainer):
 
 
 class UnconditionalTrainer(Trainer):
-    r"""UnconditionalTrainer is designed for RNN, which is a knowledge-aware recommendation method.
+    r"""UnconditionalTrainer is designed for RNN, which is a typical unconditional generator.
     """
 
     def __init__(self, config, model):
         super(UnconditionalTrainer, self).__init__(config, model)
 
+
+class ConditionalTrainer(Trainer):
+    r"""TranslationTrainer is designed for seq2seq testing, which is a typically used setting.
+    """
+
+    def __init__(self, config, model):
+        super(ConditionalTrainer, self).__init__(config, model)

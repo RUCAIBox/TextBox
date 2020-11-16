@@ -9,7 +9,7 @@
 # @email   :   tsotfsk@outlook.com, houyupeng@ruc.edu.cn
 
 """
-textbox.evaluator.topk_evaluator
+textbox.evaluator.ngram_evaluator
 ################################
 """
 

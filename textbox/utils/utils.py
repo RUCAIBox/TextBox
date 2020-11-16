@@ -52,7 +52,8 @@ def get_model(model_name):
     model_submodule = [
         'GAN',
         'LM',
-        'VAE'
+        'VAE',
+        'Seq2Seq'
     ]
     try:
         model_file_name = model_name.lower()
@@ -83,6 +84,8 @@ def get_trainer(model_type, model_name):
     except AttributeError:
         if model_type == ModelType.UNCONDITIONAL:
             return getattr(importlib.import_module('textbox.trainer'), 'UnconditionalTrainer')
+        elif model_type == ModelType.CONDITIONAL or model_type == ModelType.TRANSLATION:
+            return getattr(importlib.import_module('textbox.trainer'), 'ConditionalTrainer')
         else:
             return getattr(importlib.import_module('textbox.trainer'), 'Trainer')
 

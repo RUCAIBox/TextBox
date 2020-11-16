@@ -8,7 +8,6 @@ import collections
 import random
 import numpy as np
 from logging import getLogger
-from textbox.data.corpus import Corpus
 from textbox.utils.enum_type import SpecialTokens
 
 

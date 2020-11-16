@@ -30,35 +30,21 @@ class GPT2(UnconditionalGenerator):
 
         self.sos_token = dataset.sos_token
         self.eos_token = dataset.eos_token
-        self.max_length = dataset.max_seq_length
+        self.max_length = config['max_seq_length']
 
     def generate(self, eval_data):
         generate_corpus = []
-        number_to_gen = 10
-        idx2token = eval_data.idx2token
+        number_to_gen = len(eval_data)
         for _ in range(number_to_gen):
-            generate_token_idx = [self.sos_token_idx]
-            generate_tokens = []
-            for gen_idx in range(100):
-                input_seq = torch.LongTensor([generate_token_idx]).to(self.device)
-                input_embedding = self.token_embedder(input_seq) + self.position_embedder(input_seq).to(self.device)
-                self_padding_mask = torch.eq(input_seq, self.padding_token_idx).to(self.device)
-                self_attn_mask = self.self_attn_mask(input_seq.size(-1)).bool().to(self.device)
-
-                token_logits = self.decoder(input_embedding,
-                                            self_padding_mask=self_padding_mask,
-                                            self_attn_mask=self_attn_mask)
-                token_logits = token_logits[:, -1, :]
-
-                topv, topi = torch.log(F.softmax(token_logits, dim=-1) + 1e-12).data.topk(k=4)
-                topi = topi.squeeze()
-                token_idx = topi[0].item()
-                if token_idx == self.eos_token_idx or gen_idx >= 100:
-                    break
-                else:
-                    generate_token_idx.append(token_idx)
-                    generate_tokens.append(idx2token[token_idx])
-            generate_corpus.append(generate_tokens)
+            sample_outputs = self.decoder.generate(
+                bos_token_id=random.randint(1, 30000),
+                do_sample=True,
+                top_k=50,
+                max_length=self.max_length,
+                top_p=0.95,
+                num_return_sequences=1
+            )
+            generate_corpus.append(self.tokenizer.decode(sample_outputs[0], skip_special_tokens=True))
         return generate_corpus
 
     def calculate_loss(self, corpus, epoch_idx=-1):
@@ -66,18 +52,15 @@ class GPT2(UnconditionalGenerator):
         input_idx = []
         attn_mask = []
         for text in input_text:
-            encodings_dict = self.tokenizer(self.sos_token + ' '.join(text) + self.eos_token,
+            token_list = [self.sos_token] + text + [self.eos_token]
+            encodings_dict = self.tokenizer(' '.join(token_list),
                                             truncation=True,
                                             max_length=self.max_length,
                                             padding='max_length')
-            input_idx.append(torch.tensor(encodings_dict['input_ids']))
-            attn_mask.append(torch.tensor(encodings_dict['attention_mask']))
-
-        input_idx = torch.tensor(input_idx)
-        attn_mask = torch.tensor(attn_mask)
-        print(input_idx)
-        print(attn_mask)
-        exit()
+            input_idx.append(encodings_dict['input_ids'])
+            attn_mask.append(encodings_dict['attention_mask'])
+        input_idx = torch.LongTensor(input_idx).to(self.device)
+        attn_mask = torch.LongTensor(attn_mask).to(self.device)
         outputs = self.decoder(input_idx,
                                labels=input_idx,
                                attention_mask=attn_mask,

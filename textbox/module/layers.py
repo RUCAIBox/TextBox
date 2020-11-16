@@ -1,18 +1,12 @@
 # -*- coding: utf-8 -*-
-# @Time   : 2020/6/27 16:40
-# @Author : Shanlei Mu
-# @Email  : slmu@ruc.edu.cn
-# @File   : layers.py
-
-# UPDATE:
-# @Time   : 2020/8/24 14:58, 2020/9/16, 2020/9/21, 2020/10/9
-# @Author : Yujie Lu, Xingyu Pan, Zhichao Feng, Hui Wang
-# @Email  : yujielu1998@gmail.com, panxy@ruc.edu.cn, fzcbupt@gmail.com, hui.wang@ruc.edu.cn
+# @Time   : 2020/11/14
+# @Author : Junyi Li
+# @Email  : lijunyi@ruc.edu.cn
 
 """
-textbox.model.layers
+textbox.module.layers
 #############################
-Common Layers in recommender system
+Common Layers in text generation
 """
 
 from logging import getLogger
@@ -23,7 +17,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.init import normal_
-from textbox.module.Attention.multi_head_attention import MultiHeadAttention
+from textbox.module.Attention.attention_mechanism import MultiHeadAttention
 from textbox.utils import ModelType, InputType, FeatureType
 
 
@@ -142,59 +136,6 @@ class FMEmbedding(nn.Module):
         input_x = input_x + input_x.new_tensor(self.offsets).unsqueeze(0)
         output = self.embedding(input_x)
         return output
-
-
-class BaseFactorizationMachine(nn.Module):
-    r"""Calculate FM result over the embeddings
-
-    Args:
-        reduce_sum: bool, whether to sum the result, default is True.
-
-    Input:
-        input_x: tensor, A 3D tensor with shape:``(batch_size,field_size,embed_dim)``.
-
-    Output
-        output: tensor, A 3D tensor with shape: ``(batch_size,1)`` or ``(batch_size, embed_dim)``.
-    """
-
-    def __init__(self, reduce_sum=True):
-        super(BaseFactorizationMachine, self).__init__()
-        self.reduce_sum = reduce_sum
-
-    def forward(self, input_x):
-        square_of_sum = torch.sum(input_x, dim=1) ** 2
-        sum_of_square = torch.sum(input_x ** 2, dim=1)
-        output = square_of_sum - sum_of_square
-        if self.reduce_sum:
-            output = torch.sum(output, dim=1, keepdim=True)
-        output = 0.5 * output
-        return output
-
-
-class BiGNNLayer(nn.Module):
-    r"""Propagate a layer of Bi-interaction GNN
-
-    .. math::
-        output = (L+I)EW_1 + LE \otimes EW_2
-    """
-
-    def __init__(self, in_dim, out_dim):
-        super(BiGNNLayer, self).__init__()
-        self.in_dim = in_dim
-        self.out_dim = out_dim
-        self.linear = torch.nn.Linear(in_features=in_dim, out_features=out_dim)
-        self.interActTransform = torch.nn.Linear(in_features=in_dim, out_features=out_dim)
-
-    def forward(self, lap_matrix, eye_matrix, features):
-        # for GCF ajdMat is a (N+M) by (N+M) mat
-        # lap_matrix L = D^-1(A)D^-1 # 拉普拉斯矩阵
-        x = torch.sparse.mm(lap_matrix, features)
-
-        inter_part1 = self.linear(features + x)
-        inter_feature = torch.mul(x, features)
-        inter_part2 = self.interActTransform(inter_feature)
-
-        return inter_part1 + inter_part2
 
 
 class AttLayer(nn.Module):
@@ -387,7 +328,7 @@ class FeedForward(nn.Module):
         return hidden_states
 
 
-class TransformerLayer(nn.Module):
+class TransformerLayer(torch.nn.Module):
     """
         One transformer layer :
             a multi-head self-attention,
@@ -402,17 +343,17 @@ class TransformerLayer(nn.Module):
         Returns:
             feedforward_output (torch.Tensor): the output of the point-wise feed-forward sublayer, is the output of the transformer layer
         """
-    def __init__(self, embedding_size, ffn_size, num_heads, attn_dropout=0.0, attn_weight_dropout=0.0,
-                 ffn_dropout=0.0, ffn_activate_func='gelu', with_external=False):
+    def __init__(self, embedding_size, ffn_size, num_heads, attn_dropout_ratio=0.0, attn_weight_dropout_ratio=0.0,
+                 ffn_dropout_ratio=0.0, ffn_activate_func='gelu', with_external=False):
         super(TransformerLayer, self).__init__()
-        self.multi_head_attention = MultiHeadAttention(embedding_size, num_heads, attn_weight_dropout)
+        self.multi_head_attention = MultiHeadAttention(embedding_size, num_heads, attn_weight_dropout_ratio)
         self.feed_forward = FeedForward(embedding_size, ffn_size, ffn_activate_func)
 
         self.attn_layer_norm = nn.LayerNorm(embedding_size)
         self.ffn_layer_norm = nn.LayerNorm(embedding_size)
 
-        self.attn_dropout = nn.Dropout(attn_dropout)
-        self.ffn_dropout = nn.Dropout(ffn_dropout)
+        self.attn_dropout = nn.Dropout(attn_dropout_ratio)
+        self.ffn_dropout = nn.Dropout(ffn_dropout_ratio)
 
         self.with_external = with_external
 
@@ -440,7 +381,8 @@ class TransformerLayer(nn.Module):
         if self.with_external:
             # Usually for conditional Transformer decoder
             residual = x
-            x, external_attn_weights = self.external_multi_head_attention(query=x, key=external_states,
+            x, external_attn_weights = self.external_multi_head_attention(query=x,
+                                                                          key=external_states,
                                                                           value=external_memories,
                                                                           key_padding_mask=external_padding_mask)
             x = self.attn_dropout(x)
@@ -454,6 +396,53 @@ class TransformerLayer(nn.Module):
         x = self.ffn_layer_norm(residual + x)
 
         return x, self_attn_weights, external_attn_weights
+
+
+class GPT2TransformerLayer(torch.nn.Module):
+    """
+        One GPT-2 transformer layer :
+            a multi-head self-attention,
+            a point-wise feed-forward layer.
+
+        Args:
+            self_padding_mask (torch.bool): the padding mask for the multi head attention sublayer.
+            self_attn_mask (torch.bool): the attention mask for the multi head attention sublayer.
+        Returns:
+            feedforward_output (torch.Tensor): the output of the point-wise feed-forward sublayer, is the output of the transformer layer
+        """
+    def __init__(self, embedding_size, ffn_size, num_heads, attn_dropout_ratio=0.0, attn_weight_dropout_ratio=0.0,
+                 ffn_dropout_ratio=0.0, ffn_activate_func='gelu'):
+        super(GPT2TransformerLayer, self).__init__()
+        self.multi_head_attention = MultiHeadAttention(embedding_size, num_heads, attn_weight_dropout_ratio)
+        self.feed_forward = FeedForward(embedding_size, ffn_size, ffn_activate_func)
+
+        self.attn_layer_norm = nn.LayerNorm(embedding_size)
+        self.ffn_layer_norm = nn.LayerNorm(embedding_size)
+
+        self.attn_dropout = nn.Dropout(attn_dropout_ratio)
+        self.ffn_dropout = nn.Dropout(ffn_dropout_ratio)
+
+    def forward(self, x, kv=None, self_padding_mask=None, self_attn_mask=None):
+        residual = x
+        x = self.attn_layer_norm(x)
+        if kv is None:
+            # Usually for Transformer encoder, key_padding_mask=attn_mask
+            x, self_attn_weights = self.multi_head_attention(query=x, key=x, value=x,
+                                                             key_padding_mask=self_padding_mask,
+                                                             attn_mask=self_attn_mask)
+        else:
+            # Usually for Transformer decoder, attn_mask is a a lower triangular matrix
+            x, self_attn_weights = self.multi_head_attention(query=x, key=kv, value=kv,
+                                                             key_padding_mask=self_padding_mask,
+                                                             attn_mask=self_attn_mask)
+        x = self.attn_dropout(residual + x)
+
+        residual = x
+        x = self.ffn_layer_norm(x)
+        x = self.feed_forward(x)
+        x = self.ffn_dropout(residual + x)
+
+        return x, self_attn_weights
 
 
 class ContextSeqEmbAbstractLayer(nn.Module):

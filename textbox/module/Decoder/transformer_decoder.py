@@ -7,22 +7,22 @@ import torch.nn.functional as F
 
 class TransformerDecoder(torch.nn.Module):
     def __init__(self,
-                 input_size,
+                 embedding_size,
                  ffn_size,
-                 num_layers,
+                 num_dec_layers,
                  num_heads,
-                 attn_dropout=0.0,
-                 attn_weight_dropout=0.0,
-                 ffn_dropout=0.0,
+                 attn_dropout_ratio=0.0,
+                 attn_weight_dropout_ratio=0.0,
+                 ffn_dropout_ratio=0.0,
                  ffn_activate_func='gelu',
                  with_external=False):
         super(TransformerDecoder, self).__init__()
         
         self.transformer_layers = nn.ModuleList()
-        for _ in range(num_layers):
+        for _ in range(num_dec_layers):
             self.transformer_layers.append(
-                TransformerLayer(input_size, ffn_size, num_heads, attn_dropout, attn_weight_dropout,
-                                 ffn_dropout, ffn_activate_func, with_external))
+                TransformerLayer(embedding_size, ffn_size, num_heads, attn_dropout_ratio, attn_weight_dropout_ratio,
+                                 ffn_dropout_ratio, ffn_activate_func, with_external))
 
     def forward(self, x, kv=None,
                 self_padding_mask=None, self_attn_mask=None,

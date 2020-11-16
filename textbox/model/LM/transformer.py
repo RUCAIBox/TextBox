@@ -10,7 +10,8 @@ import torch.nn.functional as F
 from textbox.utils import InputType
 from textbox.model.abstract_generator import UnconditionalGenerator
 from textbox.module.Decoder.transformer_decoder import TransformerDecoder
-from textbox.module.Attention.multi_head_attention import SinusoidalPositionalEmbedding, SelfAttentionMask
+from textbox.module.Embedder.position_embedder import SinusoidalPositionalEmbedding
+from textbox.module.Attention.attention_mechanism import SelfAttentionMask
 from textbox.model.init import xavier_normal_initialization
 
 
@@ -26,8 +27,12 @@ class Transformer(UnconditionalGenerator):
         # load parameters info
         self.embedding_size = config['embedding_size']
         self.ffn_size = config['ffn_size']
-        self.num_layers = config['num_layers']
+        self.num_dec_layers = config['num_dec_layers']
         self.num_heads = config['num_heads']
+        self.attn_dropout_ratio = config['attn_dropout_ratio']
+        self.attn_weight_dropout_ratio = config['attn_weight_dropout_ratio']
+        self.ffn_dropout_ratio = config['ffn_dropout_ratio']
+        self.ffn_activation_func = config['ffn_activation_func']
 
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
@@ -38,8 +43,13 @@ class Transformer(UnconditionalGenerator):
         self.position_embedder = SinusoidalPositionalEmbedding(self.embedding_size)
         self.self_attn_mask = SelfAttentionMask()
 
-        self.decoder = TransformerDecoder(self.embedding_size, self.ffn_size, self.num_layers, self.num_heads)
+        self.decoder = TransformerDecoder(self.embedding_size, self.ffn_size, self.num_dec_layers, self.num_heads,
+                                          self.attn_dropout_ratio, self.attn_weight_dropout_ratio,
+                                          self.ffn_dropout_ratio, self.ffn_activation_func)
+
         self.vocab_linear = nn.Linear(self.embedding_size, self.vocab_size)
+        self.vocab_linear.weight = self.token_embedder.weight
+        
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx)
 
         # parameters initialization
@@ -74,7 +84,7 @@ class Transformer(UnconditionalGenerator):
             generate_corpus.append(generate_tokens)
         return generate_corpus
 
-    def calculate_loss(self, corpus, epoch_idx=0):
+    def calculate_loss(self, corpus, epoch_idx=-1):
         input_text = corpus['target_text'][:, :-1]
         target_text = corpus['target_text'][:, 1:]
 

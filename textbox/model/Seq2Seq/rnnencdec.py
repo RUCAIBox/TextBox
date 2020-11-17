@@ -63,27 +63,37 @@ class RNNEncDec(ConditionalGenerator):
         # parameters initialization
         self.apply(xavier_normal_initialization)
 
-    def generate(self, eval_data):
+    def generate(self, eval_dataloader):
         generate_corpus = []
-        number_to_gen = len(eval_data)
         idx2token = eval_data.idx2token
-        for _ in range(number_to_gen):
-            hidden_states = torch.zeros(self.num_layers, 1, self.hidden_size).to(self.device)
-            generate_tokens = []
-            input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
-            for gen_idx in range(100):
-                decoder_input = self.token_embedder(input_seq)
-                outputs, hidden_states = self.decoder(hidden_states, decoder_input)
-                token_logits = self.vocab_linear(outputs)
-                topv, topi = torch.log(F.softmax(token_logits, dim=-1) + 1e-12).data.topk(k=4)
-                topi = topi.squeeze()
-                token_idx = topi[0].item()
-                if token_idx == self.eos_token_idx or gen_idx >= 100:
-                    break
-                else:
-                    generate_tokens.append(idx2token[token_idx])
-                    input_seq = torch.LongTensor([[token_idx]]).to(self.device)
-            generate_corpus.append(generate_tokens)
+        for batch_data in eval_dataloader:
+            source_text = batch_data['source_idx']
+            source_length = batch_data['source_length']
+
+            source_embeddings = self.source_token_embedder(source_text)
+            encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
+
+            for bid in range(source_text.size(0)):
+                generate_tokens = []
+                input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
+                for gen_idx in range(100):
+                    decoder_input = self.target_token_embedder(input_seq)
+                    if self.attention_type is not None:
+                        decoder_outputs, decoder_states = self.decoder(decoder_input,
+                                                                       encoder_states[:, bid, :],
+                                                                       encoder_outputs[bid, :, :])
+                    else:
+                        decoder_outputs, decoder_states = self.decoder(decoder_input, encoder_states[:, bid, :])
+                    token_logits = self.vocab_linear(decoder_outputs)
+                    topv, topi = torch.log(F.softmax(token_logits, dim=-1) + 1e-12).data.topk(k=4)
+                    topi = topi.squeeze()
+                    token_idx = topi[0].item()
+                    if token_idx == self.eos_token_idx or gen_idx >= 100:
+                        break
+                    else:
+                        generate_tokens.append(idx2token[token_idx])
+                        input_seq = torch.LongTensor([[token_idx]]).to(self.device)
+                generate_corpus.append(generate_tokens)
         return generate_corpus
 
     def calculate_loss(self, corpus, epoch_idx=0):

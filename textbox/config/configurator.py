@@ -206,10 +206,12 @@ class Config(object):
                         self.internal_config_dict.update(config_dict)
 
         self.internal_config_dict['MODEL_TYPE'] = get_model(model).type
+        '''
         if self.internal_config_dict['MODEL_TYPE'] == ModelType.UNCONDITIONAL:
             pass
         else:
             raise NotImplementedError("Unknown model type: {}".format(self.internal_config_dict['MODEL_TYPE']))
+        '''
 
     def _get_final_config_dict(self):
         final_config_dict = dict()

@@ -1,7 +1,11 @@
-# -*- coding: utf-8 -*-
-# @Time   : 2020/7/17
-# @Author : Shanlei Mu
-# @Email  : slmu@ruc.edu.cn
+# @Time   : 2020/11/5
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
+
+# UPDATE:
+# @Time   : 2020/11/15
+# @Author : Tianyi Tang
+# @Email  : steventang@ruc.edu.cn
 
 """
 recbole.utils.utils
@@ -58,7 +62,7 @@ def get_model(model_name):
         model_file_name = model_name.lower()
         for submodule in model_submodule:
             module_path = '.'.join(['...model', submodule, model_file_name])
-            # print(module_path)
+            print(module_path)
             if importlib.util.find_spec(module_path, __name__):
                 model_module = importlib.import_module(module_path, __name__)
 
@@ -83,6 +87,8 @@ def get_trainer(model_type, model_name):
     except AttributeError:
         if model_type == ModelType.UNCONDITIONAL:
             return getattr(importlib.import_module('textbox.trainer'), 'UnconditionalTrainer')
+        elif model_type == ModelType.GAN:
+            return getattr(importlib.import_module('textbox.trainer'), 'GANTrainer')
         else:
             return getattr(importlib.import_module('textbox.trainer'), 'Trainer')
 

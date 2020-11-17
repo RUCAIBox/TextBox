@@ -1,7 +1,11 @@
-# -*- coding: utf-8 -*-
-# @Time   : 2020/8/9
-# @Author : Yupeng Hou
-# @Email  : houyupeng@ruc.edu.cn
+# @Time   : 2020/11/5
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
+
+# UPDATE:
+# @Time   : 2020/11/15
+# @Author : Tianyi Tang
+# @Email  : steventang@ruc.edu.cn
 
 """
 recbole.utils.enum_type
@@ -16,11 +20,13 @@ class ModelType(Enum):
 
     - ``UNCONDITIONAL``: Unconditional Generator
     - ``CONDITIONAL``: Conditional Generator
+    - ``GAN``: GenerativeAdversarialNet
     """
 
     UNCONDITIONAL = 1
     CONDITIONAL = 2
     SEQUENTIAL = 3
+    GAN = 4
 
 
 class DataLoaderType(Enum):

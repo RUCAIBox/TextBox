@@ -2,6 +2,10 @@
 # @Author : Junyi Li, Gaole He
 # @Email  : lijunyi@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2020/11/15
+# @Author : Tianyi Tang
+# @Email  : steventang@ruc.edu.cn
 
 """
 recbole.model.abstract_recommender
@@ -15,7 +19,7 @@ import torch.nn as nn
 from textbox.utils import ModelType, InputType, FeatureSource, FeatureType
 
 
-class AbstractGenerator(nn.Module):
+class AbstractModel(nn.Module):
     r"""Base class for all models
     """
 
@@ -50,14 +54,14 @@ class AbstractGenerator(nn.Module):
         return super().__str__() + '\nTrainable parameters: {}'.format(params)
 
 
-class UnconditionalGenerator(AbstractGenerator):
+class UnconditionalGenerator(AbstractModel):
     """This is a abstract general recommender. All the general model should implement this class.
     The base general recommender class provide the basic dataset and parameters information.
     """
     type = ModelType.UNCONDITIONAL
 
     def __init__(self, config, dataset):
-        super(AbstractGenerator, self).__init__()
+        super(AbstractModel, self).__init__()
 
         self.vocab_size = len(dataset.idx2token)
 
@@ -66,14 +70,14 @@ class UnconditionalGenerator(AbstractGenerator):
         self.device = config['device']
 
 
-class ConditionalGenerator(AbstractGenerator):
+class ConditionalGenerator(AbstractModel):
     """This is a abstract general recommender. All the general model should implement this class.
     The base general recommender class provide the basic dataset and parameters information.
     """
     type = ModelType.CONDITIONAL
 
     def __init__(self, config, dataset):
-        super(AbstractGenerator, self).__init__()
+        super(AbstractModel, self).__init__()
 
         self.vocab_size = len(dataset.idx2token)
 
@@ -81,5 +85,18 @@ class ConditionalGenerator(AbstractGenerator):
         self.batch_size = config['train_batch_size']
         self.device = config['device']
 
+class GenerativeAdversarialNet(AbstractModel):
+    """This is a abstract general recommender. All the general model should implement this class.
+    The base general recommender class provide the basic dataset and parameters information.
+    """
+    type = ModelType.GAN
 
+    def __init__(self, config, dataset):
+        super(AbstractModel, self).__init__()
+
+        self.vocab_size = len(dataset.idx2token)
+
+        # load parameters info
+        self.batch_size = config['train_batch_size']
+        self.device = config['device']
 

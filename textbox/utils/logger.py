@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
-# @Time   : 2020/8/7
-# @Author : Zihan Lin
-# @Email  : linzihan.super@foxmail.com
+# @Time   : 2020/11/14
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
 
 """
 recbole.utils.logger

@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
-# @Time   : 2020/9/16
-# @Author : Shanlei Mu
-# @Email  : slmu@ruc.edu.cn
+# @Time   : 2020/11/14
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
 
 """
 recbole.model.init

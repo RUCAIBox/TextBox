@@ -85,8 +85,8 @@ class Transformer(UnconditionalGenerator):
         return generate_corpus
 
     def calculate_loss(self, corpus, epoch_idx=-1):
-        input_text = corpus['target_text'][:, :-1]
-        target_text = corpus['target_text'][:, 1:]
+        input_text = corpus['target_idx'][:, :-1]
+        target_text = corpus['target_idx'][:, 1:]
 
         input_embeddings = self.token_embedder(input_text) + self.position_embedder(input_text).to(self.device)
         self_padding_mask = torch.eq(input_text, self.padding_token_idx).to(self.device)

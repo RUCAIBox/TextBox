@@ -18,7 +18,7 @@ class TransformerEncDec(ConditionalGenerator):
     r"""RNN-based Encoder-Decoder architecture is a basic framework for conditional text generation.
 
     """
-    input_type = InputType.NOISE
+    input_type = InputType.PAIRTEXT
 
     def __init__(self, config, dataset):
         super(TransformerEncDec, self).__init__(config, dataset)
@@ -39,7 +39,10 @@ class TransformerEncDec(ConditionalGenerator):
         self.eos_token_idx = dataset.eos_token_idx
 
         # define layers and loss
-        self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
+        self.source_token_embedder = nn.Embedding(self.source_vocab_size, self.embedding_size,
+                                                  padding_idx=self.padding_token_idx)
+        self.target_token_embedder = nn.Embedding(self.target_vocab_size, self.embedding_size,
+                                                  padding_idx=self.padding_token_idx)
         self.position_embedder = SinusoidalPositionalEmbedding(self.embedding_size)
         self.self_attn_mask = SelfAttentionMask()
 
@@ -51,8 +54,8 @@ class TransformerEncDec(ConditionalGenerator):
                                           self.attn_dropout_ratio, self.attn_weight_dropout_ratio,
                                           self.ffn_dropout_ratio, self.ffn_activation_func, with_external=True)
 
-        self.vocab_linear = nn.Linear(self.embedding_size, self.vocab_size)
-        self.vocab_linear.weight = self.token_embedder.weight
+        self.vocab_linear = nn.Linear(self.embedding_size, self.target_vocab_size)
+        self.vocab_linear.weight = self.target_token_embedder.weight
 
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx)
 
@@ -83,17 +86,17 @@ class TransformerEncDec(ConditionalGenerator):
         return generate_corpus
 
     def calculate_loss(self, corpus):
-        source_text = corpus['source_text']
+        source_text = corpus['source_idx']
 
-        input_text = corpus['target_text'][:, :-1]
-        target_text = corpus['target_text'][:, 1:]
+        input_text = corpus['target_idx'][:, :-1]
+        target_text = corpus['target_idx'][:, 1:]
 
-        source_embeddings = self.token_embedder(source_text) + self.position_embedder(source_text).to(self.device)
+        source_embeddings = self.source_token_embedder(source_text) + self.position_embedder(source_text).to(self.device)
         source_padding_mask = torch.eq(source_text, self.padding_token_idx).to(self.device)
         encoder_outputs = self.encoder(source_embeddings, self_padding_mask=source_padding_mask,
                                        output_all_encoded_layers=False)
 
-        input_embeddings = self.token_embedder(input_text) + self.position_embedder(input_text).to(self.device)
+        input_embeddings = self.target_token_embedder(input_text) + self.position_embedder(input_text).to(self.device)
         self_padding_mask = torch.eq(input_text, self.padding_token_idx).to(self.device)
         self_attn_mask = self.self_attn_mask(input_text.size(-1)).bool().to(self.device)
         decoder_outputs = self.decoder(input_embeddings,

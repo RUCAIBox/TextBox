@@ -1,4 +1,4 @@
-# @Time   : 2020/11/5
+# @Time   : 2020/11/14
 # @Author : Junyi Li, Gaole He
 # @Email  : lijunyi@ruc.edu.cn
 
@@ -24,7 +24,6 @@ from time import time
 from logging import getLogger
 
 from textbox.evaluator import NgramEvaluator
-from textbox.data.corpus import Corpus
 from textbox.utils import ensure_dir, get_local_time, early_stopping, calculate_valid_score, dict2str, \
     DataLoaderType, EvaluatorType
 
@@ -257,6 +256,7 @@ class Trainer(AbstractTrainer):
             train_loss = self._train_epoch(train_data, epoch_idx)
             self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             training_end_time = time()
+            self._save_checkpoint(epoch_idx)
             train_loss_output = \
                 self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss)
             if verbose:
@@ -354,7 +354,7 @@ class Trainer(AbstractTrainer):
 
 
 class UnconditionalTrainer(Trainer):
-    r"""UnconditionalTrainer is designed for RNN, which is a knowledge-aware recommendation method.
+    r"""UnconditionalTrainer is designed for RNN, which is a typical unconditional generator.
     """
 
     def __init__(self, config, model):
@@ -546,3 +546,9 @@ class GANTrainer(Trainer):
 
         self._save_checkpoint(self.adversarail_training_epochs)
         return -1, None
+class ConditionalTrainer(Trainer):
+    r"""TranslationTrainer is designed for seq2seq testing, which is a typically used setting.
+    """
+
+    def __init__(self, config, model):
+        super(ConditionalTrainer, self).__init__(config, model)

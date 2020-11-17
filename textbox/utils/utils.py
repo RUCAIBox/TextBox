@@ -1,4 +1,5 @@
-# @Time   : 2020/11/5
+# -*- coding: utf-8 -*-
+# @Time   : 2020/11/14
 # @Author : Junyi Li, Gaole He
 # @Email  : lijunyi@ruc.edu.cn
 
@@ -56,7 +57,8 @@ def get_model(model_name):
     model_submodule = [
         'GAN',
         'LM',
-        'VAE'
+        'VAE',
+        'Seq2Seq'
     ]
     try:
         model_file_name = model_name.lower()
@@ -89,6 +91,8 @@ def get_trainer(model_type, model_name):
             return getattr(importlib.import_module('textbox.trainer'), 'UnconditionalTrainer')
         elif model_type == ModelType.GAN:
             return getattr(importlib.import_module('textbox.trainer'), 'GANTrainer')
+        elif model_type == ModelType.CONDITIONAL or model_type == ModelType.TRANSLATION:
+            return getattr(importlib.import_module('textbox.trainer'), 'ConditionalTrainer')
         else:
             return getattr(importlib.import_module('textbox.trainer'), 'Trainer')
 

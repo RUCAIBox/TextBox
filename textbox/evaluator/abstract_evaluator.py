@@ -1,7 +1,6 @@
-# -*- encoding: utf-8 -*-
-# @Time    :   2020/10/21
-# @Author  :   Kaiyuan Li
-# @email   :   tsotfsk@outlook.com
+# @Time   : 2020/11/14
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
 
 """
 recbole.evaluator.abstract_evaluator

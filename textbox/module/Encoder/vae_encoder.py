@@ -59,29 +59,44 @@ class LSTMVAEEncoder(nn.Module):
         return e_hidden
 
 
-class BasicRNNEncoder(torch.nn.Module):
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 output_size,
-                 num_layers,
-                 rnn_type,
-                 token_embedder):
-        super(BasicRNNEncoder, self).__init__()
+class HybridEncoder(nn.Module):
+    def __init__(self, input_size, hidden_size=512):
+        super(HybridEncoder, self).__init__()
 
-        self.token_embedder = token_embedder
-        self.vocab_linear = nn.Linear(hidden_size, output_size)
+        self.input_size = input_size
+        self.hidden_size = hidden_size
 
-        if rnn_type == "lstm":
-            self.encoder = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
-        elif rnn_type == "gru":
-            self.encoder = nn.GRU(input_size, hidden_size, num_layers, batch_first=True)
-        elif rnn_type == "rnn":
-            self.encoder = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
-        else:
-            print("error")
+        self.cnn = nn.Sequential(
+            nn.Conv1d(self.input_size, 128, 4, 2),
+            nn.BatchNorm1d(128),
+            nn.ELU(),
 
-    def forward(self, hidden_states, input_seq):
-        inputs = self.token_embedder(input_seq)
-        outputs, hidden_states = self.encoder(inputs, hidden_states)
-        return outputs, hidden_states
+            nn.Conv1d(128, 256, 4, 2),
+            nn.BatchNorm1d(256),
+            nn.ELU(),
+
+            nn.Conv1d(256, 256, 4, 2),
+            nn.BatchNorm1d(256),
+            nn.ELU(),
+
+            nn.Conv1d(256, 512, 4, 2),
+            nn.BatchNorm1d(512),
+            nn.ELU(),
+
+            nn.Conv1d(512, self.hidden_size, 4, 2),
+            nn.BatchNorm1d(self.hidden_size),
+            nn.ELU()
+        )
+
+    def forward(self, input):
+        """
+        :param input: An float tensor with shape of [batch_size, seq_len, embed_size]
+        :return: An float tensor with shape of [batch_size, latent_variable_size]
+        """
+
+        '''
+        Transpose input to the shape of [batch_size, embed_size, seq_len]
+        '''
+        input = torch.transpose(input, 1, 2)
+        result = self.cnn(input)
+        return result.squeeze(2)

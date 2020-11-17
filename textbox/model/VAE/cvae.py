@@ -1,4 +1,4 @@
-# @Time   : 2020/11/8
+# @Time   : 2020/11/9
 # @Author : Gaole He
 # @Email  : hegaole@ruc.edu.cn
 
@@ -12,23 +12,24 @@ from textbox.utils import InputType
 from textbox.model.abstract_generator import UnconditionalGenerator
 # from recbole.model.loss import BPRLoss
 from textbox.module.Encoder.vae_encoder import LSTMVAEEncoder
-from textbox.module.Decoder.rnn_decoder import BasicRNNDecoder
+from textbox.module.Decoder.vae_decoder import CVAEDecoder
 from textbox.model.init import xavier_normal_initialization
 
+
 '''
-Reference: Generating Sentences from a Continuous Space.
-Code Reference: https://github.com/timbmg/Sentence-VAE
+Reference: Improved Variational Autoencoders for Text Modeling using Dilated Convolutions. ICML 2017
+Code Reference: https://github.com/kefirski/contiguous-succotash
 '''
 
 
-class LSTMVAE(UnconditionalGenerator):
+class CVAE(UnconditionalGenerator):
     r"""BPR is a basic matrix factorization model that be trained in the pairwise way.
 
     """
     input_type = InputType.NOISE
 
     def __init__(self, config, dataset):
-        super(LSTMVAE, self).__init__(config, dataset)
+        super(CVAE, self).__init__(config, dataset)
 
         # load parameters info
         self.embedding_size = config['embedding_size']
@@ -39,6 +40,7 @@ class LSTMVAE(UnconditionalGenerator):
         self.n_layers_decoder = config['n_layers_decoder']
         self.rnn_type = config['rnn_type']
         self.max_epoch = config['epochs']
+        self.decoder_kernel_size = config['decoder_kernel_size']
 
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
@@ -51,14 +53,14 @@ class LSTMVAE(UnconditionalGenerator):
                                       n_layers_encoder=config['n_layers_encoder'],
                                       n_layers_highway=config['n_layers_highway'])
         # Bidirectional LSTM encoder for LSTM VAE
-        self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.n_layers_decoder, self.rnn_type)
-        self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
-        if self.rnn_type == "lstm":
-            self.hidden_to_mu = nn.Linear(2 * self.hidden_size, 2 * self.hidden_size)
-            self.hidden_to_logvar = nn.Linear(2 * self.hidden_size, 2 * self.hidden_size)
-        else:
-            self.hidden_to_mu = nn.Linear(2 * self.hidden_size, self.hidden_size)
-            self.hidden_to_logvar = nn.Linear(2 * self.hidden_size, self.hidden_size)
+
+        self.decoder = CVAEDecoder(decoder_kernel_size=self.decoder_kernel_size,
+                                   input_size=self.embedding_size,
+                                   hidden_size=self.hidden_size,
+                                   drop_rate=config['decoder_drop_rate'])
+        self.vocab_linear = nn.Linear(self.decoder_kernel_size[-1], self.vocab_size)
+        self.hidden_to_mu = nn.Linear(2 * self.hidden_size, self.hidden_size)
+        self.hidden_to_logvar = nn.Linear(2 * self.hidden_size, self.hidden_size)
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx)
 
         # parameters initialization
@@ -70,22 +72,12 @@ class LSTMVAE(UnconditionalGenerator):
         number_to_gen = 10
         idx2token = eval_data.idx2token
         for _ in range(number_to_gen):
-            if self.rnn_type == "lstm":
-                hidden_states = torch.randn(size=(1, 2 * self.hidden_size), device=self.device)
-                hidden_states = torch.chunk(hidden_states, 2, dim=-1)
-                h_0 = hidden_states[0].unsqueeze(0).expand(self.n_layers_decoder, -1, -1).contiguous()
-                c_0 = hidden_states[1].unsqueeze(0).expand(self.n_layers_decoder, -1, -1).contiguous()
-                # print(h_0.size(), c_0.size())
-                hidden_states = (h_0, c_0)
-
-            else:
-                hidden_states = torch.randn(size=(self.n_layers_decoder, 1, self.hidden_size), device=self.device)
-            # draw noise from standard gussian distribution
+            z = torch.randn(size=(1, self.hidden_size), device=self.device)
             generate_tokens = []
             input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
             for gen_idx in range(100):
                 decoder_input = self.token_embedder(input_seq)
-                outputs, hidden_states = self.decoder(input_embeddings=decoder_input, hidden_states=hidden_states)
+                outputs = self.decoder(decoder_input=decoder_input, z=z)
                 token_logits = self.vocab_linear(outputs)
                 topv, topi = torch.log(F.softmax(token_logits, dim=-1) + 1e-12).data.topk(k=4)
                 topi = topi.squeeze()
@@ -111,23 +103,11 @@ class LSTMVAE(UnconditionalGenerator):
         # print(encoder_hidden.size())
         mu = self.hidden_to_mu(encoder_hidden)
         logvar = self.hidden_to_logvar(encoder_hidden)
-        if self.rnn_type == "lstm":
-            z = torch.randn([batch_size, 2 * self.hidden_size]).to(self.device)
-        else:
-            z = torch.randn([batch_size, self.hidden_size]).to(self.device)
+        z = torch.randn([batch_size, self.hidden_size]).to(self.device)
         z = mu + z * torch.exp(0.5 * logvar)
         kld = -0.5 * torch.sum(logvar - mu.pow(2) - logvar.exp() + 1, 1).mean()
-        # print(z.size(), input_emb.size())
-        if self.rnn_type == "lstm":
-            decoder_hidden = torch.chunk(z, 2, dim=-1)
-            h_0 = decoder_hidden[0].unsqueeze(0).expand(self.n_layers_decoder, -1, -1).contiguous()
-            c_0 = decoder_hidden[1].unsqueeze(0).expand(self.n_layers_decoder, -1, -1).contiguous()
-            # print(h_0.size(), c_0.size())
-            decoder_hidden = (h_0, c_0)
-        else:
-            decoder_hidden = z.unsqueeze(0).expand(self.n_layers_decoder, -1, -1).contiguous()
 
-        outputs, hidden_states = self.decoder(input_embeddings=input_emb, hidden_states=decoder_hidden)
+        outputs = self.decoder(decoder_input=input_emb, z=z)
 
         token_logits = self.vocab_linear(outputs)
         token_logits = token_logits.view(-1, token_logits.size(-1))

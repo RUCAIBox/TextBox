@@ -1,0 +1,7 @@
+# special tokens
+max_vocab_size: 30000
+max_seq_length: 100
+source_language: english
+target_language: spanish
+source_suffix: en
+target_suffix: es

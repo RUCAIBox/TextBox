@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 from textbox.utils import InputType
 from textbox.model.abstract_generator import UnconditionalGenerator
-from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPT2Config, GPT2LMHeadModel
+from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPT2Config
 
 
 class GPT2(UnconditionalGenerator):
@@ -22,11 +22,18 @@ class GPT2(UnconditionalGenerator):
     def __init__(self, config, dataset):
         super(GPT2, self).__init__(config, dataset)
 
-        self.tokenizer = GPT2Tokenizer.from_pretrained('gpt2', bos_token=dataset.sos_token, eos_token=dataset.eos_token,
-                                                       pad_token=dataset.padding_token, unk_token=dataset.eos_token)
-        self.configuration = GPT2Config.from_pretrained('gpt2', output_hidden_states=False)
+        if config['gpt2_type'] not in ['gpt2', 'gpt2-medium', 'gpt2-large', 'gpt2-xl', 'distilgpt2']:
+            raise ValueError("The type of GPT2 model should be given in ['gpt2', 'gpt2-medium', 'gpt2-large', "
+                             "'gpt2-xl', 'distilgpt2']")
+        else:
+            self.gpt2_type = config['gpt2_type']
 
-        self.decoder = GPT2LMHeadModel.from_pretrained("gpt2", config=self.configuration)
+        self.tokenizer = GPT2Tokenizer.from_pretrained(self.gpt2_type,
+                                                       bos_token=dataset.sos_token, eos_token=dataset.eos_token,
+                                                       pad_token=dataset.padding_token, unk_token=dataset.eos_token)
+        self.configuration = GPT2Config.from_pretrained(self.gpt2_type, output_hidden_states=False)
+
+        self.decoder = GPT2LMHeadModel.from_pretrained(self.gpt2_type, config=self.configuration)
         self.decoder.resize_token_embeddings(len(self.tokenizer))
 
         self.sos_token = dataset.sos_token
@@ -58,14 +65,13 @@ class GPT2(UnconditionalGenerator):
             encodings_dict = self.tokenizer(' '.join(token_list),
                                             truncation=True,
                                             max_length=self.max_length,
-                                            padding='max_length')
+                                            padding=True)
             input_idx.append(encodings_dict['input_ids'])
             attn_mask.append(encodings_dict['attention_mask'])
         input_idx = torch.LongTensor(input_idx).to(self.device)
         attn_mask = torch.LongTensor(attn_mask).to(self.device)
-        outputs = self.decoder(input_idx,
+        outputs = self.decoder(input_ids=input_idx,
                                labels=input_idx,
-                               attention_mask=attn_mask,
-                               token_type_ids=None)
+                               attention_mask=attn_mask)
         loss = outputs[0]
         return loss

@@ -16,22 +16,25 @@ class SeqGANGenerator(UnconditionalGenerator):
 
         self.hidden_size = config['hidden_size']
         self.embedding_size = config['generator_embedding_size']
+        self.max_length = config['max_seq_length']
+        self.monte_carlo_num = config['Monte_Carlo_num']
         self.start_idx = dataset.sos_token_idx
         self.end_idx = dataset.eos_token_idx
-        self.pad_idx = dataset.pad_token_idx
+        self.pad_idx = dataset.padding_token_idx
+        self.vocab_size = dataset.vocab_size
 
         self.LSTM = nn.LSTM(self.embedding_size, self.hidden_size)
         self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx = self.pad_idx)
         self.vocab_projection = nn.Linear(self.hidden_size, self.vocab_size)
 
     def calculate_loss(self, corpus):
-        datas = corpus['target_text'] # b * len
+        datas = corpus['target_idx'] # b * len
         datas = datas.permute(1, 0) # len * b
         data_embedding = self.word_embedding(datas[ : -1]) # len * b * e
         output, _ = self.LSTM(data_embedding) # len * b * h
         logits = self.vocab_projection(output) # len * b * v
         
-        logits = logits.reshape(-1, self.vocabulary_size) # (len * b) * v
+        logits = logits.reshape(-1, self.vocab_size) # (len * b) * v
         target = datas[1 : ].reshape(-1) # (len * b)
         
         losses = F.cross_entropy(logits, target, ignore_index = self.pad_idx)
@@ -102,3 +105,48 @@ class SeqGANGenerator(UnconditionalGenerator):
                 
         self.train()
         return generate_corpus
+    
+    def adversarial_loss(self, discriminator_func):
+        fake_samples = self.sample(self.batch_size)
+        h_prev = torch.zeros(1, self.batch_size, self.hidden_size, device = self.device) # 1 * b * h
+        o_prev = torch.zeros(1, self.batch_size, self.hidden_size, device = self.device) # 1 * b * h
+        X = self.word_embedding(torch.tensor([self.start_idx] * self.batch_size, device = self.device)).unsqueeze(0) # 1 * b * e
+
+        rewards = 0
+        for t in range(1, self.max_length):
+            output, (h_prev, o_prev) = self.LSTM(X, (h_prev, o_prev))
+            logits = self.vocab_projection(output).squeeze(0) # b * v
+            P = F.log_softmax(logits, dim = -1) # b * v
+            word_t = fake_samples[ : , t] # b
+            P_t = torch.gather(P, 1, word_t.unsqueeze(1)).squeeze(1) # b
+            X = self.word_embedding(word_t).unsqueeze(0) # 1 * b * e
+
+            self.eval()
+            with torch.no_grad():
+                monte_carlo_X = word_t.repeat_interleave(self.monte_carlo_num) # (b * M)
+                monte_carlo_X = self.word_embedding(monte_carlo_X).unsqueeze(0) # 1 * (b * M) * e
+                monte_carlo_h_prev = h_prev.clone().detach().repeat_interleave(self.monte_carlo_num, dim = 1) # 1 * (b * M) * h
+                monte_carlo_o_prev = o_prev.clone().detach().repeat_interleave(self.monte_carlo_num, dim = 1) # 1 * (b * M) * h
+                monte_carlo_output = torch.zeros(self.max_length, self.batch_size * self.monte_carlo_num, dtype = torch.long, device = self.device) # len * (b * M)
+
+                for i in range(self.max_length - t - 1):
+                    output, (monte_carlo_h_prev, monte_carlo_o_prev) = self.LSTM(monte_carlo_X, (monte_carlo_h_prev, monte_carlo_o_prev))
+                    P = F.softmax(self.vocab_projection(output), dim = -1).squeeze(0) # (b * M) * v
+                    for j in range(P.shape[0]):
+                        monte_carlo_output[i + t + 1][j] = torch.multinomial(P[j], 1)[0]
+                    monte_carlo_X = self.word_embedding(monte_carlo_output[i + t + 1]).unsqueeze(0) # 1 * (b * M) * e
+
+                monte_carlo_output = monte_carlo_output.permute(1, 0) # (b * M) * len
+                monte_carlo_output[ : , : t + 1] = fake_samples[ : , : t + 1].repeat_interleave(self.monte_carlo_num, dim = 0)
+    
+                discriminator_out = discriminator_func(monte_carlo_output) # (b * M)
+                reward = discriminator_out.reshape(self.batch_size, self.monte_carlo_num).mean(dim = 1) # b
+            
+            self.train()
+            mask = (word_t != self.pad_idx) & (word_t != self.end_idx)
+            reward = reward * P_t * mask
+            reward = reward[reward.nonzero(as_tuple = True)]
+            if (reward.shape[0]):
+                rewards += reward.mean()
+    
+        return -rewards

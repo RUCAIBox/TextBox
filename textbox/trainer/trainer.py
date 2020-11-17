@@ -1,12 +1,6 @@
-# @Time   : 2020/6/26
-# @Author : Shanlei Mu
-# @Email  : slmu@ruc.edu.cn
-
-# UPDATE:
-# @Time   : 2020/8/7, 2020/9/26, 2020/9/26, 2020/10/01, 2020/9/16, 2020/10/8, 2020/10/15
-# @Author : Zihan Lin, Yupeng Hou, Yushuo Chen, Shanlei Mu, Xingyu Pan, Hui Wang, Xinyan Fan
-# @Email  : linzihan.super@foxmail.com, houyupeng@ruc.edu.cn, chenyushuo@ruc.edu.cn, slmu@ruc.edu.cn, panxy@ruc.edu.cn, hui.wang@ruc.edu.cn, xinyan.fan@ruc.edu.cn
-
+# @Time   : 2020/11/14
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
 r"""
 textbox.trainer.trainer
 ################################
@@ -23,7 +17,6 @@ from time import time
 from logging import getLogger
 
 from textbox.evaluator import NgramEvaluator
-from textbox.data.corpus import Corpus
 from textbox.utils import ensure_dir, get_local_time, early_stopping, calculate_valid_score, dict2str, \
     DataLoaderType, EvaluatorType
 
@@ -257,7 +250,6 @@ class Trainer(AbstractTrainer):
             self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             training_end_time = time()
             self._save_checkpoint(epoch_idx)
-            break
             train_loss_output = \
                 self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss)
             if verbose:
@@ -355,9 +347,16 @@ class Trainer(AbstractTrainer):
 
 
 class UnconditionalTrainer(Trainer):
-    r"""UnconditionalTrainer is designed for RNN, which is a knowledge-aware recommendation method.
+    r"""UnconditionalTrainer is designed for RNN, which is a typical unconditional generator.
     """
 
     def __init__(self, config, model):
         super(UnconditionalTrainer, self).__init__(config, model)
 
+
+class ConditionalTrainer(Trainer):
+    r"""TranslationTrainer is designed for seq2seq testing, which is a typically used setting.
+    """
+
+    def __init__(self, config, model):
+        super(ConditionalTrainer, self).__init__(config, model)

@@ -1,11 +1,6 @@
-# @Time   : 2020/7/23
-# @Author : Shanlei Mu
-# @Email  : slmu@ruc.edu.cn
-
-# UPDATE:
-# @Time   : 2020/9/16, 2020/9/10
-# @Author : Yupeng Hou, Yushuo Chen
-# @Email  : houyupeng@ruc.edu.cn, chenyushuo@ruc.edu.cn
+# @Time   : 2020/11/5
+# @Author : Gaole He
+# @Email  : hegaole@ruc.edu.cn
 
 import traceback
 from time import time

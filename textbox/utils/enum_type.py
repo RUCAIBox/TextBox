@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
-# @Time   : 2020/8/9
-# @Author : Yupeng Hou
-# @Email  : houyupeng@ruc.edu.cn
+# @Time   : 2020/11/14
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
 
 """
 recbole.utils.enum_type
@@ -15,24 +14,23 @@ class ModelType(Enum):
     """Type of models.
 
     - ``UNCONDITIONAL``: Unconditional Generator
-    - ``CONDITIONAL``: Conditional Generator
+    - ``TRANSLATION``: Translation Model
     """
 
     UNCONDITIONAL = 1
     CONDITIONAL = 2
-    SEQUENTIAL = 3
+    TRANSLATION = 3
 
 
 class DataLoaderType(Enum):
     """Type of DataLoaders.
 
-    - ``ORIGIN``: Original DataLoader
-    - ``FULL``: DataLoader for full-sort evaluation
-    - ``NEGSAMPLE``: DataLoader for negative sample evaluation
+    - ``UNCONDITIONAL``: Unconditional DataLoader
+    - ``TRANSLATION``: DataLoader for translation dataset
     """
 
     UNCONDITIONAL = 1
-    CONDITIONAL = 2
+    TRANSLATION = 2
 
 
 class EvaluatorType(Enum):
@@ -49,12 +47,12 @@ class EvaluatorType(Enum):
 class InputType(Enum):
     """Type of Models' input.
 
-    - ``POINTWISE``: Point-wise input, like ``uid, iid, label``.
-    - ``PAIRWISE``: Pair-wise input, like ``uid, pos_iid, neg_iid``.
+    - ``NOISE``: Noise input.
+    - ``PAIRTEXT``: Pair-wise input, like ``src_text, tar_text``.
     """
 
     NOISE = 1
-    TEXT = 2
+    PAIRTEXT = 2
 
 
 class FeatureType(Enum):

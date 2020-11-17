@@ -1,11 +1,6 @@
-# @Time   : 2020/7/21
-# @Author : Yupeng Hou
-# @Email  : houyupeng@ruc.edu.cn
-
-# UPDATE:
-# @Time   : 2020/10/19, 2020/9/17, 2020/8/31
-# @Author : Yupeng Hou, Yushuo Chen, Kaiyuan Li
-# @Email  : houyupeng@ruc.edu.cn, chenyushuo@ruc.edu.cn, tsotfsk@outlook.com
+# @Time   : 2020/11/14
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
 
 """
 textbox.data.utils
@@ -34,6 +29,9 @@ def create_dataset(config):
     if model_type == ModelType.UNCONDITIONAL:
         from .dataset import SingleSentenceDataset
         return SingleSentenceDataset(config)
+    elif model_type == ModelType.TRANSLATION or model_type == ModelType.CONDITIONAL:
+        from .dataset import TranslationDataset
+        return TranslationDataset(config)
     else:
         from .dataset import Dataset
         return Dataset(config)
@@ -55,10 +53,11 @@ def data_preparation(config, save=False):
             - test_data (AbstractDataLoader): The dataloader for testing.
     """
     model_type = config['MODEL_TYPE']
+
     if model_type == ModelType.UNCONDITIONAL:
         from .dataset import SingleSentenceDataset
         dataset = SingleSentenceDataset(config)
-    elif model_type == ModelType.TRANSLATION:
+    elif model_type == ModelType.TRANSLATION or model_type == ModelType.CONDITIONAL:
         from .dataset import TranslationDataset
         dataset = TranslationDataset(config)
     else:
@@ -183,6 +182,8 @@ def get_data_loader(name, config, eval_setting):
     model_type = config['MODEL_TYPE']
     if model_type == ModelType.UNCONDITIONAL:
         return SingleSentenceDataLoader
+    elif model_type == ModelType.CONDITIONAL or model_type == ModelType.TRANSLATION:
+        return TranslationDataLoader
     else:
         raise NotImplementedError("No such data loader for MODEL_TYPE: {}".format(model_type))
     # if model_type == ModelType.GENERAL or model_type == ModelType.TRADITIONAL:

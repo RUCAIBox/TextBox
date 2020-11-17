@@ -75,7 +75,8 @@ class ConditionalGenerator(AbstractGenerator):
     def __init__(self, config, dataset):
         super(AbstractGenerator, self).__init__()
 
-        self.vocab_size = len(dataset.idx2token)
+        self.source_vocab_size = len(dataset.source_idx2token)
+        self.target_vocab_size = len(dataset.target_idx2token)
 
         # load parameters info
         self.batch_size = config['train_batch_size']

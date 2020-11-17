@@ -18,7 +18,7 @@ class RNNEncDec(ConditionalGenerator):
     r"""RNN-based Encoder-Decoder architecture is a basic framework for conditional text generation.
 
     """
-    input_type = InputType.NOISE
+    input_type = InputType.PAIRTEXT
 
     def __init__(self, config, dataset):
         super(RNNEncDec, self).__init__(config, dataset)
@@ -40,7 +40,10 @@ class RNNEncDec(ConditionalGenerator):
         self.eos_token_idx = dataset.eos_token_idx
 
         # define layers and loss
-        self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
+        self.source_token_embedder = nn.Embedding(self.source_vocab_size, self.embedding_size,
+                                                  padding_idx=self.padding_token_idx)
+        self.target_token_embedder = nn.Embedding(self.target_vocab_size, self.embedding_size,
+                                                  padding_idx=self.padding_token_idx)
 
         self.encoder = BasicRNNEncoder(self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type,
                                        self.dropout_ratio, self.bidirectional, self.combine_method)
@@ -54,7 +57,7 @@ class RNNEncDec(ConditionalGenerator):
                                            self.rnn_type, self.dropout_ratio)
 
         self.dropout = nn.Dropout(self.dropout_ratio)
-        self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
+        self.vocab_linear = nn.Linear(self.hidden_size, self.target_vocab_size)
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx)
 
         # parameters initialization
@@ -62,7 +65,7 @@ class RNNEncDec(ConditionalGenerator):
 
     def generate(self, eval_data):
         generate_corpus = []
-        number_to_gen = 10
+        number_to_gen = len(eval_data)
         idx2token = eval_data.idx2token
         for _ in range(number_to_gen):
             hidden_states = torch.zeros(self.num_layers, 1, self.hidden_size).to(self.device)
@@ -83,16 +86,16 @@ class RNNEncDec(ConditionalGenerator):
             generate_corpus.append(generate_tokens)
         return generate_corpus
 
-    def calculate_loss(self, corpus):
-        source_text = corpus['source_text']
-        source_length = corpus['source_text_length']
+    def calculate_loss(self, corpus, epoch_idx=0):
+        source_text = corpus['source_idx']
+        source_length = corpus['source_length']
 
-        input_text = corpus['target_text'][:, :-1]
-        target_text = corpus['target_text'][:, 1:]
+        input_text = corpus['target_idx'][:, :-1]
+        target_text = corpus['target_idx'][:, 1:]
 
-        source_embeddings = self.dropout(self.token_embedder(source_text))
-        input_embeddings = self.dropout(self.token_embedder(input_text))
-
+        source_embeddings = self.dropout(self.source_token_embedder(source_text))
+        input_embeddings = self.dropout(self.target_token_embedder(input_text))
+        # print(source_embeddings.device, input_embeddings.device, self.encoder.device)
         encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
 
         if self.attention_type is not None:

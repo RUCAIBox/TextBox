@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
-# @Time   : 2020/8/9
-# @Author : Yupeng Hou
-# @Email  : houyupeng@ruc.edu.cn
+# @Time   : 2020/11/14
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
 
 """
 recbole.utils.enum_type

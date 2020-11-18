@@ -27,3 +27,13 @@ n_grams: [1,2,3,4]
 topk: [10]
 valid_metric: MRR@10
 eval_batch_size: 64
+
+# GAN training settings
+g_pretraining_epochs: 80
+d_pretraining_epochs: 50
+d_sample_num: 10000
+d_sample_training_epochs: 3
+adversarail_training_epochs: 120
+adversarail_d_epochs: 5
+grad_clip: 5.0
+

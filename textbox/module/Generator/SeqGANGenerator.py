@@ -80,7 +80,6 @@ class SeqGANGenerator(UnconditionalGenerator):
         self.eval()
         generate_corpus = []
         number_to_gen = 10
-        max_length = 100
         idx2token = eval_data.idx2token
 
         with torch.no_grad():
@@ -88,18 +87,18 @@ class SeqGANGenerator(UnconditionalGenerator):
                 h_prev = torch.zeros(1, 1, self.hidden_size, device = self.device) # 1 * 1 * h
                 o_prev = torch.zeros(1, 1, self.hidden_size, device = self.device) # 1 * 1 * h
                 prev_state = (h_prev, o_prev)
-                X = self.word_embedding(torch.LongTensor([[self.start_idx]], device = self.device)) # 1 * 1 * e
+                X = self.word_embedding(torch.tensor([[self.start_idx]], dtype = torch.long, device = self.device)) # 1 * 1 * e
                 generate_tokens = []
 
-                for _ in range(max_length):
+                for _ in range(self.max_length):
                     output, prev_state = self.LSTM(X, prev_state)
                     P = F.softmax(self.vocab_projection(output), dim = -1).squeeze() # v
                     token = torch.multinomial(P, 1)[0]
-                    X = self.word_embedding([[token]]) # 1 * 1 * e
+                    X = self.word_embedding(torch.tensor([[token]], dtype = torch.long, device = self.device)) # 1 * 1 * e
                     if (token.item() == self.end_idx):
                         break
                     else:
-                        generate_tokens.append(idx2token(token.item()))
+                        generate_tokens.append(idx2token[token.item()])
                 
                 generate_corpus.append(generate_tokens)
                 

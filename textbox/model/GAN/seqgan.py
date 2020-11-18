@@ -6,6 +6,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import DataLoader
 
 from textbox.utils import InputType
 from textbox.model.abstract_generator import GenerativeAdversarialNet
@@ -35,3 +36,11 @@ class SeqGAN(GenerativeAdversarialNet):
         loss = self.generator.adversarial_loss(self.discriminator.forward)
         self.discriminator.train()
         return loss
+    
+    def generate(self, eval_data):
+        return self.generator.generate(eval_data)
+
+    def sample(self, sample_num):
+        samples = self.generator.sample(sample_num)
+        samples_dataloader = DataLoader(samples, batch_size=self.batch_size, shuffle=True, drop_last=True)
+        return samples_dataloader

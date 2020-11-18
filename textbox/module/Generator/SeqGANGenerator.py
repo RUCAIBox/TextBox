@@ -16,7 +16,7 @@ class SeqGANGenerator(UnconditionalGenerator):
 
         self.hidden_size = config['hidden_size']
         self.embedding_size = config['generator_embedding_size']
-        self.max_length = config['max_seq_length']
+        self.max_length = config['max_seq_length'] + 2
         self.monte_carlo_num = config['Monte_Carlo_num']
         self.start_idx = dataset.sos_token_idx
         self.end_idx = dataset.eos_token_idx

@@ -19,7 +19,6 @@ class AbstractDataLoader(object):
     """:class:`AbstractDataLoader` is an abstract object which would return a batch of data which is loaded by
     :class:`~recbole.data.interaction.Interaction` when it is iterated.
     And it is also the ancestor of all other dataloader.
-
     Args:
         config (Config): The config of dataloader.
         dataset (Corpus): The corpus for partition of dataset.
@@ -27,7 +26,6 @@ class AbstractDataLoader(object):
         dl_format (InputType, optional): The input type of dataloader. Defaults to
             :obj:`~textbox.utils.enum_type.InputType.NOISE`.
         shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
-
     Attributes:
         dataset (Dataset): The dataset of this dataloader.
         shuffle (bool): If ``True``, dataloader will shuffle before every epoch.
@@ -68,13 +66,16 @@ class AbstractDataLoader(object):
         else:
             raise NotImplementedError
 
-    def _build_data(self, text_data, token2idx):
+    def _build_data(self, text_data, token2idx, need_text_start_end=True):
         text_idx_data = []
         idx_length_data = []
         sos_token_idx = token2idx[self.sos_token]
         eos_token_idx = token2idx[self.eos_token]
         for text in text_data:
-            text_idx = [sos_token_idx] + [self._token2idx(token, token2idx) for token in text] + [eos_token_idx]
+            if need_text_start_end:
+                text_idx = [sos_token_idx] + self._token2idx(text, token2idx) + [eos_token_idx]
+            else:
+                text_idx = self._token2idx(text, token2idx)
             text_idx_data.append(text_idx)
             idx_length_data.append(len(text_idx))
         return text_idx_data, idx_length_data
@@ -167,7 +168,6 @@ class AbstractDataLoader(object):
 
     def _next_batch_data(self):
         """Assemble next batch of data in form of Interaction, and return these data.
-
         Returns:
             Interaction: The next batch of data.
         """
@@ -175,7 +175,6 @@ class AbstractDataLoader(object):
 
     def set_batch_size(self, batch_size):
         """Reset the batch_size of the dataloader, but it can't be called when dataloader is being iterated.
-
         Args:
             batch_size (int): the new batch_size of dataloader.
         """

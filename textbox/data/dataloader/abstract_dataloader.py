@@ -118,12 +118,12 @@ class AbstractDataLoader(object):
 
     def _idx2token(self, inputs, idx2token):
         if isinstance(inputs, list):
-            return [self._idx2token[x] for x in inputs]
+            return [self._idx2token(x, idx2token) for x in inputs]
         return idx2token[inputs]
 
     def _token2idx(self, inputs, token2idx):
         if isinstance(inputs, list):
-            return [self._token2idx[x] for x in inputs]
+            return [self._token2idx(x, token2idx) for x in inputs]
         return token2idx.get(inputs, self.unknown_token_idx)
 
     @property

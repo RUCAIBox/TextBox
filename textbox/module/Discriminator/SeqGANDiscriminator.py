@@ -59,7 +59,8 @@ class SeqGANDiscriminator(UnconditionalGenerator):
         return y_hat
     
     def add_pad(self, data):
-        padded_data = torch.full((self.batch_size, self.max_length), self.pad_idx, dtype=torch.long, device=self.device)
+        batch_size = data.size(0)
+        padded_data = torch.full((batch_size, self.max_length), self.pad_idx, dtype=torch.long, device=self.device)
         padded_data[ : , : data.shape[1]] = data
         return padded_data
 

@@ -116,7 +116,7 @@ class GenerativeAdversarialNet(AbstractModel):
         r"""Calculate the discriminator training loss for a batch data.
 
         Args:
-            real_data (torch.LongTensor): Real data of the batch, shape: [batch_size, max_batch_length]
+            real_data (torch.LongTensor): Real data of the batch, shape: [batch_size, max_seq_length]
             fake_data (torch.LongTensor): Fake data of the batch, shape: [batch_size, max_seq_length]
 
         Returns:

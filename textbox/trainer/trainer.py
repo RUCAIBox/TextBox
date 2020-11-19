@@ -488,7 +488,7 @@ class GANTrainer(Trainer):
                 losses = self.model.calculate_d_train_loss(real_data, fake_data, epoch_idx=epoch_idx)
                 total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
 
-        return total_loss / len(min(real_dataloader, fake_dataloader)) / self.d_sample_training_epochs
+        return total_loss / min(len(real_dataloader), len(fake_dataloader)) / self.d_sample_training_epochs
     
     def _adversarial_train_epoch(self, train_data, epoch_idx):
         r"""Adversarial training in an epoch

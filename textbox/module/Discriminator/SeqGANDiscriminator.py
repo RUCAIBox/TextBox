@@ -20,6 +20,9 @@ class SeqGANDiscriminator(UnconditionalGenerator):
         self.dropout_rate = config['dropout_rate']
         self.filter_sizes = config['filter_sizes']
         self.filter_nums = config['filter_nums']
+        self.max_length = config['max_seq_length'] + 2
+        self.pad_idx = dataset.padding_token_idx
+        self.vocab_size = dataset.vocab_size
         self.filter_sum = sum(self.filter_nums)
 
         self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx = self.pad_idx)
@@ -54,8 +57,9 @@ class SeqGANDiscriminator(UnconditionalGenerator):
         y_hat = torch.sigmoid(self.W_O(C_tilde)).squeeze(1) # b
 
         return y_hat
-
+    
     def calculate_loss(self, real_data, fake_data):
+        real_data = self.add_pad(real_data)
         real_y = self.forward(real_data)
         fake_y = self.forward(fake_data)
         real_label = torch.ones_like(real_y)

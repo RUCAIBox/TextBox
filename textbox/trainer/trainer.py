@@ -380,7 +380,7 @@ class GANTrainer(Trainer):
         self.adversarail_training_epochs = config['adversarail_training_epochs']
         self.adversarail_d_epochs = config['adversarail_d_epochs']
         self.max_length = config['max_seq_length'] + 2
-        self.pad_idx = dataset.padding_token_idx
+        self.pad_idx = model.dataset.padding_token_idx
 
         self.g_pretraining_loss_dict = dict()
         self.d_pretraining_loss_dict = dict()
@@ -438,7 +438,7 @@ class GANTrainer(Trainer):
         torch.save(state, self.saved_model_file)
 
     def _add_pad(self, data):
-        batch_size = data.size(0)
+        batch_size = data.shape[0]
         padded_data = torch.full((batch_size, self.max_length), self.pad_idx, dtype=torch.long, device=self.device)
         padded_data[ : , : data.shape[1]] = data
         return padded_data

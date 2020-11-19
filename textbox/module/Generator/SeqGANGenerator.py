@@ -16,12 +16,7 @@ class SeqGANGenerator(UnconditionalGenerator):
 
         self.hidden_size = config['hidden_size']
         self.embedding_size = config['generator_embedding_size']
-        self.max_length = config['max_seq_length'] + 2
         self.monte_carlo_num = config['Monte_Carlo_num']
-        self.start_idx = dataset.sos_token_idx
-        self.end_idx = dataset.eos_token_idx
-        self.pad_idx = dataset.padding_token_idx
-        self.vocab_size = dataset.vocab_size
 
         self.LSTM = nn.LSTM(self.embedding_size, self.hidden_size)
         self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx = self.pad_idx)

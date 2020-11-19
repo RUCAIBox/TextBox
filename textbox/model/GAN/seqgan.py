@@ -24,6 +24,12 @@ class SeqGAN(GenerativeAdversarialNet):
         self.generator = SeqGANGenerator(config, dataset)
         self.discriminator = SeqGANDiscriminator(config, dataset)
 
+        self.max_length = config['max_seq_length'] + 2
+        self.vocab_size = dataset.vocab_size
+        self.start_idx = dataset.sos_token_idx
+        self.end_idx = dataset.eos_token_idx
+        self.pad_idx = dataset.padding_token_idx
+
     def calculate_g_train_loss(self, corpus, epoch_idx):
         return self.generator.calculate_loss(corpus)
     

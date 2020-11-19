@@ -380,7 +380,7 @@ class GANTrainer(Trainer):
         self.adversarail_training_epochs = config['adversarail_training_epochs']
         self.adversarail_d_epochs = config['adversarail_d_epochs']
         self.max_length = config['max_seq_length'] + 2
-        self.pad_idx = model.dataset.padding_token_idx
+        self.pad_idx = model.padding_token_idx
 
         self.g_pretraining_loss_dict = dict()
         self.d_pretraining_loss_dict = dict()

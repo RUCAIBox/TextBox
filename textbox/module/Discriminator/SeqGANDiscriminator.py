@@ -57,15 +57,8 @@ class SeqGANDiscriminator(UnconditionalGenerator):
         y_hat = torch.sigmoid(self.W_O(C_tilde)).squeeze(1) # b
 
         return y_hat
-    
-    def add_pad(self, data):
-        batch_size = data.size(0)
-        padded_data = torch.full((batch_size, self.max_length), self.pad_idx, dtype=torch.long, device=self.device)
-        padded_data[ : , : data.shape[1]] = data
-        return padded_data
 
     def calculate_loss(self, real_data, fake_data):
-        real_data = self.add_pad(real_data)
         real_y = self.forward(real_data)
         fake_y = self.forward(fake_data)
         real_label = torch.ones_like(real_y)

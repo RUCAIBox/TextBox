@@ -3,7 +3,7 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2020/11/15
+# @Time   : 2020/11/15, 2020/11/19
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
@@ -379,6 +379,7 @@ class GANTrainer(Trainer):
         self.d_sample_training_epochs = config['d_sample_training_epochs']
         self.adversarail_training_epochs = config['adversarail_training_epochs']
         self.adversarail_d_epochs = config['adversarail_d_epochs']
+        self.max_length = config['max_seq_length'] + 2
 
         self.g_pretraining_loss_dict = dict()
         self.d_pretraining_loss_dict = dict()
@@ -435,10 +436,19 @@ class GANTrainer(Trainer):
         }
         torch.save(state, self.saved_model_file)
 
+    def _add_pad(self, data):
+        batch_size = data.size(0)
+        padded_data = torch.full((batch_size, self.max_length), self.pad_idx, dtype=torch.long, device=self.device)
+        padded_data[ : , : data.shape[1]] = data
+        return padded_data
+
     def _get_real_data(self, train_data):
         real_datas = []
         for corpus in train_data:
-            real_datas.append(corpus['target_idx'])
+            real_data = corpus['target_idx']
+            real_data = self._add_pad(real_data)
+            real_datas.append(real_data)
+
         real_datas = torch.cat(real_datas, dim=0)
         return real_datas
 

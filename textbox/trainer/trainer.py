@@ -435,6 +435,13 @@ class GANTrainer(Trainer):
         }
         torch.save(state, self.saved_model_file)
 
+    def _get_real_data(self, train_data):
+        real_datas = []
+        for corpus in train_data:
+            real_datas.append(corpus['target_idx'])
+        real_datas = torch.cat(real_datas, dim=0)
+        return real_datas
+
     def _g_train_epoch(self, train_data, epoch_idx):
         r"""Train the generator module in an epoch
 
@@ -471,18 +478,17 @@ class GANTrainer(Trainer):
         """
         self.model.discriminator.train()
         total_loss = None
+        real_data = self._get_real_data(train_data)
+        real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
         fake_data = self.model.sample(self.d_sample_num)
-        fake_dataloader = DataLoader(fake_data, batch_size=self.model.batch_size, shuffle=True)
+        fake_dataloader = DataLoader(fake_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
 
         for _ in range(self.d_sample_training_epochs):
-            for corpus, fake_data in zip(train_data, fake_dataloader):
-                # interaction = interaction.to(self.device)
-                real_data = corpus['target_idx']
-                min_batch = min(real_data.shape[0], fake_data.shape[0])
-                losses = self.model.calculate_d_train_loss(real_data[ : min_batch], fake_data[ : min_batch], epoch_idx=epoch_idx)
+            for real_data, fake_data in zip(real_dataloader, fake_dataloader):
+                losses = self.model.calculate_d_train_loss(real_data, fake_data, epoch_idx=epoch_idx)
                 total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
 
-        return total_loss / len(train_data) / self.d_sample_training_epochs
+        return total_loss / len(min(real_dataloader, fake_dataloader)) / self.d_sample_training_epochs
     
     def _adversarial_train_epoch(self, train_data, epoch_idx):
         r"""Adversarial training in an epoch

@@ -27,26 +27,26 @@ class LeakGAN(GenerativeAdversarialNet):
         self.discriminator = LeakGANDiscriminator(config, dataset)
         self.dis_sample_num = config['d_sample_num']
         self.start_idx = dataset.sos_token_idx
+        self.pad_idx = dataset.padding_token_idx
 
     def calculate_g_train_loss(self, corpus, epoch_idx):
         return self.generator.pretrain_loss(corpus, self.discriminator) # corpus: target_text
-    
+
     def calculate_d_train_loss(self, real_data, fake_data, epoch_idx):
-        return self.discriminator.calculate_loss(real_data, fake_data)
-    
+        return self.discriminator.calculate_loss(real_data[:,1:], fake_data)
+
     def calculate_g_adversarial_loss(self, epoch_idx):
         # self.discriminator.eval()
         loss = self.generator.adversarial_loss(self.discriminator)
         # self.discriminator.train()
         return loss # (manager_loss, worker_loss)
-    
+
     def generate(self, eval_data):
-        return self.generator.generate(eval_data)
+        return self.generator.generate(eval_data, self.discriminator)
 
     def sample(self, sample_num):
         samples = self.generator.sample(sample_num, self.discriminator, self.start_idx)
-        samples_dataloader = DataLoader(samples, batch_size=self.batch_size, shuffle=True, drop_last=True)
-        return samples_dataloader
+        return samples
     
     
     

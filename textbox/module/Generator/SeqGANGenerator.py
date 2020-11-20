@@ -70,7 +70,7 @@ class SeqGANGenerator(UnconditionalGenerator):
 
     def sample(self, sample_num):
         samples = []
-        batch_num = math.ceil(sample_num // self.batch_size)
+        batch_num = math.ceil(sample_num / self.batch_size)
         for _ in range(batch_num):
             samples.append(self.sample_batch())
         samples = torch.cat(samples, dim = 0)

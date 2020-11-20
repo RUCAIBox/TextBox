@@ -258,34 +258,22 @@ class LeakGANGenerator(UnconditionalGenerator):
 
         return samples  # cut to num_samples
 
-    def generate(self, eval_data):
-        self.eval()
-        generate_corpus = []
-        number_to_gen = 10
-        idx2token = eval_data.idx2token
+    def generate(self, eval_data, dis):
+        sample_num = 10
+        num_batch = sample_num // self.batch_size + 1 if sample_num != self.batch_size else 1
+        samples = torch.zeros(num_batch * self.batch_size, self.max_length-1).long()  # larger than num_samples
+        fake_sentences = torch.zeros((self.batch_size, self.max_length-1))
+        start_letter = 2 # !
+        for b in range(num_batch):
+            leak_sample, _, _, _ = self.leakgan_forward(fake_sentences, dis, if_sample=True, no_log=False
+                                                        , start_letter=start_letter, train=False)
 
-        with torch.no_grad():
-            for _ in range(number_to_gen):
-                h_prev = torch.zeros(1, 1, self.hidden_size, device = self.device) # 1 * 1 * h
-                o_prev = torch.zeros(1, 1, self.hidden_size, device = self.device) # 1 * 1 * h
-                prev_state = (h_prev, o_prev)
-                X = self.word_embedding(torch.tensor([[self.start_idx]], dtype = torch.long, device = self.device)) # 1 * 1 * e
-                generate_tokens = []
+            assert leak_sample.shape == (self.batch_size, self.max_length-1)
+            samples[b * self.batch_size:(b + 1) * self.batch_size, :] = leak_sample
 
-                for _ in range(self.max_length):
-                    output, prev_state = self.LSTM(X, prev_state)
-                    P = F.softmax(self.vocab_projection(output), dim = -1).squeeze() # v
-                    token = torch.multinomial(P, 1)[0]
-                    X = self.word_embedding(torch.tensor([[token]], dtype = torch.long, device = self.device)) # 1 * 1 * e
-                    if (token.item() == self.end_idx):
-                        break
-                    else:
-                        generate_tokens.append(idx2token[token.item()])
-                
-                generate_corpus.append(generate_tokens)
-                
-        self.train()
-        return generate_corpus
+        samples = samples[:sample_num, :]
+
+        return samples
     
     def adversarial_loss(self, dis):
         adv_mana_loss = 0

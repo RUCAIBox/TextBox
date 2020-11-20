@@ -6,7 +6,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
 
 from textbox.utils import InputType
 from textbox.model.abstract_generator import GenerativeAdversarialNet
@@ -16,7 +15,6 @@ from textbox.module.Discriminator.SeqGANDiscriminator import SeqGANDiscriminator
 
 class SeqGAN(GenerativeAdversarialNet):
     """Sequence Generative Adversarial Nets with Policy Gradient
-
     """
     input_type = InputType.NOISE
 
@@ -24,6 +22,7 @@ class SeqGAN(GenerativeAdversarialNet):
         super(SeqGAN, self).__init__(config, dataset)
         self.generator = SeqGANGenerator(config, dataset)
         self.discriminator = SeqGANDiscriminator(config, dataset)
+        self.pad_idx = dataset.padding_token_idx
 
     def calculate_g_train_loss(self, corpus, epoch_idx):
         return self.generator.calculate_loss(corpus)
@@ -42,5 +41,4 @@ class SeqGAN(GenerativeAdversarialNet):
 
     def sample(self, sample_num):
         samples = self.generator.sample(sample_num)
-        samples_dataloader = DataLoader(samples, batch_size=self.batch_size, shuffle=True, drop_last=True)
-        return samples_dataloader
+        return samples

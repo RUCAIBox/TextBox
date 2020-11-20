@@ -74,7 +74,6 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         return padded_data
 
     def calculate_loss(self, real_data, fake_data):
-        real_data = self.add_pad(real_data)
         real_y = self.forward(real_data)
         fake_y = self.forward(fake_data.cuda())
         real_label = torch.ones_like(real_y)[:,0].long()

@@ -75,9 +75,9 @@ class LeakGANDiscriminator(UnconditionalGenerator):
 
     def calculate_loss(self, real_data, fake_data):
         real_y = self.forward(real_data)
-        fake_y = self.forward(fake_data.cuda())
-        real_label = torch.ones_like(real_y)[:,0].long()
-        fake_label = torch.zeros_like(fake_y)[:,0].long()
+        fake_y = self.forward(fake_data)
+        real_label = torch.ones_like(real_y, dtype=torch.int64)[:,0].long() # [1,1,1]
+        fake_label = torch.zeros_like(fake_y, dtype=torch.int64)[:,0].long() # [0,0,0]
 
         real_loss = F.cross_entropy(real_y, real_label)
         fake_loss = F.cross_entropy(fake_y, fake_label)

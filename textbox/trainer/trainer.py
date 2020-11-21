@@ -470,8 +470,7 @@ class GANTrainer(Trainer):
             'epoch': epoch,
             'cur_step': self.cur_step,
             'best_valid_score': self.best_valid_score,
-            'state_dict': self.model.state_dict(),
-            'd_optimizer': self.d_optimizer.state_dict(),
+            'state_dict': self.model.state_dict()
         }
         torch.save(state, self.saved_model_file)
 
@@ -538,7 +537,6 @@ class GANTrainer(Trainer):
                 losses = self.model.calculate_d_train_loss(real_data, fake_data, epoch_idx=epoch_idx)
                 total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
 
-        #(xxxx)return total_loss / len(train_data) / self.d_sample_training_epochs
         return total_loss / min(len(real_dataloader), len(fake_dataloader)) / self.d_sample_training_epochs
     
     def _adversarial_train_epoch(self, train_data, epoch_idx):

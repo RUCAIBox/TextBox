@@ -18,16 +18,18 @@ class LeakGANGenerator(UnconditionalGenerator):
         self.embedding_size = config['generator_embedding_size']
         self.max_length = config['max_seq_length'] + 2
         self.monte_carlo_num = config['Monte_Carlo_num']
-        self.goal_out_size = 1720 # ! add to config['goal_out_size']
-        self.goal_size = 16 # ! add to config['goal_size']
-        self.step_size = 4 # ! add to config['step_size']
-        self.temperature = 1.5 # ! add to config['temperature']
+        self.filter_nums = config['filter_nums']
+        self.goal_out_size = sum(self.filter_nums)
+        self.goal_size = config['goal_size']
+        self.step_size = config['step_size']
+        self.temperature = config['temperature']
         self.dis_sample_num = config['d_sample_num']
         self.start_idx = dataset.sos_token_idx
         self.end_idx = dataset.eos_token_idx
         self.pad_idx = dataset.padding_token_idx
         self.vocab_size = dataset.vocab_size
-        self.gpu = True # !
+        self.use_gpu = config['use_gpu']
+        self.gpu_id = config['gpu_id']
 
         # self.LSTM = nn.LSTM(self.embedding_size, self.hidden_size)
         self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx = self.pad_idx)
@@ -151,10 +153,11 @@ class LeakGANGenerator(UnconditionalGenerator):
         # dis_inp = torch.LongTensor([start_letter] * batch_size)
         real_goal = self.goal_init[:batch_size, :]
 
-        if self.gpu:
-            feature_array = feature_array.cuda()
-            goal_array = goal_array.cuda()
-            leak_out_array = leak_out_array.cuda()
+        if self.use_gpu:
+            feature_array = feature_array.cuda(self.gpu_id)
+            goal_array = goal_array.cuda(self.gpu_id)
+            leak_out_array = leak_out_array.cuda(self.gpu_id)
+            samples = samples.cuda(self.gpu_id)
 
         goal_array[:, 0, :] = real_goal  # g0 = goal_init
         for i in range(seq_len + 1):
@@ -167,9 +170,9 @@ class LeakGANGenerator(UnconditionalGenerator):
                     dis_inp[:, :i] = sentences[:, :i]  # cut sentences
                     leak_inp = sentences[:, i - 1]
 
-            if self.gpu:
-                dis_inp = dis_inp.cuda()
-                leak_inp = leak_inp.cuda()
+            if self.use_gpu:
+                dis_inp = dis_inp.cuda(self.gpu_id)
+                leak_inp = leak_inp.cuda(self.gpu_id)
             feature = dis.get_feature(dis_inp).unsqueeze(0)  # !!!note: 1 * batch_size * total_num_filters
 
             feature_array[:, i, :] = feature.squeeze(0)
@@ -246,7 +249,7 @@ class LeakGANGenerator(UnconditionalGenerator):
         num_batch = sample_num // self.batch_size + 1 if sample_num != self.batch_size else 1
         samples = torch.zeros(num_batch * self.batch_size, self.max_length-1).long()  # larger than num_samples
         fake_sentences = torch.zeros((self.batch_size, self.max_length-1))
-        start_letter = 2 # !
+            
         for b in range(num_batch):
             leak_sample, _, _, _ = self.leakgan_forward(fake_sentences, dis, if_sample=True, no_log=False
                                                         , start_letter=start_letter, train=train)
@@ -255,23 +258,29 @@ class LeakGANGenerator(UnconditionalGenerator):
             samples[b * self.batch_size:(b + 1) * self.batch_size, :] = leak_sample
 
         samples = samples[:sample_num, :]
+        if self.use_gpu:
+            samples = samples.cuda(self.gpu_id)
+            fake_sentences = fake_sentences.cuda(self.gpu_id)
 
-        return samples  # cut to num_samples
+        return samples
 
     def generate(self, eval_data, dis):
-        sample_num = 10
-        num_batch = sample_num // self.batch_size + 1 if sample_num != self.batch_size else 1
+        number_to_gen = 10
+        num_batch = number_to_gen // self.batch_size + 1 if number_to_gen != self.batch_size else 1
         samples = torch.zeros(num_batch * self.batch_size, self.max_length-1).long()  # larger than num_samples
         fake_sentences = torch.zeros((self.batch_size, self.max_length-1))
-        start_letter = 2 # !
+        idx2token = eval_data.idx2token
+        
         for b in range(num_batch):
             leak_sample, _, _, _ = self.leakgan_forward(fake_sentences, dis, if_sample=True, no_log=False
-                                                        , start_letter=start_letter, train=False)
+                                                        , start_letter=self.start_idx, train=False)
 
             assert leak_sample.shape == (self.batch_size, self.max_length-1)
             samples[b * self.batch_size:(b + 1) * self.batch_size, :] = leak_sample
 
-        samples = samples[:sample_num, :]
+        samples = samples[:number_to_gen, :]
+        samples = samples.tolist()
+        samples = [ [idx2token[w] for w in sen] for sen in samples]
 
         return samples
     
@@ -292,8 +301,8 @@ class LeakGANGenerator(UnconditionalGenerator):
         h = torch.zeros(1, batch_size, self.hidden_size)
         c = torch.zeros(1, batch_size, self.hidden_size)
 
-        if self.gpu:
-            return h.cuda(), c.cuda()
+        if self.use_gpu:
+            return h.cuda(self.gpu_id), c.cuda(self.gpu_id)
         else:
             return h, c
         
@@ -336,7 +345,7 @@ class LeakGANGenerator(UnconditionalGenerator):
         # L2 noramlization
         sub_feature = F.normalize(sub_feature, p=2, dim=-1)
         real_goal = F.normalize(real_goal, p=2, dim=-1)
-
+            
         cos_loss = F.cosine_similarity(sub_feature, real_goal, dim=-1)
 
         return cos_loss
@@ -406,8 +415,8 @@ class LeakGANGenerator(UnconditionalGenerator):
         with torch.no_grad():
             batch_size = sentences.size(0)
             rewards = torch.zeros([rollout_num * ((self.max_length-1) // self.step_size), batch_size]).float()
-            if self.gpu:
-                rewards = rewards.cuda()
+            if self.use_gpu:
+                rewards = rewards.cuda(self.gpu_id)
             idx = 0
             for i in range(rollout_num):
                 for t in range((self.max_length-1) // self.step_size):
@@ -436,9 +445,9 @@ class LeakGANGenerator(UnconditionalGenerator):
         real_goal = self.goal_init[:batch_size, :]
         out = 0
 
-        if self.gpu:
-            goal_array = goal_array.cuda()
-            real_goal = real_goal.cuda()
+        if self.use_gpu:
+            goal_array = goal_array.cuda(self.gpu_id)
+            real_goal = real_goal.cuda(self.gpu_id)
 
         # get current state
         for i in range(given_num):
@@ -446,9 +455,9 @@ class LeakGANGenerator(UnconditionalGenerator):
             dis_inp = torch.zeros(batch_size, seq_len).long()
             dis_inp[:, :i + 1] = sentences[:, :i + 1]  # cut sentences
             leak_inp = sentences[:, i]
-            if self.gpu:
-                dis_inp = dis_inp.cuda()
-                leak_inp = leak_inp.cuda()
+            if self.use_gpu:
+                dis_inp = dis_inp.cuda(self.gpu_id)
+                leak_inp = leak_inp.cuda(self.gpu_id)
             feature = dis.get_feature(dis_inp).unsqueeze(0)
 
             # Get output of one token
@@ -474,8 +483,8 @@ class LeakGANGenerator(UnconditionalGenerator):
 
             # Get feature
             dis_inp = samples
-            if self.gpu:
-                dis_inp = dis_inp.cuda()
+            if self.use_gpu:
+                dis_inp = dis_inp.cuda(self.gpu_id)
             feature = dis.get_feature(dis_inp).unsqueeze(0)
             leak_inp = out
 
@@ -491,8 +500,8 @@ class LeakGANGenerator(UnconditionalGenerator):
                 if i / self.step_size == 1:
                     real_goal += self.goal_init[:batch_size, :]
 
-        if self.gpu:
-            samples = samples.cuda()
+        if self.use_gpu:
+            samples = samples.cuda(self.gpu_id)
 
         return samples
 
@@ -512,9 +521,9 @@ class LeakGANGenerator(UnconditionalGenerator):
         # Manager Loss
         mana_cos_loss = self.manager_cos_loss(batch_size, feature_array, goal_array)  # batch_size * (seq_len / step_size)
         mana_loss = -torch.sum(rewards * mana_cos_loss) / (batch_size * (seq_len // self.step_size))
-        mana_loss = mana_loss.cuda()
+        
         # Worker Loss
-        work_nll_loss = self.worker_nll_loss(target.cuda(), leak_out_array)  # batch_size * seq_len
+        work_nll_loss = self.worker_nll_loss(target, leak_out_array)  # batch_size * seq_len
         work_cos_reward = self.worker_cos_reward(feature_array, goal_array)  # batch_size * seq_len
         work_loss = -torch.sum(work_nll_loss * work_cos_reward) / (batch_size * seq_len)
 

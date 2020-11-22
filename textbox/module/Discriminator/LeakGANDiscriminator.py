@@ -52,10 +52,14 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         return pred
     
     def get_feature(self, inp):
-        """Get feature vector of given sentences
+        r"""Get feature vector of given sentences
         
-        :param inp: batch_size * max_seq_len
-        :return: batch_size * feature_dim
+        Args:
+            inp: batch_size * max_seq_len
+        
+        Returns:
+            batch_size * feature_dim
+        
         """
         data = self.word_embedding(inp).unsqueeze(1) # b * len * e -> b * 1 * len * e
         combined_outputs = []

@@ -15,6 +15,7 @@ from textbox.module.Discriminator.SeqGANDiscriminator import SeqGANDiscriminator
 
 class SeqGAN(GenerativeAdversarialNet):
     """Sequence Generative Adversarial Nets with Policy Gradient
+    
     """
     input_type = InputType.NOISE
 

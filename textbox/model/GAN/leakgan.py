@@ -47,6 +47,3 @@ class LeakGAN(GenerativeAdversarialNet):
     def sample(self, sample_num):
         samples = self.generator.sample(sample_num, self.discriminator, self.start_idx)
         return samples
-    
-    
-    

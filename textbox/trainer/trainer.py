@@ -42,6 +42,7 @@ class AbstractTrainer(object):
         r"""Train the model based on the train data.
 
         """
+        
         raise NotImplementedError('Method [next] should be implemented.')
 
     def evaluate(self, eval_data):
@@ -512,7 +513,7 @@ class GANTrainer(Trainer):
         total_loss = [l / len(train_data) for l in total_loss] if isinstance(total_loss, tuple) else total_loss / len(train_data)
         total_loss = tuple(total_loss) if isinstance(total_loss, list) else total_loss
         return total_loss
-    
+
     def _d_train_epoch(self, train_data, epoch_idx):
         r"""Train the discriminator module in an epoch
 

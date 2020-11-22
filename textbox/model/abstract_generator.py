@@ -25,10 +25,10 @@ class AbstractModel(nn.Module):
 
     def calculate_loss(self, corpus):
         r"""Calculate the training loss for a batch data.
-        
+
         Args:
             corpus (Corpus): Corpus class of the batch.
-            
+
         Returns:
             torch.Tensor: Training loss, shape: []
         """
@@ -36,10 +36,10 @@ class AbstractModel(nn.Module):
 
     def generate(self, corpus):
         r"""Predict the scores between users and items.
-        
+
         Args:
             corpus (Corpus): Corpus class of the batch.
-            
+
         Returns:
             torch.Tensor: Generated text, shape: [batch_size, max_len]
         """

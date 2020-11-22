@@ -42,7 +42,7 @@ class AbstractTrainer(object):
         r"""Train the model based on the train data.
 
         """
-        
+
         raise NotImplementedError('Method [next] should be implemented.')
 
     def evaluate(self, eval_data):

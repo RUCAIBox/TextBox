@@ -37,11 +37,11 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         self.W_T = nn.Linear(self.filter_sum, self.filter_sum)
         self.W_H = nn.Linear(self.filter_sum, self.filter_sum, bias = False)
         self.W_O = nn.Linear(self.filter_sum, 2)
-    
+
     def highway(self, data):
         tau = torch.sigmoid(self.W_T(data))
         non_linear = F.relu(self.W_H(data))
-        
+
         return self.dropout(tau * non_linear + (1 - tau) * data)
 
     def forward(self, data): # b * len
@@ -50,16 +50,16 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         pred = self.W_O(C_tilde)
 
         return pred
-    
+
     def get_feature(self, inp):
         r"""Get feature vector of given sentences
-        
+
         Args:
             inp: batch_size * max_seq_len
-        
+
         Returns:
             batch_size * feature_dim
-        
+
         """
         data = self.word_embedding(inp).unsqueeze(1) # b * len * e -> b * 1 * len * e
         combined_outputs = []
@@ -70,14 +70,14 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         combined_outputs = torch.cat(combined_outputs, 1) # b * tot_f_n :pred
 
         C_tilde = self.highway(combined_outputs) # b * tot_f_n
-        
+
         return C_tilde
-    
+
     def add_pad(self, data):
         batch_size = data.size(0)
         padded_data = torch.full((batch_size, self.max_length), self.pad_idx, dtype=torch.long, device=self.device)
         padded_data[ : , : data.shape[1]] = data
-        
+
         return padded_data
 
     def calculate_loss(self, real_data, fake_data):

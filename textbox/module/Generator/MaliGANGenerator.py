@@ -109,7 +109,6 @@ class MaliGANGenerator(UnconditionalGenerator):
         fake_samples = self.sample(self.batch_size)
 
         rewards = []
-        #samples_embeddings = self.word_embedding(fake_samples)  # b * l * e
         self.eval()
         with torch.no_grad():
             for _ in range(self.rollout_num):
@@ -120,7 +119,7 @@ class MaliGANGenerator(UnconditionalGenerator):
         rewards = torch.mean(torch.stack(rewards, dim=0), dim=0)  # b
         rewards = torch.div(rewards, 1 - rewards)  # rD = D(x) / (1 - D(x))
         rewards = torch.div(rewards, torch.sum(rewards))
-        rewards -= torch.mean(rewards) # To do: baseline
+        #rewards -= torch.mean(rewards) # To do: set baseline
 
         h_prev = torch.zeros(1, self.batch_size, self.hidden_size, device = self.device)  # 1 * b * h
         o_prev = torch.zeros(1, self.batch_size, self.hidden_size, device = self.device)  # 1 * b * h

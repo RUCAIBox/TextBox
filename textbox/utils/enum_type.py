@@ -2,6 +2,12 @@
 # @Author : Junyi Li, Gaole He
 # @Email  : lijunyi@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2020/11/15
+# @Author : Tianyi Tang
+# @Email  : steventang@ruc.edu.cn
+
+
 """
 recbole.utils.enum_type
 #######################
@@ -14,12 +20,15 @@ class ModelType(Enum):
     """Type of models.
 
     - ``UNCONDITIONAL``: Unconditional Generator
+    - ``CONDITIONAL``: Conditional Generator
+    - ``GAN``: Generative Adversarial Net
     - ``TRANSLATION``: Translation Model
     """
 
     UNCONDITIONAL = 1
     CONDITIONAL = 2
-    TRANSLATION = 3
+    GAN = 3
+    TRANSLATION = 4
 
 
 class DataLoaderType(Enum):

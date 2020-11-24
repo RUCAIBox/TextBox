@@ -26,7 +26,7 @@ def create_dataset(config):
         Dataset: Constructed dataset.
     """
     model_type = config['MODEL_TYPE']
-    if model_type == ModelType.UNCONDITIONAL:
+    if model_type == ModelType.UNCONDITIONAL or model_type == ModelType.GAN:
         from .dataset import SingleSentenceDataset
         return SingleSentenceDataset(config)
     elif model_type == ModelType.TRANSLATION or model_type == ModelType.CONDITIONAL:
@@ -54,7 +54,7 @@ def data_preparation(config, save=False):
     """
     model_type = config['MODEL_TYPE']
 
-    if model_type == ModelType.UNCONDITIONAL:
+    if model_type == ModelType.UNCONDITIONAL or model_type == ModelType.GAN:
         from .dataset import SingleSentenceDataset
         dataset = SingleSentenceDataset(config)
     elif model_type == ModelType.TRANSLATION or model_type == ModelType.CONDITIONAL:
@@ -180,7 +180,7 @@ def get_data_loader(name, config, eval_setting):
         type: The dataloader class that meets the requirements in :attr:`config` and :attr:`eval_setting`.
     """
     model_type = config['MODEL_TYPE']
-    if model_type == ModelType.UNCONDITIONAL:
+    if model_type == ModelType.UNCONDITIONAL or model_type == ModelType.GAN:
         return SingleSentenceDataLoader
     elif model_type == ModelType.CONDITIONAL or model_type == ModelType.TRANSLATION:
         return TranslationDataLoader

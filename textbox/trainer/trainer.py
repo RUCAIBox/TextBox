@@ -583,6 +583,41 @@ class GANTrainer(Trainer):
 
         self._save_checkpoint(self.adversarail_training_epochs)
         return -1, None
+
+
+class textganTrainer(GANTrainer):
+    r"""textganTrainer is designed for TextGAN.
+    """
+
+    def __init__(self, config, model):
+        super(textganTrainer, self).__init__(config, model)
+
+    def _d_train_epoch(self, train_data, epoch_idx):
+        r"""Train the discriminator module in an epoch
+
+        Args:
+            train_data (DataLoader): the train data
+            epoch_idx (int): the current epoch id
+
+        Returns:
+            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
+            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
+            tuple which includes the sum of loss in each part.
+        """
+        self.model.discriminator.train()
+        total_loss = None
+        real_data = self._get_real_data(train_data)
+        real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+
+        for _ in range(self.d_sample_training_epochs):
+            for real_data in real_dataloader:
+                fake_data, z = self.model.sample()
+                losses = self.model.calculate_d_train_loss(real_data, fake_data, z, epoch_idx=epoch_idx)
+                total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
+
+        return total_loss / len(real_dataloader) / self.d_sample_training_epochs
+
+
 class ConditionalTrainer(Trainer):
     r"""TranslationTrainer is designed for seq2seq testing, which is a typically used setting.
     """

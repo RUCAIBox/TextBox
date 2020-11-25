@@ -33,13 +33,13 @@ class SeqGANGenerator(UnconditionalGenerator):
         data_embedding = self.word_embedding(datas[ : -1]) # len * b * e
         output, _ = self.LSTM(data_embedding) # len * b * h
         logits = self.vocab_projection(output) # len * b * v
-        
+
         logits = logits.reshape(-1, self.vocab_size) # (len * b) * v
         target = datas[1 : ].reshape(-1) # (len * b)
-        
+
         losses = F.cross_entropy(logits, target, ignore_index = self.pad_idx)
         return losses
-    
+
     def sample_batch(self):
         self.eval()
         sentences = []
@@ -57,7 +57,7 @@ class SeqGANGenerator(UnconditionalGenerator):
                 for j in range(self.batch_size):
                     sentences[i][j] = torch.multinomial(P[j], 1)[0]
                 X = self.word_embedding(sentences[i]).unsqueeze(0) # 1 * b * e
-            
+
             sentences = sentences.permute(1, 0) # b * l
 
             for i in range(self.batch_size):
@@ -99,12 +99,12 @@ class SeqGANGenerator(UnconditionalGenerator):
                         break
                     else:
                         generate_tokens.append(idx2token[token.item()])
-                
+
                 generate_corpus.append(generate_tokens)
-                
+
         self.train()
         return generate_corpus
-    
+
     def adversarial_loss(self, discriminator_func):
         fake_samples = self.sample(self.batch_size)
         h_prev = torch.zeros(1, self.batch_size, self.hidden_size, device = self.device) # 1 * b * h
@@ -137,10 +137,10 @@ class SeqGANGenerator(UnconditionalGenerator):
 
                 monte_carlo_output = monte_carlo_output.permute(1, 0) # (b * M) * len
                 monte_carlo_output[ : , : t + 1] = fake_samples[ : , : t + 1].repeat_interleave(self.monte_carlo_num, dim = 0)
-    
+
                 discriminator_out = discriminator_func(monte_carlo_output) # (b * M)
                 reward = discriminator_out.reshape(self.batch_size, self.monte_carlo_num).mean(dim = 1) # b
-            
+
             self.train()
             mask = word_t != self.pad_idx
             reward = reward * P_t * mask

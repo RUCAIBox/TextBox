@@ -101,9 +101,7 @@ class TextGANGenerator(UnconditionalGenerator):
         self.train()
         return generate_corpus
     
-    def adversarial_loss(self, discriminator_func):
-        fake_samples = self.sample(self.batch_size) # b * l * v
-        y = discriminator_func(fake_samples) # b
-        label = torch.ones_like(y)
-        loss = F.binary_cross_entropy(y, label)
+    def adversarial_loss(self, real_data, discriminator_func):
+        fake_samples, z = self.sample()
+        loss = discriminator_func(real_data, fake_samples, z)
         return loss

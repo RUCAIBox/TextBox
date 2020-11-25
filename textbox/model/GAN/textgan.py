@@ -32,15 +32,16 @@ class TextGAN(GenerativeAdversarialNet):
         real_data = F.one_hot(real_data, num_classes = self.generator.vocab_size)
         return self.discriminator.calculate_loss(real_data, fake_data, z)
     
-    def calculate_g_adversarial_loss(self, epoch_idx):
+    def calculate_g_adversarial_loss(self, real_data, epoch_idx):
         self.discriminator.eval()
-        loss = self.generator.adversarial_loss(self.discriminator.forward)
+        real_data = F.one_hot(real_data, num_classes = self.generator.vocab_size)
+        loss = self.generator.adversarial_loss(real_data, self.discriminator.calculate_loss)
         self.discriminator.train()
         return loss
     
     def generate(self, eval_data):
         return self.generator.generate(eval_data)
 
-    def sample(self, sample_num):
+    def sample(self):
         samples, z = self.generator.sample()
         return samples, z

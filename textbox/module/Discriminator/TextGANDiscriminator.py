@@ -22,7 +22,7 @@ class TextGANDiscriminator(UnconditionalGenerator):
         self.filter_sizes = config['filter_sizes']
         self.filter_nums = config['filter_nums']
         self.max_length = config['max_seq_length'] + 2
-        self.gaussian_sigmas = config['gaussian_sigmas']
+        self.gaussian_sigmas = torch.tensor(config['gaussian_sigmas'], device=self.device)
         self.pad_idx = dataset.padding_token_idx
         self.vocab_size = dataset.vocab_size
         self.filter_sum = sum(self.filter_nums)

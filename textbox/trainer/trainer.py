@@ -585,12 +585,12 @@ class GANTrainer(Trainer):
         return -1, None
 
 
-class textganTrainer(GANTrainer):
-    r"""textganTrainer is designed for TextGAN.
+class TextGANTrainer(GANTrainer):
+    r"""TextGANTrainer is designed for TextGAN.
     """
 
     def __init__(self, config, model):
-        super(textganTrainer, self).__init__(config, model)
+        super(TextGANTrainer, self).__init__(config, model)
 
     def _d_train_epoch(self, train_data, epoch_idx):
         r"""Train the discriminator module in an epoch
@@ -616,6 +616,32 @@ class textganTrainer(GANTrainer):
                 total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
 
         return total_loss / len(real_dataloader) / self.d_sample_training_epochs
+    
+    def _adversarial_train_epoch(self, train_data, epoch_idx):
+        r"""Adversarial training in an epoch
+
+        Args:
+            train_data (DataLoader): the train data
+            epoch_idx (int): the current epoch id
+
+        Returns:
+            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
+            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
+            tuple which includes the sum of loss in each part.
+        """
+        self.model.generator.train()
+        total_loss = None
+        real_data = self._get_real_data(train_data)
+        real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+
+        for real_data in real_dataloader:
+            losses = self.model.calculate_g_adversarial_loss(real_data, epoch_idx=epoch_idx)
+            total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
+        
+        for epoch_idx in range(self.adversarail_d_epochs):
+            self._d_train_epoch(train_data, epoch_idx=epoch_idx)
+
+        return total_loss / len(real_dataloader)
 
 
 class ConditionalTrainer(Trainer):

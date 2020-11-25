@@ -66,6 +66,6 @@ class SeqGANDiscriminator(UnconditionalGenerator):
 
         real_loss = F.binary_cross_entropy(real_y, real_label)
         fake_loss = F.binary_cross_entropy(fake_y, fake_label)
-        loss = (real_loss + fake_loss) / 2 +  self.l2_reg_lambda * (self.W_O.weight.norm() + self.W_O.bias.norm())
+        loss = (real_loss + fake_loss) / 2 + self.l2_reg_lambda * (self.W_O.weight.norm() + self.W_O.bias.norm())
 
         return loss

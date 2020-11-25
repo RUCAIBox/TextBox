@@ -147,5 +147,5 @@ class SeqGANGenerator(UnconditionalGenerator):
             mask_sum = mask.sum()
             if (mask_sum):
                 rewards += reward.sum() / mask_sum
-    
+
         return -rewards

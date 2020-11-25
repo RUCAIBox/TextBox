@@ -134,9 +134,9 @@ class MaliGANGenerator(UnconditionalGenerator):
             P_t = torch.gather(P, 1, word_t.unsqueeze(1)).squeeze(1)  # b
             X = self.word_embedding(word_t).unsqueeze(0)  # 1 * b * e
 
-            mask = (word_t != self.pad_idx) & (word_t != self.end_idx)
+            mask = word_t != self.pad_idx
             loss = - rewards * P_t * mask
-            loss = loss[loss.nonzero(as_tuple = True)]
-            if (loss.shape[0]):
-                losses += loss.mean()
+            mask_sum = mask.sum()
+            if (mask_sum):
+                losses += loss.sum() / mask_sum
         return losses

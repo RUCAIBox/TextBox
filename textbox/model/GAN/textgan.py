@@ -35,7 +35,7 @@ class TextGAN(GenerativeAdversarialNet):
     def calculate_g_adversarial_loss(self, real_data, epoch_idx):
         self.discriminator.eval()
         real_data = F.one_hot(real_data, num_classes = self.generator.vocab_size)
-        loss = self.generator.adversarial_loss(real_data, self.discriminator.calculate_loss)
+        loss = self.generator.adversarial_loss(real_data, self.discriminator.calculate_g_loss)
         self.discriminator.train()
         return loss
     

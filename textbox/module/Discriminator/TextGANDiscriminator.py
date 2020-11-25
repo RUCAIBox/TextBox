@@ -88,6 +88,12 @@ class TextGANDiscriminator(UnconditionalGenerator):
         z_hat = self.recon(fake_feature) # b * h
         return (z - z_hat).norm(dim = 1).mean() # b * h -> b -> 1
 
+    def calculate_g_loss(self, real_data, fake_data):
+        real_feature = self.feature(real_data) # b * tot_f_n
+        fake_feature = self.feature(fake_data) # b * tot_f_n
+        mmd_loss = self.mmd_lambda * self.calculate_mmd_loss(real_feature, fake_feature)
+        return mmd_loss
+
     def calculate_loss(self, real_data, fake_data, z):
         gan_loss = self.calculate_gan_loss(real_data, fake_data)
         real_feature = self.feature(real_data) # b * tot_f_n

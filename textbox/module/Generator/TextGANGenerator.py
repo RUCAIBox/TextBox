@@ -102,6 +102,6 @@ class TextGANGenerator(UnconditionalGenerator):
         return generate_corpus
     
     def adversarial_loss(self, real_data, discriminator_func):
-        fake_samples, z = self.sample()
-        loss = discriminator_func(real_data, fake_samples, z)
+        fake_samples, _ = self.sample()
+        loss = discriminator_func(real_data, fake_samples)
         return loss

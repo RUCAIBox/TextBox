@@ -5,8 +5,8 @@ dropout_rate: 0.25
 l2_reg_lambda: 0.2
 mmd_lambda: 0.001
 recon_lambda: 0.01
-filter_sizes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
-filter_nums: [100, 200, 200, 200, 200, 100, 100, 100, 100, 100, 160, 160]
+filter_sizes: [2, 3, 4]
+filter_nums: [200, 200, 200]
 gaussian_sigmas : [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1., 5., 1e1, 15., 20., 25., 30., 35., 1e2, 1e3, 1e4, 1e5, 1e6]
 
 split_ratio: [1.0, 0.0, 0.0]

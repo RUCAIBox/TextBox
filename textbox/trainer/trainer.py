@@ -3,9 +3,9 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2020/11/15, 2020/11/19
-# @Author : Tianyi Tang
-# @Email  : steventang@ruc.edu.cn
+# @Time   : 2020/11/24, 2020/11/21
+# @Author : Tianyi Tang, Jiangjin Hao
+# @Email  : steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
 
 r"""
 textbox.trainer.trainer
@@ -42,6 +42,7 @@ class AbstractTrainer(object):
         r"""Train the model based on the train data.
 
         """
+
         raise NotImplementedError('Method [next] should be implemented.')
 
     def evaluate(self, eval_data):
@@ -360,7 +361,6 @@ class UnconditionalTrainer(Trainer):
     def __init__(self, config, model):
         super(UnconditionalTrainer, self).__init__(config, model)
 
-
 class GANTrainer(Trainer):
     r"""GANTrainer is designed for GAN, which is a generative adversarial net method.
     """
@@ -379,11 +379,11 @@ class GANTrainer(Trainer):
         self.d_sample_training_epochs = config['d_sample_training_epochs']
         self.adversarail_training_epochs = config['adversarail_training_epochs']
         self.adversarail_d_epochs = config['adversarail_d_epochs']
-        self.max_length = config['max_seq_length'] + 2
-        self.pad_idx = model.pad_idx
 
         self.g_pretraining_loss_dict = dict()
         self.d_pretraining_loss_dict = dict()
+        self.max_length = config['max_seq_length'] + 2
+        self.pad_idx = model.pad_idx
     
     def _build_module_optimizer(self, module):
         r"""Init the Module Optimizer
@@ -391,21 +391,49 @@ class GANTrainer(Trainer):
         Returns:
             torch.optim: the optimizer
         """
+        multi_flag = False
+        if module._get_name() == 'LeakGANGenerator':
+            manager_params, worker_params = module.split_params()
+            multi_flag = True
+
         if self.learner.lower() == 'adam':
-            optimizer = optim.Adam(module.parameters(), lr=self.learning_rate)
+            if multi_flag:
+                manager_opt = optim.Adam(manager_params, lr=self.learning_rate)
+                worker_opt = optim.Adam(worker_params, lr=self.learning_rate)
+            else:
+                optimizer = optim.Adam(module.parameters(), lr=self.learning_rate)
         elif self.learner.lower() == 'sgd':
-            optimizer = optim.SGD(module.parameters(), lr=self.learning_rate)
+            if multi_flag:
+                manager_opt = optim.SGD(manager_params, lr=self.learning_rate)
+                worker_opt = optim.SGD(worker_params, lr=self.learning_rate)
+            else:
+                optimizer = optim.SGD(module.parameters(), lr=self.learning_rate)
         elif self.learner.lower() == 'adagrad':
-            optimizer = optim.Adagrad(module.parameters(), lr=self.learning_rate)
+            if multi_flag:
+                manager_opt = optim.Adagrad(manager_params, lr=self.learning_rate)
+                worker_opt = optim.Adagrad(worker_params, lr=self.learning_rate)
+            else:
+                optimizer = optim.Adagrad(module.parameters(), lr=self.learning_rate)
         elif self.learner.lower() == 'rmsprop':
-            optimizer = optim.RMSprop(module.parameters(), lr=self.learning_rate)
+            if multi_flag:
+                manager_opt = optim.RMSprop(manager_params, lr=self.learning_rate)
+                worker_opt = optim.RMSprop(worker_params, lr=self.learning_rate)
+            else:
+                optimizer = optim.RMSprop(module.parameters(), lr=self.learning_rate)
         else:
             self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
-            optimizer = optim.Adam(module.parameters(), lr=self.learning_rate)
-        return optimizer
+            if multi_flag:
+                manager_opt = optim.Adam(manager_params, lr=self.learning_rate)
+                worker_opt = optim.Adam(worker_params, lr=self.learning_rate)
+            else:
+                optimizer = optim.Adam(module.parameters(), lr=self.learning_rate)
+
+        if multi_flag:
+            return (manager_opt, worker_opt)
+        else:
+            return optimizer
     
     def _optimize_step(self, losses, total_loss, model, opt):
-        opt.zero_grad()
         if isinstance(losses, tuple):
             loss = sum(losses)
             loss_tuple = tuple(per_loss.item() for per_loss in losses)
@@ -414,11 +442,23 @@ class GANTrainer(Trainer):
             loss = losses
             total_loss = losses.item() if total_loss is None else total_loss + losses.item()
         self._check_nan(loss)
+
+        if model._get_name() == "LeakGANGenerator":
+            self._optimize_multi_step(losses, model, opt)
+            return total_loss
+
+        opt.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
         opt.step()
         return total_loss
-    
+
+    def _optimize_multi_step(self, losses, model, opts):
+        for i, (opt, loss) in enumerate(zip(opts, losses)):
+            opt.zero_grad()
+            loss.backward(retain_graph=True if i < len(opts) - 1 else False)
+            opt.step()
+
     def _save_checkpoint(self, epoch):
         r"""Store the model parameters information and training information.
 
@@ -431,9 +471,7 @@ class GANTrainer(Trainer):
             'epoch': epoch,
             'cur_step': self.cur_step,
             'best_valid_score': self.best_valid_score,
-            'state_dict': self.model.state_dict(),
-            'g_optimizer': self.g_optimizer.state_dict(),
-            'd_optimizer': self.d_optimizer.state_dict(),
+            'state_dict': self.model.state_dict()
         }
         torch.save(state, self.saved_model_file)
 
@@ -472,9 +510,10 @@ class GANTrainer(Trainer):
             # interaction = interaction.to(self.device)
             losses = self.model.calculate_g_train_loss(data, epoch_idx=epoch_idx)
             total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
-        
-        return total_loss / len(train_data)
-    
+        total_loss = [l / len(train_data) for l in total_loss] if isinstance(total_loss, tuple) else total_loss / len(train_data)
+        total_loss = tuple(total_loss) if isinstance(total_loss, list) else total_loss
+        return total_loss
+
     def _d_train_epoch(self, train_data, epoch_idx):
         r"""Train the discriminator module in an epoch
 
@@ -583,6 +622,67 @@ class GANTrainer(Trainer):
 
         self._save_checkpoint(self.adversarail_training_epochs)
         return -1, None
+
+
+class TextGANTrainer(GANTrainer):
+    r"""TextGANTrainer is designed for TextGAN.
+    """
+
+    def __init__(self, config, model):
+        super(TextGANTrainer, self).__init__(config, model)
+
+    def _d_train_epoch(self, train_data, epoch_idx):
+        r"""Train the discriminator module in an epoch
+
+        Args:
+            train_data (DataLoader): the train data
+            epoch_idx (int): the current epoch id
+
+        Returns:
+            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
+            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
+            tuple which includes the sum of loss in each part.
+        """
+        self.model.discriminator.train()
+        total_loss = None
+        real_data = self._get_real_data(train_data)
+        real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+
+        for _ in range(self.d_sample_training_epochs):
+            for real_data in real_dataloader:
+                fake_data, z = self.model.sample()
+                losses = self.model.calculate_d_train_loss(real_data, fake_data, z, epoch_idx=epoch_idx)
+                total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
+
+        return total_loss / len(real_dataloader) / self.d_sample_training_epochs
+    
+    def _adversarial_train_epoch(self, train_data, epoch_idx):
+        r"""Adversarial training in an epoch
+
+        Args:
+            train_data (DataLoader): the train data
+            epoch_idx (int): the current epoch id
+
+        Returns:
+            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
+            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
+            tuple which includes the sum of loss in each part.
+        """
+        self.model.generator.train()
+        total_loss = None
+        real_data = self._get_real_data(train_data)
+        real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+
+        for real_data in real_dataloader:
+            losses = self.model.calculate_g_adversarial_loss(real_data, epoch_idx=epoch_idx)
+            total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
+        
+        for epoch_idx in range(self.adversarail_d_epochs):
+            self._d_train_epoch(train_data, epoch_idx=epoch_idx)
+
+        return total_loss / len(real_dataloader)
+
+
 class ConditionalTrainer(Trainer):
     r"""TranslationTrainer is designed for seq2seq testing, which is a typically used setting.
     """

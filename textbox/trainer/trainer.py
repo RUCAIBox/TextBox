@@ -3,9 +3,9 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2020/11/24, 2020/11/21
-# @Author : Tianyi Tang, Jiangjin Hao
-# @Email  : steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
+# @Time   : 2020/11/27, 2020/11/24, 2020/11/21
+# @Author : Xiaoxuan Hu, Tianyi Tang, Jiangjin Hao
+# @Email  : huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
 
 r"""
 textbox.trainer.trainer
@@ -681,6 +681,73 @@ class TextGANTrainer(GANTrainer):
             self._d_train_epoch(train_data, epoch_idx=epoch_idx)
 
         return total_loss / len(real_dataloader)
+
+
+class RankGANTrainer(GANTrainer):
+    r"""RankGANTrainer is designed for RankGAN.
+    """
+
+    def __init__(self, config, model):
+        super(RankGANTrainer, self).__init__(config, model)
+
+    def _d_train_epoch(self, train_data, epoch_idx):
+        r"""Train the discriminator module in an epoch
+
+        Args:
+            train_data (DataLoader): the train data
+            epoch_idx (int): the current epoch id
+
+        Returns:
+            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
+            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
+            tuple which includes the sum of loss in each part.
+        """
+        self.model.discriminator.train()
+        total_loss = None
+        real_data = self._get_real_data(train_data)
+        real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+        fake_data = self.model.sample(self.d_sample_num)
+        fake_dataloader = DataLoader(fake_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+
+        ref_index = np.random.randint(0, real_data.shape[0], size = self.model.ref_size)
+        ref_data = real_data[ref_index]  # ref_size * l
+
+        for _ in range(self.d_sample_training_epochs):
+            for real_data, fake_data in zip(real_dataloader, fake_dataloader):
+                losses = self.model.calculate_d_train_loss(real_data, fake_data, ref_data, epoch_idx=epoch_idx)
+                total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
+
+        return total_loss / min(len(real_dataloader), len(fake_dataloader)) / self.d_sample_training_epochs
+
+    def _adversarial_train_epoch(self, train_data, epoch_idx):
+        r"""Adversarial training in an epoch
+
+        Args:
+            train_data (DataLoader): the train data
+            epoch_idx (int): the current epoch id
+
+        Returns:
+            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
+            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
+            tuple which includes the sum of loss in each part.
+        """
+        self.model.generator.train()
+        total_loss = None
+        real_data = self._get_real_data(train_data)
+        ref_index = np.random.randint(0, real_data.shape[0], size = self.model.ref_size)
+        ref_data = real_data[ref_index]  # ref_size * l
+
+        losses = self.model.calculate_g_adversarial_loss(ref_data, epoch_idx=epoch_idx)
+        total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
+        
+        d_loss = 0
+        for epoch_idx in range(self.adversarail_d_epochs):
+            d_loss += self._d_train_epoch(train_data, epoch_idx=epoch_idx)
+        d_loss = d_loss/self.adversarail_d_epochs
+        
+        #d_output = "d_loss: %f" % (d_loss)
+        #self.logger.info(d_output)
+        return total_loss
 
 
 class ConditionalTrainer(Trainer):

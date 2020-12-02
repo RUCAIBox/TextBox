@@ -1,3 +1,8 @@
+# @Time   : 2020/12/2
+# @Author : Jinhao Jiang
+# @Email  : jiangjinhao@std.uestc.edu.cn
+
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -93,10 +98,10 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         inputs_missing = torch.zeros_like(inputs)
 
         # 第0个输入通常不会被mask，创建大小为bs*1的全1矩阵
-        zeroth_input_present = torch.ones_like(targets_present)[:, 1].unsqueeze(dim=-1) # bs*1
+        zeroth_input_present = torch.ones_like(targets_present)[:, 1].unsqueeze(dim=-1)  # bs*1
 
         # 将第0个输入和target_present表示的剩余输入一起拼接成bs*seq_len的mask矩阵
-        inputs_present = torch.cat([zeroth_input_present, targets_present], dim=1)[:, :-1] # bs*seq_len
+        inputs_present = torch.cat([zeroth_input_present, targets_present], dim=1)[:, :-1]  # bs*seq_len
 
         # 使用where函数根据inputs_present确定是否maskinputs
         masked_input = torch.where(inputs_present, inputs, inputs_missing)
@@ -137,37 +142,38 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         hidden_state = encoder_final_state
         for t in range(seq_len):
             if t == 0:
-                input_t = self.target_token_embedder(inputs[:, t].unsqueeze(dim=-1))    # bs*1*emb_dim
+                input_t = self.target_token_embedder(inputs[:, t].unsqueeze(dim=-1))  # bs*1*emb_dim
             else:
-                real_input_t = self.target_token_embedder(inputs[:, t].unsqueeze(dim=-1))   # bs*1*emb_dim
+                real_input_t = self.target_token_embedder(inputs[:, t].unsqueeze(dim=-1))  # bs*1*emb_dim
                 mask_input_t = self.target_token_embedder(sample_t)
                 if not is_advtrain:
                     input_t = real_input_t
                 else:
-                    input_t = torch.where(targets_present[:, t - 1].unsqueeze(dim=1).unsqueeze(dim=2), real_input_t, mask_input_t)
+                    input_t = torch.where(targets_present[:, t - 1].unsqueeze(dim=1).unsqueeze(dim=2), real_input_t,
+                                          mask_input_t)
 
             # rnn_output, hidden_state = self.decoder(input_t, hidden_state, encoder_outputs)
             rnn_output, hidden_state = self.decoder(input_t, hidden_state)  # need to fix attention decoder
-            logit = self.vocab_linear(rnn_output)   # bs*1*vocab_size
+            logit = self.vocab_linear(rnn_output)  # bs*1*vocab_size
             categorical = Categorical(logits=logit)
-            sample_t = categorical.sample()     # bs*1
-            log_prob = categorical.log_prob(sample_t).squeeze(dim=-1)   # bs
+            sample_t = categorical.sample()  # bs*1
+            log_prob = categorical.log_prob(sample_t).squeeze(dim=-1)  # bs
             real_t = targets[:, t]  # bs
-            output = torch.where(targets_present[:, t], real_t, sample_t.squeeze(dim=-1))   # bs
+            output = torch.where(targets_present[:, t], real_t, sample_t.squeeze(dim=-1))  # bs
 
             outputs.append(output)
             log_probs.append(log_prob)
             logits.append(logit)
         # 收集decoder解码过程中的output, log_probs, logits
-        outputs = torch.stack(outputs, dim=1)   # bs*seq_len
-        log_probs = torch.stack(log_probs, dim=1)   # bs*seq_len
+        outputs = torch.stack(outputs, dim=1)  # bs*seq_len
+        log_probs = torch.stack(log_probs, dim=1)  # bs*seq_len
         logits = torch.stack(logits, dim=1).squeeze(dim=2)  # bs*seq_len*vocab_size
         return outputs, log_probs, logits
 
     def create_masked_cross_entropy_loss(self, targets, present, logits):
         r"""Calculate the cross entropy loss matrices for the masked tokens."""
 
-        targets = targets.long()    # bs*seq_len
+        targets = targets.long()  # bs*seq_len
         logits = logits.permute(0, 2, 1)  # bs*vocab_size*seq_len
         cross_entropy_losses = F.cross_entropy(logits, targets, reduction="none", ignore_index=self.padding_token_idx)
 
@@ -187,7 +193,8 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         outputs, log_probs, logits = self.forward(inputs, lengths, targets, targets_present, is_advtrain=True)
         fake_predictions = discriminator(inputs, lengths, outputs, targets_present)
         est_state_values = discriminator.critic(outputs)
-        rl_loss, critic_loss = self.calculate_reinforce_objective(log_probs, fake_predictions, targets_present, est_state_values)
+        rl_loss, critic_loss = self.calculate_reinforce_objective(log_probs, fake_predictions, targets_present,
+                                                                  est_state_values)
         return (rl_loss, critic_loss)
 
     def create_critic_loss(self, cumulative_rewards, estimated_values, target_present):
@@ -308,8 +315,8 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         num_batch = number_to_gen // self.batch_size + 1 if number_to_gen != self.batch_size else 1
         samples = torch.zeros(num_batch * self.batch_size, seq_len).long()  # larger than num_samples
         inputs = torch.zeros(self.batch_size, seq_len).long().cuda(self.device)
-        input_length = torch.Tensor([seq_len]*self.batch_size).float().cuda(self.device)
-        targets = torch.zeros( self.batch_size, seq_len).long().cuda(self.device)
+        input_length = torch.Tensor([seq_len] * self.batch_size).float().cuda(self.device)
+        targets = torch.zeros(self.batch_size, seq_len).long().cuda(self.device)
         targets_present = torch.zeros(self.batch_size, seq_len).byte().cuda(self.device)
         idx2token = corpus.idx2token
 

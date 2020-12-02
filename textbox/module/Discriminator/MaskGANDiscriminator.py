@@ -1,3 +1,8 @@
+# @Time   : 2020/12/2
+# @Author : Jinhao Jiang
+# @Email  : jiangjinhao@std.uestc.edu.cn
+
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -13,6 +18,7 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
     r"""RNN-based Encoder-Decoder architecture is a basic framework for conditional text generation.
 
     """
+
     # input_type = InputType.PAIRTEXT
 
     def __init__(self, config, dataset):
@@ -126,12 +132,12 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
             input = sequence_rnn_inputs[:, t].unsqueeze(dim=1)  # bs*1*emb_dim
             # rnn_output, hidden_size = self.decoder(input, hidden_size, encoder_outputs)
             rnn_output, hidden_size = self.decoder(input, hidden_size)  # need fix attention decoder bs*1*hid_dim
-            prediction = self.fc_linear(rnn_output) # bs*1*1
-            prediction = prediction.squeeze(dim=1) # bs*1
-            predictions.append(prediction)   # bs*1
+            prediction = self.fc_linear(rnn_output)  # bs*1*1
+            prediction = prediction.squeeze(dim=1)  # bs*1
+            predictions.append(prediction)  # bs*1
         # 收集decoder解码过程中的prediction
-        predictions = torch.stack(predictions, dim=1)   # bs*seq_len*1
-        predictions = predictions.squeeze(dim=2)    # bs*seq_len
+        predictions = torch.stack(predictions, dim=1)  # bs*seq_len*1
+        predictions = predictions.squeeze(dim=2)  # bs*seq_len
         return predictions
 
     def critic(self, fake_sequence):
@@ -160,7 +166,7 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
             value = self.fc_linear(rnn_output)  # bs*1*1
             values.append(value)
         # 压缩values的形状返回
-        values = torch.stack(values, dim=1).squeeze() # bs*seq_len
+        values = torch.stack(values, dim=1).squeeze()  # bs*seq_len
         return values
 
     def calculate_dis_loss(self, fake_prediction, real_prediction, target_present):
@@ -179,11 +185,11 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
 
         # 得到real_label
         batch_size, seq_len = real_prediction.size()
-        real_label = torch.ones_like(real_prediction, dtype=torch.float) # bs*seq_len
+        real_label = torch.ones_like(real_prediction, dtype=torch.float)  # bs*seq_len
         fake_label = torch.zeros_like(fake_prediction, dtype=torch.float)
         # 分别计算sigmoid_cross_entropy
-        real_prediction_sigmoid = torch.sigmoid(real_prediction)    # bs*seq_len
-        fake_prediction_sigmoid = torch.sigmoid(fake_prediction)    # bs*seq_len
+        real_prediction_sigmoid = torch.sigmoid(real_prediction)  # bs*seq_len
+        fake_prediction_sigmoid = torch.sigmoid(fake_prediction)  # bs*seq_len
         loss = nn.BCELoss(weight=missing)
         real_loss = loss(real_prediction_sigmoid, real_label)
         fake_loss = loss(fake_prediction_sigmoid, fake_label)

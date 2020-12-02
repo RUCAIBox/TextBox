@@ -1,6 +1,6 @@
-# @Time   : 2020/11/15
-# @Author : Tianyi Tang
-# @Email  : steventang@ruc.edu.cn
+# @Time   : 2020/12/2
+# @Author : Jinhao Jiang
+# @Email  : jiangjinhao@std.uestc.edu.cn
 
 
 import torch
@@ -44,7 +44,7 @@ class MaskGAN(GenerativeAdversarialNet):
         real_inputs = corpus['target_idx'][:, :-1]
         target_inputs = corpus['target_idx'][:, 1:]
         # lengths = self.get_length(real_inputs)
-        lengths = corpus['target_length']-1
+        lengths = corpus['target_length'] - 1
         if not is_advtrain:
             target_present = torch.ones_like(target_inputs, dtype=torch.bool)
         else:
@@ -62,7 +62,8 @@ class MaskGAN(GenerativeAdversarialNet):
         batch_size, seq_len = inputs.size()
         targets_present = self.generate_mask(batch_size, seq_len)
         targets_present = targets_present.cuda(self.device)
-        fake_sequence, _, _ = self.generator.forward(inputs, lengths, targets, targets_present, is_advtrain=is_advtrain)  # is_advtrain?
+        fake_sequence, _, _ = self.generator.forward(inputs, lengths, targets, targets_present,
+                                                     is_advtrain=is_advtrain)  # is_advtrain?
         self.generator.train()
         return self.discriminator.calculate_loss(inputs, lengths, fake_sequence, targets_present)
 

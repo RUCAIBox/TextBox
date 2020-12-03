@@ -771,43 +771,7 @@ class MaskGANTrainer(GANTrainer):
 
     def __init__(self, config, model):
         super(MaskGANTrainer, self).__init__(config, model)
-        self.optimizer = None
-        self.g_optimizer = self._build_module_optimizer(self.model.generator)
-        self.d_optimizer = self._build_module_optimizer(self.model.discriminator)
-
-        self.grad_clip = config['grad_clip']
-        self.g_pretraining_epochs = config['g_pretraining_epochs']
-        self.d_pretraining_epochs = config['d_pretraining_epochs']
-        self.d_sample_num = config['d_sample_num']
-        self.d_sample_training_epochs = config['d_sample_training_epochs']
-        self.adversarail_training_epochs = config['adversarail_training_epochs']
-        self.adversarail_d_epochs = config['adversarail_d_epochs']
         self.adversarail_c_epochs = config['adversarail_c_epochs']  # !!
-
-        self.g_pretraining_loss_dict = dict()
-        self.d_pretraining_loss_dict = dict()
-        self.max_length = config['max_seq_length'] + 2
-        self.pad_idx = model.pad_idx
-
-    def _build_module_optimizer(self, module):
-        r"""Init the Module Optimizer
-
-        Returns:
-            torch.optim: the optimizer
-        """
-        if self.learner.lower() == 'adam':
-            optimizer = optim.Adam(module.parameters(), lr=self.learning_rate)
-        elif self.learner.lower() == 'sgd':
-            optimizer = optim.SGD(module.parameters(), lr=self.learning_rate)
-        elif self.learner.lower() == 'adagrad':
-            optimizer = optim.Adagrad(module.parameters(), lr=self.learning_rate)
-        elif self.learner.lower() == 'rmsprop':
-            optimizer = optim.RMSprop(module.parameters(), lr=self.learning_rate)
-        else:
-            self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
-            optimizer = optim.Adam(module.parameters(), lr=self.learning_rate)
-
-        return optimizer
 
     def _optimize_step(self, losses, total_loss, model, opt, retain_graph=False):
         if isinstance(losses, tuple):
@@ -824,38 +788,6 @@ class MaskGANTrainer(GANTrainer):
         torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
         opt.step()
         return total_loss
-
-    def _save_checkpoint(self, epoch):
-        r"""Store the model parameters information and training information.
-
-        Args:
-            epoch (int): the current epoch id
-
-        """
-        state = {
-            'config': self.config,
-            'epoch': epoch,
-            'cur_step': self.cur_step,
-            'best_valid_score': self.best_valid_score,
-            'state_dict': self.model.state_dict()
-        }
-        torch.save(state, self.saved_model_file)
-
-    def _add_pad(self, data):
-        batch_size = data.shape[0]
-        padded_data = torch.full((batch_size, self.max_length), self.pad_idx, dtype=torch.long, device=self.device)
-        padded_data[:, : data.shape[1]] = data
-        return padded_data
-
-    def _get_real_data(self, train_data):
-        real_datas = []
-        for corpus in train_data:
-            real_data = corpus['target_idx']
-            real_data = self._add_pad(real_data)
-            real_datas.append(real_data)
-
-        real_datas = torch.cat(real_datas, dim=0)
-        return real_datas
 
     def _g_train_epoch(self, train_data, epoch_idx):
         r"""Train the generator module in an epoch
@@ -940,66 +872,3 @@ class MaskGANTrainer(GANTrainer):
             critic_total_loss = self._optimize_step(critic_losses, critic_total_loss, self.model.discriminator,
                                                     self.d_optimizer)
         return (dis_total_loss / d_num, gen_total_loss / g_num, critic_total_loss / g_num)
-
-    def fit(self, train_data, valid_data=None, verbose=True, saved=True):
-        r"""Train the model based on the train data and the valid data.
-
-        Args:
-            train_data (DataLoader): the train data
-            valid_data (DataLoader, optional): the valid data, default: None.
-                                               If it's None, the early_stopping is invalid.
-            verbose (bool, optional): whether to write training and evaluation information to logger, default: True
-            saved (bool, optional): whether to save the model parameters, default: True
-
-        Returns:
-             (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
-        """
-        # generator pretraining
-        if verbose:
-            self.logger.info("Start generator pretraining...")
-        for epoch_idx in range(self.g_pretraining_epochs):
-            training_start_time = time()
-            train_loss = self._g_train_epoch(train_data, epoch_idx)
-            self.g_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
-            training_end_time = time()
-            train_loss_output = \
-                self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss,
-                                                 "generator pre")
-            if verbose:
-                self.logger.info(train_loss_output)
-        if verbose:
-            self.logger.info("End generator pretraining...")
-
-        # discriminator pretraining
-        if verbose:
-            self.logger.info("Start discriminator pretraining...")
-        for epoch_idx in range(self.d_pretraining_epochs):
-            training_start_time = time()
-            train_loss = self._d_train_epoch(train_data, epoch_idx)
-            self.d_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
-            training_end_time = time()
-            train_loss_output = \
-                self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss,
-                                                 "discriminator pre")
-            if verbose:
-                self.logger.info(train_loss_output)
-        if verbose:
-            self.logger.info("End discriminator pretraining...")
-
-        # adversarial training
-        if verbose:
-            self.logger.info("Start adversarial training...")
-        for epoch_idx in range(self.adversarail_training_epochs):
-            training_start_time = time()
-            train_loss = self._adversarial_train_epoch(train_data, epoch_idx)
-            self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
-            training_end_time = time()
-            train_loss_output = \
-                self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss)
-            if verbose:
-                self.logger.info(train_loss_output)
-        if verbose:
-            self.logger.info("End adversarial pretraining...")
-
-        self._save_checkpoint(self.adversarail_training_epochs)
-        return -1, None

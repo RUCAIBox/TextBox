@@ -58,14 +58,7 @@ class SeqGANDiscriminator(UnconditionalGenerator):
 
         return y_hat
     
-    def add_pad(self, data):
-        batch_size = data.size(0)
-        padded_data = torch.full((batch_size, self.max_length), self.pad_idx, dtype=torch.long, device=self.device)
-        padded_data[ : , : data.shape[1]] = data
-        return padded_data
-
     def calculate_loss(self, real_data, fake_data):
-        real_data = self.add_pad(real_data)
         real_y = self.forward(real_data)
         fake_y = self.forward(fake_data)
         real_label = torch.ones_like(real_y)
@@ -73,6 +66,6 @@ class SeqGANDiscriminator(UnconditionalGenerator):
 
         real_loss = F.binary_cross_entropy(real_y, real_label)
         fake_loss = F.binary_cross_entropy(fake_y, fake_label)
-        loss = (real_loss + fake_loss) / 2 +  self.l2_reg_lambda * (self.W_O.weight.norm() + self.W_O.bias.norm())
+        loss = (real_loss + fake_loss) / 2 + self.l2_reg_lambda * (self.W_O.weight.norm() + self.W_O.bias.norm())
 
         return loss

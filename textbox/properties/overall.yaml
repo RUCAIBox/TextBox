@@ -36,4 +36,3 @@ d_sample_training_epochs: 3
 adversarail_training_epochs: 120
 adversarail_d_epochs: 5
 grad_clip: 5.0
-

@@ -3,9 +3,9 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2020/11/27, 2020/11/24, 2020/11/21
-# @Author : Xiaoxuan Hu, Tianyi Tang, Jiangjin Hao
-# @Email  : huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
+# @Time   : 2020/12/2, 2020/11/27, 2020/11/24, 2020/11/21
+# @Author : Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang, Jiangjin Hao
+# @Email  : jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
 
 r"""
 textbox.trainer.trainer
@@ -18,6 +18,7 @@ import torch
 import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
+import copy
 
 from torch.utils.data import DataLoader
 from time import time
@@ -67,6 +68,7 @@ class Trainer(AbstractTrainer):
     More information can be found in [placeholder]. `model` is the instantiated object of a Model Class.
 
     """
+
     def __init__(self, config, model):
         super(Trainer, self).__init__(config, model)
 
@@ -361,6 +363,7 @@ class UnconditionalTrainer(Trainer):
     def __init__(self, config, model):
         super(UnconditionalTrainer, self).__init__(config, model)
 
+
 class GANTrainer(Trainer):
     r"""GANTrainer is designed for GAN, which is a generative adversarial net method.
     """
@@ -384,7 +387,7 @@ class GANTrainer(Trainer):
         self.d_pretraining_loss_dict = dict()
         self.max_length = config['max_seq_length'] + 2
         self.pad_idx = model.pad_idx
-    
+
     def _build_module_optimizer(self, module):
         r"""Init the Module Optimizer
 
@@ -432,7 +435,7 @@ class GANTrainer(Trainer):
             return (manager_opt, worker_opt)
         else:
             return optimizer
-    
+
     def _optimize_step(self, losses, total_loss, model, opt):
         if isinstance(losses, tuple):
             loss = sum(losses)
@@ -478,7 +481,7 @@ class GANTrainer(Trainer):
     def _add_pad(self, data):
         batch_size = data.shape[0]
         padded_data = torch.full((batch_size, self.max_length), self.pad_idx, dtype=torch.long, device=self.device)
-        padded_data[ : , : data.shape[1]] = data
+        padded_data[:, : data.shape[1]] = data
         return padded_data
 
     def _get_real_data(self, train_data):
@@ -510,7 +513,8 @@ class GANTrainer(Trainer):
             # interaction = interaction.to(self.device)
             losses = self.model.calculate_g_train_loss(data, epoch_idx=epoch_idx)
             total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
-        total_loss = [l / len(train_data) for l in total_loss] if isinstance(total_loss, tuple) else total_loss / len(train_data)
+        total_loss = [l / len(train_data) for l in total_loss] if isinstance(total_loss, tuple) else total_loss / len(
+            train_data)
         total_loss = tuple(total_loss) if isinstance(total_loss, list) else total_loss
         return total_loss
 
@@ -539,7 +543,7 @@ class GANTrainer(Trainer):
                 total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
 
         return total_loss / min(len(real_dataloader), len(fake_dataloader)) / self.d_sample_training_epochs
-    
+
     def _adversarial_train_epoch(self, train_data, epoch_idx):
         r"""Adversarial training in an epoch
 
@@ -556,12 +560,12 @@ class GANTrainer(Trainer):
         total_loss = None
         losses = self.model.calculate_g_adversarial_loss(epoch_idx=epoch_idx)
         total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
-        
+
         for epoch_idx in range(self.adversarail_d_epochs):
             self._d_train_epoch(train_data, epoch_idx=epoch_idx)
 
         return total_loss
-    
+
     def fit(self, train_data, valid_data=None, verbose=True, saved=True):
         r"""Train the model based on the train data and the valid data.
 
@@ -584,7 +588,8 @@ class GANTrainer(Trainer):
             self.g_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             training_end_time = time()
             train_loss_output = \
-                self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss, "generator pre")
+                self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss,
+                                                 "generator pre")
             if verbose:
                 self.logger.info(train_loss_output)
         if verbose:
@@ -599,12 +604,13 @@ class GANTrainer(Trainer):
             self.d_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             training_end_time = time()
             train_loss_output = \
-                self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss, "discriminator pre")
+                self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss,
+                                                 "discriminator pre")
             if verbose:
                 self.logger.info(train_loss_output)
         if verbose:
             self.logger.info("End discriminator pretraining...")
-        
+
         # adversarial training
         if verbose:
             self.logger.info("Start adversarial training...")
@@ -655,7 +661,7 @@ class TextGANTrainer(GANTrainer):
                 total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
 
         return total_loss / len(real_dataloader) / self.d_sample_training_epochs
-    
+
     def _adversarial_train_epoch(self, train_data, epoch_idx):
         r"""Adversarial training in an epoch
 
@@ -676,7 +682,7 @@ class TextGANTrainer(GANTrainer):
         for real_data in real_dataloader:
             losses = self.model.calculate_g_adversarial_loss(real_data, epoch_idx=epoch_idx)
             total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
-        
+
         for epoch_idx in range(self.adversarail_d_epochs):
             self._d_train_epoch(train_data, epoch_idx=epoch_idx)
 
@@ -709,7 +715,7 @@ class RankGANTrainer(GANTrainer):
         fake_data = self.model.sample(self.d_sample_num)
         fake_dataloader = DataLoader(fake_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
 
-        ref_index = np.random.randint(0, real_data.shape[0], size = self.model.ref_size)
+        ref_index = np.random.randint(0, real_data.shape[0], size=self.model.ref_size)
         ref_data = real_data[ref_index]  # ref_size * l
 
         for _ in range(self.d_sample_training_epochs):
@@ -734,19 +740,19 @@ class RankGANTrainer(GANTrainer):
         self.model.generator.train()
         total_loss = None
         real_data = self._get_real_data(train_data)
-        ref_index = np.random.randint(0, real_data.shape[0], size = self.model.ref_size)
+        ref_index = np.random.randint(0, real_data.shape[0], size=self.model.ref_size)
         ref_data = real_data[ref_index]  # ref_size * l
 
         losses = self.model.calculate_g_adversarial_loss(ref_data, epoch_idx=epoch_idx)
         total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
-        
+
         d_loss = 0
         for epoch_idx in range(self.adversarail_d_epochs):
             d_loss += self._d_train_epoch(train_data, epoch_idx=epoch_idx)
-        d_loss = d_loss/self.adversarail_d_epochs
-        
-        #d_output = "d_loss: %f" % (d_loss)
-        #self.logger.info(d_output)
+        d_loss = d_loss / self.adversarail_d_epochs
+
+        # d_output = "d_loss: %f" % (d_loss)
+        # self.logger.info(d_output)
         return total_loss
 
 
@@ -756,3 +762,113 @@ class ConditionalTrainer(Trainer):
 
     def __init__(self, config, model):
         super(ConditionalTrainer, self).__init__(config, model)
+
+
+class MaskGANTrainer(GANTrainer):
+    r""" Trainer specifically designed for MaskGAN training process.
+
+    """
+
+    def __init__(self, config, model):
+        super(MaskGANTrainer, self).__init__(config, model)
+        self.adversarail_c_epochs = config['adversarail_c_epochs']  # !!
+
+    def _optimize_step(self, losses, total_loss, model, opt, retain_graph=False):
+        if isinstance(losses, tuple):
+            loss = sum(losses)
+            loss_tuple = tuple(per_loss.item() for per_loss in losses)
+            total_loss = loss_tuple if total_loss is None else tuple(map(sum, zip(total_loss, loss_tuple)))
+        else:
+            loss = losses
+            total_loss = losses.item() if total_loss is None else total_loss + losses.item()
+        self._check_nan(loss)
+
+        opt.zero_grad()
+        loss.backward(retain_graph=retain_graph)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
+        opt.step()
+        return total_loss
+
+    def _g_train_epoch(self, train_data, epoch_idx):
+        r"""Train the generator module in an epoch
+
+        Args:
+            train_data (DataLoader): the train data
+            epoch_idx (int): the current epoch id
+
+        Returns:
+            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
+            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
+            tuple which includes the sum of loss in each part.
+        """
+        self.model.generator.train()
+        total_loss = None
+
+        for batch_idx, data in enumerate(train_data):
+            losses = self.model.calculate_g_train_loss(data, is_advtrain=False, epoch_idx=epoch_idx)
+            total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
+        total_loss = total_loss / len(train_data)
+        return total_loss
+
+    def _d_train_epoch(self, train_data, epoch_idx):
+        r"""Train the discriminator module in an epoch
+
+        Args:
+            train_data (DataLoader): the train data
+            epoch_idx (int): the current epoch id
+
+        Returns:
+            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
+            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
+            tuple which includes the sum of loss in each part.
+        """
+        self.model.discriminator.train()
+        total_loss = None
+
+        for batch_idx, data in enumerate(train_data):
+            losses = self.model.calculate_d_train_loss(data, epoch_idx=epoch_idx, is_advtrain=False)
+            total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
+
+        return total_loss / len(train_data)
+
+    def _adversarial_train_epoch(self, train_data, epoch_idx):
+        r"""Adversarial training in an epoch
+
+        Args:
+            train_data (DataLoader): the train data
+            epoch_idx (int): the current epoch id
+
+        Returns:
+            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
+            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
+            tuple which includes the sum of loss in each part.
+        """
+        dis_total_loss = None
+        gen_total_loss = None
+        critic_total_loss = None
+        g_num = 0.0
+        d_num = 0.0
+        dis_train_data = copy.deepcopy(train_data)
+        gen_train_data = copy.deepcopy(train_data)
+        _ = next(dis_train_data)
+        for g_x in gen_train_data:
+            g_num += 1
+            # self.model.discriminator.train()
+            for _ in range(self.adversarail_d_epochs):
+                d_num += 1
+                try:
+                    d_x = next(dis_train_data)
+                except StopIteration:
+                    del dis_train_data
+                    dis_train_data = copy.deepcopy(train_data)
+                    d_x = next(dis_train_data)
+                losses = self.model.calculate_d_train_loss(d_x, epoch_idx=_, is_advtrain=True)
+                dis_total_loss = self._optimize_step(losses, dis_total_loss, self.model.discriminator, self.d_optimizer)
+
+            # self.model.generator.train()
+            gen_losses, critic_losses = self.model.calculate_g_adversarial_loss(g_x, epoch_idx=g_num)
+            gen_total_loss = self._optimize_step(gen_losses, gen_total_loss, self.model.generator, self.g_optimizer,
+                                                 retain_graph=True)
+            critic_total_loss = self._optimize_step(critic_losses, critic_total_loss, self.model.discriminator,
+                                                    self.d_optimizer)
+        return (dis_total_loss / d_num, gen_total_loss / g_num, critic_total_loss / g_num)

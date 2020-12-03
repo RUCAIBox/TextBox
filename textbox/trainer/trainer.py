@@ -3,9 +3,9 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2020/12/2, 2020/11/27, 2020/11/24, 2020/11/21
-# @Author : Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang, Jiangjin Hao
-# @Email  : jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
+# @Time   : 2020/12/2, 2020/11/27, 2020/12/3
+# @Author : Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang
+# @Email  : jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn
 
 r"""
 textbox.trainer.trainer
@@ -304,6 +304,22 @@ class Trainer(AbstractTrainer):
                     break
         return self.best_valid_score, self.best_valid_result
 
+    def _evaluate_nll_test(self, eval_data):
+        r"""Calculate the negative log-likelihood of the eval_data.
+
+        Args:
+            eval_data (DataLoader): the eval data.
+
+        Returns:
+            Float: NLL_test of the eval data.
+        """
+
+        total_loss = 0
+        for epoch_idx, eval_batch in enumerate(eval_data):
+            nll_test = self.model.calculate_g_train_loss(eval_batch, epoch_idx)
+            total_loss += nll_test.item()
+        return total_loss / len(eval_data)
+
     @torch.no_grad()
     def evaluate(self, eval_data, load_best_model=True, model_file=None):
         r"""Evaluate the model based on the eval data.
@@ -332,6 +348,7 @@ class Trainer(AbstractTrainer):
         generate_corpus = self.model.generate(eval_data)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
+        result['nll_test'] = self._evaluate_nll_test(eval_data)
 
         return result
 

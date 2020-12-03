@@ -18,6 +18,7 @@ class SeqGANGenerator(UnconditionalGenerator):
         self.embedding_size = config['generator_embedding_size']
         self.max_length = config['max_seq_length'] + 2
         self.monte_carlo_num = config['Monte_Carlo_num']
+        self.eval_generate_num = config['eval_generate_num']
         self.start_idx = dataset.sos_token_idx
         self.end_idx = dataset.eos_token_idx
         self.pad_idx = dataset.padding_token_idx
@@ -79,11 +80,10 @@ class SeqGANGenerator(UnconditionalGenerator):
     def generate(self, eval_data):
         self.eval()
         generate_corpus = []
-        number_to_gen = 10
         idx2token = eval_data.idx2token
 
         with torch.no_grad():
-            for _ in range(number_to_gen):
+            for _ in range(self.eval_generate_num):
                 h_prev = torch.zeros(1, 1, self.hidden_size, device = self.device) # 1 * 1 * h
                 o_prev = torch.zeros(1, 1, self.hidden_size, device = self.device) # 1 * 1 * h
                 prev_state = (h_prev, o_prev)

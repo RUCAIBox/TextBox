@@ -23,7 +23,7 @@ split_ratio: [0.8,0.1,0.1]
 leave_one_num: 2
 real_time_process: True
 metrics: ["bleu", "self_bleu"]
-n_grams: [1,2,3,4]
+n_grams: [1,2,3,4,5]
 topk: [10]
 valid_metric: MRR@10
 eval_batch_size: 64

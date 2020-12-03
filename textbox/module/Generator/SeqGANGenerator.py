@@ -34,12 +34,26 @@ class SeqGANGenerator(UnconditionalGenerator):
         data_embedding = self.word_embedding(datas[ : -1]) # len * b * e
         output, _ = self.LSTM(data_embedding) # len * b * h
         logits = self.vocab_projection(output) # len * b * v
-
-        logits = logits.reshape(-1, self.vocab_size) # (len * b) * v
-        target = datas[1 : ].reshape(-1) # (len * b)
-
-        losses = F.cross_entropy(logits, target, ignore_index = self.pad_idx)
-        return losses
+        
+        target_word = datas[1 : ] # len * b
+        target_word_prob = F.cross_entropy(logits.reshape(-1, self.vocab_size), target_word.reshape(-1), ignore_index=self.pad_idx, reduction='none') # (len * b)
+        target_word_prob = target_word_prob.reshape_as(target_word) # len * b
+        mask = target_word.ne(self.pad_idx).float() # len * b
+        loss = target_word_prob.sum(dim = 0) / mask.sum(dim = 0) # b
+        return loss.mean()
+    
+    def calculate_nll_test(self, corpus):
+        datas = corpus['target_idx'] # b * len
+        datas = datas.permute(1, 0) # len * b
+        data_embedding = self.word_embedding(datas[ : -1]) # len * b * e
+        output, _ = self.LSTM(data_embedding) # len * b * h
+        logits = self.vocab_projection(output) # len * b * v
+        
+        target_word = datas[1 : ] # len * b
+        target_word_prob = F.cross_entropy(logits.reshape(-1, self.vocab_size), target_word.reshape(-1), ignore_index=self.pad_idx, reduction='none') # (len * b)
+        target_word_prob = target_word_prob.reshape_as(target_word) # len * b
+        loss = target_word_prob.sum(dim = 0) # b
+        return loss.mean()
 
     def sample_batch(self):
         self.eval()

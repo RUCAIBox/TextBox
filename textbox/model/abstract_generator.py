@@ -45,6 +45,17 @@ class AbstractModel(nn.Module):
         """
         raise NotImplementedError
 
+    def calculate_nll_test(self, eval_data):
+        r"""Calculate the negative log-likelihood of the batch.
+
+        Args:
+            eval_data (Corpus): Corpus class of the batch.
+
+        Returns:
+            torch.FloatTensor: NLL_test of eval data
+        """
+        raise NotImplementedError
+
     def __str__(self):
         """
         Model prints with number of trainable parameters

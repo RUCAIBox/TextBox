@@ -2,6 +2,11 @@
 # @Author : Gaole He
 # @Email  : hegaole@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2020/12/3
+# @Author : Tianyi Tang
+# @Email  : steventang@ruc.edu.cn
+
 """
 textbox.evaluator.ngram_evaluator
 ################################
@@ -89,9 +94,8 @@ class NgramEvaluator(AbstractEvaluator):
         assert metric in metrics_dict
         metric_fuc = metrics_dict[metric.lower()]
         result_list = []
-        for n_gram in self.n_grams:
-            result = metric_fuc(generate_corpus=generate_corpus, reference_corpus=reference_corpus, n_gram=n_gram)
-            result_list.append(result)
+        result = metric_fuc(generate_corpus=generate_corpus, reference_corpus=reference_corpus, n_grams=self.n_grams)
+        result_list.extend(result)
         return result_list
 
     def _calculate_metrics(self, generate_corpus, reference_corpus):

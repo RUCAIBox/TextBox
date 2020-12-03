@@ -3,7 +3,7 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2020/11/15
+# @Time   : 2020/12/3
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
@@ -101,7 +101,7 @@ class GenerativeAdversarialNet(AbstractModel):
         self.batch_size = config['train_batch_size']
         self.device = config['device']
 
-    def calculate_g_loss(self, corpus):
+    def calculate_g_train_loss(self, corpus):
         r"""Calculate the generator training loss for a batch data.
 
         Args:
@@ -112,7 +112,7 @@ class GenerativeAdversarialNet(AbstractModel):
         """
         raise NotImplementedError
 
-    def calculate_d_loss(self, real_data, fake_data):
+    def calculate_d_train_loss(self, real_data, fake_data):
         r"""Calculate the discriminator training loss for a batch data.
 
         Args:

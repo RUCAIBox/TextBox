@@ -6,6 +6,3 @@ l2_reg_lambda: 0.2
 filter_sizes: [2, 3, 4]
 filter_nums: [200, 200, 200]
 Monte_Carlo_num: 16
-
-split_ratio: [1.0, 0.0, 0.0]
-overfit: True

@@ -2,6 +2,10 @@
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2020/12/3
+# @Author : Tianyi Tang
+# @Email  : steventang@ruc.edu.cn
 
 import torch
 import torch.nn as nn

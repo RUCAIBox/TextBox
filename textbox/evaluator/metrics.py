@@ -15,8 +15,7 @@ from nltk.translate.bleu_score import SmoothingFunction, sentence_bleu
 
 
 def bleu_(generate_corpus, reference_corpus, n_gram):
-    assert n_gram <= 4
-    weights = [0, 0, 0, 0]
+    weights = [0, 0, 0, 0, 0]
     weights[n_gram-1] = 1
     weights = tuple(weights)
     bleu_score = []
@@ -27,8 +26,7 @@ def bleu_(generate_corpus, reference_corpus, n_gram):
 
 
 def self_bleu_(generate_corpus, n_gram, reference_corpus=None):
-    assert n_gram <= 4
-    weights = [0, 0, 0, 0]
+    weights = [0, 0, 0, 0, 0]
     weights[n_gram-1] = 1
     weights = tuple(weights)
     self_bleu_score = []

@@ -87,11 +87,11 @@ def get_trainer(model_type, model_name):
         return getattr(importlib.import_module('textbox.trainer'), model_name + 'Trainer')
     except AttributeError:
         if model_type == ModelType.UNCONDITIONAL:
-            return getattr(importlib.import_module('textbox.trainer'), 'UnconditionalTrainer')
+            return getattr(importlib.import_module('textbox.trainer'), 'Trainer')
         elif model_type == ModelType.GAN:
             return getattr(importlib.import_module('textbox.trainer'), 'GANTrainer')
-        elif model_type == ModelType.CONDITIONAL or model_type == ModelType.TRANSLATION:
-            return getattr(importlib.import_module('textbox.trainer'), 'ConditionalTrainer')
+        elif model_type == ModelType.CONDITIONAL:
+            return getattr(importlib.import_module('textbox.trainer'), 'Trainer')
         else:
             return getattr(importlib.import_module('textbox.trainer'), 'Trainer')
 

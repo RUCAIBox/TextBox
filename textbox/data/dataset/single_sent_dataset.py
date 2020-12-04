@@ -14,7 +14,7 @@ from textbox.data.dataset import Dataset
 
 class SingleSentenceDataset(Dataset):
     def __init__(self, config, saved_dataset=None):
-        self.source_language = config['source_language']
+        self.source_language = config['source_language'].lower()
         self.strategy = config['strategy']
         self.split_ratio = config['split_ratio']
         super().__init__(config, saved_dataset)
@@ -42,7 +42,7 @@ class SingleSentenceDataset(Dataset):
             source_text = []
             fin = open(source_file, "r")
             for line in fin:
-                words = nltk.word_tokenize(line.strip(), language=self.source_language.lower())[:self.max_seq_length]
+                words = nltk.word_tokenize(line.strip(), language=self.source_language)[:self.max_seq_length]
                 source_text.append(words)
             fin.close()
             self.text_data.append(source_text)

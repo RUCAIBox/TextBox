@@ -4,6 +4,7 @@ use_gpu: True
 seed: 2020
 state: INFO
 reproducibility: True
+TASK_TYPE: 'unconditional'
 data_path: 'dataset/'
 checkpoint_dir: 'saved'
 

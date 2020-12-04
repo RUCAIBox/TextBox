@@ -23,9 +23,6 @@ class AbstractDataLoader(object):
         config (Config): The config of dataloader.
         dataset (Corpus): The corpus for partition of dataset.
         batch_size (int, optional): The batch_size of dataloader. Defaults to ``1``.
-        dl_format (InputType, optional): The input type of dataloader. Defaults to
-            :obj:`~textbox.utils.enum_type.InputType.NOISE`.
-        shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
     Attributes:
         dataset (Dataset): The dataset of this dataloader.
         shuffle (bool): If ``True``, dataloader will shuffle before every epoch.
@@ -38,14 +35,13 @@ class AbstractDataLoader(object):
     dl_type = None
 
     def __init__(self, config, dataset,
-                 batch_size=1, dl_format=InputType.NOISE, shuffle=False):
+                 batch_size=1, shuffle=False):
         self.config = config
         self.device = config['device']
         self.logger = getLogger()
         self.dataset = dataset
         self.batch_size = batch_size
         self.step = batch_size
-        self.dl_format = dl_format
         self.shuffle = shuffle
         self.pr = 0
 

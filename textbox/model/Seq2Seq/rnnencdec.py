@@ -18,7 +18,6 @@ class RNNEncDec(ConditionalGenerator):
     r"""RNN-based Encoder-Decoder architecture is a basic framework for conditional text generation.
 
     """
-    input_type = InputType.NOISE
 
     def __init__(self, config, dataset):
         super(RNNEncDec, self).__init__(config, dataset)
@@ -66,7 +65,7 @@ class RNNEncDec(ConditionalGenerator):
 
     def generate(self, eval_dataloader):
         generate_corpus = []
-        idx2token = eval_data.idx2token
+        idx2token = eval_dataloader.idx2token
         for batch_data in eval_dataloader:
             source_text = batch_data['source_idx']
             source_length = batch_data['source_length']

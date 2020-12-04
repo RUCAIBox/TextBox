@@ -42,7 +42,7 @@ class SeqGAN(GenerativeAdversarialNet):
         return loss
 
     def calculate_nll_test(self, corpus, epoch_idx):
-        return self.generator.calculate_nll_test(corpus)
+        return self.generator.calculate_loss(corpus, nll_test=True)
 
     def generate(self, eval_data):
         return self.generator.generate(eval_data)

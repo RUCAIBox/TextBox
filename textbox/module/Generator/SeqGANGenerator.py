@@ -28,7 +28,7 @@ class SeqGANGenerator(UnconditionalGenerator):
         self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx = self.pad_idx)
         self.vocab_projection = nn.Linear(self.hidden_size, self.vocab_size)
 
-    def calculate_loss(self, corpus):
+    def calculate_loss(self, corpus, nll_test=False):
         datas = corpus['target_idx'] # b * len
         datas = datas.permute(1, 0) # len * b
         data_embedding = self.word_embedding(datas[ : -1]) # len * b * e
@@ -38,21 +38,11 @@ class SeqGANGenerator(UnconditionalGenerator):
         target_word = datas[1 : ] # len * b
         target_word_prob = F.cross_entropy(logits.reshape(-1, self.vocab_size), target_word.reshape(-1), ignore_index=self.pad_idx, reduction='none') # (len * b)
         target_word_prob = target_word_prob.reshape_as(target_word) # len * b
-        mask = target_word.ne(self.pad_idx).float() # len * b
-        loss = target_word_prob.sum(dim = 0) / mask.sum(dim = 0) # b
-        return loss.mean()
-    
-    def calculate_nll_test(self, corpus):
-        datas = corpus['target_idx'] # b * len
-        datas = datas.permute(1, 0) # len * b
-        data_embedding = self.word_embedding(datas[ : -1]) # len * b * e
-        output, _ = self.LSTM(data_embedding) # len * b * h
-        logits = self.vocab_projection(output) # len * b * v
-        
-        target_word = datas[1 : ] # len * b
-        target_word_prob = F.cross_entropy(logits.reshape(-1, self.vocab_size), target_word.reshape(-1), ignore_index=self.pad_idx, reduction='none') # (len * b)
-        target_word_prob = target_word_prob.reshape_as(target_word) # len * b
-        loss = target_word_prob.sum(dim = 0) # b
+        if (nll_test):
+            loss = target_word_prob.sum(dim = 0)
+        else:
+            length = corpus['target_length'] - 1 # b
+            loss = target_word_prob.sum(dim = 0) / length # b
         return loss.mean()
 
     def sample_batch(self):

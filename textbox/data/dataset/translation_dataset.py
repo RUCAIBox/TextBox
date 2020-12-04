@@ -17,14 +17,6 @@ class TranslationDataset(Dataset):
         self.target_language = config['target_language']
         self.source_suffix = config['source_suffix']
         self.target_suffix = config['target_suffix']
-        try:
-            self.source_tokenizer = nltk.data.load('tokenizers/punkt/{}.pickle'.format(self.source_language.lower()))
-        except FileNotFoundError:
-            print("Error occur when fetching tokenizers/punkt/{}.pickle".format(self.source_language.lower()))
-        try:
-            self.target_tokenizer = nltk.data.load('tokenizers/punkt/{}.pickle'.format(self.target_language.lower()))
-        except FileNotFoundError:
-            print("Error occur when fetching tokenizers/punkt/{}.pickle".format(self.target_language.lower()))
         super().__init__(config, saved_dataset)
 
     def _get_preset(self):
@@ -56,8 +48,7 @@ class TranslationDataset(Dataset):
             source_text = []
             fin = open(source_file, "r")
             for line in fin:
-                words = self.source_tokenizer.tokenize(line.strip())[:self.max_seq_length]
-                # words = nltk.word_tokenize(line.strip())[:self.max_seq_length]
+                words = nltk.word_tokenize(line.strip(), language=self.source_language.lower())[:self.max_seq_length]
                 source_text.append(words)
             fin.close()
             self.source_text_data.append(source_text)
@@ -66,8 +57,7 @@ class TranslationDataset(Dataset):
             target_text = []
             fin = open(target_file, "r")
             for line in fin:
-                words = self.target_tokenizer.tokenize(line.strip())[:self.max_seq_length]
-                # words = nltk.word_tokenize(line.strip())[:self.max_seq_length]
+                words = nltk.word_tokenize(line.strip(), language=self.target_language.lower())[:self.max_seq_length]
                 target_text.append(words)
             fin.close()
             self.target_text_data.append(target_text)

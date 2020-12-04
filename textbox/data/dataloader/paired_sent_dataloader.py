@@ -29,23 +29,21 @@ class PairedSentenceDataLoader(AbstractDataLoader):
             :obj:`~textbox.utils.enum_type.InputType.POINTWISE`.
         shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
     """
-    dl_type = DataLoaderType.CONDITIONAL
 
-    def __init__(self, config, dataset,
-                 batch_size=1, dl_format=InputType.PAIRTEXT, shuffle=False):
-        super().__init__(config, dataset, batch_size=batch_size, dl_format=dl_format, shuffle=shuffle)
+    def __init__(self, config, dataset, batch_size=1, shuffle=False):
+        super().__init__(config, dataset, batch_size=batch_size, shuffle=shuffle)
         self.data_preprocess(dataset)
 
     def data_preprocess(self, dataset):
-        required_key_list = ['source_text_data', 'target_text_data', 'token2idx', 'idx2token']
+        required_key_list = ['source_text_data', 'target_text_data', 'source_token2idx',
+                             'source_idx2token', 'target_token2idx', 'target_idx2token']
         for dataset_attr in required_key_list:
             assert dataset_attr in dataset
             setattr(self, dataset_attr, dataset[dataset_attr])
         self.source_text_idx_data, self.source_idx_length_data = self._build_data(self.source_text_data,
-                                                                                  self.token2idx,
-                                                                                  need_text_start_end=False)
+                                                                                  self.source_token2idx)
         self.target_text_idx_data, self.target_idx_length_data = self._build_data(self.target_text_data,
-                                                                                  self.token2idx)
+                                                                                  self.target_token2idx)
 
     def get_reference(self):
         return self.target_text_data
@@ -61,8 +59,8 @@ class PairedSentenceDataLoader(AbstractDataLoader):
         temp = list(zip(self.source_text_data, self.source_text_idx_data, self.source_idx_length_data,
                         self.target_text_data, self.target_text_idx_data, self.target_idx_length_data))
         random.shuffle(temp)
-        self.source_text_data[:], self.source_text_idx_data[:], self.source_idx_length_data[:],\
-            self.target_text_data[:], self.target_text_idx_data[:], self.target_idx_length_data[:] = zip(*temp)
+        self.source_text_data[:], self.source_text_idx_data[:], self.source_idx_length_data[:], \
+        self.target_text_data[:], self.target_text_idx_data[:], self.target_idx_length_data[:] = zip(*temp)
 
     def _next_batch_data(self):
         source_text = self.source_text_data[self.pr: self.pr + self.step]

@@ -221,16 +221,16 @@ class Config(object):
         else:
             self.final_config_dict['data_path'] = os.path.join(self.final_config_dict['data_path'], self.dataset)
 
-        if hasattr(get_model(self.model), 'input_type'):
-            self.final_config_dict['MODEL_INPUT_TYPE'] = get_model(self.model).input_type
-        elif 'loss_type' in self.final_config_dict:
-            if self.final_config_dict['loss_type'] in ['CE']:
-                self.final_config_dict['MODEL_INPUT_TYPE'] = InputType.POINTWISE
-            elif self.final_config_dict['loss_type'] in ['BPR']:
-                self.final_config_dict['MODEL_INPUT_TYPE'] = InputType.PAIRWISE
-        else:
-            raise ValueError('Either Model has attr \'input_type\','
-                             'or arg \'loss_type\' should exist in config.')
+        # if hasattr(get_model(self.model), 'input_type'):
+        #     self.final_config_dict['MODEL_INPUT_TYPE'] = get_model(self.model).input_type
+        # elif 'loss_type' in self.final_config_dict:
+        #     if self.final_config_dict['loss_type'] in ['CE']:
+        #         self.final_config_dict['MODEL_INPUT_TYPE'] = InputType.POINTWISE
+        #     elif self.final_config_dict['loss_type'] in ['BPR']:
+        #         self.final_config_dict['MODEL_INPUT_TYPE'] = InputType.PAIRWISE
+        # else:
+        #     raise ValueError('Either Model has attr \'input_type\','
+        #                      'or arg \'loss_type\' should exist in config.')
 
         eval_type = None
         self.final_config_dict['eval_type'] = eval_type

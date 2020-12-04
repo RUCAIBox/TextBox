@@ -3,6 +3,11 @@
 # @Author  :   Junyi Li
 # @email   :   lijunyi@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2020/12/3
+# @Author : Tianyi Tang
+# @Email  : steventang@ruc.edu.cn
+
 """
 recbole.evaluator.metrics
 ############################
@@ -11,31 +16,42 @@ recbole.evaluator.metrics
 from logging import getLogger
 
 import numpy as np
-from nltk.translate.bleu_score import SmoothingFunction, sentence_bleu
+from fast_bleu import BLEU, SelfBLEU
 
 
-def bleu_(generate_corpus, reference_corpus, n_gram):
-    weights = [0, 0, 0, 0, 0]
-    weights[n_gram-1] = 1
-    weights = tuple(weights)
-    bleu_score = []
-    for candidate in generate_corpus:
-        bleu_score.append(sentence_bleu(reference_corpus, candidate, weights,
-                                        smoothing_function=SmoothingFunction().method1))
-    return sum(bleu_score) / len(bleu_score)
+def bleu_(generate_corpus, reference_corpus, n_grams):
+    weight = [0] * max(n_grams)
+    weights = {}
+    for n_gram in n_grams:
+        weight[n_gram - 1] = 1.0
+        weights[n_gram] = tuple(weight)
+        weight[n_gram - 1] = 0.0
 
+    bleu = BLEU(reference_corpus, weights)
+    scores = bleu.get_score(generate_corpus)
 
-def self_bleu_(generate_corpus, n_gram, reference_corpus=None):
-    weights = [0, 0, 0, 0, 0]
-    weights[n_gram-1] = 1
-    weights = tuple(weights)
-    self_bleu_score = []
-    for idx in range(len(generate_corpus)):
-        candidate = generate_corpus[idx]
-        reference_corpus = generate_corpus[:idx] + generate_corpus[idx+1:]
-        self_bleu_score.append(sentence_bleu(reference_corpus, candidate, weights,
-                                             smoothing_function=SmoothingFunction().method1))
-    return sum(self_bleu_score) / len(self_bleu_score)
+    results = []
+    for n_gram in n_grams:
+        score = np.array(scores[n_gram])
+        results.append(score.mean())
+    return results
+
+def self_bleu_(generate_corpus, n_grams, reference_corpus=None):
+    weight = [0] * max(n_grams)
+    weights = {}
+    for n_gram in n_grams:
+        weight[n_gram - 1] = 1.0
+        weights[n_gram] = tuple(weight)
+        weight[n_gram - 1] = 0.0
+
+    bleu = SelfBLEU(generate_corpus, weights)
+    scores = bleu.get_score()
+
+    results = []
+    for n_gram in n_grams:
+        score = np.array(scores[n_gram])
+        results.append(score.mean())
+    return results
 
 
 """Function name and function mapper.

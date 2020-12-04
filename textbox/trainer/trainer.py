@@ -317,8 +317,8 @@ class Trainer(AbstractTrainer):
 
         total_loss = 0
         for epoch_idx, eval_batch in enumerate(eval_data):
-            nll_test = self.model.calculate_g_train_loss(eval_batch, epoch_idx)
-            total_loss += nll_test.item()
+            nll_test = self.model.calculate_nll_test(eval_batch, epoch_idx)
+            total_loss += float(nll_test)
         return total_loss / len(eval_data)
 
     @torch.no_grad()

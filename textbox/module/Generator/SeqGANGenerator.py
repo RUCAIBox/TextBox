@@ -28,18 +28,22 @@ class SeqGANGenerator(UnconditionalGenerator):
         self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx = self.pad_idx)
         self.vocab_projection = nn.Linear(self.hidden_size, self.vocab_size)
 
-    def calculate_loss(self, corpus):
+    def calculate_loss(self, corpus, nll_test=False):
         datas = corpus['target_idx'] # b * len
         datas = datas.permute(1, 0) # len * b
         data_embedding = self.word_embedding(datas[ : -1]) # len * b * e
         output, _ = self.LSTM(data_embedding) # len * b * h
         logits = self.vocab_projection(output) # len * b * v
-
-        logits = logits.reshape(-1, self.vocab_size) # (len * b) * v
-        target = datas[1 : ].reshape(-1) # (len * b)
-
-        losses = F.cross_entropy(logits, target, ignore_index = self.pad_idx)
-        return losses
+        
+        target_word = datas[1 : ] # len * b
+        target_word_prob = F.cross_entropy(logits.reshape(-1, self.vocab_size), target_word.reshape(-1), ignore_index=self.pad_idx, reduction='none') # (len * b)
+        target_word_prob = target_word_prob.reshape_as(target_word) # len * b
+        if (nll_test):
+            loss = target_word_prob.sum(dim = 0)
+        else:
+            length = corpus['target_length'] - 1 # b
+            loss = target_word_prob.sum(dim = 0) / length # b
+        return loss.mean()
 
     def sample_batch(self):
         self.eval()

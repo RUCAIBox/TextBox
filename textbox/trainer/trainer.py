@@ -3,9 +3,9 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2020/12/2, 2020/11/27, 2020/11/24, 2020/11/21
-# @Author : Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang, Jiangjin Hao
-# @Email  : jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
+# @Time   : 2020/12/2, 2020/11/27, 2020/12/3
+# @Author : Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang
+# @Email  : jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn
 
 r"""
 textbox.trainer.trainer
@@ -91,7 +91,7 @@ class Trainer(AbstractTrainer):
         self.cur_step = 0
         self.best_valid_score = 100000000
         self.best_valid_result = None
-        self.train_loss_dict = dict()
+        self.train_loss_ppl_dict = dict()
         self.optimizer = self._build_optimizer()
         self.evaluator = NgramEvaluator(config)
         # self.eval_type = config['eval_type']
@@ -151,7 +151,9 @@ class Trainer(AbstractTrainer):
             self._check_nan(loss)
             loss.backward()
             self.optimizer.step()
-        return total_loss / len(train_data)
+        train_loss = total_loss / len(train_data)
+        ppl = np.exp(train_loss)
+        return train_loss, ppl
 
     def _valid_epoch(self, valid_data):
         r"""Valid the model with valid data
@@ -165,7 +167,6 @@ class Trainer(AbstractTrainer):
         """
         self.model.eval()
         total_loss = None
-        valid_len = float(len(valid_data))
         for batch_idx, data in enumerate(valid_data):
             # interaction = interaction.to(self.device)
             self.optimizer.zero_grad()
@@ -179,7 +180,7 @@ class Trainer(AbstractTrainer):
                 total_loss = losses.item() if total_loss is None else total_loss + losses.item()
             self._check_nan(loss)
         self.optimizer.zero_grad()
-        valid_loss = total_loss / valid_len
+        valid_loss = total_loss / len(valid_data)
         ppl = np.exp(valid_loss)
         return valid_loss, ppl
 
@@ -256,8 +257,8 @@ class Trainer(AbstractTrainer):
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
             training_start_time = time()
-            train_loss = self._train_epoch(train_data, epoch_idx)
-            self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
+            train_loss, train_ppl = self._train_epoch(train_data, epoch_idx)
+            self.train_loss_ppl_dict[epoch_idx] = (train_loss, train_ppl)
             training_end_time = time()
             self._save_checkpoint(epoch_idx)
             train_loss_output = \
@@ -304,6 +305,22 @@ class Trainer(AbstractTrainer):
                     break
         return self.best_valid_score, self.best_valid_result
 
+    def _evaluate_nll_test(self, eval_data):
+        r"""Calculate the negative log-likelihood of the eval_data.
+
+        Args:
+            eval_data (DataLoader): the eval data.
+
+        Returns:
+            Float: NLL_test of the eval data.
+        """
+
+        total_loss = 0
+        for epoch_idx, eval_batch in enumerate(eval_data):
+            nll_test = self.model.calculate_nll_test(eval_batch, epoch_idx)
+            total_loss += float(nll_test)
+        return total_loss / len(eval_data)
+
     @torch.no_grad()
     def evaluate(self, eval_data, load_best_model=True, model_file=None):
         r"""Evaluate the model based on the eval data.
@@ -332,6 +349,7 @@ class Trainer(AbstractTrainer):
         generate_corpus = self.model.generate(eval_data)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
+        result['nll_test'] = self._evaluate_nll_test(eval_data)
 
         return result
 

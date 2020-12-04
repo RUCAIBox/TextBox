@@ -184,6 +184,8 @@ def get_data_loader(name, config, eval_setting):
         return SingleSentenceDataLoader
     elif model_type == ModelType.CONDITIONAL or model_type == ModelType.TRANSLATION:
         return TranslationDataLoader
+    # elif model_type == ModelType.SUMMARIZATION:
+    #     return SummarizationDataLoader
     else:
         raise NotImplementedError("No such data loader for MODEL_TYPE: {}".format(model_type))
     # if model_type == ModelType.GENERAL or model_type == ModelType.TRADITIONAL:

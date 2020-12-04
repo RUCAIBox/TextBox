@@ -2,6 +2,10 @@
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2020/12/3
+# @Author : Tianyi Tang
+# @Email  : steventang@ruc.edu.cn
 
 import torch
 import torch.nn as nn
@@ -36,6 +40,9 @@ class SeqGAN(GenerativeAdversarialNet):
         loss = self.generator.adversarial_loss(self.discriminator.forward)
         self.discriminator.train()
         return loss
+
+    def calculate_nll_test(self, corpus, epoch_idx):
+        return self.generator.calculate_loss(corpus, nll_test=True)
 
     def generate(self, eval_data):
         return self.generator.generate(eval_data)

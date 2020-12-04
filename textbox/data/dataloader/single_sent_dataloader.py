@@ -3,7 +3,7 @@
 # @email  : hegaole@ruc.edu.cn
 
 """
-textbox.data.dataloader.general_dataloader
+textbox.data.dataloader.single_sent_dataloader
 ################################################
 """
 
@@ -31,10 +31,9 @@ class SingleSentenceDataLoader(AbstractDataLoader):
     """
     dl_type = DataLoaderType.UNCONDITIONAL
 
-    def __init__(self, config, dataset,
-                 batch_size=1, dl_format=InputType.NOISE, shuffle=False):
+    def __init__(self, config, dataset, batch_size=1, shuffle=False):
 
-        super().__init__(config, dataset, batch_size, dl_format, shuffle)
+        super().__init__(config, dataset, batch_size, shuffle)
         self.data_preprocess(dataset)
 
     def data_preprocess(self, dataset):
@@ -75,4 +74,3 @@ class SingleSentenceDataLoader(AbstractDataLoader):
             'target_length': length.to(self.device)
         }
         return batch_data
-

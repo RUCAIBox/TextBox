@@ -14,13 +14,9 @@ from textbox.data.dataset import Dataset
 
 class SingleSentenceDataset(Dataset):
     def __init__(self, config, saved_dataset=None):
-        self.source_language = config['source_language']
+        self.source_language = config['source_language'].lower()
         self.strategy = config['strategy']
         self.split_ratio = config['split_ratio']
-        try:
-            self.tokenizer = nltk.data.load('tokenizers/punkt/{}.pickle'.format(self.source_language.lower()))
-        except FileNotFoundError:
-            print("Error occur when fetching tokenizers/punkt/{}.pickle".format(self.source_language.lower()))
         super().__init__(config, saved_dataset)
 
     def _get_preset(self):
@@ -46,8 +42,7 @@ class SingleSentenceDataset(Dataset):
             source_text = []
             fin = open(source_file, "r")
             for line in fin:
-                words = self.tokenizer.tokenize(line.strip())[:self.max_seq_length]
-                # words = nltk.word_tokenize(line.strip())[:self.max_seq_length]
+                words = nltk.word_tokenize(line.strip(), language=self.source_language)[:self.max_seq_length]
                 source_text.append(words)
             fin.close()
             self.text_data.append(source_text)
@@ -66,14 +61,14 @@ class SingleSentenceDataset(Dataset):
 
         fin = open(dataset_file, "r")
         for line in fin:
-            words = nltk.word_tokenize(line.strip())[:self.max_seq_length]
+            words = nltk.word_tokenize(line.strip(), language=self.source_language.lower())[:self.max_seq_length]
             self.text_data.append(words)
         fin.close()
 
     def _load_data(self, dataset_path):
         if self.strategy == "load_split":
             self._load_splitted_data(dataset_path)
-        elif self.strategy == "split_ratio":
+        elif self.strategy == "by_ratio":
             self._load_single_data(dataset_path)
         else:
             raise NotImplementedError("{} split strategy not implemented".format(self.strategy))

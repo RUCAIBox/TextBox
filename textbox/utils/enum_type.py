@@ -16,6 +16,20 @@ recbole.utils.enum_type
 from enum import Enum
 
 
+class TaskType(Enum):
+    """Type of models.
+
+    - ``UNCONDITIONAL``: Unconditional Generation Task
+    - ``TRANSLATION``: Translation Generator Task
+    - ``GAN``: Generative Adversarial Net
+    - ``TRANSLATION``: Translation Model
+    """
+
+    UNCONDITIONAL = 1
+    TRANSLATION = 2
+    SUMMARIZATION = 3
+
+
 class ModelType(Enum):
     """Type of models.
 
@@ -26,9 +40,8 @@ class ModelType(Enum):
     """
 
     UNCONDITIONAL = 1
-    CONDITIONAL = 2
-    GAN = 3
-    TRANSLATION = 4
+    GAN = 2
+    CONDITIONAL = 3
 
 
 class DataLoaderType(Enum):

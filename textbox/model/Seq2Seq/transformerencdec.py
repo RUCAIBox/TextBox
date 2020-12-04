@@ -18,7 +18,6 @@ class TransformerEncDec(ConditionalGenerator):
     r"""RNN-based Encoder-Decoder architecture is a basic framework for conditional text generation.
 
     """
-    input_type = InputType.PAIRTEXT
 
     def __init__(self, config, dataset):
         super(TransformerEncDec, self).__init__(config, dataset)

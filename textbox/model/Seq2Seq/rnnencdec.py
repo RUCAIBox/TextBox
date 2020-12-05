@@ -18,7 +18,6 @@ class RNNEncDec(ConditionalGenerator):
     r"""RNN-based Encoder-Decoder architecture is a basic framework for conditional text generation.
 
     """
-    input_type = InputType.PAIRTEXT
 
     def __init__(self, config, dataset):
         super(RNNEncDec, self).__init__(config, dataset)
@@ -33,6 +32,7 @@ class RNNEncDec(ConditionalGenerator):
         self.combine_method = config['combine_method']
         self.dropout_ratio = config['dropout_ratio']
         self.attention_type = config['attention_type']
+        self.alignment_method = config['alignment_method']
         self.context_size = config['context_size']
 
         self.padding_token_idx = dataset.padding_token_idx
@@ -51,7 +51,7 @@ class RNNEncDec(ConditionalGenerator):
         if self.attention_type is not None:
             self.decoder = AttentionalRNNDecoder(self.embedding_size, self.hidden_size, self.context_size,
                                                  self.num_dec_layers, self.rnn_type, self.dropout_ratio,
-                                                 self.attention_type)
+                                                 self.attention_type, self.alignment_method)
         else:
             self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.num_dec_layers,
                                            self.rnn_type, self.dropout_ratio)
@@ -65,7 +65,7 @@ class RNNEncDec(ConditionalGenerator):
 
     def generate(self, eval_dataloader):
         generate_corpus = []
-        idx2token = eval_data.idx2token
+        idx2token = eval_dataloader.idx2token
         for batch_data in eval_dataloader:
             source_text = batch_data['source_idx']
             source_length = batch_data['source_length']
@@ -107,9 +107,11 @@ class RNNEncDec(ConditionalGenerator):
         input_embeddings = self.dropout(self.target_token_embedder(input_text))
         # print(source_embeddings.device, input_embeddings.device, self.encoder.device)
         encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
+        encoder_masks = torch.ne(source_text, self.padding_token_idx)
 
         if self.attention_type is not None:
-            decoder_outputs, decoder_states = self.decoder(input_embeddings, encoder_states, encoder_outputs)
+            decoder_outputs, decoder_states, _ = self.decoder(input_embeddings, encoder_states, encoder_outputs,
+                                                              encoder_masks)
         else:
             decoder_outputs, decoder_states = self.decoder(input_embeddings, encoder_states)
 

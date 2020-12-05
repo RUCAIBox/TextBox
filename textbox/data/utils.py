@@ -2,6 +2,10 @@
 # @Author : Junyi Li, Gaole He
 # @Email  : lijunyi@ruc.edu.cn
 
+# @Time   : 2020/12/4
+# @Author : Gaole He
+# @Email  : hegaole@ruc.edu.cn
+
 """
 textbox.data.utils
 ########################
@@ -11,8 +15,7 @@ import copy
 import os
 import importlib
 
-from textbox.config import EvalSetting
-from textbox.utils import ModelType
+# from textbox.config import EvalSetting
 from textbox.data.dataloader import *
 
 
@@ -25,13 +28,13 @@ def create_dataset(config):
     Returns:
         Dataset: Constructed dataset.
     """
-    model_type = config['MODEL_TYPE']
-    if model_type == ModelType.UNCONDITIONAL or model_type == ModelType.GAN:
+    task_type = config['task_type'].lower()
+    if task_type == "unconditional":
         from .dataset import SingleSentenceDataset
         return SingleSentenceDataset(config)
-    elif model_type == ModelType.TRANSLATION or model_type == ModelType.CONDITIONAL:
-        from .dataset import TranslationDataset
-        return TranslationDataset(config)
+    elif task_type == "translation" or task_type == "summarization":
+        from .dataset import PairedSentenceDataset
+        return PairedSentenceDataset(config)
     else:
         from .dataset import Dataset
         return Dataset(config)
@@ -52,16 +55,7 @@ def data_preparation(config, save=False):
             - valid_data (AbstractDataLoader): The dataloader for validation.
             - test_data (AbstractDataLoader): The dataloader for testing.
     """
-    model_type = config['MODEL_TYPE']
-
-    if model_type == ModelType.UNCONDITIONAL or model_type == ModelType.GAN:
-        from .dataset import SingleSentenceDataset
-        dataset = SingleSentenceDataset(config)
-    elif model_type == ModelType.TRANSLATION or model_type == ModelType.CONDITIONAL:
-        from .dataset import TranslationDataset
-        dataset = TranslationDataset(config)
-    else:
-        raise NotImplementedError("model of type {} is not implemented".format(model_type))
+    dataset = create_dataset(config)
 
     builded_datasets = dataset.build(eval_setting=None)
     train_dataset, valid_dataset, test_dataset = builded_datasets
@@ -73,9 +67,7 @@ def data_preparation(config, save=False):
     train_data = dataloader_construct(
         name='train',
         config=config,
-        eval_setting=None,
         dataset=train_dataset,
-        dl_format=config['MODEL_INPUT_TYPE'],
         batch_size=config['train_batch_size'],
         shuffle=True
     )
@@ -83,7 +75,6 @@ def data_preparation(config, save=False):
     valid_data, test_data = dataloader_construct(
         name='evaluation',
         config=config,
-        eval_setting=None,
         dataset=[valid_dataset, test_dataset],
         batch_size=config['eval_batch_size']
     )
@@ -91,18 +82,13 @@ def data_preparation(config, save=False):
     return train_data, valid_data, test_data
 
 
-def dataloader_construct(name, config, eval_setting, dataset,
-                         dl_format=InputType.NOISE,
-                         batch_size=1, shuffle=False):
+def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False):
     """Get a correct dataloader class by calling :func:`get_data_loader` to construct dataloader.
 
     Args:
         name (str): The stage of dataloader. It can only take two values: 'train' or 'evaluation'.
         config (Config): An instance object of Config, used to record parameter information.
-        eval_setting (EvalSetting): An instance object of EvalSetting, used to record evaluation settings.
         dataset (Dataset or list of Dataset): The split dataset for constructing dataloader.
-        dl_format (InputType, optional): The input type of dataloader. Defaults to
-            :obj:`~textbox.utils.enum_type.InputType.NOISE`.
         batch_size (int, optional): The batch_size of dataloader. Defaults to ``1``.
         shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
         **kwargs: Other input args of dataloader, such as :attr:`sampler`, :attr:`kg_sampler`
@@ -120,13 +106,14 @@ def dataloader_construct(name, config, eval_setting, dataset,
     if len(dataset) != len(batch_size):
         raise ValueError('dataset {} and batch_size {} should have the same length'.format(dataset, batch_size))
 
-    model_type = config['MODEL_TYPE']
+    # model_type = config['MODEL_TYPE']
+    task_type = config['task_type'].lower()
     logger = getLogger()
-    logger.info('Build [{}] DataLoader for [{}] with format [{}]'.format(model_type, name, dl_format))
+    logger.info('Build [{}] DataLoader for [{}]'.format(task_type, name))
     # logger.info(eval_setting)
     logger.info('batch_size = [{}], shuffle = [{}]\n'.format(batch_size, shuffle))
 
-    DataLoader = get_data_loader(name, config, eval_setting)
+    DataLoader = get_data_loader(config)
 
     # try:
     ret = [
@@ -134,7 +121,6 @@ def dataloader_construct(name, config, eval_setting, dataset,
             config=config,
             dataset=ds,
             batch_size=bs,
-            dl_format=dl_format,
             shuffle=shuffle
         ) for ds, bs in zip(dataset, batch_size)
     ]
@@ -168,33 +154,22 @@ def save_datasets(save_path, name, dataset):
     #     d.save(cur_path)
 
 
-def get_data_loader(name, config, eval_setting):
+def get_data_loader(config):
     """Return a dataloader class according to :attr:`config` and :attr:`eval_setting`.
 
     Args:
-        name (str): The stage of dataloader. It can only take two values: 'train' or 'evaluation'.
         config (Config): An instance object of Config, used to record parameter information.
-        eval_setting (EvalSetting): An instance object of EvalSetting, used to record evaluation settings.
 
     Returns:
         type: The dataloader class that meets the requirements in :attr:`config` and :attr:`eval_setting`.
     """
-    model_type = config['MODEL_TYPE']
-    if model_type == ModelType.UNCONDITIONAL or model_type == ModelType.GAN:
+    task_type = config['task_type'].lower()
+    if task_type == "unconditional":
         return SingleSentenceDataLoader
-    elif model_type == ModelType.CONDITIONAL or model_type == ModelType.TRANSLATION:
-        return TranslationDataLoader
+    elif task_type == "translation" or task_type == "summarization":
+        return PairedSentenceDataLoader
     else:
-        raise NotImplementedError("No such data loader for MODEL_TYPE: {}".format(model_type))
-    # if model_type == ModelType.GENERAL or model_type == ModelType.TRADITIONAL:
-    #     if neg_sample_strategy == 'none':
-    #         return GeneralDataLoader
-    #     elif neg_sample_strategy == 'by':
-    #         return GeneralNegSampleDataLoader
-    #     elif neg_sample_strategy == 'full':
-    #         return GeneralFullDataLoader
-    # else:
-    #     raise NotImplementedError('model_type [{}] has not been implemented'.format(model_type))
+        raise NotImplementedError("No such data loader for TASK_TYPE: {}".format(task_type))
 
 
 class DLFriendlyAPI(object):

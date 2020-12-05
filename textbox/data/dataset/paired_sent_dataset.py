@@ -2,6 +2,12 @@
 # @Author : Junyi Li
 # @Email  : lijunyi@ruc.edu.cn
 
+
+# UPDATE:
+# @Time   : 2020/12/04
+# @Author : Gaole He
+# @Email  : hegaole@ruc.edu.cn
+
 import os
 import nltk
 import collections
@@ -13,15 +19,19 @@ from textbox.data.dataset import Dataset
 
 class PairedSentenceDataset(Dataset):
     def __init__(self, config, saved_dataset=None):
+        self.source_language = config['source_language'].lower()
+        self.target_language = config['target_language'].lower()
+        self.source_suffix = config['source_suffix']
+        self.target_suffix = config['target_suffix']
         super().__init__(config, saved_dataset)
-        self.max_source_length = config['max_source_length']
-        self.max_target_length = config['max_target_length']
 
     def _get_preset(self):
         """Initialization useful inside attributes.
         """
-        self.token2idx = {}
-        self.idx2token = {}
+        self.source_token2idx = {}
+        self.source_idx2token = {}
+        self.target_token2idx = {}
+        self.target_idx2token = {}
         self.source_text_data = []
         self.target_text_data = []
 
@@ -36,24 +46,36 @@ class PairedSentenceDataset(Dataset):
             dataset_name (str): dataset name.
             dataset_path (str): path of dataset dir.
         """
-        dataset_file = os.path.join(dataset_path, 'corpus_large.txt')
-        if not os.path.isfile(dataset_file):
-            raise ValueError('File {} not exist'.format(dataset_file))
+        train_src_file = os.path.join(dataset_path, 'train.' + self.source_suffix)
+        if not os.path.isfile(train_src_file):
+            raise ValueError('File {} not exist'.format(train_src_file))
+        for prefix in ['train', 'dev', 'test']:
+            source_file = os.path.join(dataset_path, '{}.{}'.format(prefix, self.source_suffix))
+            source_text = []
+            fin = open(source_file, "r")
+            for line in fin:
+                words = nltk.word_tokenize(line.strip(), language=self.source_language)[:self.max_seq_length]
+                source_text.append(words)
+            fin.close()
+            self.source_text_data.append(source_text)
 
-        fin = open(dataset_file, 'r')
-        for line in fin:
-            source, target = line.strip().split('\t')
-            self.source_text_data.append(nltk.word_tokenizer(source)[:self.max_source_length])
-            self.target_text_data.append(nltk.word_tokenizer(target)[:self.max_target_length])
-        fin.close()
+            target_file = os.path.join(dataset_path, '{}.{}'.format(prefix, self.target_suffix))
+            target_text = []
+            fin = open(target_file, "r")
+            for line in fin:
+                words = nltk.word_tokenize(line.strip(), language=self.target_language)[:self.max_seq_length]
+                target_text.append(words)
+            fin.close()
+            self.target_text_data.append(target_text)
 
     def _data_processing(self):
         self._build_vocab()
 
-    def _build_vocab_from_text(self, text_data):
+    def _build_vocab_text(self, text_data_list):
         word_list = list()
-        for text in text_data:
-            word_list.extend(text)
+        for text_data in text_data_list:
+            for text in text_data:
+                word_list.extend(text)
         tokens = [token for token, _ in collections.Counter(word_list).items()]
         tokens = [self.padding_token, self.unknown_token, self.sos_token, self.eos_token] + tokens
         tokens = tokens[:self.max_vocab_size]
@@ -62,43 +84,11 @@ class PairedSentenceDataset(Dataset):
         return idx2token, token2idx
 
     def _build_vocab(self):
-        self.idx2token, self.token2idx = self._build_vocab_from_text(self.source_text_data + self.target_text_data)
+        self.source_idx2token, self.source_token2idx = self._build_vocab_text(self.source_text_data)
+        self.target_idx2token, self.target_token2idx = self._build_vocab_text(self.target_text_data)
 
     def shuffle(self):
-        temp = list(zip(self.source_text_data, self.target_text_data))
-        random.shuffle(temp)
-        self.source_text_data[:], self.target_text_data[:] = zip(*temp)
-
-    def split_by_ratio(self, ratios):
-        """Split dataset by ratios.
-
-        Args:
-            ratios (list): List of split ratios. No need to be normalized.
-
-        Returns:
-            list: List of : `list -> int`, whose interaction features has been splitted.
-
-        Note:
-            Other than the first one, each part is rounded down.
-        """
-        self.logger.debug('split by ratios [{}]'.format(ratios))
-        tot_ratio = sum(ratios)
-        ratios = [_ / tot_ratio for _ in ratios]
-
-        tot_cnt = self.__len__()
-        split_ids = self._calcu_split_ids(tot=tot_cnt, ratios=ratios)
-        corpus_list = []
-        for start, end in zip([0] + split_ids, split_ids + [tot_cnt]):
-            src_text_data = self.source_text_data[start: end]
-            tgt_text_data = self.target_text_data[start: end]
-            tp_data = {
-                'idx2token': self.idx2token,
-                'token2idx': self.token2idx,
-                'source_text_data': src_text_data,
-                'target_text_data': tgt_text_data,
-            }
-            corpus_list.append(tp_data)
-        return corpus_list
+        pass
 
     def build(self, eval_setting=None):
         """Processing dataset according to evaluation setting, including Group, Order and Split.
@@ -111,10 +101,23 @@ class PairedSentenceDataset(Dataset):
         Returns:
             list: List of builded :class:`Dataset`.
         """
-        self.shuffle()
-        split_args = {'strategy': 'by_ratio', 'ratios': [0.8, 0.1, 0.1]}
-        if split_args['strategy'] == 'by_ratio':
-            corpus_list = self.split_by_ratio(split_args['ratios'])
-        else:
-            raise NotImplementedError()
+        info_str = ''
+        corpus_list = []
+        for i, prefix in enumerate(['train', 'dev', 'test']):
+            source_text_data = self.source_text_data[i]
+            target_text_data = self.target_text_data[i]
+            tp_data = {
+                'source_idx2token': self.source_idx2token,
+                'source_token2idx': self.source_token2idx,
+                'source_text_data': source_text_data,
+                'target_idx2token': self.target_idx2token,
+                'target_token2idx': self.target_token2idx,
+                'target_text_data': target_text_data
+            }
+            corpus_list.append(tp_data)
+            if prefix == 'test':
+                info_str += '{}: {} cases'.format(prefix, len(source_text_data))
+            else:
+                info_str += '{}: {} cases, '.format(prefix, len(source_text_data))
+        self.logger.info(info_str)
         return corpus_list

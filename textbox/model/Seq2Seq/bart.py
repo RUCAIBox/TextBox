@@ -17,7 +17,6 @@ class BART(ConditionalGenerator):
     r"""BPR is a basic matrix factorization model that be trained in the pairwise way.
 
     """
-    input_type = InputType.NOISE
 
     def __init__(self, config, dataset):
         super(BART, self).__init__(config, dataset)

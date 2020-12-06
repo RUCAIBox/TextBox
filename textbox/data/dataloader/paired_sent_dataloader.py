@@ -64,8 +64,8 @@ class PairedSentenceDataLoader(AbstractDataLoader):
 
     def _next_batch_data(self):
         source_text = self.source_text_data[self.pr: self.pr + self.step]
-        tp_source_text_idx_data = self.target_text_idx_data[self.pr: self.pr + self.step]
-        tp_source_idx_length_data = self.target_idx_length_data[self.pr: self.pr + self.step]
+        tp_source_text_idx_data = self.source_text_idx_data[self.pr: self.pr + self.step]
+        tp_source_idx_length_data = self.source_idx_length_data[self.pr: self.pr + self.step]
         source_idx, source_length = self._pad_batch_sequence(tp_source_text_idx_data, tp_source_idx_length_data)
 
         target_text = self.target_text_data[self.pr: self.pr + self.step]

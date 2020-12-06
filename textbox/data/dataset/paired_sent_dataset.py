@@ -86,6 +86,8 @@ class PairedSentenceDataset(Dataset):
     def _build_vocab(self):
         self.source_idx2token, self.source_token2idx = self._build_vocab_text(self.source_text_data)
         self.target_idx2token, self.target_token2idx = self._build_vocab_text(self.target_text_data)
+        print("Source vocab size: {}, Target vocab size: {}".format(len(self.source_idx2token),
+                                                                    len(self.target_idx2token)))
 
     def shuffle(self):
         pass

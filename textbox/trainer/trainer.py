@@ -91,7 +91,7 @@ class Trainer(AbstractTrainer):
         self.cur_step = 0
         self.best_valid_score = 100000000
         self.best_valid_result = None
-        self.train_loss_ppl_dict = dict()
+        self.train_loss_dict = dict()
         self.optimizer = self._build_optimizer()
         self.evaluator = NgramEvaluator(config)
         # self.eval_type = config['eval_type']
@@ -152,8 +152,7 @@ class Trainer(AbstractTrainer):
             loss.backward()
             self.optimizer.step()
         train_loss = total_loss / len(train_data)
-        ppl = np.exp(train_loss)
-        return train_loss, ppl
+        return train_loss
 
     def _valid_epoch(self, valid_data):
         r"""Valid the model with valid data
@@ -257,8 +256,8 @@ class Trainer(AbstractTrainer):
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
             training_start_time = time()
-            train_loss, train_ppl = self._train_epoch(train_data, epoch_idx)
-            self.train_loss_ppl_dict[epoch_idx] = (train_loss, train_ppl)
+            train_loss = self._train_epoch(train_data, epoch_idx)
+            self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             training_end_time = time()
             self._save_checkpoint(epoch_idx)
             train_loss_output = \

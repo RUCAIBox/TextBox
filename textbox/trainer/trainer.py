@@ -87,6 +87,11 @@ class Trainer(AbstractTrainer):
         saved_model_file = '{}-{}.pth'.format(self.config['model'], get_local_time())
         self.saved_model_file = os.path.join(self.checkpoint_dir, saved_model_file)
 
+        self.generated_text_dir = config['generated_text_dir']
+        ensure_dir(self.generated_text_dir)
+        saved_text_file = '{}-{}.txt'.format(self.config['model'], get_local_time())
+        self.saved_text_file = os.path.join(self.generated_text_dir, saved_text_file)
+
         self.start_epoch = 0
         self.cur_step = 0
         self.best_valid_score = 100000000
@@ -199,6 +204,16 @@ class Trainer(AbstractTrainer):
             'optimizer': self.optimizer.state_dict(),
         }
         torch.save(state, self.saved_model_file)
+
+    def _save_generated_text(self, generated_corpus):
+        r"""Store the generated text by our model.
+
+        Args:
+            corpus (list of string list):
+        """
+        with open(self.saved_text_file, 'w') as fin:
+            for tokens in generated_corpus:
+                fin.write(' '.join(tokens) + '\n')
 
     def resume_checkpoint(self, resume_file):
         r"""Load the model parameters information and training information.
@@ -346,6 +361,7 @@ class Trainer(AbstractTrainer):
 
         self.model.eval()
         generate_corpus = self.model.generate(eval_data)
+        self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
         result['nll_test'] = self._evaluate_nll_test(eval_data)
@@ -779,6 +795,37 @@ class ConditionalTrainer(Trainer):
 
     def __init__(self, config, model):
         super(ConditionalTrainer, self).__init__(config, model)
+
+    @torch.no_grad()
+    def evaluate(self, eval_data, load_best_model=True, model_file=None):
+        r"""Evaluate the model based on the eval data.
+
+        Args:
+            eval_data (DataLoader): the eval data
+            load_best_model (bool, optional): whether load the best model in the training process, default: True.
+                                              It should be set True, if users want to test the model after training.
+            model_file (str, optional): the saved model file, default: None. If users want to test the previously
+                                        trained model file, they can set this parameter.
+
+        Returns:
+            dict: eval result, key is the eval metric and value in the corresponding metric value
+        """
+        if load_best_model:
+            if model_file:
+                checkpoint_file = model_file
+            else:
+                checkpoint_file = self.saved_model_file
+            checkpoint = torch.load(checkpoint_file)
+            self.model.load_state_dict(checkpoint['state_dict'])
+            message_output = 'Loading model structure and parameters from {}'.format(checkpoint_file)
+            self.logger.info(message_output)
+
+        self.model.eval()
+        generate_corpus = self.model.generate(eval_data)
+        reference_corpus = eval_data.get_reference()
+        result = self.evaluator.evaluate(generate_corpus, reference_corpus)
+
+        return result
 
 
 class MaskGANTrainer(GANTrainer):

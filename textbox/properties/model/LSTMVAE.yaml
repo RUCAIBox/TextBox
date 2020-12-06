@@ -1,6 +1,0 @@
-embedding_size: 64
-hidden_size: 128
-rnn_type: "lstm"
-n_layers_highway: 2
-n_layers_encoder: 1
-n_layers_decoder: 2

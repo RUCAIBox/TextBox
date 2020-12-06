@@ -1,0 +1,16 @@
+# model settings
+embedding_size: 128
+hidden_size: 256
+latent_size: 64
+rnn_type: "lstm"
+num_highway_layers: 2
+num_enc_layers: 2
+num_dec_layers: 2
+bidirectional: True
+
+# training settings
+learner: adam
+learning_rate: 0.001
+eval_step: 2
+stopping_step: 10
+dropout_ratio: 0.5

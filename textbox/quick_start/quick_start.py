@@ -31,14 +31,13 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     """
     # configurations initialization
     config = Config(model=model, dataset=dataset, config_file_list=config_file_list, config_dict=config_dict)
-    init_seed(config['seed'], config['reproducibility'])
 
+    init_seed(config['seed'], config['reproducibility'])
     # logger initialization
     init_logger(config)
     logger = getLogger()
 
     logger.info(config)
-
     # dataset filtering
     dataset = create_dataset(config)
     logger.info(dataset)

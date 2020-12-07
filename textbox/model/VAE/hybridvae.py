@@ -10,9 +10,10 @@ import math
 
 from textbox.utils import InputType
 from textbox.model.abstract_generator import UnconditionalGenerator
-from textbox.module.Encoder.cnn_encoder import HybridEncoder
+from textbox.module.Encoder.cnn_encoder import BasicCNNEncoder
 from textbox.module.Decoder.cnn_decoder import HybridDecoder
 from textbox.model.init import xavier_normal_initialization
+from textbox.module.strategy import topk_sampling
 
 
 '''
@@ -33,6 +34,7 @@ class HybridVAE(UnconditionalGenerator):
         # load parameters info
         self.embedding_size = config['embedding_size']
         self.hidden_size = config['hidden_size']
+        self.latent_size = config['latent_size']
         self.num_dec_layers = config['num_dec_layers']
         self.max_epoch = config['epochs']
         self.alpha_aux = config['alpha_aux']
@@ -47,14 +49,14 @@ class HybridVAE(UnconditionalGenerator):
 
         # define layers and loss
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
-        self.encoder = HybridEncoder(self.embedding_size, self.hidden_size)
-        self.decoder = HybridDecoder(self.embedding_size, self.hidden_size, self.num_dec_layers,
+        self.encoder = BasicCNNEncoder(self.embedding_size, self.latent_size)
+        self.decoder = HybridDecoder(self.embedding_size, self.latent_size, self.hidden_size, self.num_dec_layers,
                                      self.rnn_type, self.vocab_size)
 
         self.dropout = nn.Dropout(self.dropout_ratio)
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
-        self.hidden_to_mu = nn.Linear(self.hidden_size, self.hidden_size)
-        self.hidden_to_logvar = nn.Linear(self.hidden_size, self.hidden_size)
+        self.hidden_to_mean = nn.Linear(self.latent_size, self.latent_size)
+        self.hidden_to_logvar = nn.Linear(self.latent_size, self.latent_size)
 
         # parameters initialization
         self.apply(xavier_normal_initialization)
@@ -65,19 +67,26 @@ class HybridVAE(UnconditionalGenerator):
 
         with torch.no_grad():
             for _ in range(self.eval_generate_num):
-                z = torch.randn(size=(1, self.hidden_size), device=self.device)
-                cnn_out = self.decoder.conv_decoder(z).permute(0, 2, 1)
-                hidden_states = torch.randn(size=(self.num_layers, 1, self.hidden_size), device=self.device)
+                z = torch.randn(size=(1, self.latent_size), device=self.device)
+                cnn_out = self.decoder.conv_decoder(z)
+                if self.rnn_type == "lstm":
+                    hidden_states = torch.randn(size=(1, 2 * self.hidden_size), device=self.device)
+                    hidden_states = torch.chunk(hidden_states, 2, dim=-1)
+                    h_0 = hidden_states[0].unsqueeze(0).expand(self.num_dec_layers, -1, -1).contiguous()
+                    c_0 = hidden_states[1].unsqueeze(0).expand(self.num_dec_layers, -1, -1).contiguous()
+                    hidden_states = (h_0, c_0)
+                else:
+                    hidden_states = torch.randn(size=(self.num_dec_layers, 1, self.hidden_size), device=self.device)
                 generate_tokens = []
                 input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
                 for gen_idx in range(self.max_length):
                     decoder_input = self.token_embedder(input_seq)
-                    token_logits, hidden_states = self.decoder.rnn_decoder(cnn_out[gen_idx].unsqueeze(1),
+
+                    token_logits, hidden_states = self.decoder.rnn_decoder(cnn_out[:, gen_idx, :].unsqueeze(1),
                                                                            decoder_input=decoder_input,
                                                                            initial_state=hidden_states)
-                    topv, topi = torch.log(F.softmax(token_logits, dim=-1) + 1e-12).data.topk(k=4)
-                    topi = topi.squeeze()
-                    token_idx = topi[0].item()
+                    token_idx = topk_sampling(token_logits)
+                    token_idx = token_idx.item()
                     if token_idx == self.eos_token_idx:
                         break
                     else:
@@ -91,15 +100,16 @@ class HybridVAE(UnconditionalGenerator):
         target_text = corpus['target_idx'][:, 1:]
         batch_size = input_text.size(0)
 
-        input_emb = self.dropout(self.token_embedder(input_text))
+        input_emb = self.token_embedder(input_text)
         hidden_states = self.encoder(input_emb)
 
-        mu = self.hidden_to_mu(hidden_states)
+        mean = self.hidden_to_mean(hidden_states)
         logvar = self.hidden_to_logvar(hidden_states)
-        z = torch.randn([batch_size, self.hidden_size]).to(self.device)
-        z = mu + z * torch.exp(0.5 * logvar)
-        kld = -0.5 * torch.sum(logvar - mu.pow(2) - logvar.exp() + 1, 1).mean()
+        z = torch.randn([batch_size, self.latent_size]).to(self.device)
+        z = mean + z * torch.exp(0.5 * logvar)
+        kld = -0.5 * torch.sum(logvar - mean.pow(2) - logvar.exp() + 1, 1).mean()
 
+        input_emb = self.dropout(input_emb)
         token_logits, aux_logits = self.decoder(decoder_input=input_emb, latent_variable=z)
 
         length = corpus['target_length'] - 1
@@ -122,13 +132,13 @@ class HybridVAE(UnconditionalGenerator):
         target_text = corpus['target_idx'][:, 1:]
         batch_size = input_text.size(0)
 
-        input_emb = self.dropout(self.token_embedder(input_text))
+        input_emb = self.token_embedder(input_text)
         hidden_states = self.encoder(input_emb)
 
-        mu = self.hidden_to_mu(hidden_states)
+        mean = self.hidden_to_mean(hidden_states)
         logvar = self.hidden_to_logvar(hidden_states)
-        z = torch.randn([batch_size, self.hidden_size]).to(self.device)
-        z = mu + z * torch.exp(0.5 * logvar)
+        z = torch.randn([batch_size, self.latent_size]).to(self.device)
+        z = mean + z * torch.exp(0.5 * logvar)
 
         token_logits, aux_logits = self.decoder(decoder_input=input_emb, latent_variable=z)
 

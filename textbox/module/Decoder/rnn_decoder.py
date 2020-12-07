@@ -120,6 +120,7 @@ class AttentionalRNNDecoder(torch.nn.Module):
         for step in range(decode_length):
 
             if self.attention_type == 'BahdanauAttention':
+                # only top layer
                 if self.rnn_type == 'lstm':
                     hidden = hidden_states[0][-1]
                 else:

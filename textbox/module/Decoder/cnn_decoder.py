@@ -77,7 +77,7 @@ class BasicCNNDecoder(torch.nn.Module):
                          bias=self.decoder_biases[layer].to(device),
                          dilation=self.decoder_dilations[layer],
                          padding=self.decoder_paddings[layer])
-            x_width = x.size()[2]
+            x_width = x.size(2)
             x = x[:, :, :(x_width - self.decoder_paddings[layer])].contiguous()
             x = F.relu(x)
 
@@ -90,17 +90,18 @@ class HybridDecoder(nn.Module):
     Code Reference: https://github.com/kefirski/hybrid_rvae
     '''
 
-    def __init__(self, embedding_size, hidden_size, num_dec_layers, rnn_type, vocab_size):
+    def __init__(self, embedding_size, latent_size, hidden_size, num_dec_layers, rnn_type, vocab_size):
         super(HybridDecoder, self).__init__()
 
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
+        self.latent_size = latent_size
         self.embedding_size = embedding_size
         self.num_dec_layers = num_dec_layers
         self.rnn_type = rnn_type
 
         self.cnn = nn.Sequential(
-            nn.ConvTranspose1d(self.hidden_size, 512, 4, 2, 0),
+            nn.ConvTranspose1d(self.latent_size, 512, 4, 2, 0),
             nn.BatchNorm1d(512),
             nn.ELU(),
 
@@ -136,14 +137,13 @@ class HybridDecoder(nn.Module):
 
     def forward(self, decoder_input, latent_variable):
         """
-        :param latent_variable: An float tensor with shape of [batch_size, hidden_size]
+        :param latent_variable: An float tensor with shape of [batch_size, latent_size]
         :param decoder_input: An float tensot with shape of [batch_size, max_seq_len, embed_size]
         :return: two tensors with shape of [batch_size, max_seq_len, vocab_size]
                     for estimating likelihood for whole model and for auxiliary target respectively
         """
         cnn_logits = self.conv_decoder(latent_variable)
         cnn_logits = cnn_logits[:, :decoder_input.size(1), :].contiguous()  # seq_len
-
         rnn_logits, _ = self.rnn_decoder(cnn_logits, decoder_input)
 
         return rnn_logits, cnn_logits
@@ -153,7 +153,7 @@ class HybridDecoder(nn.Module):
         logits = self.cnn(latent_variable).permute(0, 2, 1)
         return logits
 
-    def rnn_decoder(self, cnn_out, decoder_input, initial_state=None):
-        outputs, hidden_states = self.rnn(torch.cat([cnn_out, decoder_input], 2), initial_state)
+    def rnn_decoder(self, cnn_logits, decoder_input, initial_state=None):
+        outputs, hidden_states = self.rnn(torch.cat([cnn_logits, decoder_input], 2), initial_state)
         logits = self.token_vocab(outputs)
         return logits, hidden_states

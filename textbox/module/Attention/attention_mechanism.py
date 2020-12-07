@@ -83,6 +83,7 @@ class BahdanauAttention(torch.nn.Module):
         """
         src_len = encoder_outputs.size(1)
         hidden_states = hidden_states.unsqueeze(1).repeat(1, src_len, 1)  # B * src_len * target_size
+        # print(hidden_states.size(), encoder_outputs.size())
 
         energy = torch.tanh(self.energy_linear(torch.cat((hidden_states, encoder_outputs), dim=-1)))
         energy = self.v.mul(energy).sum(dim=-1)

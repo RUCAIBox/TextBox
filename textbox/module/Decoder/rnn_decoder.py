@@ -133,6 +133,7 @@ class AttentionalRNNDecoder(torch.nn.Module):
                 context = None
 
             # outputs shape: [batch_size, 1, hidden_size]
+            hidden_states = hidden_states.contiguous()
             outputs, hidden_states = self.decoder(inputs, hidden_states)
 
             if self.attention_type == 'LuongAttention' and context is None:

@@ -76,6 +76,11 @@ class BahdanauAttention(torch.nn.Module):
         self.v = nn.Parameter(torch.FloatTensor(target_size))
 
     def score(self, hidden_states, encoder_outputs):
+        """
+        :param hidden_states: B * target_size
+        :param encoder_outputs: B * src_len * source_size
+        :return:
+        """
         src_len = encoder_outputs.size(1)
         hidden_states = hidden_states.unsqueeze(1).repeat(1, src_len, 1)  # B * src_len * target_size
 
@@ -85,12 +90,13 @@ class BahdanauAttention(torch.nn.Module):
 
     def forward(self, hidden_states, encoder_outputs, encoder_masks):
         """
-        :param hidden_states: 1 * B * target_size
+        :param hidden_states: B * target_size
         :param encoder_outputs: B * src_len * source_size
         :param encoder_masks: B * src_len
         :return:
+            context: B * 1 * source_size
         """
-        energy = self.score(hidden_states.squeeze(0), encoder_outputs)
+        energy = self.score(hidden_states, encoder_outputs)
         probs = F.softmax(energy, dim=-1) * encoder_masks
         normalization_factor = probs.sum(-1, keepdim=True) + 1e-12
         probs = probs / normalization_factor
@@ -140,16 +146,20 @@ class MonotonicAttention(torch.nn.Module):
         return energy
 
     def soft(self, hidden_states, encoder_outputs, encoder_masks, previous_probs=None):
-        """
+        r"""
         Soft monotonic attention (Train)
+
         Args:
-            encoder_outputs [batch_size, sequence_length, enc_dim]
-            decoder_h [batch_size, dec_dim]
-            previous_alpha [batch_size, sequence_length]
+            hidden_states: [batch_size, tgt_len, target_size]
+            encoder_outputs [batch_size, src_len, source_size]
+            encoder_masks [batch_size, src_len]
+            previous_alpha [batch_size, tgt_len, src_len]
+
         Return:
-            alpha [batch_size, sequence_length]
+            probs [batch_size, tgt_len, src_len]
         """
         device = hidden_states.device
+        tgt_len = hidden_states.size(1)
         batch_size, src_len, _ = encoder_outputs.size()
 
         energy = self.score(hidden_states, encoder_outputs)
@@ -157,16 +167,15 @@ class MonotonicAttention(torch.nn.Module):
         cumprod_1_minus_p = self.safe_cumprod(1 - p_select)
 
         if previous_probs is None:
-            probs = torch.zeros(batch_size, src_len).to(device)
-            probs[:, 0] = torch.ones(batch_size).to(device)
+            probs = torch.zeros(batch_size, tgt_len, src_len).to(device)
+            probs[:, :, 0] = torch.ones(batch_size, tgt_len).to(device)
         else:
             probs = p_select * cumprod_1_minus_p * torch.cumsum(previous_probs / cumprod_1_minus_p, dim=-1)
-            probs = probs.squeeze(1)
 
+        encoder_masks = encoder_masks.unsqueeze(1).repeat(1, tgt_len, 1)
         probs = probs * encoder_masks
         normalization_factor = probs.sum(-1, keepdim=True) + 1e-12
         probs = probs / normalization_factor
-        probs = probs.unsqueeze(1)
         context = probs.bmm(encoder_outputs)
 
         return context, probs
@@ -182,11 +191,12 @@ class MonotonicAttention(torch.nn.Module):
             alpha [batch_size, sequence_length]
         """
         device = hidden_states.device
+        tgt_len = hidden_states.size(1)
         batch_size, src_len, _ = encoder_outputs.size()
 
         if previous_probs is None:
-            probs = torch.zeros(batch_size, src_len).to(device)
-            probs[:, 0] = torch.ones(batch_size).to(device)
+            probs = torch.zeros(batch_size, tgt_len, src_len).to(device)
+            probs[:, :, 0] = torch.ones(batch_size, tgt_len).to(device)
         else:
             energy = self.score(hidden_states, encoder_outputs)
 
@@ -194,7 +204,7 @@ class MonotonicAttention(torch.nn.Module):
             # Attend when monotonic energy is above threshold (Sigmoid > 0.5)
             above_threshold = (energy > 0).float()
 
-            p_select = above_threshold * torch.cumsum(previous_probs, dim=1)
+            p_select = above_threshold * torch.cumsum(previous_probs, dim=-1)
             probs = p_select * self.exclusive_cumprod(1 - p_select)
 
             # Not attended => attend at last encoder output
@@ -204,6 +214,7 @@ class MonotonicAttention(torch.nn.Module):
                 if not attended[batch_i]:
                     probs[batch_i, -1] = 1
 
+        encoder_masks = encoder_masks.unsqueeze(1).repeat(1, tgt_len, 1)
         probs = probs * encoder_masks
         normalization_factor = probs.sum(-1, keepdim=True) + 1e-12
         probs = probs / normalization_factor

@@ -8,32 +8,32 @@ https://github.com/rohithreddy024/VAE-Text-Generation/blob/master/model.py
 '''
 
 
-class HybridEncoder(nn.Module):
-    def __init__(self, input_size, hidden_size=512):
-        super(HybridEncoder, self).__init__()
+class BasicCNNEncoder(nn.Module):
+    def __init__(self, input_size, latent_size):
+        super(BasicCNNEncoder, self).__init__()
 
         self.input_size = input_size
-        self.hidden_size = hidden_size
+        self.latent_size = latent_size
 
         self.cnn = nn.Sequential(
-            nn.Conv1d(self.input_size, 128, 4, 2),
+            nn.Conv1d(self.input_size, 128, 3, 1),
             nn.BatchNorm1d(128),
             nn.ELU(),
 
-            nn.Conv1d(128, 256, 4, 2),
+            nn.Conv1d(128, 256, 3, 1),
             nn.BatchNorm1d(256),
             nn.ELU(),
 
-            nn.Conv1d(256, 256, 4, 2),
+            nn.Conv1d(256, 256, 3, 1),
             nn.BatchNorm1d(256),
             nn.ELU(),
 
-            nn.Conv1d(256, 512, 4, 2),
+            nn.Conv1d(256, 512, 3, 1),
             nn.BatchNorm1d(512),
             nn.ELU(),
 
-            nn.Conv1d(512, self.hidden_size, 4, 2),
-            nn.BatchNorm1d(self.hidden_size),
+            nn.Conv1d(512, self.latent_size, 3, 1),
+            nn.BatchNorm1d(self.latent_size),
             nn.ELU()
         )
 
@@ -42,6 +42,7 @@ class HybridEncoder(nn.Module):
         :param input: An float tensor with shape of [batch_size, seq_len, embed_size]
         :return: An float tensor with shape of [batch_size, latent_variable_size]
         """
-        input = input.permute(0, 2, 1)
-        result = self.cnn(input)
-        return result.squeeze(2)
+        input = input.transpose(1, 2).contiguous()
+        output = self.cnn(input)
+        output = torch.mean(output, dim=-1)
+        return output

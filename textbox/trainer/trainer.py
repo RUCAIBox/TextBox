@@ -173,7 +173,7 @@ class Trainer(AbstractTrainer):
         total_loss = None
         for batch_idx, data in enumerate(valid_data):
             # interaction = interaction.to(self.device)
-            self.optimizer.zero_grad()
+            # self.optimizer.zero_grad()
             losses = self.model.calculate_loss(data)
             if isinstance(losses, tuple):
                 loss = sum(losses)
@@ -183,7 +183,7 @@ class Trainer(AbstractTrainer):
                 loss = losses
                 total_loss = losses.item() if total_loss is None else total_loss + losses.item()
             self._check_nan(loss)
-        self.optimizer.zero_grad()
+        # self.optimizer.zero_grad()
         valid_loss = total_loss / len(valid_data)
         ppl = np.exp(valid_loss)
         return valid_loss, ppl

@@ -24,7 +24,7 @@ from torch.utils.data import DataLoader
 from time import time
 from logging import getLogger
 
-from textbox.evaluator import NgramEvaluator
+from textbox.evaluator import NgramEvaluator, TranslationEvaluator
 from textbox.utils import ensure_dir, get_local_time, early_stopping, calculate_valid_score, dict2str, \
     DataLoaderType, EvaluatorType
 
@@ -98,7 +98,11 @@ class Trainer(AbstractTrainer):
         self.best_valid_result = None
         self.train_loss_dict = dict()
         self.optimizer = self._build_optimizer()
-        self.evaluator = NgramEvaluator(config)
+        self.task_type = config['task_type'].lower()
+        if self.task_type == "translation":
+            self.evaluator = TranslationEvaluator(config)
+        else:
+            self.evaluator = NgramEvaluator(config)
         # self.eval_type = config['eval_type']
         # if self.eval_type == EvaluatorType.INDIVIDUAL:
         #     self.evaluator = LossEvaluator(config)

@@ -40,13 +40,19 @@ class BasicRNNEncoder(torch.nn.Module):
     def init_hidden(self, input_embeddings):
         batch_size = input_embeddings.size(0)
         device = input_embeddings.device
+        # print(input_embeddings.size())
         if self.rnn_type == 'lstm':
             h_0 = torch.zeros(self.num_enc_layers * self.num_directions, batch_size, self.hidden_size).to(device)
             c_0 = torch.zeros(self.num_enc_layers * self.num_directions, batch_size, self.hidden_size).to(device)
             hidden_states = (h_0, c_0)
             return hidden_states
         elif self.rnn_type == 'gru' or self.rnn_type == 'rnn':
-            return torch.zeros(self.num_enc_layers * self.num_directions, batch_size, self.hidden_size).to(device)
+            # print("Enter init")
+            # print(device)
+            tp_vec = torch.zeros(self.num_enc_layers * self.num_directions, batch_size, self.hidden_size)
+            # print(tp_vec.device)
+            # print(self.num_enc_layers * self.num_directions, batch_size, self.hidden_size)
+            return tp_vec.to(device)
         else:
             raise NotImplementedError("No such rnn type {} for initializing encoder states.".format(self.rnn_type))
 

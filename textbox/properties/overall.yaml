@@ -7,6 +7,7 @@ reproducibility: True
 TASK_TYPE: 'unconditional'
 data_path: 'dataset/'
 checkpoint_dir: 'saved'
+generated_text_dir: 'generated'
 
 # training settings
 epochs: 10

@@ -76,8 +76,10 @@ class BahdanauAttention(torch.nn.Module):
         self.v = nn.Parameter(torch.FloatTensor(target_size))
 
     def score(self, hidden_states, encoder_outputs):
+        # print(hidden_states.size(), encoder_outputs.size())
         src_len = encoder_outputs.size(1)
         hidden_states = hidden_states.unsqueeze(1).repeat(1, src_len, 1)  # B * src_len * target_size
+        # print(hidden_states.size(), encoder_outputs.size())
 
         energy = torch.tanh(self.energy_linear(torch.cat((hidden_states, encoder_outputs), dim=-1)))
         energy = self.v.mul(energy).sum(dim=-1)
@@ -90,7 +92,7 @@ class BahdanauAttention(torch.nn.Module):
         :param encoder_masks: B * src_len
         :return:
         """
-        energy = self.score(hidden_states.squeeze(0), encoder_outputs)
+        energy = self.score(hidden_states, encoder_outputs)
         probs = F.softmax(energy, dim=-1) * encoder_masks
         normalization_factor = probs.sum(-1, keepdim=True) + 1e-12
         probs = probs / normalization_factor

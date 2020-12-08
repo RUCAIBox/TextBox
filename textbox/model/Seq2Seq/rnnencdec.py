@@ -88,8 +88,8 @@ class RNNEncDec(ConditionalGenerator):
                                                                           encoder_outputs[bid, :, :].unsqueeze(0),
                                                                           encoder_masks[bid, :].unsqueeze(0))
                     else:
-                        decoder_outputs, decoder_states, _ = self.decoder(decoder_input,
-                                                                          encoder_states[:, bid, :].unsqueeze(1))
+                        decoder_outputs, decoder_states = self.decoder(decoder_input,
+                                                                       encoder_states[:, bid, :].unsqueeze(1))
                     token_logits = self.vocab_linear(decoder_outputs)
                     topv, topi = torch.log(F.softmax(token_logits, dim=-1) + 1e-12).data.topk(k=4)
                     topi = topi.squeeze()

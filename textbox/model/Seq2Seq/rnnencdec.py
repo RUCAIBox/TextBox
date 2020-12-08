@@ -70,8 +70,11 @@ class RNNEncDec(ConditionalGenerator):
             source_length = batch_data['source_length']
             source_embeddings = self.source_token_embedder(source_text)
             encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
-            encoder_outputs = encoder_outputs[:, :, :self.hidden_size] + encoder_outputs[:, :, self.hidden_size:]
-            encoder_states = encoder_states[0:encoder_states.size(0):2]
+
+            if self.bidirectional:
+                encoder_outputs = encoder_outputs[:, :, :self.hidden_size] + encoder_outputs[:, :, self.hidden_size:]
+                encoder_states = encoder_states[0:encoder_states.size(0):2]
+                
             encoder_masks = torch.ne(source_text, self.padding_token_idx)
 
             for bid in range(source_text.size(0)):
@@ -112,8 +115,10 @@ class RNNEncDec(ConditionalGenerator):
         # print(source_embeddings.device, input_embeddings.device, self.encoder.device)
         encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
 
-        encoder_outputs = encoder_outputs[:, :, :self.hidden_size] + encoder_outputs[:, :, self.hidden_size:]
-        encoder_states = encoder_states[0:encoder_states.size(0):2]
+        if self.bidirectional:
+            encoder_outputs = encoder_outputs[:, :, :self.hidden_size] + encoder_outputs[:, :, self.hidden_size:]
+            encoder_states = encoder_states[0:encoder_states.size(0):2]
+
         encoder_masks = torch.ne(source_text, self.padding_token_idx)
 
         if self.attention_type is not None:

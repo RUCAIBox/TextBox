@@ -1,5 +1,5 @@
 # general
-gpu_id: 1
+gpu_id: 0
 use_gpu: True
 seed: 2020
 state: INFO
@@ -10,7 +10,7 @@ generated_text_dir: 'generated'
 
 # training settings
 epochs: 50
-train_batch_size: 128
+train_batch_size: 64
 learner: adam
 learning_rate: 0.001
 eval_step: 2

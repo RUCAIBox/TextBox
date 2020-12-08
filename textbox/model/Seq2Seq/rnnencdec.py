@@ -64,7 +64,7 @@ class RNNEncDec(ConditionalGenerator):
 
     def generate(self, eval_dataloader):
         generate_corpus = []
-        idx2token = eval_dataloader.idx2token
+        idx2token = eval_dataloader.target_idx2token
         for batch_data in eval_dataloader:
             source_text = batch_data['source_idx']
             source_length = batch_data['source_length']

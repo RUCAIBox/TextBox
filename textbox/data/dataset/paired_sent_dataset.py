@@ -23,6 +23,19 @@ class PairedSentenceDataset(Dataset):
         self.target_language = config['target_language'].lower()
         self.source_suffix = config['source_suffix']
         self.target_suffix = config['target_suffix']
+        if config['target_max_vocab_size'] is None or config['source_max_vocab_size'] is None:
+            self.source_max_vocab_size = config['max_vocab_size']
+            self.target_max_vocab_size = config['max_vocab_size']
+        else:
+            self.source_max_vocab_size = config['source_max_vocab_size']
+            self.target_max_vocab_size = config['target_max_vocab_size']
+
+        if config['target_max_seq_length'] is None or config['source_max_seq_length'] is None:
+            self.source_max_vocab_size = config['max_seq_length']
+            self.target_max_vocab_size = config['max_seq_length']
+        else:
+            self.source_max_seq_length = config['source_max_seq_length']
+            self.target_max_seq_length = config['target_max_seq_length']
         super().__init__(config, saved_dataset)
 
     def _get_preset(self):
@@ -54,7 +67,7 @@ class PairedSentenceDataset(Dataset):
             source_text = []
             fin = open(source_file, "r")
             for line in fin:
-                words = nltk.word_tokenize(line.strip(), language=self.source_language)[:self.max_seq_length]
+                words = nltk.word_tokenize(line.strip(), language=self.source_language)[:self.source_max_seq_length]
                 source_text.append(words)
             fin.close()
             self.source_text_data.append(source_text)
@@ -63,7 +76,7 @@ class PairedSentenceDataset(Dataset):
             target_text = []
             fin = open(target_file, "r")
             for line in fin:
-                words = nltk.word_tokenize(line.strip(), language=self.target_language)[:self.max_seq_length]
+                words = nltk.word_tokenize(line.strip(), language=self.target_language)[:self.target_max_seq_length]
                 target_text.append(words)
             fin.close()
             self.target_text_data.append(target_text)
@@ -71,21 +84,23 @@ class PairedSentenceDataset(Dataset):
     def _data_processing(self):
         self._build_vocab()
 
-    def _build_vocab_text(self, text_data_list):
+    def _build_vocab_text(self, text_data_list, max_vocab_size):
         word_list = list()
         for text_data in text_data_list:
             for text in text_data:
                 word_list.extend(text)
         tokens = [token for token, _ in collections.Counter(word_list).items()]
         tokens = [self.padding_token, self.unknown_token, self.sos_token, self.eos_token] + tokens
-        tokens = tokens[:self.max_vocab_size]
-        idx2token = dict(zip(range(self.max_vocab_size), tokens))
-        token2idx = dict(zip(tokens, range(self.max_vocab_size)))
+        tokens = tokens[:max_vocab_size]
+        idx2token = dict(zip(range(max_vocab_size), tokens))
+        token2idx = dict(zip(tokens, range(max_vocab_size)))
         return idx2token, token2idx
 
     def _build_vocab(self):
-        self.source_idx2token, self.source_token2idx = self._build_vocab_text(self.source_text_data)
-        self.target_idx2token, self.target_token2idx = self._build_vocab_text(self.target_text_data)
+        self.source_idx2token, self.source_token2idx = self._build_vocab_text(self.source_text_data,
+                                                                              max_vocab_size=self.source_max_vocab_size)
+        self.target_idx2token, self.target_token2idx = self._build_vocab_text(self.target_text_data,
+                                                                              max_vocab_size=self.target_max_vocab_size)
         print("Source vocab size: {}, Target vocab size: {}".format(len(self.source_idx2token),
                                                                     len(self.target_idx2token)))
 

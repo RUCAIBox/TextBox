@@ -76,24 +76,26 @@ class RNNEncDec(ConditionalGenerator):
                 encoder_states = encoder_states[0:encoder_states.size(0):2]
                 
             encoder_masks = torch.ne(source_text, self.padding_token_idx)
-
             for bid in range(source_text.size(0)):
+                decoder_states = encoder_states[:, bid, :].unsqueeze(1)
                 generate_tokens = []
                 input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
                 for gen_idx in range(100):
                     decoder_input = self.target_token_embedder(input_seq)
                     if self.attention_type is not None:
                         decoder_outputs, decoder_states, _ = self.decoder(decoder_input,
-                                                                          encoder_states[:, bid, :].unsqueeze(1),
+                                                                          decoder_states,
                                                                           encoder_outputs[bid, :, :].unsqueeze(0),
                                                                           encoder_masks[bid, :].unsqueeze(0))
                     else:
                         decoder_outputs, decoder_states = self.decoder(decoder_input,
-                                                                       encoder_states[:, bid, :].unsqueeze(1))
+                                                                       decoder_states)
                     token_logits = self.vocab_linear(decoder_outputs)
                     topv, topi = torch.log(F.softmax(token_logits, dim=-1) + 1e-12).data.topk(k=4)
+                    print(topv, topi)
                     topi = topi.squeeze()
                     token_idx = topi[0].item()
+                    print(token_idx)
                     if token_idx == self.eos_token_idx or gen_idx >= 100:
                         break
                     else:

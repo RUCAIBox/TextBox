@@ -91,7 +91,7 @@ def get_trainer(model_type, model_name):
         elif model_type == ModelType.GAN:
             return getattr(importlib.import_module('textbox.trainer'), 'GANTrainer')
         elif model_type == ModelType.CONDITIONAL:
-            return getattr(importlib.import_module('textbox.trainer'), 'Trainer')
+            return getattr(importlib.import_module('textbox.trainer'), 'ConditionalTrainer')
         else:
             return getattr(importlib.import_module('textbox.trainer'), 'Trainer')
 

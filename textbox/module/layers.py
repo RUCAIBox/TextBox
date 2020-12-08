@@ -21,6 +21,27 @@ from textbox.module.Attention.attention_mechanism import MultiHeadAttention
 from textbox.utils import ModelType, InputType, FeatureType
 
 
+class Highway(nn.Module):
+    def __init__(self, num_highway_layers, input_size):
+        super(Highway, self).__init__()
+        self.num_highway_layers = num_highway_layers
+        self.non_linear = nn.ModuleList([nn.Linear(input_size, input_size) for _ in range(self.num_highway_layers)])
+        self.linear = nn.ModuleList([nn.Linear(input_size, input_size) for _ in range(self.num_highway_layers)])
+        self.gate = nn.ModuleList([nn.Linear(input_size, input_size) for _ in range(self.num_highway_layers)])
+
+    def forward(self, x):
+        for layer in range(self.num_highway_layers):
+            gate = torch.sigmoid(self.gate[layer](x))
+            # Compute percentage of non linear information to be allowed for each element in x
+            non_linear = F.relu(self.non_linear[layer](x))
+            # Compute non linear information
+            linear = self.linear[layer](x)
+            # Compute linear information
+            x = gate*non_linear + (1-gate)*linear
+            # Combine non linear and linear information according to gate
+        return x
+
+
 class MLPLayers(nn.Module):
     r""" MLPLayers
 

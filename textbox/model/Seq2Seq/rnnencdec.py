@@ -29,7 +29,6 @@ class RNNEncDec(ConditionalGenerator):
         self.num_dec_layers = config['num_dec_layers']
         self.rnn_type = config['rnn_type']
         self.bidirectional = config['bidirectional']
-        self.combine_method = config['combine_method']
         self.dropout_ratio = config['dropout_ratio']
         self.attention_type = config['attention_type']
         self.alignment_method = config['alignment_method']
@@ -46,7 +45,7 @@ class RNNEncDec(ConditionalGenerator):
                                                   padding_idx=self.padding_token_idx)
 
         self.encoder = BasicRNNEncoder(self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type,
-                                       self.dropout_ratio, self.bidirectional, self.combine_method)
+                                       self.dropout_ratio, self.bidirectional)
 
         if self.attention_type is not None:
             self.decoder = AttentionalRNNDecoder(self.embedding_size, self.hidden_size, self.context_size,
@@ -69,9 +68,14 @@ class RNNEncDec(ConditionalGenerator):
         for batch_data in eval_dataloader:
             source_text = batch_data['source_idx']
             source_length = batch_data['source_length']
-
             source_embeddings = self.source_token_embedder(source_text)
             encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
+
+            if self.bidirectional:
+                encoder_outputs = encoder_outputs[:, :, :self.hidden_size] + encoder_outputs[:, :, self.hidden_size:]
+                encoder_states = encoder_states[0:encoder_states.size(0):2]
+                
+            encoder_masks = torch.ne(source_text, self.padding_token_idx)
 
             for bid in range(source_text.size(0)):
                 generate_tokens = []
@@ -79,11 +83,13 @@ class RNNEncDec(ConditionalGenerator):
                 for gen_idx in range(100):
                     decoder_input = self.target_token_embedder(input_seq)
                     if self.attention_type is not None:
-                        decoder_outputs, decoder_states = self.decoder(decoder_input,
-                                                                       encoder_states[:, bid, :],
-                                                                       encoder_outputs[bid, :, :])
+                        decoder_outputs, decoder_states, _ = self.decoder(decoder_input,
+                                                                          encoder_states[:, bid, :].unsqueeze(1),
+                                                                          encoder_outputs[bid, :, :].unsqueeze(0),
+                                                                          encoder_masks[bid, :].unsqueeze(0))
                     else:
-                        decoder_outputs, decoder_states = self.decoder(decoder_input, encoder_states[:, bid, :])
+                        decoder_outputs, decoder_states, _ = self.decoder(decoder_input,
+                                                                          encoder_states[:, bid, :].unsqueeze(1))
                     token_logits = self.vocab_linear(decoder_outputs)
                     topv, topi = torch.log(F.softmax(token_logits, dim=-1) + 1e-12).data.topk(k=4)
                     topi = topi.squeeze()
@@ -102,11 +108,17 @@ class RNNEncDec(ConditionalGenerator):
 
         input_text = corpus['target_idx'][:, :-1]
         target_text = corpus['target_idx'][:, 1:]
+        # print(type(source_text), type(source_length))
 
         source_embeddings = self.dropout(self.source_token_embedder(source_text))
         input_embeddings = self.dropout(self.target_token_embedder(input_text))
         # print(source_embeddings.device, input_embeddings.device, self.encoder.device)
         encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
+
+        if self.bidirectional:
+            encoder_outputs = encoder_outputs[:, :, :self.hidden_size] + encoder_outputs[:, :, self.hidden_size:]
+            encoder_states = encoder_states[0:encoder_states.size(0):2]
+
         encoder_masks = torch.ne(source_text, self.padding_token_idx)
 
         if self.attention_type is not None:

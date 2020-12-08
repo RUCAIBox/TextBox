@@ -50,6 +50,7 @@ class SingleSentenceDataset(Dataset):
         Args:
             dataset_path (str): path of dataset dir.
         """
+        # TODO: predefined path should be fixed
         dataset_file = os.path.join(dataset_path, 'corpus_large.txt')
         if not os.path.isfile(dataset_file):
             raise ValueError('File {} not exist'.format(dataset_file))

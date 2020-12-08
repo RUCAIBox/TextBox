@@ -33,12 +33,12 @@ class LeakGAN(GenerativeAdversarialNet):
         return self.generator.pretrain_loss(corpus, self.discriminator) # corpus: target_text
 
     def calculate_d_train_loss(self, real_data, fake_data, epoch_idx):
-        return self.discriminator.calculate_loss(real_data[:,1:], fake_data)
+        return self.discriminator.calculate_loss(real_data[:, 1:], fake_data)
 
     def calculate_g_adversarial_loss(self, epoch_idx):
-        # self.discriminator.eval()
+        self.discriminator.eval()
         loss = self.generator.adversarial_loss(self.discriminator)
-        # self.discriminator.train()
+        self.discriminator.train()
         return loss # (manager_loss, worker_loss)
 
     def generate(self, eval_data):
@@ -47,3 +47,6 @@ class LeakGAN(GenerativeAdversarialNet):
     def sample(self, sample_num):
         samples = self.generator.sample(sample_num, self.discriminator, self.start_idx)
         return samples
+
+    def calculate_nll_test(self, corpus, epoch_idx):
+        return self.generator.calculate_loss(corpus, self.discriminator)

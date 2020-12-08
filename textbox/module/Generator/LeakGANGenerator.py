@@ -16,7 +16,7 @@ class LeakGANGenerator(UnconditionalGenerator):
 
         self.hidden_size = config['hidden_size']
         self.embedding_size = config['generator_embedding_size']
-        self.max_length = config['max_seq_length'] + 2
+        self.max_length = config['max_seq_length'] + 2  # max_length is the length of (eos + origin_max_len + sos)
         self.monte_carlo_num = config['Monte_Carlo_num']
         self.filter_nums = config['filter_nums']
         self.goal_out_size = sum(self.filter_nums)
@@ -28,8 +28,10 @@ class LeakGANGenerator(UnconditionalGenerator):
         self.end_idx = dataset.eos_token_idx
         self.pad_idx = dataset.padding_token_idx
         self.vocab_size = dataset.vocab_size
+        self.batch_size = dataset.batch_size
         self.use_gpu = config['use_gpu']
         self.gpu_id = config['gpu_id']
+        self.eval_generate_num = config['eval_generate_num']
 
         # self.LSTM = nn.LSTM(self.embedding_size, self.hidden_size)
         self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx = self.pad_idx)
@@ -42,45 +44,68 @@ class LeakGANGenerator(UnconditionalGenerator):
         self.mana2goal = nn.Linear(self.hidden_size, self.goal_out_size)
         self.goal2goal = nn.Linear(self.goal_out_size, self.goal_size, bias=False)
 
-        self.goal_init = nn.Parameter(torch.rand((dataset.batch_size, self.goal_out_size)))
+        self.goal_init = nn.Parameter(torch.rand((self.batch_size, self.goal_out_size)))
 
     def pretrain_loss(self, corpus, dis):
-        r'''Returns the pretrain_generator Loss for predicting target sequence.
+        r"""Returns the pretrain_generator Loss for predicting target sequence.
 
-        '''
-        datas = corpus['target_idx'] # b * len
-        batch_size, seq_len = datas.size()
-        start_letter = 2 # !
-        _, feature_array, goal_array, leak_out_array = self.leakgan_forward(datas[:, 1:], dis, if_sample=False, no_log=False,
-                                                                            start_letter=self.start_idx)
+        Args:
+            corpus: include input_idx(bs*seq_len), target_idx(bs*seq_len) ,
+            dis: discriminator model
+
+        Returns:
+            object:
+
+        """
+        datas = corpus['target_idx'] # b * max_len
+        targets = datas[:, 1:] # b*max_length-1
+        batch_size, seq_len = targets.size()
+        _, feature_array, goal_array, leak_out_array = self.leakgan_forward(targets, dis, if_sample=False,
+                                                                            no_log=False, start_letter=self.start_idx)
         # Manager loss
         mana_cos_loss = self.manager_cos_loss(batch_size, feature_array,
                                               goal_array)  # batch_size * (seq_len / step_size)
-        manager_loss = -torch.sum(mana_cos_loss) / (batch_size * ((seq_len-1) // self.step_size))
+        manager_loss = -torch.sum(mana_cos_loss) / (batch_size * (seq_len // self.step_size))
 
         # Worker loss
-        work_nll_loss = self.worker_nll_loss(datas[:, 1:], leak_out_array)  # batch_size * seq_len
-        worker_loss = torch.sum(work_nll_loss) / (batch_size * seq_len)
+        work_nll_loss = self.worker_nll_loss(targets, leak_out_array)  # batch_size * seq_len
+        work_nll_loss = torch.sum(work_nll_loss, dim=1) # bs
+        targets_length = corpus['target_length'] - 1
+        work_nll_loss = work_nll_loss / targets_length
+        worker_loss = torch.mean(work_nll_loss)
 
         return manager_loss, worker_loss
-        # datas = datas.permute(1, 0) # len * b
-        # data_embedding = self.word_embedding(datas[ : -1]) # len * b * e
-        # output, _ = self.LSTM(data_embedding) # len * b * h
 
-        # logits = self.vocab_projection(output) # len * b * v
+    def calculate_loss(self, corpus, dis):
+        r"""Returns the nll for test predicting target sequence.
 
-        # logits = logits.reshape(-1, self.vocab_size) # (len * b) * v
-        # target = datas[1 : ].reshape(-1) # (len * b)
+        Args:
+            corpus: include input_idx(bs*seq_len), target_idx(bs*seq_len) ,
+            dis: discriminator model
 
-        # losses = F.cross_entropy(logits, target, ignore_index = self.pad_idx)
-        # return losses
+        Returns:
+            object:
+
+        """
+        datas = corpus['target_idx'] # b * max_len
+        targets = datas[:, 1:] # b*max_length-1
+        batch_size, seq_len = targets.size()
+        _, feature_array, goal_array, leak_out_array = self.leakgan_forward(targets, dis, if_sample=False,
+                                                                            no_log=False, start_letter=self.start_idx)
+
+        # Worker loss
+        work_nll_loss = self.worker_nll_loss(targets, leak_out_array)  # batch_size * seq_len
+        work_nll_loss = torch.sum(work_nll_loss, dim=1)  # bs
+        work_nll_loss = work_nll_loss
+        worker_loss = torch.mean(work_nll_loss)
+
+        return worker_loss
 
     def forward(self, idx, inp, work_hidden, mana_hidden, feature, real_goal, no_log=False, train=False):
         r"""Embeds input and sample on token at a time (seq_len = 1)
-
         Args:
             idx: index of current token in sentence
-            inp: [batch_size]
+            inp: current input token for a batch [batch_size]
             work_hidden: 1 * batch_size * hidden_dim
             mana_hidden: 1 * batch_size * hidden_dim
             feature: 1 * batch_size * total_num_filters, feature of current sentence
@@ -88,24 +113,25 @@ class LeakGANGenerator(UnconditionalGenerator):
             no_log: no log operation
             train: if train
 
-        Returns: out, cur_goal, work_hidden, mana_hidden
-            out: batch_size * vocab_size
-            cur_goal: batch_size * 1 * goal_out_size
-
+        Returns:
+            out: current output prob over vocab with log_softmax or softmax bs*vocab_size
+            cur_goal: bs * 1 * goal_out_size
+            work_hidden: 1 * batch_size * hidden_dim
+            mana_hidden: 1 * batch_size * hidden_dim
         """
         emb = self.word_embedding(inp).unsqueeze(0)  # 1 * batch_size * embed_dim
 
         # Manager
         mana_out, mana_hidden = self.manager(feature, mana_hidden)  # mana_out: 1 * batch_size * hidden_dim
         mana_out = self.mana2goal(mana_out.permute([1, 0, 2]))  # batch_size * 1 * goal_out_size
-        cur_goal = F.normalize(mana_out, dim=-1)
+        cur_goal = F.normalize(mana_out, p=2, dim=-1)
         _real_goal = self.goal2goal(real_goal)  # batch_size * goal_size
         _real_goal = F.normalize(_real_goal, p=2, dim=-1).unsqueeze(-1)  # batch_size * goal_size * 1
 
         # Worker
         work_out, work_hidden = self.worker(emb, work_hidden)  # work_out: 1 * batch_size * hidden_dim
-        work_out = self.work2goal(work_out).view(-1, self.vocab_size,
-                                                 self.goal_size)  # batch_size * vocab_size * goal_size
+        work_out = self.work2goal(work_out.squeeze(dim=0))  # bs * (vocab*goal)
+        work_out = work_out.contiguous().view(-1, self.vocab_size, self.goal_size)  # batch_size * vocab_size * goal_size
 
         # Sample token
         out = torch.matmul(work_out, _real_goal).squeeze(-1)  # batch_size * vocab_size
@@ -119,7 +145,7 @@ class LeakGANGenerator(UnconditionalGenerator):
         else:
             temperature = self.temperature
 
-        out = temperature * out
+        out = temperature * out # bs * vocab
 
         if no_log:
             out = F.softmax(out, dim=-1)
@@ -128,30 +154,32 @@ class LeakGANGenerator(UnconditionalGenerator):
 
         return out, cur_goal, work_hidden, mana_hidden
 
-    def leakgan_forward(self, sentences, dis, if_sample, start_letter=2, no_log=False, train=False):
+    def leakgan_forward(self, targets, dis, if_sample, start_letter=2, no_log=False, train=False):
         r""" Get all feature and goals according to given sentences
 
         Args:
-            padded input sentences: batch_size * max_seq_len, include end token and pad token but not include start token
+            targets: batch_size * max_seq_len, include end token and pad token but not include start token
             dis: discriminator model
             if_sample: if use to sample token
             no_log: if use log operation
             train: if use temperature parameter
 
         Returns: samples, feature_array, goal_array, leak_out_array:
-            samples: batch_size * max_seq_len
-            feature_array: batch_size * (max_seq_len + 1) * total_num_filter
-            goal_array: batch_size * (max_seq_len + 1) * goal_out_size
-            leak_out_array: batch_size * max_seq_len * vocab_size
+            samples: batch_size * seq_len
+            feature_array: batch_size * (seq_len + 1) * total_num_filter
+            goal_array: batch_size * (seq_len + 1) * goal_out_size
+            leak_out_array: batch_size * seq_len * vocab_size
 
         """
-        batch_size, seq_len = sentences.size()
+        batch_size, seq_len = targets.size() # seq_len = max_length - 1
 
         feature_array = torch.zeros((batch_size, seq_len + 1, self.goal_out_size))
         goal_array = torch.zeros((batch_size, seq_len + 1, self.goal_out_size))
         leak_out_array = torch.zeros((batch_size, seq_len + 1, self.vocab_size))
 
         samples = torch.zeros(batch_size, seq_len + 1).long()
+        samples[:,:] = self.pad_idx
+        samples = samples.long()
         work_hidden = self.init_hidden(batch_size)
         mana_hidden = self.init_hidden(batch_size)
         leak_inp = torch.LongTensor([start_letter] * batch_size)
@@ -171,9 +199,11 @@ class LeakGANGenerator(UnconditionalGenerator):
                 dis_inp = samples[:, :seq_len]
             else:  # to get feature and goal
                 dis_inp = torch.zeros(batch_size, seq_len).long()
+                dis_inp[:, :] = self.pad_idx
+                dis_inp = dis_inp.long()
                 if i > 0:
-                    dis_inp[:, :i] = sentences[:, :i]  # cut sentences
-                    leak_inp = sentences[:, i - 1]
+                    dis_inp[:, :i] = targets[:, :i]  # cut sentences
+                    leak_inp = targets[:, i - 1]
 
             if self.use_gpu:
                 dis_inp = dis_inp.cuda(self.gpu_id)
@@ -250,6 +280,7 @@ class LeakGANGenerator(UnconditionalGenerator):
         num_batch = sample_num // self.batch_size + 1 if sample_num != self.batch_size else 1
         samples = torch.zeros(num_batch * self.batch_size, self.max_length-1).long()  # larger than num_samples
         fake_sentences = torch.zeros((self.batch_size, self.max_length-1))
+        fake_sentences[:, :] = self.pad_idx
 
         for b in range(num_batch):
             leak_sample, _, _, _ = self.leakgan_forward(fake_sentences, dis, if_sample=True, no_log=False
@@ -261,12 +292,11 @@ class LeakGANGenerator(UnconditionalGenerator):
         samples = samples[:sample_num, :]
         if self.use_gpu:
             samples = samples.cuda(self.gpu_id)
-            fake_sentences = fake_sentences.cuda(self.gpu_id)
 
         return samples
 
     def generate(self, eval_data, dis):
-        number_to_gen = 10
+        number_to_gen = self.eval_generate_num
         num_batch = number_to_gen // self.batch_size + 1 if number_to_gen != self.batch_size else 1
         samples = torch.zeros(num_batch * self.batch_size, self.max_length-1).long()  # larger than num_samples
         fake_sentences = torch.zeros((self.batch_size, self.max_length-1))
@@ -286,8 +316,6 @@ class LeakGANGenerator(UnconditionalGenerator):
         return samples
     
     def adversarial_loss(self, dis):
-        adv_mana_loss = 0
-        adv_work_loss = 0
         with torch.no_grad():
             gen_samples = self.sample(self.batch_size, dis, self.start_idx, train=True)  # !!! train=True, the only place
             # target = DataLoader(gen_samples, batch_size=self.batch_size, shuffle=True, drop_last=True)
@@ -359,7 +387,7 @@ class LeakGANGenerator(UnconditionalGenerator):
             loss: batch_size * seq_len
 
         """
-        loss_fn = nn.NLLLoss(reduction='none')
+        loss_fn = nn.NLLLoss(reduction='none',ignore_index=self.pad_idx)
         loss = loss_fn(leak_out_array.permute([0, 2, 1]), target)
 
         return loss

@@ -42,12 +42,13 @@ class GPT2(UnconditionalGenerator):
 
     def generate(self, eval_data):
         generate_corpus = []
-        text_sequence = eval_data["target_text"]
         first_token_ids = set()
-        for text in text_sequence:
-            sentence = ' '.join(text)
-            encoding_dict = self.tokenizer(sentence)
-            first_token_ids.add(encoding_dict['input_ids'][0])
+        for corpus in eval_data:
+            text_sequence = corpus["target_text"]
+            for text in text_sequence:
+                sentence = ' '.join(text)
+                encoding_dict = self.tokenizer(sentence)
+                first_token_ids.add(encoding_dict['input_ids'][0])
         first_token_ids = list(first_token_ids)
 
         with torch.no_grad():
@@ -90,7 +91,7 @@ class GPT2(UnconditionalGenerator):
 
         token_logits = outputs[1]
         loss = self.loss(token_logits.view(-1, token_logits.size(-1)), decoder_labels.view(-1))
-        loss = loss.reshape_as(target_text)
+        loss = loss.reshape_as(decoder_labels)
 
         length = (decoder_labels != self.padding_token_idx).sum(dim=1).float()
         loss = loss.sum(dim=1) / length
@@ -122,7 +123,7 @@ class GPT2(UnconditionalGenerator):
 
         token_logits = outputs[1]
         loss = self.loss(token_logits.view(-1, token_logits.size(-1)), decoder_labels.view(-1))
-        loss = loss.reshape_as(target_text)
+        loss = loss.reshape_as(decoder_labels)
 
         loss = loss.sum(dim=1)
         return loss.mean()

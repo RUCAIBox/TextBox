@@ -1,11 +1,11 @@
-embedding_size: 64
-hidden_size: 128
+embedding_size: 128
+hidden_size: 256
 num_enc_layers: 2
-bidirectional: False
+bidirectional: True
 combine_method: concat
-context_size: 128
+context_size: 256
 num_dec_layers: 2
 dropout_ratio: 0.2
 rnn_type: "gru"
-attention_type: "BahdanauAttention"
+#attention_type: "BahdanauAttention"
 alignment_method: "concat"

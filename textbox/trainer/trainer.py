@@ -826,6 +826,7 @@ class ConditionalTrainer(Trainer):
 
         self.model.eval()
         generate_corpus = self.model.generate(eval_data)
+        self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
 

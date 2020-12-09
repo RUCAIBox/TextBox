@@ -1,2 +1,7 @@
-train_batch_size: 2
-eval_batch_size: 2
+# model settings
+gpt2_type: "gpt2"
+
+# training settings
+learner: adam
+learning_rate: 0.00001
+eval_step: 1

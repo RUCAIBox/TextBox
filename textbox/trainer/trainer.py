@@ -505,11 +505,9 @@ class GANTrainer(Trainer):
 
     def _g_train_epoch(self, train_data, epoch_idx):
         r"""Train the generator module in an epoch
-
         Args:
             train_data (DataLoader): the train data
             epoch_idx (int): the current epoch id
-
         Returns:
             float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
             multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
@@ -524,8 +522,8 @@ class GANTrainer(Trainer):
             total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
         total_loss = [l / len(train_data) for l in total_loss] if isinstance(total_loss, tuple) else total_loss / len(
             train_data)
-        mana_loss, work_loss = total_loss
-        return {"mana_loss":mana_loss, "work_loss":work_loss}
+        total_loss = tuple(total_loss) if isinstance(total_loss, list) else total_loss
+        return total_loss
 
     def _d_train_epoch(self, train_data, epoch_idx):
         r"""Train the discriminator module in an epoch
@@ -1031,6 +1029,32 @@ class LeakGANTrainer(GANTrainer):
         adv_d_loss = total_d_loss / self.adversarail_d_epochs
 
         return {"mana_loss": adv_mana_loss, "work_loss": adv_work_loss, "dis_loss": adv_d_loss}
+
+    def _g_train_epoch(self, train_data, epoch_idx):
+        r"""Train the generator module in an epoch
+
+        Args:
+            train_data (DataLoader): the train data
+            epoch_idx (int): the current epoch id
+
+        Returns:
+            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
+            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
+            tuple which includes the sum of loss in each part.
+        """
+        self.model.generator.train()
+        total_loss = None
+
+        real_data = self._get_real_data(train_data)
+        real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+        for batch_idx, data in enumerate(real_dataloader):
+            # interaction = interaction.to(self.device)
+            losses = self.model.calculate_g_train_loss(data, epoch_idx=epoch_idx)
+            total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
+        total_loss = [l / len(train_data) for l in total_loss] if isinstance(total_loss, tuple) else total_loss / len(
+            train_data)
+        mana_loss, work_loss = total_loss
+        return {"mana_loss":mana_loss, "work_loss":work_loss}
 
     def _save_checkpoint(self, epoch, cur_epoch=None, postfix=None):
         r"""Store the model parameters information and training information.

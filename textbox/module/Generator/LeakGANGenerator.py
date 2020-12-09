@@ -57,8 +57,9 @@ class LeakGANGenerator(UnconditionalGenerator):
             object:
 
         """
-        datas = corpus['target_idx'] # b * max_len
-        targets = datas[:, 1:] # b*max_length-1
+        # datas = corpus['target_idx'] # b * max_len
+        # targets = datas[:, 1:] # b*max_length-1
+        targets = corpus[:, 1:]
         batch_size, seq_len = targets.size()
         _, feature_array, goal_array, leak_out_array = self.leakgan_forward(targets, dis, if_sample=False,
                                                                             no_log=False, start_letter=self.start_idx)
@@ -68,10 +69,11 @@ class LeakGANGenerator(UnconditionalGenerator):
         manager_loss = -torch.sum(mana_cos_loss) / (batch_size * (seq_len // self.step_size))
 
         # Worker loss
+        # TODO: should use the padding token ?
         work_nll_loss = self.worker_nll_loss(targets, leak_out_array)  # batch_size * seq_len
-        work_nll_loss = torch.sum(work_nll_loss, dim=1) # bs
-        targets_length = corpus['target_length'] - 1
-        work_nll_loss = work_nll_loss / targets_length
+        # work_nll_loss = torch.sum(work_nll_loss, dim=1) # bs
+        # targets_length = corpus['target_length'] - 1
+        # work_nll_loss = work_nll_loss / targets_length
         worker_loss = torch.mean(work_nll_loss)
 
         return manager_loss, worker_loss
@@ -359,7 +361,7 @@ class LeakGANGenerator(UnconditionalGenerator):
 
         # ===LeakGAN origin===
         # get sub_feature and real_goal
-        # batch_size, seq_len = sentences.size()
+        # batch_size, seq_len = feature_array.size()
         sub_feature = torch.zeros(batch_size, (self.max_length-1) // self.step_size, self.goal_out_size)
         real_goal = torch.zeros(batch_size, (self.max_length-1) // self.step_size, self.goal_out_size)
         for i in range((self.max_length-1) // self.step_size):
@@ -387,7 +389,8 @@ class LeakGANGenerator(UnconditionalGenerator):
             loss: batch_size * seq_len
 
         """
-        loss_fn = nn.NLLLoss(reduction='none',ignore_index=self.pad_idx)
+        # loss_fn = nn.NLLLoss(reduction='none', ignore_index=self.pad_idx)
+        loss_fn = nn.NLLLoss(reduction='none')
         loss = loss_fn(leak_out_array.permute([0, 2, 1]), target)
 
         return loss

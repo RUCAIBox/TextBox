@@ -23,6 +23,7 @@ class PairedSentenceDataset(Dataset):
         self.target_language = config['target_language'].lower()
         self.source_suffix = config['source_suffix']
         self.target_suffix = config['target_suffix']
+        self.share_vocab = config['share_vocab']
         if config['target_max_vocab_size'] is None or config['source_max_vocab_size'] is None:
             self.source_max_vocab_size = config['max_vocab_size']
             self.target_max_vocab_size = config['max_vocab_size']
@@ -97,12 +98,20 @@ class PairedSentenceDataset(Dataset):
         return idx2token, token2idx
 
     def _build_vocab(self):
-        self.source_idx2token, self.source_token2idx = self._build_vocab_text(self.source_text_data,
-                                                                              max_vocab_size=self.source_max_vocab_size)
-        self.target_idx2token, self.target_token2idx = self._build_vocab_text(self.target_text_data,
-                                                                              max_vocab_size=self.target_max_vocab_size)
-        print("Source vocab size: {}, Target vocab size: {}".format(len(self.source_idx2token),
-                                                                    len(self.target_idx2token)))
+        if self.share_vocab:
+            assert self.source_language == self.target_language
+            text_data = self.source_text_data + self.target_text_data
+            self.source_idx2token, self.source_token2idx = self._build_vocab_text(text_data,
+                                                                                  self.source_max_vocab_size)
+            self.target_idx2token, self.target_token2idx = self.source_idx2token, self.source_token2idx
+            print("Share Vocabulary between source and target, vocab size: {}".format(len(self.target_idx2token)))
+        else:
+            self.source_idx2token, self.source_token2idx = self._build_vocab_text(self.source_text_data,
+                                                                                  max_vocab_size=self.source_max_vocab_size)
+            self.target_idx2token, self.target_token2idx = self._build_vocab_text(self.target_text_data,
+                                                                                  max_vocab_size=self.target_max_vocab_size)
+            print("Source vocab size: {}, Target vocab size: {}".format(len(self.source_idx2token),
+                                                                        len(self.target_idx2token)))
 
     def shuffle(self):
         pass

@@ -36,24 +36,28 @@ class BART(ConditionalGenerator):
         self.sos_token = dataset.sos_token
         self.eos_token = dataset.eos_token
         self.padding_token_idx = self.tokenizer.pad_token_id
-        self.max_source_length = config['max_source_length']
-        self.max_target_length = config['max_target_length']
+        self.max_source_length = config['source_max_seq_length']
+        self.max_target_length = config['target_max_seq_length']
 
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
 
     def generate(self, eval_dataloader):
         generate_corpus = []
-        for batch_data in eval_dataloader:
-            source_text_list = [' '.join(token_list) for token_list in batch_data['source_text']]
-            sample_outputs = self.decoder.generate(
-                source_text_list,
-                num_beams=4,
-                max_length=self.max_target_length,
-                early_stopping=True
-            )
-            generated_text = [self.tokenizer.decode(sample, skip_special_tokens=True) for sample in sample_outputs]
-            generated_text = [text.lower().split() for text in generated_text]
-            generate_corpus.extend(generated_text)
+        with torch.no_grad():
+            for batch_data in eval_dataloader:
+                source_text = batch_data["source_text"]
+                for text in source_text:
+                    sentence = ' '.join(text)
+                    encoding_dict = self.tokenizer(sentence, return_tensors="pt")
+                    input_ids = encoding_dict['input_ids'].to(self.device)
+                    sample_outputs = self.decoder.generate(input_ids,
+                                                           num_beams=4,
+                                                           max_length=self.max_target_length,
+                                                           early_stopping=True)
+                    generated_text = [self.tokenizer.decode(sample, skip_special_tokens=True) for sample in
+                                      sample_outputs]
+                    generated_text = [text.lower().split() for text in generated_text]
+                    generate_corpus.extend(generated_text)
         return generate_corpus
 
     def calculate_loss(self, corpus, epoch_idx=-1):
@@ -69,6 +73,7 @@ class BART(ConditionalGenerator):
                                            padding="max_length",
                                            truncation=True,
                                            return_tensors="pt")
+            print(encoding_dict['input_ids'].size())
             input_ids.append(encoding_dict['input_ids'])
             attn_masks.append(encoding_dict['attention_mask'])
         input_ids = torch.cat(input_ids, dim=0).to(self.device)
@@ -87,43 +92,6 @@ class BART(ConditionalGenerator):
 
         decoder_input_ids = target_ids[:, :-1].contiguous()
         decoder_labels = target_ids[:, 1:].contiguous()
-
-        # target_text_list.append(' '.join([self.sos_token] + target_text[tid] + [self.eos_token]))
-        # encoding_dict = self.tokenizer.prepare_seq2seq_batch(src_texts=source_text_list,
-        #                                                      tgt_texts=target_text_list,
-        #                                                      # max_length=self.max_source_length,
-        #                                                      # max_target_length=self.max_target_length,
-        #                                                      return_tensors='pt',
-        #                                                      padding=True)
-
-        # source_text_idx = []
-        # target_text_idx = []
-        # attn_mask = []
-        # for tid in range(len(source_text)):
-        #     source_token_list = source_text[tid]
-        #     target_token_list = [self.sos_token] + target_text[tid] + [self.eos_token]
-        #     encodings_dict = self.tokenizer(' '.join(source_token_list),
-        #                                     ' '.join(target_token_list),
-        #                                     return_tensors='pt')
-        #     source_text_idx.append(encodings_dict['input_ids'])
-        #     target_text_idx.append(encodings_dict['labels'])
-        #     attn_mask.append(encodings_dict['attention_mask'])
-        # src_max_length = max([len(idx) for idx in source_text_idx])
-        # source_text_idx = [idx + [self.padding_token_idx] * (src_max_length - len(idx)) for idx in source_text_idx]
-        #
-        # tgt_max_length = max([len(idx) for idx in target_text_idx])
-        # target_text_idx = [idx + [self.padding_token_idx] * (tgt_max_length - len(idx)) for idx in target_text_idx]
-        #
-        # attn_mask = [mask + [0] * (src_max_length - len(mask)) for mask in attn_mask]
-        #
-        # source_text_idx = torch.LongTensor(source_text_idx).to(self.device)
-        # target_text_idx = torch.LongTensor(target_text_idx).to(self.device)
-        # attn_mask = torch.LongTensor(attn_mask).to(self.device)
-
-        # input_idx = encoding_dict['input_ids'].to(self.device)
-        # attn_mask = encoding_dict['attention_mask'].to(self.device)
-        # decoder_input_idx = encoding_dict['labels'][:, :-1].to(self.device)
-        # decoder_label = encoding_dict['labels'][:, 1:].to(self.device)
 
         outputs = self.decoder(input_ids,
                                attention_mask=attn_masks,

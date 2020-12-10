@@ -14,7 +14,7 @@ train_batch_size: 64
 learner: adam
 learning_rate: 0.001
 eval_step: 2
-stopping_step: 10
+stopping_step: 5
 
 # evaluation settings
 eval_setting: RO_RS,full

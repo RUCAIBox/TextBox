@@ -243,6 +243,18 @@ class MultiHeadAttention(torch.nn.Module):
 
         self.weight_dropout = nn.Dropout(attn_weight_dropout_ratio)
 
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.normal_(self.query_proj.weight, std=0.02)
+        nn.init.normal_(self.key_proj.weight, std=0.02)
+        nn.init.normal_(self.value_proj.weight, std=0.02)
+        nn.init.normal_(self.out_proj.weight, std=0.02)
+        nn.init.constant_(self.query_proj.bias, 0.)
+        nn.init.constant_(self.key_proj.bias, 0.)
+        nn.init.constant_(self.value_proj.bias, 0.)
+        nn.init.constant_(self.out_proj.bias, 0.)
+
     def forward(self, query, key, value, key_padding_mask=None, attn_mask=None):
         """ Input shape: batch_size * time * embedding_size
             key_padding_mask: batch_size * time
@@ -266,7 +278,7 @@ class MultiHeadAttention(torch.nn.Module):
         if attn_mask is not None:
             # don't attend to future symbols
             attn_weights.masked_fill_(
-                attn_mask.unsqueeze(0),
+                attn_mask.unsqueeze(0).unsqueeze(1),
                 float('-inf')
             )
 

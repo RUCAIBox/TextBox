@@ -34,7 +34,6 @@ class TransformerEncDec(ConditionalGenerator):
         self.attn_dropout_ratio = config['attn_dropout_ratio']
         self.attn_weight_dropout_ratio = config['attn_weight_dropout_ratio']
         self.ffn_dropout_ratio = config['ffn_dropout_ratio']
-        self.ffn_activation_func = config['ffn_activation_func']
 
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
@@ -50,7 +49,7 @@ class TransformerEncDec(ConditionalGenerator):
             self.target_token_embedder = nn.Embedding(self.target_vocab_size, self.embedding_size,
                                                       padding_idx=self.padding_token_idx)
 
-        if config['learned_position']:
+        if config['learned_position_embedder']:
             self.position_embedder = LearnedPositionalEmbedding(self.embedding_size)
         else:
             self.position_embedder = SinusoidalPositionalEmbedding(self.embedding_size)
@@ -59,20 +58,23 @@ class TransformerEncDec(ConditionalGenerator):
 
         self.encoder = TransformerEncoder(self.embedding_size, self.ffn_size, self.num_enc_layers, self.num_heads,
                                           self.attn_dropout_ratio, self.attn_weight_dropout_ratio,
-                                          self.ffn_dropout_ratio, self.ffn_activation_func)
+                                          self.ffn_dropout_ratio)
 
         self.decoder = TransformerDecoder(self.embedding_size, self.ffn_size, self.num_dec_layers, self.num_heads,
                                           self.attn_dropout_ratio, self.attn_weight_dropout_ratio,
-                                          self.ffn_dropout_ratio, self.ffn_activation_func, with_external=True)
+                                          self.ffn_dropout_ratio, with_external=True)
 
         self.vocab_linear = nn.Linear(self.embedding_size, self.target_vocab_size)
-        self.vocab_linear.weight = self.target_token_embedder.weight
 
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
         self.max_target_length = config['target_max_seq_length']
 
         # parameters initialization
-        self.apply(xavier_normal_initialization)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.normal_(self.vocab_linear.weight, std=0.02)
+        nn.init.constant_(self.vocab_linear.bias, 0.)
 
     def generate(self, eval_dataloader):
         generate_corpus = []
@@ -102,7 +104,6 @@ class TransformerEncDec(ConditionalGenerator):
 
                         if prev_decoder_outputs is None:
                             prev_decoder_outputs = decoder_outputs
-                            print(prev_decoder_outputs.size())
                         else:
                             prev_decoder_outputs = torch.cat((prev_decoder_outputs, decoder_outputs), dim=1)
 

@@ -299,56 +299,6 @@ class VanillaAttention(nn.Module):
         return hidden_states, weights
 
 
-class FeedForward(nn.Module):
-    """
-    Point-wise feed-forward layer is implemented by two dense layers.
-
-    Args:
-        input_tensor (torch.Tensor): the input of the point-wise feed-forward layer
-
-    Returns:
-        hidden_states (torch.Tensor): the output of the point-wise feed-forward layer
-
-    """
-    def __init__(self, embedding_size, inner_size, activate_function):
-        super(FeedForward, self).__init__()
-        self.dense_1 = nn.Linear(embedding_size, inner_size)
-        self.dense_2 = nn.Linear(inner_size, embedding_size)
-
-        self.intermediate_act_func = self.get_mediate_act(activate_function)
-
-    def get_mediate_act(self, act):
-        ACT2FUNC = {
-            'gelu': self.gelu,
-            'relu': F.relu,
-            'swish': self.swish,
-            'tanh': torch.tanh,
-            'sigmoid': torch.sigmoid,
-        }
-        return ACT2FUNC[act]
-
-    def gelu(self, x):
-        """Implementation of the gelu activation function.
-
-        For information: OpenAI GPT's gelu is slightly different (and gives slightly different results)::
-
-            0.5 * x * (1 + torch.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3))))
-
-        Also see https://arxiv.org/abs/1606.08415
-        """
-        return x * 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
-
-    def swish(self, x):
-        return x * torch.sigmoid(x)
-
-    def forward(self, input_tensor):
-        hidden_states = self.dense_1(input_tensor)
-        hidden_states = self.intermediate_act_func(hidden_states)
-        hidden_states = self.dense_2(hidden_states)
-
-        return hidden_states
-
-
 class TransformerLayer(torch.nn.Module):
     """
         One transformer layer :
@@ -365,13 +315,14 @@ class TransformerLayer(torch.nn.Module):
             feedforward_output (torch.Tensor): the output of the point-wise feed-forward sublayer, is the output of the transformer layer
         """
     def __init__(self, embedding_size, ffn_size, num_heads, attn_dropout_ratio=0.0, attn_weight_dropout_ratio=0.0,
-                 ffn_dropout_ratio=0.0, ffn_activate_func='gelu', with_external=False):
+                 ffn_dropout_ratio=0.0, with_external=False):
         super(TransformerLayer, self).__init__()
         self.multi_head_attention = MultiHeadAttention(embedding_size, num_heads, attn_weight_dropout_ratio)
-        self.feed_forward = FeedForward(embedding_size, ffn_size, ffn_activate_func)
+        self.feed_forward_1 = nn.Linear(embedding_size, ffn_size)
+        self.feed_forward_2 = nn.Linear(ffn_size, embedding_size)
 
-        self.attn_layer_norm = nn.LayerNorm(embedding_size)
-        self.ffn_layer_norm = nn.LayerNorm(embedding_size)
+        self.attn_layer_norm = nn.LayerNorm(embedding_size, eps=1e-6)
+        self.ffn_layer_norm = nn.LayerNorm(embedding_size, eps=1e-6)
 
         self.attn_dropout = nn.Dropout(attn_dropout_ratio)
         self.ffn_dropout = nn.Dropout(ffn_dropout_ratio)
@@ -381,6 +332,17 @@ class TransformerLayer(torch.nn.Module):
         if self.with_external:
             self.external_multi_head_attention = MultiHeadAttention(embedding_size, num_heads, attn_weight_dropout_ratio)
             self.external_layer_norm = nn.LayerNorm(embedding_size)
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.normal_(self.feed_forward_1.weight, std=0.02)
+        nn.init.normal_(self.feed_forward_2.weight, std=0.02)
+        nn.init.constant_(self.feed_forward_1.bias, 0.)
+        nn.init.constant_(self.feed_forward_2.bias, 0.)
+
+    def gelu(self, x):
+        return x * 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
 
     def forward(self, x, kv=None,
                 self_padding_mask=None, self_attn_mask=None,
@@ -412,7 +374,7 @@ class TransformerLayer(torch.nn.Module):
             external_attn_weights = None
 
         residual = x
-        x = self.feed_forward(x)
+        x = self.feed_forward_2(self.gelu(self.feed_forward_1(x)))
         x = self.ffn_dropout(x)
         x = self.ffn_layer_norm(residual + x)
 

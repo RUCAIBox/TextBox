@@ -24,7 +24,7 @@ from torch.utils.data import DataLoader
 from time import time
 from logging import getLogger
 
-from textbox.evaluator import NgramEvaluator, TranslationEvaluator
+from textbox.evaluator import NgramEvaluator, TranslationEvaluator, SummarizationEvaluator
 from textbox.utils import ensure_dir, get_local_time, early_stopping, calculate_valid_score, dict2str, \
     DataLoaderType, EvaluatorType
 
@@ -101,6 +101,8 @@ class Trainer(AbstractTrainer):
         self.task_type = config['task_type'].lower()
         if self.task_type == "translation":
             self.evaluator = TranslationEvaluator(config)
+        elif self.task_type == "summarization":
+            self.evaluator = SummarizationEvaluator(config)
         else:
             self.evaluator = NgramEvaluator(config)
         # self.eval_type = config['eval_type']
@@ -294,7 +296,8 @@ class Trainer(AbstractTrainer):
                 continue
             if (epoch_idx + 1) % self.eval_step == 0:
                 valid_start_time = time()
-                valid_score, valid_result = self._valid_epoch(valid_data)
+                with torch.no_grad():
+                    valid_score, valid_result = self._valid_epoch(valid_data)
                 # valid_loss, ppl
                 self.best_valid_score, self.cur_step, stop_flag, update_flag = early_stopping(
                     valid_score, self.best_valid_score, self.cur_step,
@@ -364,7 +367,8 @@ class Trainer(AbstractTrainer):
             self.logger.info(message_output)
 
         self.model.eval()
-        generate_corpus = self.model.generate(eval_data)
+        with torch.no_grad():
+            generate_corpus = self.model.generate(eval_data)
         self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)

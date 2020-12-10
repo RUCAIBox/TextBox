@@ -1,9 +1,11 @@
 embedding_size: 512
-ffn_size: 128
+ffn_size: 1024
 num_enc_layers: 6
 num_dec_layers: 6
 num_heads: 8
-attn_dropout_ratio: 0.2
-attn_weight_dropout_ratio: 0.2
-ffn_dropout_ratio: 0.2
-ffn_activation_func: gelu
+attn_dropout_ratio: 0.1
+attn_weight_dropout_ratio: 0.1
+ffn_dropout_ratio: 0.1
+learning_rate: 1.0
+learner: schedule
+warmup_steps: 4000

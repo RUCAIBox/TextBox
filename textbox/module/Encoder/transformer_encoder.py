@@ -13,15 +13,14 @@ class TransformerEncoder(torch.nn.Module):
                  num_heads,
                  attn_dropout_ratio=0.0,
                  attn_weight_dropout_ratio=0.0,
-                 ffn_dropout_ratio=0.0,
-                 ffn_activate_func='gelu'):
+                 ffn_dropout_ratio=0.0):
         super(TransformerEncoder, self).__init__()
 
         self.transformer_layers = nn.ModuleList()
         for _ in range(num_enc_layers):
             self.transformer_layers.append(
                 TransformerLayer(embedding_size, ffn_size, num_heads, attn_dropout_ratio, attn_weight_dropout_ratio,
-                                 ffn_dropout_ratio, ffn_activate_func))
+                                 ffn_dropout_ratio))
 
     def forward(self, x, kv=None, self_padding_mask=None, output_all_encoded_layers=True):
         all_encoded_layers = []

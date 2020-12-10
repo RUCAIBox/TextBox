@@ -24,6 +24,7 @@ from torch.utils.data import DataLoader
 from time import time
 from logging import getLogger
 
+from textbox.module.Optimizer.optim import ScheduledOptim
 from textbox.evaluator import NgramEvaluator, TranslationEvaluator, SummarizationEvaluator
 from textbox.utils import ensure_dir, get_local_time, early_stopping, calculate_valid_score, dict2str, \
     DataLoaderType, EvaluatorType
@@ -82,6 +83,8 @@ class Trainer(AbstractTrainer):
         self.valid_metric_bigger = config['valid_metric_bigger']
         self.test_batch_size = config['eval_batch_size']
         self.device = config['device']
+        self.embedding_size = config['embedding_size']
+        self.warmup_steps = config['warmup_steps']
         self.checkpoint_dir = config['checkpoint_dir']
         ensure_dir(self.checkpoint_dir)
         saved_model_file = '{}-{}.pth'.format(self.config['model'], get_local_time())
@@ -129,6 +132,9 @@ class Trainer(AbstractTrainer):
             optimizer = optim.Adagrad(self.model.parameters(), lr=self.learning_rate)
         elif self.learner.lower() == 'rmsprop':
             optimizer = optim.RMSprop(self.model.parameters(), lr=self.learning_rate)
+        elif self.learner.lower() == 'schedule':
+            optimizer = ScheduledOptim(optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-09),
+                                       self.learning_rate, self.embedding_size, self.warmup_steps)
         else:
             self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
             optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)

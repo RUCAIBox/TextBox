@@ -135,11 +135,10 @@ class RNNEncDec(ConditionalGenerator):
             decoder_outputs, decoder_states = self.decoder(input_embeddings, encoder_states)
 
         token_logits = self.vocab_linear(decoder_outputs)
-        token_logits = token_logits.view(-1, token_logits.size(-1))
-        target_text = target_text.contiguous().view(-1)
+        # token_logits = token_logits.view(-1, token_logits.size(-1))
+        # target_text = target_text.contiguous().view(-1)
 
-        loss = self.loss(token_logits, target_text)
-
+        loss = self.loss(token_logits.view(-1, token_logits.size(-1)), target_text.contiguous().view(-1))
         loss = loss.reshape_as(target_text)
 
         length = corpus['target_length'] - 1

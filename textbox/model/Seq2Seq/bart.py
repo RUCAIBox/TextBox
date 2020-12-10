@@ -73,7 +73,6 @@ class BART(ConditionalGenerator):
                                            padding="max_length",
                                            truncation=True,
                                            return_tensors="pt")
-            print(encoding_dict['input_ids'].size())
             input_ids.append(encoding_dict['input_ids'])
             attn_masks.append(encoding_dict['attention_mask'])
         input_ids = torch.cat(input_ids, dim=0).to(self.device)

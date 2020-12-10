@@ -62,7 +62,7 @@ class RNNEncDec(ConditionalGenerator):
 
         self.dropout = nn.Dropout(self.dropout_ratio)
         self.vocab_linear = nn.Linear(self.hidden_size, self.target_vocab_size)
-        self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx)
+        self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
         
         self.max_target_length = config['target_max_seq_length']
 
@@ -135,8 +135,13 @@ class RNNEncDec(ConditionalGenerator):
             decoder_outputs, decoder_states = self.decoder(input_embeddings, encoder_states)
 
         token_logits = self.vocab_linear(decoder_outputs)
-        token_logits = token_logits.view(-1, token_logits.size(-1))
-        target_text = target_text.contiguous().view(-1)
+        # token_logits = token_logits.view(-1, token_logits.size(-1))
+        # target_text = target_text.contiguous().view(-1)
 
-        loss = self.loss(token_logits, target_text)
+        loss = self.loss(token_logits.view(-1, token_logits.size(-1)), target_text.contiguous().view(-1))
+        loss = loss.reshape_as(target_text)
+
+        length = corpus['target_length'] - 1
+        loss = loss.sum(dim=1) / length
+        loss = loss.mean()
         return loss

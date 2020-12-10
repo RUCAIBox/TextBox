@@ -15,7 +15,7 @@ class TransformerDecoder(torch.nn.Module):
                  attn_weight_dropout_ratio=0.0,
                  ffn_dropout_ratio=0.0,
                  ffn_activate_func='gelu',
-                 with_external=False):
+                 with_external=True):
         super(TransformerDecoder, self).__init__()
         
         self.transformer_layers = nn.ModuleList()

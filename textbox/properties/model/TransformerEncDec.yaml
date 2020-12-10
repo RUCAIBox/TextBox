@@ -1,5 +1,6 @@
-embedding_size: 64
+embedding_size: 512
 ffn_size: 128
+num_enc_layers: 6
 num_dec_layers: 6
 num_heads: 8
 attn_dropout_ratio: 0.2

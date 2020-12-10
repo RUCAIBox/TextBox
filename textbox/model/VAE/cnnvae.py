@@ -24,8 +24,8 @@ Code Reference: https://github.com/kefirski/contiguous-succotash
 
 
 class CNNVAE(UnconditionalGenerator):
-    r"""BPR is a basic matrix factorization model that be trained in the pairwise way.
-
+    r""" CNNVAE use a dilated CNN as decoder, which made a trade-off between contextual capacity of the decoder and
+    effective use of encoding information.
     """
     input_type = InputType.NOISE
 

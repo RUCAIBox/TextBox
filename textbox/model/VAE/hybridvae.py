@@ -23,8 +23,8 @@ Code Reference: https://github.com/kefirski/hybrid_rvae
 
 
 class HybridVAE(UnconditionalGenerator):
-    r"""BPR is a basic matrix factorization model that be trained in the pairwise way.
-
+    r"""HybridVAE blends fully feed-forward convolutional and deconvolutional components
+     with a recurrent language model.
     """
     input_type = InputType.NOISE
 

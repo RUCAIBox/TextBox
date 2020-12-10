@@ -225,7 +225,7 @@ class MonotonicAttention(torch.nn.Module):
 
 
 class MultiHeadAttention(torch.nn.Module):
-    def __init__(self, embedding_size, num_heads, attn_weights_dropout_ratio=0.0):
+    def __init__(self, embedding_size, num_heads, attn_weight_dropout_ratio=0.0):
         super(MultiHeadAttention, self).__init__()
         self.embedding_size = embedding_size
         self.num_heads = num_heads
@@ -241,7 +241,7 @@ class MultiHeadAttention(torch.nn.Module):
 
         self.out_proj = nn.Linear(embedding_size, embedding_size)
 
-        self.weight_dropout = nn.Dropout(attn_weights_dropout_ratio)
+        self.weight_dropout = nn.Dropout(attn_weight_dropout_ratio)
 
     def forward(self, query, key, value, key_padding_mask=None, attn_mask=None):
         """ Input shape: batch_size * time * embedding_size
@@ -267,14 +267,14 @@ class MultiHeadAttention(torch.nn.Module):
             # don't attend to future symbols
             attn_weights.masked_fill_(
                 attn_mask.unsqueeze(0),
-                1e-10
+                float('-inf')
             )
 
         if key_padding_mask is not None:
             # don't attend to padding symbols
             attn_weights.masked_fill_(
                 key_padding_mask.unsqueeze(1).unsqueeze(2),
-                1e-10
+                float('-inf')
             )
 
         attn_weights = self.weight_dropout(F.softmax(attn_weights, dim=-1))

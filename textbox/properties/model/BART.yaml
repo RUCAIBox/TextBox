@@ -2,3 +2,7 @@
 learner: adam
 learning_rate: 0.00001
 eval_step: 1
+stopping_step: 5
+epochs: 10
+train_batch_size: 10
+eval_batch_size: 10

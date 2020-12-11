@@ -22,7 +22,7 @@ class TransformerEncoder(torch.nn.Module):
                 TransformerLayer(embedding_size, ffn_size, num_heads, attn_dropout_ratio, attn_weight_dropout_ratio,
                                  ffn_dropout_ratio))
 
-    def forward(self, x, kv=None, self_padding_mask=None, output_all_encoded_layers=True):
+    def forward(self, x, kv=None, self_padding_mask=None, output_all_encoded_layers=False):
         all_encoded_layers = []
         for idx, layer in enumerate(self.transformer_layers):
             x, _, _ = layer(x, kv, self_padding_mask)

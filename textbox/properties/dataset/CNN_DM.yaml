@@ -1,0 +1,8 @@
+# special tokens
+max_vocab_size: 30000
+max_seq_length: 100
+strategy: "load_split"
+source_language: english
+target_language: english
+source_suffix: en
+target_suffix: es

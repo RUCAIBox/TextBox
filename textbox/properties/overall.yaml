@@ -4,18 +4,17 @@ use_gpu: True
 seed: 2020
 state: INFO
 reproducibility: True
-TASK_TYPE: 'unconditional'
 data_path: 'dataset/'
 checkpoint_dir: 'saved'
+generated_text_dir: 'generated'
 
 # training settings
-epochs: 10
+epochs: 50
 train_batch_size: 64
 learner: adam
 learning_rate: 0.001
-training_neg_sample_num: 1
 eval_step: 2
-stopping_step: 10
+stopping_step: 5
 
 # evaluation settings
 eval_setting: RO_RS,full

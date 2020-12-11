@@ -12,6 +12,7 @@ from textbox.model.abstract_generator import ConditionalGenerator
 from textbox.module.Encoder.rnn_encoder import BasicRNNEncoder
 from textbox.module.Decoder.rnn_decoder import BasicRNNDecoder, AttentionalRNNDecoder
 from textbox.model.init import xavier_normal_initialization
+from textbox.module.strategy import topk_sampling
 
 
 class RNNEncDec(ConditionalGenerator):
@@ -29,7 +30,6 @@ class RNNEncDec(ConditionalGenerator):
         self.num_dec_layers = config['num_dec_layers']
         self.rnn_type = config['rnn_type']
         self.bidirectional = config['bidirectional']
-        self.combine_method = config['combine_method']
         self.dropout_ratio = config['dropout_ratio']
         self.attention_type = config['attention_type']
         self.alignment_method = config['alignment_method']
@@ -42,11 +42,15 @@ class RNNEncDec(ConditionalGenerator):
         # define layers and loss
         self.source_token_embedder = nn.Embedding(self.source_vocab_size, self.embedding_size,
                                                   padding_idx=self.padding_token_idx)
-        self.target_token_embedder = nn.Embedding(self.target_vocab_size, self.embedding_size,
-                                                  padding_idx=self.padding_token_idx)
-
+        
+        if config['share_vocab']:
+            self.target_token_embedder = self.source_token_embedder
+        else:
+            self.target_token_embedder = nn.Embedding(self.target_vocab_size, self.embedding_size,
+                                                      padding_idx=self.padding_token_idx)
+        
         self.encoder = BasicRNNEncoder(self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type,
-                                       self.dropout_ratio, self.bidirectional, self.combine_method)
+                                       self.dropout_ratio, self.bidirectional)
 
         if self.attention_type is not None:
             self.decoder = AttentionalRNNDecoder(self.embedding_size, self.hidden_size, self.context_size,
@@ -58,37 +62,46 @@ class RNNEncDec(ConditionalGenerator):
 
         self.dropout = nn.Dropout(self.dropout_ratio)
         self.vocab_linear = nn.Linear(self.hidden_size, self.target_vocab_size)
-        self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx)
+        self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
+        
+        self.max_target_length = config['target_max_seq_length']
 
         # parameters initialization
         self.apply(xavier_normal_initialization)
 
     def generate(self, eval_dataloader):
         generate_corpus = []
-        idx2token = eval_dataloader.idx2token
+        idx2token = eval_dataloader.target_idx2token
         for batch_data in eval_dataloader:
             source_text = batch_data['source_idx']
             source_length = batch_data['source_length']
-
             source_embeddings = self.source_token_embedder(source_text)
             encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
 
+            if self.bidirectional:
+                encoder_outputs = encoder_outputs[:, :, :self.hidden_size] + encoder_outputs[:, :, self.hidden_size:]
+                encoder_states = encoder_states[0:encoder_states.size(0):2]
+                
+            encoder_masks = torch.ne(source_text, self.padding_token_idx)
             for bid in range(source_text.size(0)):
+                decoder_states = encoder_states[:, bid, :].unsqueeze(1)
                 generate_tokens = []
                 input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
-                for gen_idx in range(100):
+                for gen_idx in range(self.max_target_length):
                     decoder_input = self.target_token_embedder(input_seq)
                     if self.attention_type is not None:
-                        decoder_outputs, decoder_states = self.decoder(decoder_input,
-                                                                       encoder_states[:, bid, :],
-                                                                       encoder_outputs[bid, :, :])
+                        decoder_outputs, decoder_states, _ = self.decoder(decoder_input,
+                                                                          decoder_states,
+                                                                          encoder_outputs[bid, :, :].unsqueeze(0),
+                                                                          encoder_masks[bid, :].unsqueeze(0))
                     else:
-                        decoder_outputs, decoder_states = self.decoder(decoder_input, encoder_states[:, bid, :])
+                        decoder_outputs, decoder_states = self.decoder(decoder_input,
+                                                                       decoder_states)
                     token_logits = self.vocab_linear(decoder_outputs)
-                    topv, topi = torch.log(F.softmax(token_logits, dim=-1) + 1e-12).data.topk(k=4)
-                    topi = topi.squeeze()
-                    token_idx = topi[0].item()
-                    if token_idx == self.eos_token_idx or gen_idx >= 100:
+                    token_idx = topk_sampling(token_logits)
+                    token_idx = token_idx.item()
+                    # print(token_idx)
+                    if token_idx == self.eos_token_idx:
                         break
                     else:
                         generate_tokens.append(idx2token[token_idx])
@@ -102,11 +115,17 @@ class RNNEncDec(ConditionalGenerator):
 
         input_text = corpus['target_idx'][:, :-1]
         target_text = corpus['target_idx'][:, 1:]
+        # print(type(source_text), type(source_length))
 
         source_embeddings = self.dropout(self.source_token_embedder(source_text))
         input_embeddings = self.dropout(self.target_token_embedder(input_text))
         # print(source_embeddings.device, input_embeddings.device, self.encoder.device)
         encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
+
+        if self.bidirectional:
+            encoder_outputs = encoder_outputs[:, :, :self.hidden_size] + encoder_outputs[:, :, self.hidden_size:]
+            encoder_states = encoder_states[0:encoder_states.size(0):2]
+
         encoder_masks = torch.ne(source_text, self.padding_token_idx)
 
         if self.attention_type is not None:
@@ -116,8 +135,13 @@ class RNNEncDec(ConditionalGenerator):
             decoder_outputs, decoder_states = self.decoder(input_embeddings, encoder_states)
 
         token_logits = self.vocab_linear(decoder_outputs)
-        token_logits = token_logits.view(-1, token_logits.size(-1))
-        target_text = target_text.contiguous().view(-1)
+        # token_logits = token_logits.view(-1, token_logits.size(-1))
+        # target_text = target_text.contiguous().view(-1)
 
-        loss = self.loss(token_logits, target_text)
+        loss = self.loss(token_logits.view(-1, token_logits.size(-1)), target_text.contiguous().view(-1))
+        loss = loss.reshape_as(target_text)
+
+        length = corpus['target_length'] - 1
+        loss = loss.sum(dim=1) / length
+        loss = loss.mean()
         return loss

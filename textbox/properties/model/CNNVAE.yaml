@@ -2,9 +2,12 @@
 embedding_size: 128
 hidden_size: 256
 latent_size: 64
-rnn_type: "lstm"
-num_dec_layers: 2
-alpha_aux: 0.4
+num_highway_layers: 2
+num_enc_layers: 2
+decoder_kernel_size: [400,450,500]
+decoder_dilations: [1, 2, 4]
+rnn_type: 'lstm'
+bidirectional: True
 
 # training settings
 learner: adam

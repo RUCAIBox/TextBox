@@ -21,6 +21,27 @@ from textbox.module.Attention.attention_mechanism import MultiHeadAttention
 from textbox.utils import ModelType, InputType, FeatureType
 
 
+class Highway(nn.Module):
+    def __init__(self, num_highway_layers, input_size):
+        super(Highway, self).__init__()
+        self.num_highway_layers = num_highway_layers
+        self.non_linear = nn.ModuleList([nn.Linear(input_size, input_size) for _ in range(self.num_highway_layers)])
+        self.linear = nn.ModuleList([nn.Linear(input_size, input_size) for _ in range(self.num_highway_layers)])
+        self.gate = nn.ModuleList([nn.Linear(input_size, input_size) for _ in range(self.num_highway_layers)])
+
+    def forward(self, x):
+        for layer in range(self.num_highway_layers):
+            gate = torch.sigmoid(self.gate[layer](x))
+            # Compute percentage of non linear information to be allowed for each element in x
+            non_linear = F.relu(self.non_linear[layer](x))
+            # Compute non linear information
+            linear = self.linear[layer](x)
+            # Compute linear information
+            x = gate*non_linear + (1-gate)*linear
+            # Combine non linear and linear information according to gate
+        return x
+
+
 class MLPLayers(nn.Module):
     r""" MLPLayers
 
@@ -278,56 +299,6 @@ class VanillaAttention(nn.Module):
         return hidden_states, weights
 
 
-class FeedForward(nn.Module):
-    """
-    Point-wise feed-forward layer is implemented by two dense layers.
-
-    Args:
-        input_tensor (torch.Tensor): the input of the point-wise feed-forward layer
-
-    Returns:
-        hidden_states (torch.Tensor): the output of the point-wise feed-forward layer
-
-    """
-    def __init__(self, embedding_size, inner_size, activate_function):
-        super(FeedForward, self).__init__()
-        self.dense_1 = nn.Linear(embedding_size, inner_size)
-        self.dense_2 = nn.Linear(inner_size, embedding_size)
-
-        self.intermediate_act_func = self.get_mediate_act(activate_function)
-
-    def get_mediate_act(self, act):
-        ACT2FUNC = {
-            'gelu': self.gelu,
-            'relu': F.relu,
-            'swish': self.swish,
-            'tanh': torch.tanh,
-            'sigmoid': torch.sigmoid,
-        }
-        return ACT2FUNC[act]
-
-    def gelu(self, x):
-        """Implementation of the gelu activation function.
-
-        For information: OpenAI GPT's gelu is slightly different (and gives slightly different results)::
-
-            0.5 * x * (1 + torch.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3))))
-
-        Also see https://arxiv.org/abs/1606.08415
-        """
-        return x * 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
-
-    def swish(self, x):
-        return x * torch.sigmoid(x)
-
-    def forward(self, input_tensor):
-        hidden_states = self.dense_1(input_tensor)
-        hidden_states = self.intermediate_act_func(hidden_states)
-        hidden_states = self.dense_2(hidden_states)
-
-        return hidden_states
-
-
 class TransformerLayer(torch.nn.Module):
     """
         One transformer layer :
@@ -344,13 +315,14 @@ class TransformerLayer(torch.nn.Module):
             feedforward_output (torch.Tensor): the output of the point-wise feed-forward sublayer, is the output of the transformer layer
         """
     def __init__(self, embedding_size, ffn_size, num_heads, attn_dropout_ratio=0.0, attn_weight_dropout_ratio=0.0,
-                 ffn_dropout_ratio=0.0, ffn_activate_func='gelu', with_external=False):
+                 ffn_dropout_ratio=0.0, with_external=False):
         super(TransformerLayer, self).__init__()
         self.multi_head_attention = MultiHeadAttention(embedding_size, num_heads, attn_weight_dropout_ratio)
-        self.feed_forward = FeedForward(embedding_size, ffn_size, ffn_activate_func)
+        self.feed_forward_1 = nn.Linear(embedding_size, ffn_size)
+        self.feed_forward_2 = nn.Linear(ffn_size, embedding_size)
 
-        self.attn_layer_norm = nn.LayerNorm(embedding_size)
-        self.ffn_layer_norm = nn.LayerNorm(embedding_size)
+        self.attn_layer_norm = nn.LayerNorm(embedding_size, eps=1e-6)
+        self.ffn_layer_norm = nn.LayerNorm(embedding_size, eps=1e-6)
 
         self.attn_dropout = nn.Dropout(attn_dropout_ratio)
         self.ffn_dropout = nn.Dropout(ffn_dropout_ratio)
@@ -358,8 +330,19 @@ class TransformerLayer(torch.nn.Module):
         self.with_external = with_external
 
         if self.with_external:
-            self.external_multi_head_attention = MultiHeadAttention(embedding_size, num_heads, attn_weight_dropout)
+            self.external_multi_head_attention = MultiHeadAttention(embedding_size, num_heads, attn_weight_dropout_ratio)
             self.external_layer_norm = nn.LayerNorm(embedding_size)
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.normal_(self.feed_forward_1.weight, std=0.02)
+        nn.init.normal_(self.feed_forward_2.weight, std=0.02)
+        nn.init.constant_(self.feed_forward_1.bias, 0.)
+        nn.init.constant_(self.feed_forward_2.bias, 0.)
+
+    def gelu(self, x):
+        return x * 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
 
     def forward(self, x, kv=None,
                 self_padding_mask=None, self_attn_mask=None,
@@ -383,7 +366,7 @@ class TransformerLayer(torch.nn.Module):
             residual = x
             x, external_attn_weights = self.external_multi_head_attention(query=x,
                                                                           key=external_states,
-                                                                          value=external_memories,
+                                                                          value=external_states,
                                                                           key_padding_mask=external_padding_mask)
             x = self.attn_dropout(x)
             x = self.external_layer_norm(residual + x)
@@ -391,58 +374,11 @@ class TransformerLayer(torch.nn.Module):
             external_attn_weights = None
 
         residual = x
-        x = self.feed_forward(x)
+        x = self.feed_forward_2(self.gelu(self.feed_forward_1(x)))
         x = self.ffn_dropout(x)
         x = self.ffn_layer_norm(residual + x)
 
         return x, self_attn_weights, external_attn_weights
-
-
-class GPT2TransformerLayer(torch.nn.Module):
-    """
-        One GPT-2 transformer layer :
-            a multi-head self-attention,
-            a point-wise feed-forward layer.
-
-        Args:
-            self_padding_mask (torch.bool): the padding mask for the multi head attention sublayer.
-            self_attn_mask (torch.bool): the attention mask for the multi head attention sublayer.
-        Returns:
-            feedforward_output (torch.Tensor): the output of the point-wise feed-forward sublayer, is the output of the transformer layer
-        """
-    def __init__(self, embedding_size, ffn_size, num_heads, attn_dropout_ratio=0.0, attn_weight_dropout_ratio=0.0,
-                 ffn_dropout_ratio=0.0, ffn_activate_func='gelu'):
-        super(GPT2TransformerLayer, self).__init__()
-        self.multi_head_attention = MultiHeadAttention(embedding_size, num_heads, attn_weight_dropout_ratio)
-        self.feed_forward = FeedForward(embedding_size, ffn_size, ffn_activate_func)
-
-        self.attn_layer_norm = nn.LayerNorm(embedding_size)
-        self.ffn_layer_norm = nn.LayerNorm(embedding_size)
-
-        self.attn_dropout = nn.Dropout(attn_dropout_ratio)
-        self.ffn_dropout = nn.Dropout(ffn_dropout_ratio)
-
-    def forward(self, x, kv=None, self_padding_mask=None, self_attn_mask=None):
-        residual = x
-        x = self.attn_layer_norm(x)
-        if kv is None:
-            # Usually for Transformer encoder, key_padding_mask=attn_mask
-            x, self_attn_weights = self.multi_head_attention(query=x, key=x, value=x,
-                                                             key_padding_mask=self_padding_mask,
-                                                             attn_mask=self_attn_mask)
-        else:
-            # Usually for Transformer decoder, attn_mask is a a lower triangular matrix
-            x, self_attn_weights = self.multi_head_attention(query=x, key=kv, value=kv,
-                                                             key_padding_mask=self_padding_mask,
-                                                             attn_mask=self_attn_mask)
-        x = self.attn_dropout(residual + x)
-
-        residual = x
-        x = self.ffn_layer_norm(x)
-        x = self.feed_forward(x)
-        x = self.ffn_dropout(residual + x)
-
-        return x, self_attn_weights
 
 
 class ContextSeqEmbAbstractLayer(nn.Module):

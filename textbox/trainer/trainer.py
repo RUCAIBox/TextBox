@@ -24,7 +24,8 @@ from torch.utils.data import DataLoader
 from time import time
 from logging import getLogger
 
-from textbox.evaluator import NgramEvaluator
+from textbox.module.Optimizer.optim import ScheduledOptim
+from textbox.evaluator import NgramEvaluator, TranslationEvaluator, SummarizationEvaluator
 from textbox.utils import ensure_dir, get_local_time, early_stopping, calculate_valid_score, dict2str, \
     DataLoaderType, EvaluatorType
 
@@ -82,10 +83,17 @@ class Trainer(AbstractTrainer):
         self.valid_metric_bigger = config['valid_metric_bigger']
         self.test_batch_size = config['eval_batch_size']
         self.device = config['device']
+        self.embedding_size = config['embedding_size']
+        self.warmup_steps = config['warmup_steps']
         self.checkpoint_dir = config['checkpoint_dir']
         ensure_dir(self.checkpoint_dir)
         saved_model_file = '{}-{}.pth'.format(self.config['model'], get_local_time())
         self.saved_model_file = os.path.join(self.checkpoint_dir, saved_model_file)
+
+        self.generated_text_dir = config['generated_text_dir']
+        ensure_dir(self.generated_text_dir)
+        saved_text_file = '{}-{}.txt'.format(self.config['model'], get_local_time())
+        self.saved_text_file = os.path.join(self.generated_text_dir, saved_text_file)
 
         self.start_epoch = 0
         self.cur_step = 0
@@ -93,7 +101,13 @@ class Trainer(AbstractTrainer):
         self.best_valid_result = None
         self.train_loss_dict = dict()
         self.optimizer = self._build_optimizer()
-        self.evaluator = NgramEvaluator(config)
+        self.task_type = config['task_type'].lower()
+        if self.task_type == "translation":
+            self.evaluator = TranslationEvaluator(config)
+        elif self.task_type == "summarization":
+            self.evaluator = SummarizationEvaluator(config)
+        else:
+            self.evaluator = NgramEvaluator(config)
         # self.eval_type = config['eval_type']
         # if self.eval_type == EvaluatorType.INDIVIDUAL:
         #     self.evaluator = LossEvaluator(config)
@@ -118,6 +132,9 @@ class Trainer(AbstractTrainer):
             optimizer = optim.Adagrad(self.model.parameters(), lr=self.learning_rate)
         elif self.learner.lower() == 'rmsprop':
             optimizer = optim.RMSprop(self.model.parameters(), lr=self.learning_rate)
+        elif self.learner.lower() == 'schedule':
+            optimizer = ScheduledOptim(optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-09),
+                                       self.learning_rate, self.embedding_size, self.warmup_steps)
         else:
             self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
             optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
@@ -168,7 +185,7 @@ class Trainer(AbstractTrainer):
         total_loss = None
         for batch_idx, data in enumerate(valid_data):
             # interaction = interaction.to(self.device)
-            self.optimizer.zero_grad()
+            # self.optimizer.zero_grad()
             losses = self.model.calculate_loss(data)
             if isinstance(losses, tuple):
                 loss = sum(losses)
@@ -178,7 +195,7 @@ class Trainer(AbstractTrainer):
                 loss = losses
                 total_loss = losses.item() if total_loss is None else total_loss + losses.item()
             self._check_nan(loss)
-        self.optimizer.zero_grad()
+        # self.optimizer.zero_grad()
         valid_loss = total_loss / len(valid_data)
         ppl = np.exp(valid_loss)
         return valid_loss, ppl
@@ -199,6 +216,16 @@ class Trainer(AbstractTrainer):
             'optimizer': self.optimizer.state_dict(),
         }
         torch.save(state, self.saved_model_file)
+
+    def _save_generated_text(self, generated_corpus):
+        r"""Store the generated text by our model.
+
+        Args:
+            corpus (list of string list):
+        """
+        with open(self.saved_text_file, 'w') as fin:
+            for tokens in generated_corpus:
+                fin.write(' '.join(tokens) + '\n')
 
     def resume_checkpoint(self, resume_file):
         r"""Load the model parameters information and training information.
@@ -275,7 +302,8 @@ class Trainer(AbstractTrainer):
                 continue
             if (epoch_idx + 1) % self.eval_step == 0:
                 valid_start_time = time()
-                valid_score, valid_result = self._valid_epoch(valid_data)
+                with torch.no_grad():
+                    valid_score, valid_result = self._valid_epoch(valid_data)
                 # valid_loss, ppl
                 self.best_valid_score, self.cur_step, stop_flag, update_flag = early_stopping(
                     valid_score, self.best_valid_score, self.cur_step,
@@ -345,7 +373,9 @@ class Trainer(AbstractTrainer):
             self.logger.info(message_output)
 
         self.model.eval()
-        generate_corpus = self.model.generate(eval_data)
+        with torch.no_grad():
+            generate_corpus = self.model.generate(eval_data)
+        self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
         result['nll_test'] = self._evaluate_nll_test(eval_data)
@@ -779,6 +809,38 @@ class ConditionalTrainer(Trainer):
 
     def __init__(self, config, model):
         super(ConditionalTrainer, self).__init__(config, model)
+
+    @torch.no_grad()
+    def evaluate(self, eval_data, load_best_model=True, model_file=None):
+        r"""Evaluate the model based on the eval data.
+
+        Args:
+            eval_data (DataLoader): the eval data
+            load_best_model (bool, optional): whether load the best model in the training process, default: True.
+                                              It should be set True, if users want to test the model after training.
+            model_file (str, optional): the saved model file, default: None. If users want to test the previously
+                                        trained model file, they can set this parameter.
+
+        Returns:
+            dict: eval result, key is the eval metric and value in the corresponding metric value
+        """
+        if load_best_model:
+            if model_file:
+                checkpoint_file = model_file
+            else:
+                checkpoint_file = self.saved_model_file
+            checkpoint = torch.load(checkpoint_file)
+            self.model.load_state_dict(checkpoint['state_dict'])
+            message_output = 'Loading model structure and parameters from {}'.format(checkpoint_file)
+            self.logger.info(message_output)
+
+        self.model.eval()
+        generate_corpus = self.model.generate(eval_data)
+        self._save_generated_text(generate_corpus)
+        reference_corpus = eval_data.get_reference()
+        result = self.evaluator.evaluate(generate_corpus, reference_corpus)
+
+        return result
 
 
 class MaskGANTrainer(GANTrainer):

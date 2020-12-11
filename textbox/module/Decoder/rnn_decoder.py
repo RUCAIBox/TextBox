@@ -48,6 +48,7 @@ class BasicRNNDecoder(torch.nn.Module):
         if hidden_states is None:
             hidden_states = self.init_hidden(input_embeddings)
 
+        hidden_states = hidden_states.contiguous()
         outputs, hidden_states = self.decoder(input_embeddings, hidden_states)
         return outputs, hidden_states
 
@@ -120,6 +121,7 @@ class AttentionalRNNDecoder(torch.nn.Module):
         for step in range(decode_length):
 
             if self.attention_type == 'BahdanauAttention':
+                # only top layer
                 if self.rnn_type == 'lstm':
                     hidden = hidden_states[0][-1]
                 else:
@@ -132,6 +134,7 @@ class AttentionalRNNDecoder(torch.nn.Module):
                 context = None
 
             # outputs shape: [batch_size, 1, hidden_size]
+            hidden_states = hidden_states.contiguous()
             outputs, hidden_states = self.decoder(inputs, hidden_states)
 
             if self.attention_type == 'LuongAttention' and context is None:

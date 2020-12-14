@@ -37,3 +37,4 @@ class SpecialTokens:
     UNK = "<|unk|>"
     SOS = "<|startoftext|>"
     EOS = "<|endoftext|>"
+    MASK = "<|mask|>"

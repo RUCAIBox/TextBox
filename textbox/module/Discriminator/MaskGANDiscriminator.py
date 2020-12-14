@@ -5,7 +5,6 @@
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from textbox.model.abstract_generator import GenerativeAdversarialNet
 from textbox.module.Encoder.rnn_encoder import BasicRNNEncoder
@@ -156,7 +155,6 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
                 input = torch.zeros_like(fake_sequence[:, 0].unsqueeze(dim=1))
             else:
                 input = fake_sequence[:, t - 1].unsqueeze(dim=1)
-
             rnn_output, hidden_size = self.decoder.decoder(input, hidden_size)
             rnn_output_ = rnn_output.detach()  # only update critic_linear
             value = self.critic_fc_linear(rnn_output_)  # bs*1*1

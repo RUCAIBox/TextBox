@@ -3,7 +3,7 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2020/12/2, 2020/11/27, 2020/12/3, 2020/12/15
+# @Time   : 2020/12/2, 2020/11/27, 2020/12/3, 2020/12/26
 # @Author : Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang, Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
 
@@ -18,6 +18,7 @@ import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 import copy
+import math
 
 from torch.utils.data import DataLoader
 from time import time
@@ -782,14 +783,46 @@ class ConditionalTrainer(Trainer):
 
 class MaskGANTrainer(GANTrainer):
     r""" Trainer specifically designed for MaskGAN training process.
-
     """
 
     def __init__(self, config, model):
         super(MaskGANTrainer, self).__init__(config, model)
-        self.adversarail_c_epochs = config['adversarail_c_epochs']  # !!
+        self.max_length = config["max_seq_length"]
+        self.eos_token_idx = model.eos_idx
+        self.adversarail_c_epochs = config['adversarail_c_epochs']
+        self.g_mask_pretraining_epochs = config['g_mask_pretraining_epochs']
+        self.g_lr = config['gen_learning_rate']
+        self.d_lr = config['dis_learning_rate']
+        self.c_lr = config['critic_learning_rate']
+        self.g_optimizer = self._build_module_optimizer_(self.model.generator, self.g_lr)
+        self.d_optimizer = self._build_module_optimizer_(self.model.discriminator, self.d_lr)
+        self.c_optimizer = self._build_module_optimizer_(self.model.discriminator.critic_fc_linear, self.c_lr)
+        self.pre_lm_weight = config["pre_lm_weight"]
+        self.pretrain_lm_epochs = config["pretrain_lm_epochs"]
+        self.checkp = config['checkp']
+
+    def _build_module_optimizer_(self, module, lr):
+        r""" Init the Module Optimizer with specified learning rate
+        Returns:
+            torch.optim: the optimizer
+        """
+        if self.learner.lower() == 'adam':
+            optimizer = optim.Adam(module.parameters(), lr)
+        elif self.learner.lower() == 'sgd':
+            optimizer = optim.SGD(module.parameters(), lr)
+        elif self.learner.lower() == 'adagrad':
+            optimizer = optim.Adagrad(module.parameters(), lr)
+        elif self.learner.lower() == 'rmsprop':
+            optimizer = optim.RMSprop(module.parameters(), lr)
+        else:
+            self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
+            optimizer = optim.Adam(module.parameters(), lr)
+
+        return optimizer
 
     def _optimize_step(self, losses, total_loss, model, opt, retain_graph=False):
+        r""" Add retain_graph option
+        """
         if isinstance(losses, tuple):
             loss = sum(losses)
             loss_tuple = tuple(per_loss.item() for per_loss in losses)
@@ -805,90 +838,347 @@ class MaskGANTrainer(GANTrainer):
         opt.step()
         return total_loss
 
-    def _g_train_epoch(self, train_data, epoch_idx):
-        r"""Train the generator module in an epoch
-
-        Args:
-            train_data (DataLoader): the train data
-            epoch_idx (int): the current epoch id
-
-        Returns:
-            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
-            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
-            tuple which includes the sum of loss in each part.
+    def _generate_train_loss_output(self, epoch_idx, s_time, e_time, losses, train_info=""):
+        r""" Specified for maskgan output
         """
+        train_loss_output = "%straining [time: %.2fs, " % (train_info, e_time - s_time)
+        if isinstance(losses, dict):
+            for key, loss in losses.items():
+                train_loss_output += '%s: %.4f, ' % (key, loss)
+            train_loss_output = train_loss_output[:-2]
+        else:
+            train_loss_output += "train loss: %.4f" % losses
+        return train_loss_output + ']'
+
+    def pretrain_lm(self, train_data, valid_data, verbose):
+        r""" Pretrain rnn-based Language Model with teacher forcing mechanism
+        """
+
+        def lm_forward(data):
+            r""" One iteration of LM forward
+            """
+            input = data[:, :-1]  # bs * self.max_len - 1
+            target = data[:, 1:]
+            bs, seq_len = target.size()
+            lengths = torch.tensor([seq_len] * bs)
+            target_present = torch.ones_like(input).byte()
+            device = target.device
+            lengths = lengths.cuda(device)
+
+            # pretaining
+            encoder_outputs = pre_train_lm(input, lengths, target, target_present, pretrain=True)
+            logit = pre_train_lm.vocab_linear(encoder_outputs)
+            logit = logit.permute([0, 2, 1])
+            lossf = torch.nn.CrossEntropyLoss()
+            loss = lossf(logit, target)
+            return loss
+
+        pre_train_lm = self.model.generator
+        lm_opt = self._build_module_optimizer_(pre_train_lm, lr=0.001)
+        for epoch in range(self.pretrain_lm_epochs):
+            total_loss = None
+            real_data = self._get_real_data(train_data)  # bs * self.max_len
+            real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+            for batch_idx, data in enumerate(real_dataloader):
+
+                loss = lm_forward(data)
+                total_loss = self._optimize_step(loss, total_loss, pre_train_lm, lm_opt)
+
+            total_loss = total_loss / len(real_dataloader)
+            if verbose:
+                self.logger.info("Epoch {}/{} of LM pretraining loss: {} ".format(epoch+1, self.pretrain_lm_epochs, total_loss))
+
+            ppl = 0.0
+            if (epoch+1) % 1 == 0:
+                pre_train_lm.eval()
+                validate_data = self._get_real_data(valid_data)  # bs * self.max_len
+                validate_dataloader = DataLoader(validate_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+                ppl = 0.0
+                for batch_idx, data in enumerate(validate_dataloader):
+                    cross_entropy_loss = lm_forward(data)
+                    ppl += math.exp(cross_entropy_loss.item())
+                ppl = ppl / len(validate_dataloader)
+                pre_train_lm.train()
+                if verbose:
+                    self.logger.info("Epoch {}/{} of LM pretraining PPL: {}...".format(epoch + 1, self.pretrain_lm_epochs, ppl))
+                if ppl < 110:
+                    state_dict = {
+                        'embedder': pre_train_lm.embedder,
+                        'encoder': pre_train_lm.encoder.encoder,
+                        'vocab_linear': pre_train_lm.vocab_linear
+                    }
+                    self.pre_lm_weight = "saved/pretrain_lm_weight" + str(epoch+1) + ".pkl"
+                    torch.save(state_dict, self.pre_lm_weight)
+                    if verbose:
+                        self.logger.info("End LM pretraining. PPL: {}".format(ppl))
+                        self.logger.info("Weigth saved in {}".format(self.pre_lm_weight))
+                    return  pre_train_lm, ppl
+
+    def _g_train_epoch(self, train_data, epoch_idx):
         self.model.generator.train()
         total_loss = None
-
-        for batch_idx, data in enumerate(train_data):
-            losses = self.model.calculate_g_train_loss(data, is_advtrain=False, epoch_idx=epoch_idx)
-            total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
-        total_loss = total_loss / len(train_data)
+        real_data = self._get_real_data(train_data) # bs * self.max_len
+        real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+        for batch_idx, data in enumerate(real_dataloader):
+            loss = self.model.calculate_g_train_loss(data, epoch_idx=epoch_idx)
+            total_loss = self._optimize_step(loss, total_loss, self.model.generator, self.g_optimizer)
+        total_loss = total_loss / len(real_dataloader)
         return total_loss
 
+    def _get_validate_ppl(self, validate_data, epoch_idx):
+        self.model.generator.eval()
+        ppl = 0.0
+        validate_data = self._get_real_data(validate_data)  # bs * self.max_len
+        validate_dataloader = DataLoader(validate_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+        for batch_idx, data in enumerate(validate_dataloader):
+            loss = self.model.calculate_g_train_loss(data, epoch_idx=epoch_idx, validate=True)
+            ppl += math.exp(loss.item())
+        ppl = ppl / len(validate_dataloader)
+        self.model.generator.train()
+        return ppl
+
     def _d_train_epoch(self, train_data, epoch_idx):
-        r"""Train the discriminator module in an epoch
-
-        Args:
-            train_data (DataLoader): the train data
-            epoch_idx (int): the current epoch id
-
-        Returns:
-            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
-            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
-            tuple which includes the sum of loss in each part.
-        """
         self.model.discriminator.train()
         total_loss = None
-
-        for batch_idx, data in enumerate(train_data):
-            losses = self.model.calculate_d_train_loss(data, epoch_idx=epoch_idx, is_advtrain=False)
+        real_data = self._get_real_data(train_data)
+        real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+        for batch_idx, data in enumerate(real_dataloader):
+            losses = self.model.calculate_d_train_loss(data, epoch_idx=epoch_idx)
             total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
 
-        return total_loss / len(train_data)
+        return total_loss / len(real_dataloader)
 
     def _adversarial_train_epoch(self, train_data, epoch_idx):
-        r"""Adversarial training in an epoch
-
-        Args:
-            train_data (DataLoader): the train data
-            epoch_idx (int): the current epoch id
-
-        Returns:
-            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
-            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
-            tuple which includes the sum of loss in each part.
+        r""" Specified for MaskGAN adversarial training
         """
         dis_total_loss = None
         gen_total_loss = None
         critic_total_loss = None
         g_num = 0.0
         d_num = 0.0
-        dis_train_data = copy.deepcopy(train_data)
-        gen_train_data = copy.deepcopy(train_data)
-        _ = next(dis_train_data)
+        real_data = self._get_real_data(train_data)
+        real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+
+        dis_train_data = copy.deepcopy(real_dataloader)
+        gen_train_data = copy.deepcopy(real_dataloader)
+        c_train_data = copy.deepcopy(real_dataloader)
+
+        dis_train_data = iter(dis_train_data)
+        gen_train_data = iter(gen_train_data)
+        _ = next(dis_train_data) # have one offset
+
         for g_x in gen_train_data:
             g_num += 1
-            # self.model.discriminator.train()
-            for _ in range(self.adversarail_d_epochs):
+            for _ in range(3):
                 d_num += 1
                 try:
                     d_x = next(dis_train_data)
                 except StopIteration:
                     del dis_train_data
-                    dis_train_data = copy.deepcopy(train_data)
+                    dis_train_data = copy.deepcopy(real_dataloader)
+                    dis_train_data = iter(dis_train_data)
                     d_x = next(dis_train_data)
-                losses = self.model.calculate_d_train_loss(d_x, epoch_idx=_, is_advtrain=True)
+                losses = self.model.calculate_d_train_loss(d_x, epoch_idx=_)
                 dis_total_loss = self._optimize_step(losses, dis_total_loss, self.model.discriminator, self.d_optimizer)
 
-            # self.model.generator.train()
             gen_losses, critic_losses = self.model.calculate_g_adversarial_loss(g_x, epoch_idx=g_num)
-            gen_total_loss = self._optimize_step(gen_losses, gen_total_loss, self.model.generator, self.g_optimizer,
-                                                 retain_graph=True)
-            critic_total_loss = self._optimize_step(critic_losses, critic_total_loss, self.model.discriminator,
-                                                    self.d_optimizer)
-        return (dis_total_loss / d_num, gen_total_loss / g_num, critic_total_loss / g_num)
+            gen_total_loss = self._optimize_step(gen_losses, gen_total_loss, self.model.generator, self.g_optimizer)
+            critic_total_loss = self._optimize_step(critic_losses, critic_total_loss, self.model.discriminator.critic_fc_linear, self.c_optimizer)
+        return {"dis_loss": dis_total_loss / d_num, "gen_loss": gen_total_loss / g_num, "critic_loss": critic_total_loss / g_num}
 
+    def _evaluate_nll_test(self, eval_data):
+        total_loss = 0
+        real_data = self._get_real_data(eval_data)
+        real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+        for batch_idx, data in enumerate(real_dataloader):
+            nll_test = self.model.calculate_nll_test(data, batch_idx)
+            total_loss += float(nll_test)
+        return total_loss / len(eval_data)
+
+    def _add_eos(self, data, length):
+        batch_size, pad_seq_len = data.size()
+        padded_data = torch.full((batch_size, self.max_length), self.eos_token_idx, dtype=torch.long, device=self.device)
+        for i in range(batch_size):
+            l = int(length[i].cpu().data)
+            if l == self.max_length+2:
+                padded_data[i, :] = data[i, 1:l-1]
+            else:
+                padded_data[i, 0:l-1] = data[i, 1:l]
+        return padded_data
+
+    def _get_real_data(self, train_data):
+        real_datas = []
+        for corpus in train_data:
+            real_data = corpus['target_idx'] # bs*batch_max_seq_len
+            length = corpus['target_length']
+            real_data = self._add_eos(real_data, length)
+            real_datas.append(real_data)
+
+        real_datas = torch.cat(real_datas, dim=0)
+        return real_datas
+
+    def _save_checkpoint(self, epoch, postfix=None):
+        state = {
+            'config': self.config,
+            'epoch': epoch,
+            'cur_step': self.cur_step,
+            'best_valid_score': self.best_valid_score,
+            'state_dict': self.model.state_dict(),
+            'g_opt': self.g_optimizer.state_dict(),
+            'd_opt': self.d_optimizer.state_dict(),
+            'c_opt':self.c_optimizer.state_dict()
+        }
+        if postfix is not None:
+            path = self.saved_model_file + "_" + str(epoch) + "_" + postfix
+            torch.save(state, path)
+            return path
+        else:
+            torch.save(state, self.saved_model_file)
+
+    def _load_generated_text(self):
+        r""" Load the generated text by our model to log.
+        """
+        with open(self.saved_text_file, 'r') as fin:
+            samples = []
+            for i in range(5):
+                text = fin.readline()
+                samples.append(text)
+            return samples
+
+    def fit(self, train_data, valid_data=None, verbose=True, saved=True):
+        # generator pretraining
+        if self.checkp is not None:
+            checkpoint = torch.load(self.checkp)
+            self.model.load_state_dict(checkpoint['state_dict'])
+            self.d_optimizer.load_state_dict(checkpoint["d_opt"])
+            self.g_optimizer.load_state_dict(checkpoint["g_opt"])
+            epoch_check = checkpoint['epoch']
+            if verbose:
+                self.logger.info("Load checkpoint file from: {}".format(self.checkp))
+        else:
+            if self.pre_lm_weight is None:
+                if verbose:
+                    self.logger.info("Start LM pretraining...")
+                pretrain_lm, ppl = self.pretrain_lm(train_data, valid_data, verbose)
+
+                pretrain_lm = torch.load(self.pre_lm_weight)
+                embedder = pretrain_lm['embedder'].state_dict()
+                lstm = pretrain_lm['encoder'].state_dict()
+                vocab_linear = pretrain_lm['vocab_linear'].state_dict()
+
+                self.model.generator.embedder.load_state_dict(embedder)
+                self.model.generator.encoder.encoder.load_state_dict(lstm)
+                self.model.generator.decoder.decoder.load_state_dict(lstm)
+                self.model.generator.vocab_linear.load_state_dict(vocab_linear)
+                self.model.discriminator.encoder.encoder.load_state_dict(lstm)
+                self.model.discriminator.decoder.decoder.load_state_dict(lstm)
+                if verbose:
+                    self.logger.info("Load pretrained LM weight")
+            else:
+                pretrain_lm = torch.load(self.pre_lm_weight)
+                embedder = pretrain_lm['embedder'].state_dict()
+                lstm = pretrain_lm['encoder'].state_dict()
+                vocab_linear = pretrain_lm['vocab_linear'].state_dict()
+
+                self.model.generator.embedder.load_state_dict(embedder)
+                self.model.generator.encoder.encoder.load_state_dict(lstm)
+                self.model.generator.decoder.decoder.load_state_dict(lstm)
+                self.model.generator.vocab_linear.load_state_dict(vocab_linear)
+                self.model.discriminator.encoder.encoder.load_state_dict(lstm)
+                self.model.discriminator.decoder.decoder.load_state_dict(lstm)
+                if verbose:
+                    self.logger.info("Load pretrained LM weight from: {}".format(self.pre_lm_weight))
+
+        if verbose:
+            self.logger.info("Start generator mask pretraining...")
+        for epoch_idx in range(self.g_mask_pretraining_epochs):
+            training_start_time = time()
+            train_loss = self._g_train_epoch(train_data, epoch_idx)
+            self.g_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
+            training_end_time = time()
+            train_loss_output = \
+                self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss,
+                                                 "generator pre")
+            if verbose:
+                self.logger.info(train_loss_output)
+
+            ppl = self._get_validate_ppl(valid_data, epoch_idx)
+            if verbose:
+                self.logger.info(
+                    "Epoch {}/{} of mask pretraining PPL: {}...".format(epoch_idx + 1, self.g_mask_pretraining_epochs, ppl))
+            if ppl <= 90:
+                if verbose:
+                    path = self._save_checkpoint(epoch_idx + 1, postfix="pretrain_gen")
+                    self.logger.info(">>>> [Pretrain Gen] PPL: {} save weight in {}".format(ppl, path))
+                    self.logger.info("End generator mask pretraining...")
+                    break
+            if (epoch_idx) % 10 == 0:
+                self.logger.info(">>>> [Pretrain Gen] Save pretrain gen check in epoch %d ..." % (epoch_idx + 1))
+                path = self._save_checkpoint(epoch_idx + 1, postfix="pretrain_gen")
+
+                self.model.eval()
+                test_result = self.evaluate(valid_data, model_file=path)
+                self.model.train()
+                sample = self._load_generated_text()
+                tmp = "\n"
+                for i, s in enumerate(sample):
+                    tmp += str(i)
+                    tmp += ": "
+                    tmp += s.strip()
+                    tmp += "\n"
+                self.logger.info('>>>> [Pretrain Gen] test result: {}'.format(test_result))
+                self.logger.info('>>>> [Pretrain Gen] test result samples: {}'.format(tmp))
+
+        # discriminator pretraining
+        if verbose:
+            self.logger.info("Start discriminator pretraining...")
+        for epoch_idx in range(self.d_pretraining_epochs):
+            training_start_time = time()
+            train_loss = self._d_train_epoch(train_data, epoch_idx)
+            self.d_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
+            training_end_time = time()
+            train_loss_output = \
+                self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss,
+                                                 "discriminator pre")
+            if verbose:
+                self.logger.info(train_loss_output)
+        if verbose:
+            self.logger.info("End discriminator pretraining...")
+
+        # adversarial training
+        if verbose:
+            self.logger.info("Start adversarial training...")
+        for epoch_idx in range(self.adversarail_training_epochs):
+            training_start_time = time()
+            train_loss = self._adversarial_train_epoch(train_data, epoch_idx)
+            self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
+            training_end_time = time()
+            train_loss_output = \
+                self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss)
+            if verbose:
+                self.logger.info(train_loss_output)
+
+            if (epoch_idx+1) % 10 == 0:
+                path = self._save_checkpoint((epoch_idx + 1), postfix="adv_train")
+                self.model.eval()
+                test_result = self.evaluate(valid_data, model_file=path)
+                self.model.train()
+
+                sample = self._load_generated_text()
+                tmp = "\n"
+                for i, s in enumerate(sample):
+                    tmp += str(i)
+                    tmp += ": "
+                    tmp += s.strip()
+                    tmp += "\n"
+                self.logger.info('>>>>>> [Adv] test result: {}'.format(test_result))
+                self.logger.info('>>>>>> [Adv] test result samples: {}'.format(tmp))
+
+        if verbose:
+            self.logger.info("End adversarial pretraining...")
+
+        self._save_checkpoint(self.adversarail_training_epochs)
+        return -1, None
 
 class LeakGANTrainer(GANTrainer):
     r""" Specified for leakgan trainer

@@ -1,6 +1,11 @@
-# @Time   : 2020/11/16, 2020/12/27
-# @Author : Gaole He, Jinhao Jiang
-# @Email  : hegaole@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
+# @Time   : 2020/11/16
+# @Author : Gaole He
+# @Email  : hegaole@ruc.edu.cn
+
+# UPDATE:
+# @Time   : 2020/12/26
+# @Author : Jinhao Jiang
+# @Email  : jiangjinhao@std.uestc.edu.cn
 
 import os
 import nltk

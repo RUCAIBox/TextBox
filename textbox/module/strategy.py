@@ -51,3 +51,16 @@ def topk_sampling(logits, temperature=1.0, top_k=0, top_p=0.9):
 
     return token_idx
 
+
+def greedy_sampling(logits):
+    r"""
+    Basic greedy sampling strategy
+
+    Args:
+        logits: logits distribution
+    """
+    topv, topi = torch.log(F.softmax(logits, dim=-1) + 1e-12).data.topk(k=4)
+    topi = topi.squeeze()
+    token_idx = topi[0].item()
+
+    return token_idx

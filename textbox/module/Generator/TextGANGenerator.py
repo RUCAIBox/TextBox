@@ -16,7 +16,7 @@ class TextGANGenerator(UnconditionalGenerator):
         self.hidden_size = config['hidden_size']
         self.embedding_size = config['generator_embedding_size']
         self.max_length = config['max_seq_length'] + 2
-        self.monte_carlo_num = config['Monte_Carlo_num']
+        self.eval_generate_num = config['eval_generate_num']
         self.start_idx = dataset.sos_token_idx
         self.end_idx = dataset.eos_token_idx
         self.pad_idx = dataset.padding_token_idx
@@ -26,24 +26,31 @@ class TextGANGenerator(UnconditionalGenerator):
         self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx = self.pad_idx)
         self.vocab_projection = nn.Linear(self.hidden_size, self.vocab_size)
 
-    def calculate_loss(self, corpus):
+    def calculate_loss(self, corpus, nll_test=False):
         datas = corpus['target_idx'] # b * len
         datas = datas.permute(1, 0) # len * b
         data_embedding = self.word_embedding(datas[ : -1]) # len * b * e
-        output, _ = self.LSTM(data_embedding) # len * b * h
+        h_prev = torch.randn(1, datas.size(1), self.hidden_size, device = self.device) # 1 * b * h
+        o_prev = torch.zeros(1, datas.size(1), self.hidden_size, device = self.device) # 1 * b * h
+        prev_state = (h_prev, o_prev)
+        output, _ = self.LSTM(data_embedding, prev_state) # len * b * h
         logits = self.vocab_projection(output) # len * b * v
         
-        logits = logits.reshape(-1, self.vocab_size) # (len * b) * v
-        target = datas[1 : ].reshape(-1) # (len * b)
-        
-        losses = F.cross_entropy(logits, target, ignore_index = self.pad_idx)
-        return losses
+        target_word = datas[1 : ] # len * b
+        target_word_prob = F.cross_entropy(logits.reshape(-1, self.vocab_size), target_word.reshape(-1), ignore_index=self.pad_idx, reduction='none') # (len * b)
+        target_word_prob = target_word_prob.reshape_as(target_word) # len * b
+        if (nll_test):
+            loss = target_word_prob.sum(dim = 0)
+        else:
+            length = corpus['target_length'] - 1 # b
+            loss = target_word_prob.sum(dim = 0) / length # b
+        return loss.mean()
     
     def sample(self):
         self.eval()
         sentences = []
         with torch.no_grad():
-            h_prev = torch.rand(1, self.batch_size, self.hidden_size, device = self.device) # 1 * b * h
+            h_prev = torch.randn(1, self.batch_size, self.hidden_size, device = self.device) # 1 * b * h
             o_prev = torch.zeros(1, self.batch_size, self.hidden_size, device = self.device) # 1 * b * h
             prev_state = (h_prev, o_prev)
             X = self.word_embedding(torch.tensor([self.start_idx] * self.batch_size, dtype = torch.long, device = self.device)).unsqueeze(0) # 1 * b * e
@@ -75,11 +82,10 @@ class TextGANGenerator(UnconditionalGenerator):
     def generate(self, eval_data):
         self.eval()
         generate_corpus = []
-        number_to_gen = 10
         idx2token = eval_data.idx2token
 
         with torch.no_grad():
-            for _ in range(number_to_gen):
+            for _ in range(self.eval_generate_num):
                 h_prev = torch.zeros(1, 1, self.hidden_size, device = self.device) # 1 * 1 * h
                 o_prev = torch.zeros(1, 1, self.hidden_size, device = self.device) # 1 * 1 * h
                 prev_state = (h_prev, o_prev)

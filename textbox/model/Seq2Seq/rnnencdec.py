@@ -100,6 +100,11 @@ class RNNEncDec(ConditionalGenerator):
                     token_logits = self.vocab_linear(decoder_outputs)
                     token_idx = topk_sampling(token_logits)
                     token_idx = token_idx.item()
+
+                    # topv, topi = torch.log(F.softmax(token_logits, dim=-1) + 1e-12).data.topk(k=4)
+                    # topi = topi.squeeze()
+                    # token_idx = topi[0].item()
+
                     # print(token_idx)
                     if token_idx == self.eos_token_idx:
                         break

@@ -40,8 +40,6 @@ class PairedSentenceDataset(Dataset):
         super().__init__(config, saved_dataset)
 
     def _get_preset(self):
-        """Initialization useful inside attributes.
-        """
         self.source_token2idx = {}
         self.source_idx2token = {}
         self.target_token2idx = {}
@@ -53,11 +51,9 @@ class PairedSentenceDataset(Dataset):
         return sum([len(data) for data in self.source_text_data])
 
     def _load_data(self, dataset_path):
-        """Load features.
-        Firstly load interaction features, then user/item features optionally,
-        finally load additional features if ``config['additional_feat_suffix']`` is set.
+        """Load dataset from split (train, dev, test).
+        This is designed for paired sentence format, such as translation task and summarization task.
         Args:
-            dataset_name (str): dataset name.
             dataset_path (str): path of dataset dir.
         """
         train_src_file = os.path.join(dataset_path, 'train.' + self.source_suffix)
@@ -117,16 +113,6 @@ class PairedSentenceDataset(Dataset):
         pass
 
     def build(self, eval_setting=None):
-        """Processing dataset according to evaluation setting, including Group, Order and Split.
-        See :class:`~textbox.config.eval_setting.EvalSetting` for details.
-
-        Args:
-            eval_setting (:class:`~textbox.config.eval_setting.EvalSetting`):
-                Object contains evaluation settings, which guide the data processing procedure.
-
-        Returns:
-            list: List of builded :class:`Dataset`.
-        """
         info_str = ''
         corpus_list = []
         for i, prefix in enumerate(['train', 'dev', 'test']):

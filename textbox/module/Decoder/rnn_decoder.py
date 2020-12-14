@@ -151,5 +151,5 @@ class AttentionalRNNDecoder(torch.nn.Module):
             outputs = self.attention_dense(torch.cat((outputs, context), dim=2))
             all_outputs.append(outputs)
 
-        outputs = torch.stack(all_outputs, dim=1)
+        outputs = torch.cat(all_outputs, dim=1)
         return outputs, hidden_states, probs

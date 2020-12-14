@@ -58,14 +58,13 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         return pred
 
     def get_feature(self, inp):
-        r"""Get feature vector of given sentences
+        """Get feature vector of given sentences
 
         Args:
             inp: batch_size * max_seq_len
 
         Returns:
             batch_size * feature_dim
-
         """
         data = self.word_embedding(inp).unsqueeze(1)  # b * len * e -> b * 1 * len * e
         combined_outputs = []
@@ -80,7 +79,7 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         return C_tilde
 
     def calculate_loss(self, real_data, fake_data):
-        r""" calculate loss and acc
+        """ calculate loss and acc
         """
         real_y = self.forward(real_data)
         fake_y = self.forward(fake_data)
@@ -100,7 +99,7 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         return loss, acc
 
     def init_params(self):
-        r""" used for truncated_normal inti params
+        """ used for truncated_normal inti params
         """
         for param in self.parameters():
             stddev = 1 / math.sqrt(param.shape[0])
@@ -112,7 +111,6 @@ class LeakGANDiscriminator(UnconditionalGenerator):
 
         Returns:
             tensor: initialized tensor
-
         """
         size = tensor.shape
         tmp = tensor.new_empty(size + (4,)).normal_()

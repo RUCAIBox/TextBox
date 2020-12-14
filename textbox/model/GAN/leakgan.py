@@ -16,9 +16,6 @@ from textbox.module.Discriminator.LeakGANDiscriminator import LeakGANDiscriminat
 
 
 class LeakGAN(GenerativeAdversarialNet):
-    """Sequence Generative Adversarial Nets with Policy Gradient
-
-    """
     input_type = InputType.NOISE
 
     def __init__(self, config, dataset):

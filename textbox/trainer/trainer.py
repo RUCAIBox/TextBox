@@ -3,9 +3,9 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2020/12/2, 2020/11/27, 2020/12/3
-# @Author : Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang
-# @Email  : jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn
+# @Time   : 2020/12/2, 2020/11/27, 2020/12/3, 2020/12/15
+# @Author : Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang, Jinhao Jiang
+# @Email  : jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
 
 r"""
 textbox.trainer.trainer

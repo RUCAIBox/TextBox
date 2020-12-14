@@ -28,7 +28,6 @@ def create_dataset(config):
     Returns:
         Dataset: Constructed dataset.
     """
-    # TODO: config can not load task_type
     task_type = config['task_type'].lower()
     if task_type == "unconditional":
         from .dataset import SingleSentenceDataset
@@ -106,7 +105,6 @@ def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False):
         raise ValueError('dataset {} and batch_size {} should have the same length'.format(dataset, batch_size))
 
     # model_type = config['MODEL_TYPE']
-    # TODO: config can not load task_type
     task_type = config['task_type'].lower()
     logger = getLogger()
     logger.info('Build [{}] DataLoader for [{}]'.format(task_type, name))
@@ -163,7 +161,6 @@ def get_data_loader(config):
     Returns:
         type: The dataloader class that meets the requirements in :attr:`config` and :attr:`eval_setting`.
     """
-    # TODO: config can not load task_type
     task_type = config['task_type'].lower()
     if task_type == "unconditional":
         return SingleSentenceDataLoader

@@ -7,8 +7,8 @@ discriminator_embedding_size: 64
 hidden_size: 32
 dropout_rate: 0.25
 l2_reg_lambda: 0.2
-filter_sizes: [2, 3]
-filter_nums: [100, 200]
+filter_sizes: [ 2, 3 ]
+filter_nums: [ 100, 200 ]
 Monte_Carlo_num: 4
 step_size: 4
 goal_size: 16

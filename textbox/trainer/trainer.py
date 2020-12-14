@@ -544,7 +544,7 @@ class GANTrainer(Trainer):
         fake_data = self.model.sample(self.d_sample_num)
         fake_dataloader = DataLoader(fake_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
 
-        for _ in range(self.d_sample_training_epochs): # d_epoch
+        for _ in range(self.d_sample_training_epochs):  # d_epoch
             for real_data, fake_data in zip(real_dataloader, fake_dataloader):
                 losses = self.model.calculate_d_train_loss(real_data, fake_data, epoch_idx=epoch_idx)
                 total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
@@ -912,12 +912,13 @@ class MaskGANTrainer(GANTrainer):
                                                     self.d_optimizer)
         return (dis_total_loss / d_num, gen_total_loss / g_num, critic_total_loss / g_num)
 
+
 class LeakGANTrainer(GANTrainer):
     def __init__(self, config, model):
         super(LeakGANTrainer, self).__init__(config, model)
         self.interleaved_pretrain_epoch = config['interleaved_pretrain_epoch']
         self.adversarail_g_epochs = config['adversarail_g_epochs']
-        self.g_optimizer = self._build_module_optimizer(self.model.generator) # (manager_opt, worker_opt)
+        self.g_optimizer = self._build_module_optimizer(self.model.generator)  # (manager_opt, worker_opt)
         self.d_optimizer = self._build_module_optimizer(self.model.discriminator)
         self.iters_num = config['iter_num']
         self.end_idx = model.end_idx
@@ -1052,10 +1053,11 @@ class LeakGANTrainer(GANTrainer):
             # interaction = interaction.to(self.device)
             losses = self.model.calculate_g_train_loss(data, epoch_idx=epoch_idx)
             total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
-        total_loss = [l / len(real_dataloader) for l in total_loss] if isinstance(total_loss, tuple) else total_loss / len(
+        total_loss = [l / len(real_dataloader) for l in total_loss] if isinstance(total_loss,
+                                                                                  tuple) else total_loss / len(
             train_data)
         mana_loss, work_loss = total_loss
-        return {"mana_loss":mana_loss, "work_loss":work_loss}
+        return {"mana_loss": mana_loss, "work_loss": work_loss}
 
     def _d_train_epoch(self, train_data, epoch_idx):
         total_loss = None
@@ -1081,7 +1083,7 @@ class LeakGANTrainer(GANTrainer):
         total_loss = total_loss / self.d_sample_training_epochs
         total_acc = total_acc / self.d_sample_training_epochs
 
-        return {"total_loss":total_loss, "train_acc":total_acc}
+        return {"total_loss": total_loss, "train_acc": total_acc}
 
     def _save_checkpoint(self, epoch, postfix=None):
         state = {
@@ -1092,7 +1094,7 @@ class LeakGANTrainer(GANTrainer):
             'state_dict': self.model.state_dict()
         }
         if postfix is not None:
-            path = self.saved_model_file+"_"+str(epoch)+"_"+postfix
+            path = self.saved_model_file + "_" + str(epoch) + "_" + postfix
             torch.save(state, path)
             return path
         else:
@@ -1117,7 +1119,7 @@ class LeakGANTrainer(GANTrainer):
         for epoch_idx in range(self.g_pretraining_epochs):  # 80
             if verbose:
                 self.logger.info(">>>> [Pretrain Gen] Start %d / %d epochs generator pretraining" % (
-                epoch_idx + 1, self.g_pretraining_epochs))
+                    epoch_idx + 1, self.g_pretraining_epochs))
             training_start_time = time()
             train_loss = self._g_train_epoch(train_data, epoch_idx)
             # self.g_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
@@ -1130,8 +1132,8 @@ class LeakGANTrainer(GANTrainer):
                 self.logger.info(train_loss_output)
 
             if epoch_idx % 15 == 0:
-                self.logger.info(">>>> [Pretrain Gen] Save pretrain gen in epoch %d ..." % (epoch_idx+1))
-                path = self._save_checkpoint(epoch_idx+1, postfix="pretrain_gen")
+                self.logger.info(">>>> [Pretrain Gen] Save pretrain gen in epoch %d ..." % (epoch_idx + 1))
+                path = self._save_checkpoint(epoch_idx + 1, postfix="pretrain_gen")
 
                 self.model.eval()
                 test_result = self.evaluate(valid_data, model_file=path)
@@ -1147,9 +1149,10 @@ class LeakGANTrainer(GANTrainer):
                 self.logger.info('>>>> [Pretrain Gen] test result samples: {}'.format(tmp))
 
         # discriminator pretraining
-        for epoch_idx in range(self.d_pretraining_epochs): # 5
+        for epoch_idx in range(self.d_pretraining_epochs):  # 5
             if verbose:
-                self.logger.info(">>>> [Pretrain Dis]Start %d / %d epochs discriminator pretraining..." % (epoch_idx+1, self.d_pretraining_epochs))
+                self.logger.info(">>>> [Pretrain Dis]Start %d / %d epochs discriminator pretraining..." % (
+                epoch_idx + 1, self.d_pretraining_epochs))
             training_start_time = time()
             train_loss = self._d_train_epoch(train_data, epoch_idx)
             # self.d_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss,
@@ -1162,7 +1165,7 @@ class LeakGANTrainer(GANTrainer):
             if verbose:
                 self.logger.info(train_loss_output)
 
-            if epoch_idx+1 == self.d_pretraining_epochs:
+            if epoch_idx + 1 == self.d_pretraining_epochs:
                 self.logger.info(">>>> [Pretrain Gen] Save pretrain dis in epoch %d ..." % (epoch_idx + 1))
                 path = self._save_checkpoint(epoch_idx + 1, postfix="pretrain_dis")
 
@@ -1188,23 +1191,25 @@ class LeakGANTrainer(GANTrainer):
             self.logger.info(">> Start adversarial training")
         for epoch in range(int(self.iters_num / self.adversarail_training_epochs)):
             if verbose:
-                self.logger.info(">>>> [Adv] Start epoch %d / 10 interleaved adversarial training" % (epoch+1))
+                self.logger.info(">>>> [Adv] Start epoch %d / 10 interleaved adversarial training" % (epoch + 1))
 
             for epoch_idx in range(self.adversarail_training_epochs):
                 if verbose:
-                    self.logger.info(">>>>>> [Adv] Start epoch %d / %d adversarial training" % (epoch_idx+1, self.adversarail_training_epochs))
+                    self.logger.info(">>>>>> [Adv] Start epoch %d / %d adversarial training" % (
+                    epoch_idx + 1, self.adversarail_training_epochs))
                 training_start_time = time()
                 train_loss = self._adversarial_train_epoch(train_data, epoch_idx)
                 # self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
                 training_end_time = time()
                 train_loss_output = \
-                    self._generate_train_loss_output((epoch_idx+1), training_start_time, training_end_time, train_loss,
+                    self._generate_train_loss_output((epoch_idx + 1), training_start_time, training_end_time,
+                                                     train_loss,
                                                      train_info="adv ")
                 train_loss_output = ">>>>>> " + train_loss_output
                 if verbose:
                     self.logger.info(train_loss_output)
-                if (epoch_idx+1) % 5 == 0:
-                    path = self._save_checkpoint((epoch_idx+1), postfix="adv_train")
+                if (epoch_idx + 1) % 5 == 0:
+                    path = self._save_checkpoint((epoch_idx + 1), postfix="adv_train")
                     self.model.eval()
                     test_result = self.evaluate(valid_data, model_file=path)
                     self.model.train()
@@ -1222,43 +1227,45 @@ class LeakGANTrainer(GANTrainer):
             # gen pretrain
             for epoch_idx in range(5):
                 if verbose:
-                    self.logger.info(">>>>>> [Adv] Start epoch %d / 5 pretrain generator" % (epoch_idx+1))
+                    self.logger.info(">>>>>> [Adv] Start epoch %d / 5 pretrain generator" % (epoch_idx + 1))
                 training_start_time = time()
                 train_loss = self._g_train_epoch(train_data, epoch_idx)
                 # self.g_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
                 training_end_time = time()
                 train_loss_output = \
-                    self._generate_train_loss_output((epoch_idx+1), training_start_time, training_end_time, train_loss,
+                    self._generate_train_loss_output((epoch_idx + 1), training_start_time, training_end_time,
+                                                     train_loss,
                                                      "adv generator pre")
                 train_loss_output = ">>>>>> " + train_loss_output
                 if verbose:
                     self.logger.info(train_loss_output)
 
-                if (epoch_idx+1) % 5 == 0:
-                    path = self._save_checkpoint((epoch_idx+1), postfix="adv_pretrain")
+                if (epoch_idx + 1) % 5 == 0:
+                    path = self._save_checkpoint((epoch_idx + 1), postfix="adv_pretrain")
                     self.model.eval()
                     test_result = self.evaluate(valid_data, model_file=path)
                     self.model.train()
                     self.logger.info('>>>>>> [Adv] test result: {}'.format(test_result))
 
             # dis pretrain
-            for epoch_idx in range(5): # d_steps
+            for epoch_idx in range(5):  # d_steps
                 if verbose:
-                    self.logger.info(">>>>>> [Adv] Start epoch %d / 5 pretrain discriminator" % (epoch_idx+1))
+                    self.logger.info(">>>>>> [Adv] Start epoch %d / 5 pretrain discriminator" % (epoch_idx + 1))
                 training_start_time = time()
                 train_loss = self._d_train_epoch(train_data, epoch_idx)
                 # self.d_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss,
                 #                                                                         tuple) else train_loss
                 training_end_time = time()
                 train_loss_output = \
-                    self._generate_train_loss_output((epoch_idx+1), training_start_time, training_end_time, train_loss,
+                    self._generate_train_loss_output((epoch_idx + 1), training_start_time, training_end_time,
+                                                     train_loss,
                                                      "adv discriminator pre")
                 train_loss_output = ">>>>>> " + train_loss_output
                 if verbose:
                     self.logger.info(train_loss_output)
 
-            if (epoch+1) % 3 == 0:
-                path = self._save_checkpoint((epoch+1), postfix="adv and pre train")
+            if (epoch + 1) % 3 == 0:
+                path = self._save_checkpoint((epoch + 1), postfix="adv and pre train")
                 test_result = self.evaluate(valid_data, model_file=path)
                 sample = self._load_generated_text()
                 tmp = "\n"

@@ -14,6 +14,7 @@ import numpy as np
 
 is_origin_loss = False
 
+
 class LeakGANGenerator(UnconditionalGenerator):
     def __init__(self, config, dataset):
         super(LeakGANGenerator, self).__init__(config, dataset)
@@ -64,12 +65,13 @@ class LeakGANGenerator(UnconditionalGenerator):
 
         """
 
-        targets = corpus[:, 1:] # not use sos token
-        batch_size, seq_len = targets.size() # bs*max_seq_len
+        targets = corpus[:, 1:]  # not use sos token
+        batch_size, seq_len = targets.size()  # bs*max_seq_len
         leak_out_array, feature_array, goal_array = self.leakgan_forward(targets, dis, train=False, pretrain=True)
 
         # Manager loss
-        mana_cos_loss = self.manager_cos_loss(batch_size, feature_array, goal_array)  # batch_size * (seq_len / step_size)
+        mana_cos_loss = self.manager_cos_loss(batch_size, feature_array,
+                                              goal_array)  # batch_size * (seq_len / step_size)
         manager_loss = -torch.sum(mana_cos_loss) / (self.batch_size * self.max_length / self.step_size)
         # Worker loss
         work_cn_loss = self.worker_cross_entropy_loss(targets, leak_out_array)
@@ -128,14 +130,15 @@ class LeakGANGenerator(UnconditionalGenerator):
         # Worker
         work_out, work_hidden = self.worker(emb, work_hidden)  # work_out: 1 * batch_size * hidden_dim
         work_out = self.work2goal(work_out.squeeze(dim=0))  # bs * (vocab*goal)
-        work_out = work_out.contiguous().view(-1, self.vocab_size, self.goal_size)  # batch_size * vocab_size * goal_size
+        work_out = work_out.contiguous().view(-1, self.vocab_size,
+                                              self.goal_size)  # batch_size * vocab_size * goal_size
 
         # Sample token
         out = torch.matmul(work_out, _real_goal).squeeze(-1)  # batch_size * vocab_size
 
         # Temperature control
         if idx > 1:
-            if train: # if train we should use a min temperature to modify the out distribution
+            if train:  # if train we should use a min temperature to modify the out distribution
                 temperature = 0.9
             else:
                 temperature = self.temperature
@@ -143,7 +146,7 @@ class LeakGANGenerator(UnconditionalGenerator):
             temperature = self.temperature
 
         if not pretrain:
-           out = temperature * out # bs * vocab
+            out = temperature * out  # bs * vocab
 
         # if log:
         #     out = F.log_softmax(out, dim=-1)
@@ -165,7 +168,7 @@ class LeakGANGenerator(UnconditionalGenerator):
             leak_out_array: batch_size * seq_len * vocab_size with log_softmax
 
         """
-        batch_size, seq_len = targets.size() # seq_len = max_seq_len
+        batch_size, seq_len = targets.size()  # seq_len = max_seq_len
 
         feature_array = torch.zeros((batch_size, self.max_length + 1, self.goal_out_size))
         goal_array = torch.zeros((batch_size, self.max_length + 1, self.goal_out_size))
@@ -178,25 +181,25 @@ class LeakGANGenerator(UnconditionalGenerator):
         work_hidden = self.init_hidden(batch_size)
         mana_hidden = self.init_hidden(batch_size)
         # Special operations for step 0
-        leak_inp_t = torch.LongTensor([self.start_idx] * batch_size) # the input token for worker at step t
-        cur_dis_inp = torch.LongTensor([self.pad_idx] * batch_size * seq_len) # current sentence for dis ar step t
-        cur_dis_inp = cur_dis_inp.view((batch_size, seq_len)) # bs*seq_len
+        leak_inp_t = torch.LongTensor([self.start_idx] * batch_size)  # the input token for worker at step t
+        cur_dis_inp = torch.LongTensor([self.pad_idx] * batch_size * seq_len)  # current sentence for dis ar step t
+        cur_dis_inp = cur_dis_inp.view((batch_size, seq_len))  # bs*seq_len
         if self.use_gpu:
             leak_inp_t = leak_inp_t.cuda(self.gpu_id)
             cur_dis_inp = cur_dis_inp.cuda(self.gpu_id)
 
-        real_goal = self.goal_init[:batch_size, :] # init real goal
+        real_goal = self.goal_init[:batch_size, :]  # init real goal
         goal_array[:, 0, :] = real_goal
         last_goal = torch.zeros_like(real_goal)
         feature = dis.get_feature(cur_dis_inp).unsqueeze(0)  # !!!note: 1 * batch_size * total_num_filters
-        feature_array[:, 0, :] = feature.squeeze(0) # batch_size * total_num_filters
+        feature_array[:, 0, :] = feature.squeeze(0)  # batch_size * total_num_filters
         # Update the hidden state of manager using the current all padding token
         _, mana_hidden = self.manager(feature, mana_hidden)  # mana_out: 1 * batch_size * hidden_dim
 
         for i in range(1, self.max_length + 1):
 
             # get current dis inp which giving the real top i token and padding token
-            given_dis_inp = targets[:, :i] # bs*i
+            given_dis_inp = targets[:, :i]  # bs*i
             cur_dis_inp = torch.cat([given_dis_inp, cur_dis_inp], dim=1)
             cur_dis_inp = cur_dis_inp[:, :seq_len].long()
             # get feature
@@ -206,13 +209,13 @@ class LeakGANGenerator(UnconditionalGenerator):
             # out is the log softmax over vocab distribution
             out, cur_goal, work_hidden, mana_hidden = self.forward(i, leak_inp_t, work_hidden, mana_hidden, feature,
                                                                    real_goal, train=train, pretrain=pretrain)
-            leak_out_array[:, i-1, :] = out
+            leak_out_array[:, i - 1, :] = out
             # save the current goal_t
             goal_array[:, i, :] = cur_goal
 
             # update real goal every step_size steps
             if i % self.step_size == 0:
-                real_goal = torch.sum(goal_array[:, i - 3:i + 1, :], dim=1) # g1 -> g4
+                real_goal = torch.sum(goal_array[:, i - 3:i + 1, :], dim=1)  # g1 -> g4
 
             # use the real input token during train
             leak_inp_t = targets[:, i - 1]
@@ -227,26 +230,28 @@ class LeakGANGenerator(UnconditionalGenerator):
         self.eval()
         sentences = []
         with torch.no_grad():
-            h_prev = torch.zeros(1, self.batch_size, self.hidden_size, device = self.device) # 1 * b * h
-            o_prev = torch.zeros(1, self.batch_size, self.hidden_size, device = self.device) # 1 * b * h
+            h_prev = torch.zeros(1, self.batch_size, self.hidden_size, device=self.device)  # 1 * b * h
+            o_prev = torch.zeros(1, self.batch_size, self.hidden_size, device=self.device)  # 1 * b * h
             prev_state = (h_prev, o_prev)
-            X = self.word_embedding(torch.tensor([self.start_idx] * self.batch_size, dtype = torch.long, device = self.device)).unsqueeze(0) # 1 * b * e
-            sentences = torch.zeros((self.max_length, self.batch_size), dtype = torch.long, device = self.device)
+            X = self.word_embedding(
+                torch.tensor([self.start_idx] * self.batch_size, dtype=torch.long, device=self.device)).unsqueeze(
+                0)  # 1 * b * e
+            sentences = torch.zeros((self.max_length, self.batch_size), dtype=torch.long, device=self.device)
             sentences[0] = self.start_idx
 
             for i in range(1, self.max_length):
                 output, prev_state = self.LSTM(X, prev_state)
-                P = F.softmax(self.vocab_projection(output), dim = -1).squeeze(0) # b * v
+                P = F.softmax(self.vocab_projection(output), dim=-1).squeeze(0)  # b * v
                 for j in range(self.batch_size):
                     sentences[i][j] = torch.multinomial(P[j], 1)[0]
-                X = self.word_embedding(sentences[i]).unsqueeze(0) # 1 * b * e
+                X = self.word_embedding(sentences[i]).unsqueeze(0)  # 1 * b * e
 
-            sentences = sentences.permute(1, 0) # b * l
+            sentences = sentences.permute(1, 0)  # b * l
 
             for i in range(self.batch_size):
                 end_pos = (sentences[i] == self.end_idx).nonzero()
                 if (end_pos.shape[0]):
-                    sentences[i][end_pos[0][0] + 1 : ] = self.pad_idx
+                    sentences[i][end_pos[0][0] + 1:] = self.pad_idx
 
         self.train()
 
@@ -287,7 +292,6 @@ class LeakGANGenerator(UnconditionalGenerator):
         work_hidden = self.init_hidden(batch_size)
         mana_hidden = self.init_hidden(batch_size)
 
-
         real_goal = self.goal_init[:batch_size, :]  # init real goal
         last_goal = torch.zeros_like(real_goal)
 
@@ -312,8 +316,8 @@ class LeakGANGenerator(UnconditionalGenerator):
             # out is the softmax over vocab distribution
             out, cur_goal, work_hidden, mana_hidden = self.forward(i, leak_inp_t, work_hidden, mana_hidden, feature,
                                                                    real_goal, train=train, pretrain=False)
-            out_dis = Categorical(F.softmax(out, dim=-1)) # bs * vocab
-            gen_x = out_dis.sample() # bs
+            out_dis = Categorical(F.softmax(out, dim=-1))  # bs * vocab
+            gen_x = out_dis.sample()  # bs
             gen_x_prob = out_dis.log_prob(gen_x)
             samples.append(gen_x)
             log_probs.append(gen_x_prob)
@@ -321,12 +325,12 @@ class LeakGANGenerator(UnconditionalGenerator):
             last_goal = last_goal + cur_goal
 
             # update real goal every step_size steps
-            if (i+1) % self.step_size == 0:
+            if (i + 1) % self.step_size == 0:
                 real_goal = last_goal
                 last_goal = torch.zeros_like(real_goal)
 
         samples = torch.stack(samples, dim=1)
-        log_probs = torch.stack(log_probs,dim=1)
+        log_probs = torch.stack(log_probs, dim=1)
         if self.use_gpu:
             samples = samples.cuda(self.gpu_id)
             log_probs = log_probs.cuda(self.gpu_id)
@@ -338,7 +342,7 @@ class LeakGANGenerator(UnconditionalGenerator):
         samples = torch.zeros(num_batch * self.batch_size, self.max_length).long()  # larger than num_samples
         fake_sentences = torch.zeros((self.batch_size, self.max_length))
         idx2token = eval_data.idx2token
-        
+
         for b in range(num_batch):
             leak_sample = self.leakgan_generate(fake_sentences, dis)
 
@@ -359,10 +363,11 @@ class LeakGANGenerator(UnconditionalGenerator):
         # samples = [[idx2token[w] for w in sen] for sen in samples]
 
         return texts
-    
+
     def adversarial_loss(self, dis):
         with torch.no_grad():
-            gen_samples = self.sample(self.batch_size, dis, self.start_idx, train=True)  # !!! train=True, the only place
+            gen_samples = self.sample(self.batch_size, dis, self.start_idx,
+                                      train=True)  # !!! train=True, the only place
             # target = DataLoader(gen_samples, batch_size=self.batch_size, shuffle=True, drop_last=True)
 
         # ===Train===
@@ -391,7 +396,7 @@ class LeakGANGenerator(UnconditionalGenerator):
         sub_feature = torch.zeros(batch_size, self.max_length // self.step_size, self.goal_out_size)
         real_goal = torch.zeros(batch_size, self.max_length // self.step_size, self.goal_out_size)
         for i in range(self.max_length // self.step_size):
-            idx = i * self.step_size # 0, 4, 8, 16, 20
+            idx = i * self.step_size  # 0, 4, 8, 16, 20
             sub_feature[:, i, :] = feature_array[:, idx + self.step_size, :] - feature_array[:, idx, :]
 
             if i == 0:
@@ -520,24 +525,24 @@ class LeakGANGenerator(UnconditionalGenerator):
                     given_num = t * self.step_size  # 4, 8, 12, ..
                     # given current words and search a complete sentence by mc
                     samples = self.rollout_mc_search_leakgan(sentences, dis, given_num)
-                    out = dis(samples) # bs*2
+                    out = dis(samples)  # bs*2
                     out = F.softmax(out, dim=-1)
                     # using the prob of true computed by dis as the reward for current action reward
-                    reward = out[:, current_k + 1] # bs
+                    reward = out[:, current_k + 1]  # bs
                     rewards[idx] = reward
                     idx += 1
 
                 last_token_out = dis(sentences)
                 last_token_out = F.softmax(last_token_out, dim=-1)
-                last_token_reward = last_token_out[:, current_k+1]
+                last_token_reward = last_token_out[:, current_k + 1]
                 rewards[idx] = last_token_reward
                 idx += 1
 
         rewards = rewards.contiguous()
         rewards = rewards.view(batch_size, self.max_length // self.step_size, rollout_num)
-        rewards = torch.sum(rewards,dim=-1)
+        rewards = torch.sum(rewards, dim=-1)
         rewards_ = torch.mean(rewards, dim=-1)
-        rewards = self.rescale(rewards,rollout_num)
+        rewards = self.rescale(rewards, rollout_num)
         rewards = rewards / (1.0 * rollout_num)
         # rewards = torch.mean(rewards, dim=-1)
         return rewards
@@ -589,7 +594,7 @@ class LeakGANGenerator(UnconditionalGenerator):
         _, mana_hidden = self.manager(feature, mana_hidden)  # mana_out: 1 * batch_size * hidden_dim
 
         # get current state
-        for i in range(1, given_num+1):
+        for i in range(1, given_num + 1):
             # get current dis inp which giving the real top i token and padding token
             given_dis_inp = targets[:, :i]  # bs*i
             cur_dis_inp = torch.cat([given_dis_inp, cur_dis_inp], dim=1)
@@ -601,10 +606,10 @@ class LeakGANGenerator(UnconditionalGenerator):
             out, cur_goal, work_hidden, mana_hidden = self.forward(i, leak_inp_t, work_hidden, mana_hidden, feature,
                                                                    real_goal, train=False, pretrain=False)
 
-            leak_out_array.append(targets[:, i-1])
+            leak_out_array.append(targets[:, i - 1])
 
             last_goal = last_goal + cur_goal
-            leak_inp_t = targets[:, i-1]
+            leak_inp_t = targets[:, i - 1]
             if self.use_gpu:
                 leak_inp_t = leak_inp_t.cuda(self.gpu_id)
 
@@ -613,9 +618,8 @@ class LeakGANGenerator(UnconditionalGenerator):
                 real_goal = last_goal
                 last_goal = torch.zeros_like(real_goal)
 
-
         # MC search
-        for i in range(given_num+1, self.max_length+1):
+        for i in range(given_num + 1, self.max_length + 1):
             # get the generated token
             gen_x = torch.stack(leak_out_array, dim=-1)
             if self.use_gpu:
@@ -632,7 +636,7 @@ class LeakGANGenerator(UnconditionalGenerator):
 
             # sample one token
             out_dis = Categorical(F.softmax(out))
-            leak_inp_t = out_dis.sample() # bs
+            leak_inp_t = out_dis.sample()  # bs
 
             if self.use_gpu:
                 leak_inp_t = leak_inp_t.cuda(self.gpu_id)
@@ -664,7 +668,8 @@ class LeakGANGenerator(UnconditionalGenerator):
         leak_out_array, feature_array, goal_array = self.leakgan_forward(target, dis, train=True)
 
         # Manager Loss
-        mana_cos_loss = self.manager_cos_loss(batch_size, feature_array, goal_array)  # batch_size * (seq_len / step_size)
+        mana_cos_loss = self.manager_cos_loss(batch_size, feature_array,
+                                              goal_array)  # batch_size * (seq_len / step_size)
         mana_loss = -torch.mean(rewards * mana_cos_loss)
 
         # Worker Loss

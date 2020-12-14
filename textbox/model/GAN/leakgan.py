@@ -33,7 +33,7 @@ class LeakGAN(GenerativeAdversarialNet):
 
     def calculate_g_train_loss(self, corpus, epoch_idx):
         self.discriminator.eval()
-        loss = self.generator.pretrain_loss(corpus, self.discriminator) # corpus: target_text
+        loss = self.generator.pretrain_loss(corpus, self.discriminator)  # corpus: target_text
         self.discriminator.train()
         return loss
 
@@ -44,7 +44,7 @@ class LeakGAN(GenerativeAdversarialNet):
         self.discriminator.eval()
         loss = self.generator.adversarial_loss(self.discriminator)
         self.discriminator.train()
-        return loss # (manager_loss, worker_loss)
+        return loss  # (manager_loss, worker_loss)
 
     def generate(self, eval_data):
         return self.generator.generate(eval_data, self.discriminator)
@@ -72,5 +72,5 @@ class LeakGAN(GenerativeAdversarialNet):
         # specified for nll test and use eos_idx pad not pad_idx to pad
         real_data = train_data['target_idx']
         length = train_data['target_length']
-        real_data = self._add_eos(real_data, length) # bs * seq_len
+        real_data = self._add_eos(real_data, length)  # bs * seq_len
         return real_data

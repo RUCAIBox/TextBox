@@ -8,7 +8,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
-
 from textbox.model.abstract_generator import UnconditionalGenerator
 
 
@@ -40,7 +39,7 @@ class LeakGANDiscriminator(UnconditionalGenerator):
             )
 
         self.W_T = nn.Linear(self.filter_sum, self.filter_sum)
-        self.W_H = nn.Linear(self.filter_sum, self.filter_sum, bias = False)
+        self.W_H = nn.Linear(self.filter_sum, self.filter_sum, bias=False)
         self.W_O = nn.Linear(self.filter_sum, 2)
 
         self.init_params()
@@ -51,7 +50,7 @@ class LeakGANDiscriminator(UnconditionalGenerator):
 
         return self.dropout(tau * non_linear + (1 - tau) * data)
 
-    def forward(self, data): # b * len
+    def forward(self, data):  # b * len
         C_tilde = self.get_feature(data)
         # y_hat = torch.sigmoid(self.W_O(C_tilde)).squeeze(1) # b
         pred = self.W_O(C_tilde)
@@ -68,15 +67,15 @@ class LeakGANDiscriminator(UnconditionalGenerator):
             batch_size * feature_dim
 
         """
-        data = self.word_embedding(inp).unsqueeze(1) # b * len * e -> b * 1 * len * e
+        data = self.word_embedding(inp).unsqueeze(1)  # b * len * e -> b * 1 * len * e
         combined_outputs = []
         for CNN_filter in self.filters:
             output = CNN_filter(data)
             combined_outputs.append(output)
-        combined_outputs = torch.cat(combined_outputs, 1) # b * tot_f_n :pred
+        combined_outputs = torch.cat(combined_outputs, 1)  # b * tot_f_n :pred
         combined_outputs = combined_outputs.squeeze(dim=3).squeeze(dim=2)
 
-        C_tilde = self.highway(combined_outputs) # b * tot_f_n
+        C_tilde = self.highway(combined_outputs)  # b * tot_f_n
 
         return C_tilde
 
@@ -87,15 +86,15 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         fake_y = self.forward(fake_data)
         pre_logits = torch.cat([real_y, fake_y], dim=0)
 
-        real_label = torch.ones_like(real_y, dtype=torch.int64)[:, 0].long() # [1,1,1]
-        fake_label = torch.zeros_like(fake_y, dtype=torch.int64)[:, 0].long() # [0,0,0]
+        real_label = torch.ones_like(real_y, dtype=torch.int64)[:, 0].long()  # [1,1,1]
+        fake_label = torch.zeros_like(fake_y, dtype=torch.int64)[:, 0].long()  # [0,0,0]
         label = torch.cat([real_label, fake_label], dim=-1)
         loss = F.cross_entropy(pre_logits, label)
 
         loss = loss + self.l2_reg_lambda * (torch.norm(self.W_O.weight, 2) + torch.norm(self.W_O.bias, 2))
 
-        pred = torch.cat([real_y, fake_y], dim=0) # bs*2
-        target = torch.cat([real_label, fake_label],dim=0) # bs
+        pred = torch.cat([real_y, fake_y], dim=0)  # bs*2
+        target = torch.cat([real_label, fake_label], dim=0)  # bs
         acc = torch.sum((pred.argmax(dim=-1) == target)).item()
         acc = acc / pred.size()[0]
         return loss, acc

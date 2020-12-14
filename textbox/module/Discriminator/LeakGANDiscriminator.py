@@ -6,6 +6,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 
 
 from textbox.model.abstract_generator import UnconditionalGenerator
@@ -20,23 +21,29 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         self.dropout_rate = config['dropout_rate']
         self.filter_sizes = config['filter_sizes']
         self.filter_nums = config['filter_nums']
-        self.max_length = config['max_seq_length'] + 2
+        self.max_length = config['max_seq_length'] + 1
         self.pad_idx = dataset.padding_token_idx
         self.vocab_size = dataset.vocab_size
         self.filter_sum = sum(self.filter_nums)
 
-        self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx = self.pad_idx)
+        self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size)
         self.dropout = nn.Dropout(self.dropout_rate)
         self.filters = nn.ModuleList([])
 
         for (filter_size, filter_num) in zip(self.filter_sizes, self.filter_nums):
             self.filters.append(
-                nn.Conv2d(1, filter_num, (filter_size, self.embedding_size))
+                nn.Sequential(
+                    nn.Conv2d(1, filter_num, (filter_size, self.embedding_size), stride=1, padding=0, bias=True),
+                    nn.ReLU(),
+                    nn.MaxPool2d((self.max_length - filter_size + 1, 1), stride=1, padding=0)
+                )
             )
 
         self.W_T = nn.Linear(self.filter_sum, self.filter_sum)
         self.W_H = nn.Linear(self.filter_sum, self.filter_sum, bias = False)
         self.W_O = nn.Linear(self.filter_sum, 2)
+
+        self.init_params()
 
     def highway(self, data):
         tau = torch.sigmoid(self.W_T(data))
@@ -64,30 +71,54 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         data = self.word_embedding(inp).unsqueeze(1) # b * len * e -> b * 1 * len * e
         combined_outputs = []
         for CNN_filter in self.filters:
-            output = F.relu(CNN_filter(data)).squeeze(3) # b * f_n * 1 * 1 -> b * f_n
-            output = F.max_pool1d(output, output.size(2)).squeeze(2)
+            output = CNN_filter(data)
             combined_outputs.append(output)
         combined_outputs = torch.cat(combined_outputs, 1) # b * tot_f_n :pred
+        combined_outputs = combined_outputs.squeeze(dim=3).squeeze(dim=2)
 
         C_tilde = self.highway(combined_outputs) # b * tot_f_n
 
         return C_tilde
 
-    def add_pad(self, data):
-        batch_size = data.size(0)
-        padded_data = torch.full((batch_size, self.max_length), self.pad_idx, dtype=torch.long, device=self.device)
-        padded_data[ : , : data.shape[1]] = data
-
-        return padded_data
-
     def calculate_loss(self, real_data, fake_data):
+        r""" calculate loss and acc
+        """
         real_y = self.forward(real_data)
         fake_y = self.forward(fake_data)
+        pre_logits = torch.cat([real_y, fake_y], dim=0)
+
         real_label = torch.ones_like(real_y, dtype=torch.int64)[:, 0].long() # [1,1,1]
         fake_label = torch.zeros_like(fake_y, dtype=torch.int64)[:, 0].long() # [0,0,0]
+        label = torch.cat([real_label, fake_label], dim=-1)
+        loss = F.cross_entropy(pre_logits, label)
 
-        real_loss = F.cross_entropy(real_y, real_label) # mean loss
-        fake_loss = F.cross_entropy(fake_y, fake_label) # mean loss
-        loss = (real_loss + fake_loss) / 2 + self.l2_reg_lambda * (self.W_O.weight.norm() + self.W_O.bias.norm())
+        loss = loss + self.l2_reg_lambda * (torch.norm(self.W_O.weight, 2) + torch.norm(self.W_O.bias, 2))
 
-        return loss
+        pred = torch.cat([real_y, fake_y], dim=0) # bs*2
+        target = torch.cat([real_label, fake_label],dim=0) # bs
+        acc = torch.sum((pred.argmax(dim=-1) == target)).item()
+        acc = acc / pred.size()[0]
+        return loss, acc
+
+    def init_params(self):
+        r""" used for truncated_normal inti params
+        """
+        for param in self.parameters():
+            stddev = 1 / math.sqrt(param.shape[0])
+            self.truncated_normal_(param, std=stddev)
+
+    def truncated_normal_(self, tensor, mean=0, std=1):
+        """ Implemented by @ruotianluo
+        See https://discuss.pytorch.org/t/implementing-truncated-normal-initializer/4778/15
+
+        Returns:
+            tensor: initialized tensor
+
+        """
+        size = tensor.shape
+        tmp = tensor.new_empty(size + (4,)).normal_()
+        valid = (tmp < 2) & (tmp > -2)
+        ind = valid.max(-1, keepdim=True)[1]
+        tensor.data.copy_(tmp.gather(-1, ind).squeeze(-1))
+        tensor.data.mul_(std).add_(mean)
+        return tensor

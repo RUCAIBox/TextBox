@@ -1,5 +1,5 @@
 # general
-gpu_id: 1
+gpu_id: 0
 use_gpu: True
 seed: 2020
 state: INFO

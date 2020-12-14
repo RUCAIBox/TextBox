@@ -14,15 +14,14 @@ class TransformerDecoder(torch.nn.Module):
                  attn_dropout_ratio=0.0,
                  attn_weight_dropout_ratio=0.0,
                  ffn_dropout_ratio=0.0,
-                 ffn_activate_func='gelu',
-                 with_external=False):
+                 with_external=True):
         super(TransformerDecoder, self).__init__()
         
         self.transformer_layers = nn.ModuleList()
         for _ in range(num_dec_layers):
             self.transformer_layers.append(
                 TransformerLayer(embedding_size, ffn_size, num_heads, attn_dropout_ratio, attn_weight_dropout_ratio,
-                                 ffn_dropout_ratio, ffn_activate_func, with_external))
+                                 ffn_dropout_ratio, with_external))
 
     def forward(self, x, kv=None,
                 self_padding_mask=None, self_attn_mask=None,

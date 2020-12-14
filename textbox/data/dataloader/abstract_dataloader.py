@@ -23,11 +23,9 @@ class AbstractDataLoader(object):
         config (Config): The config of dataloader.
         dataset (Corpus): The corpus for partition of dataset.
         batch_size (int, optional): The batch_size of dataloader. Defaults to ``1``.
-    Attributes:
-        dataset (Dataset): The dataset of this dataloader.
         shuffle (bool): If ``True``, dataloader will shuffle before every epoch.
-        real_time (bool): If ``True``, dataloader will do data pre-processing,
-            such as neg-sampling and data-augmentation.
+    Attributes:
+        dataset (dict): The necessary elements of this dataloader.
         pr (int): Pointer of dataloader.
         step (int): The increment of :attr:`pr` for each batch.
         batch_size (int): The max interaction number for all batch.
@@ -63,6 +61,15 @@ class AbstractDataLoader(object):
             raise NotImplementedError
 
     def _build_data(self, text_data, token2idx, need_text_start_end=True):
+        r"""transform text to id and add sos and eos token index.
+        input:
+            text_data: list -> list -> character, original text
+            token2idx: dict, map token to index
+            need_text_start_end, bool, indicates whether we should add sos and eos token index.
+        output:
+            text_idx_data: list -> list -> int, list of word index
+            idx_length_data: list of sequence length
+        """
         text_idx_data = []
         idx_length_data = []
         sos_token_idx = token2idx[self.sos_token]
@@ -77,13 +84,14 @@ class AbstractDataLoader(object):
         return text_idx_data, idx_length_data
 
     def _pad_batch_sequence(self, text_idx_data, idx_length_data):
-        '''
+        r"""padding a batch of word index data, to make them have equivalent length
         input:
-            cur_data: list -> list -> int
+            text_idx_data: list -> list -> int, a batch of word index
+            idx_length_data: list -> int, a batch of sequence length
         output:
             new_data: torch.LongTensor (batch_size, max_length_in_batch)
             length: torch.LongTensor (batch_size)
-        '''
+        """
         # tp_batch_size = len(text_idx_data)
         # print(tp_batch_size)
         max_len = max(idx_length_data)
@@ -122,6 +130,17 @@ class AbstractDataLoader(object):
             return [self._token2idx(x, token2idx) for x in inputs]
         return token2idx.get(inputs, self.unknown_token_idx)
 
+    def get_reference(self):
+        r"""Get reference documents for current data loader
+        return is supposed to be reference_corpus as list -> list -> word
+        """
+        raise NotImplementedError('Method [get_reference] should be implemented')
+
+    def data_preprocess(self, dataset):
+        r"""obtain necessary elements from dataset(dict) and conduct preprocess
+        """
+        raise NotImplementedError('Method [data_preprocess] should be implemented')
+
     @property
     def vocab_size(self):
         r"""The vocabulary size.
@@ -154,23 +173,23 @@ class AbstractDataLoader(object):
 
     @property
     def pr_end(self):
-        """This property marks the end of dataloader.pr which is used in :meth:`__next__()`."""
+        r"""This property marks the end of dataloader.pr which is used in :meth:`__next__()`."""
         raise NotImplementedError('Method [pr_end] should be implemented')
 
     def _shuffle(self):
-        """Shuffle the order of data, and it will be called by :meth:`__iter__()` if self.shuffle is True.
+        r"""Shuffle the order of data, and it will be called by :meth:`__iter__()` if self.shuffle is True.
         """
         raise NotImplementedError('Method [shuffle] should be implemented.')
 
     def _next_batch_data(self):
-        """Assemble next batch of data in form of Interaction, and return these data.
+        r"""Assemble next batch of data in form of Interaction, and return these data.
         Returns:
             Interaction: The next batch of data.
         """
         raise NotImplementedError('Method [next_batch_data] should be implemented.')
 
     def set_batch_size(self, batch_size):
-        """Reset the batch_size of the dataloader, but it can't be called when dataloader is being iterated.
+        r"""Reset the batch_size of the dataloader, but it can't be called when dataloader is being iterated.
         Args:
             batch_size (int): the new batch_size of dataloader.
         """

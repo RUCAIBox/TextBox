@@ -24,7 +24,8 @@ from torch.utils.data import DataLoader
 from time import time
 from logging import getLogger
 
-from textbox.evaluator import NgramEvaluator, TranslationEvaluator
+from textbox.module.Optimizer.optim import ScheduledOptim
+from textbox.evaluator import NgramEvaluator, TranslationEvaluator, SummarizationEvaluator
 from textbox.utils import ensure_dir, get_local_time, early_stopping, calculate_valid_score, dict2str, \
     DataLoaderType, EvaluatorType
 
@@ -82,6 +83,8 @@ class Trainer(AbstractTrainer):
         self.valid_metric_bigger = config['valid_metric_bigger']
         self.test_batch_size = config['eval_batch_size']
         self.device = config['device']
+        self.embedding_size = config['embedding_size']
+        self.warmup_steps = config['warmup_steps']
         self.checkpoint_dir = config['checkpoint_dir']
         ensure_dir(self.checkpoint_dir)
         saved_model_file = '{}-{}.pth'.format(self.config['model'], get_local_time())
@@ -101,6 +104,8 @@ class Trainer(AbstractTrainer):
         self.task_type = config['task_type'].lower()
         if self.task_type == "translation":
             self.evaluator = TranslationEvaluator(config)
+        elif self.task_type == "summarization":
+            self.evaluator = SummarizationEvaluator(config)
         else:
             self.evaluator = NgramEvaluator(config)
         # self.eval_type = config['eval_type']
@@ -127,6 +132,9 @@ class Trainer(AbstractTrainer):
             optimizer = optim.Adagrad(self.model.parameters(), lr=self.learning_rate)
         elif self.learner.lower() == 'rmsprop':
             optimizer = optim.RMSprop(self.model.parameters(), lr=self.learning_rate)
+        elif self.learner.lower() == 'schedule':
+            optimizer = ScheduledOptim(optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-09),
+                                       self.learning_rate, self.embedding_size, self.warmup_steps)
         else:
             self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
             optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
@@ -294,7 +302,8 @@ class Trainer(AbstractTrainer):
                 continue
             if (epoch_idx + 1) % self.eval_step == 0:
                 valid_start_time = time()
-                valid_score, valid_result = self._valid_epoch(valid_data)
+                with torch.no_grad():
+                    valid_score, valid_result = self._valid_epoch(valid_data)
                 # valid_loss, ppl
                 self.best_valid_score, self.cur_step, stop_flag, update_flag = early_stopping(
                     valid_score, self.best_valid_score, self.cur_step,
@@ -364,7 +373,8 @@ class Trainer(AbstractTrainer):
             self.logger.info(message_output)
 
         self.model.eval()
-        generate_corpus = self.model.generate(eval_data)
+        with torch.no_grad():
+            generate_corpus = self.model.generate(eval_data)
         self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
@@ -831,6 +841,7 @@ class ConditionalTrainer(Trainer):
 
         self.model.eval()
         generate_corpus = self.model.generate(eval_data)
+        self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
 

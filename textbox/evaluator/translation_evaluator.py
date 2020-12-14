@@ -30,7 +30,8 @@ class TranslationEvaluator(AbstractEvaluator):
     def __init__(self, config):
         super().__init__(config)
 
-        self.n_grams = [1, 2, 3, 4]
+        self.n_grams = config['n_grams']
+        # [1, 2, 3, 4]
         # config['n_grams']
         self._check_args()
 
@@ -100,7 +101,7 @@ class TranslationEvaluator(AbstractEvaluator):
         return bleu_dict
 
     def __str__(self):
-        mesg = 'The Ngram Evaluator Info:\n' + '\tMetrics:[' + ', '.join(
+        mesg = 'The Translation Evaluator Info:\n' + '\tMetrics:[' + ', '.join(
             [ngram_metrics[metric.lower()] for metric in self.metrics]) \
                + '], Ngram:[' + ', '.join(map(str, self.n_grams)) + ']'
         return mesg

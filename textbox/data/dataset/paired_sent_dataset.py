@@ -23,11 +23,23 @@ class PairedSentenceDataset(Dataset):
         self.target_language = config['target_language'].lower()
         self.source_suffix = config['source_suffix']
         self.target_suffix = config['target_suffix']
+        self.share_vocab = config['share_vocab']
+        if config['target_max_vocab_size'] is None or config['source_max_vocab_size'] is None:
+            self.source_max_vocab_size = config['max_vocab_size']
+            self.target_max_vocab_size = config['max_vocab_size']
+        else:
+            self.source_max_vocab_size = config['source_max_vocab_size']
+            self.target_max_vocab_size = config['target_max_vocab_size']
+
+        if config['target_max_seq_length'] is None or config['source_max_seq_length'] is None:
+            self.source_max_vocab_size = config['max_seq_length']
+            self.target_max_vocab_size = config['max_seq_length']
+        else:
+            self.source_max_seq_length = config['source_max_seq_length']
+            self.target_max_seq_length = config['target_max_seq_length']
         super().__init__(config, saved_dataset)
 
     def _get_preset(self):
-        """Initialization useful inside attributes.
-        """
         self.source_token2idx = {}
         self.source_idx2token = {}
         self.target_token2idx = {}
@@ -39,11 +51,9 @@ class PairedSentenceDataset(Dataset):
         return sum([len(data) for data in self.source_text_data])
 
     def _load_data(self, dataset_path):
-        """Load features.
-        Firstly load interaction features, then user/item features optionally,
-        finally load additional features if ``config['additional_feat_suffix']`` is set.
+        """Load dataset from split (train, dev, test).
+        This is designed for paired sentence format, such as translation task and summarization task.
         Args:
-            dataset_name (str): dataset name.
             dataset_path (str): path of dataset dir.
         """
         train_src_file = os.path.join(dataset_path, 'train.' + self.source_suffix)
@@ -54,7 +64,7 @@ class PairedSentenceDataset(Dataset):
             source_text = []
             fin = open(source_file, "r")
             for line in fin:
-                words = nltk.word_tokenize(line.strip(), language=self.source_language)[:self.max_seq_length]
+                words = nltk.word_tokenize(line.strip(), language=self.source_language)[:self.source_max_seq_length]
                 source_text.append(words)
             fin.close()
             self.source_text_data.append(source_text)
@@ -63,7 +73,7 @@ class PairedSentenceDataset(Dataset):
             target_text = []
             fin = open(target_file, "r")
             for line in fin:
-                words = nltk.word_tokenize(line.strip(), language=self.target_language)[:self.max_seq_length]
+                words = nltk.word_tokenize(line.strip(), language=self.target_language)[:self.target_max_seq_length]
                 target_text.append(words)
             fin.close()
             self.target_text_data.append(target_text)
@@ -71,38 +81,38 @@ class PairedSentenceDataset(Dataset):
     def _data_processing(self):
         self._build_vocab()
 
-    def _build_vocab_text(self, text_data_list):
+    def _build_vocab_text(self, text_data_list, max_vocab_size):
         word_list = list()
         for text_data in text_data_list:
             for text in text_data:
                 word_list.extend(text)
         tokens = [token for token, _ in collections.Counter(word_list).items()]
         tokens = [self.padding_token, self.unknown_token, self.sos_token, self.eos_token] + tokens
-        tokens = tokens[:self.max_vocab_size]
-        idx2token = dict(zip(range(self.max_vocab_size), tokens))
-        token2idx = dict(zip(tokens, range(self.max_vocab_size)))
+        tokens = tokens[:max_vocab_size]
+        idx2token = dict(zip(range(max_vocab_size), tokens))
+        token2idx = dict(zip(tokens, range(max_vocab_size)))
         return idx2token, token2idx
 
     def _build_vocab(self):
-        self.source_idx2token, self.source_token2idx = self._build_vocab_text(self.source_text_data)
-        self.target_idx2token, self.target_token2idx = self._build_vocab_text(self.target_text_data)
-        print("Source vocab size: {}, Target vocab size: {}".format(len(self.source_idx2token),
-                                                                    len(self.target_idx2token)))
+        if self.share_vocab:
+            assert self.source_language == self.target_language
+            text_data = self.source_text_data + self.target_text_data
+            self.source_idx2token, self.source_token2idx = self._build_vocab_text(text_data,
+                                                                                  self.source_max_vocab_size)
+            self.target_idx2token, self.target_token2idx = self.source_idx2token, self.source_token2idx
+            print("Share Vocabulary between source and target, vocab size: {}".format(len(self.target_idx2token)))
+        else:
+            self.source_idx2token, self.source_token2idx = self._build_vocab_text(self.source_text_data,
+                                                                                  max_vocab_size=self.source_max_vocab_size)
+            self.target_idx2token, self.target_token2idx = self._build_vocab_text(self.target_text_data,
+                                                                                  max_vocab_size=self.target_max_vocab_size)
+            print("Source vocab size: {}, Target vocab size: {}".format(len(self.source_idx2token),
+                                                                        len(self.target_idx2token)))
 
     def shuffle(self):
         pass
 
     def build(self, eval_setting=None):
-        """Processing dataset according to evaluation setting, including Group, Order and Split.
-        See :class:`~textbox.config.eval_setting.EvalSetting` for details.
-
-        Args:
-            eval_setting (:class:`~textbox.config.eval_setting.EvalSetting`):
-                Object contains evaluation settings, which guide the data processing procedure.
-
-        Returns:
-            list: List of builded :class:`Dataset`.
-        """
         info_str = ''
         corpus_list = []
         for i, prefix in enumerate(['train', 'dev', 'test']):

@@ -7,6 +7,11 @@
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2020/12/8
+# @Author : Gaole He
+# @Email  : hegaole@ruc.edu.cn
+
 """
 textbox.quick_start
 ########################
@@ -52,13 +57,20 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     # trainer loading and initialization
     trainer = get_trainer(config['MODEL_TYPE'], config['model'])(config, model)
 
-    # model training
-    best_valid_score, best_valid_result = trainer.fit(train_data, valid_data, saved=saved)
+    if config['test_only']:
+        logger.info('Test only')
+        test_result = trainer.evaluate(test_data, load_best_model=saved, model_file=config['load_experiment'])
+    else:
+        if config['load_experiment'] is not None:
+            trainer.resume_checkpoint(resume_file=config['load_experiment'])
+        # model training
+        best_valid_score, best_valid_result = trainer.fit(train_data, valid_data, saved=saved)
 
-    # model evaluation
-    test_result = trainer.evaluate(test_data, load_best_model=saved)
-    
-    logger.info('best valid loss: {}, best valid ppl: {}'.format(best_valid_score, best_valid_result))
+        # model evaluation
+        test_result = trainer.evaluate(test_data, load_best_model=saved)
+
+        logger.info('best valid loss: {}, best valid ppl: {}'.format(best_valid_score, best_valid_result))
+
     logger.info('test result: {}'.format(test_result))
 
     # return {

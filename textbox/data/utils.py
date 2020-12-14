@@ -57,7 +57,7 @@ def data_preparation(config, save=False):
     """
     dataset = create_dataset(config)
 
-    builded_datasets = dataset.build(eval_setting=None)
+    builded_datasets = dataset.build()
     train_dataset, valid_dataset, test_dataset = builded_datasets
     phases = ['train', 'valid', 'test']
 
@@ -91,8 +91,6 @@ def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False):
         dataset (Dataset or list of Dataset): The split dataset for constructing dataloader.
         batch_size (int, optional): The batch_size of dataloader. Defaults to ``1``.
         shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
-        **kwargs: Other input args of dataloader, such as :attr:`sampler`, :attr:`kg_sampler`
-            and :attr:`neg_sample_args`. The meaning of these args is the same as these args in some dataloaders.
 
     Returns:
         AbstractDataLoader or list of AbstractDataLoader: Constructed dataloader in split dataset.

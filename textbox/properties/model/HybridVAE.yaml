@@ -1,6 +1,14 @@
-embedding_size: 64
-hidden_size: 128
+# model settings
+embedding_size: 128
+hidden_size: 256
+latent_size: 64
+rnn_type: "lstm"
 num_dec_layers: 2
 alpha_aux: 0.4
-rnn_type: gru
-dropout_ratio: 0.1
+
+# training settings
+learner: adam
+learning_rate: 0.0005
+eval_step: 2
+stopping_step: 10
+dropout_ratio: 0.5

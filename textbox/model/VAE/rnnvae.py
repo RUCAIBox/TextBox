@@ -22,8 +22,8 @@ Code Reference: https://github.com/timbmg/Sentence-VAE
 
 
 class RNNVAE(UnconditionalGenerator):
-    r"""BPR is a basic matrix factorization model that be trained in the pairwise way.
-
+    r"""LSTMVAE is the first text generation model with VAE,
+     we modify its architecture to fit all RNN type, and rename it as RNNVAE
     """
     input_type = InputType.NOISE
 

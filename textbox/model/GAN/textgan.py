@@ -14,7 +14,7 @@ from textbox.module.Discriminator.TextGANDiscriminator import TextGANDiscriminat
 
 
 class TextGAN(GenerativeAdversarialNet):
-    """Adversarial Feature Matching for Text Generation
+    r"""TextGAN followed "Adversarial Feature Matching for Text Generation".
 
     """
     input_type = InputType.NOISE

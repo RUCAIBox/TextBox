@@ -438,6 +438,9 @@ class GANTrainer(Trainer):
     def _build_module_optimizer(self, module):
         r"""Init the Module Optimizer
 
+        Args:
+            module (torch.nn.Mudule): Mudule class of torch.nn needed optimizer
+
         Returns:
             torch.optim: the optimizer
         """
@@ -484,6 +487,18 @@ class GANTrainer(Trainer):
             return optimizer
 
     def _optimize_step(self, losses, total_loss, model, opt):
+        r"""The opt uses the cliped losses to conduct an optimize step to optimize model
+        and sum up losses to the total_loss.
+
+        Args:
+            losses (torch.Tensor or tuple): The loss to be backward.
+            total_loss (Float): Total loss in an epoch.
+            model (torch.nn.Mudule): The model to be optimized.
+            opt (torch.optim): The optimizer of the model.
+
+        Returns:
+            torch.Tensor or tuple: Total loss in an epoch, shape: [].
+        """
         if isinstance(losses, tuple):
             loss = sum(losses)
             loss_tuple = tuple(per_loss.item() for per_loss in losses)
@@ -504,18 +519,19 @@ class GANTrainer(Trainer):
         return total_loss
 
     def _optimize_multi_step(self, losses, model, opts):
+        r"""Each opt from opts conducts an optimize step using respective loss from losses.
+
+        Args:
+            losses (tuple): The tuple of losses to be backward.
+            model (torch.nn.Mudule): The model to be optimized.
+            opts (tuple): The tuple of optimizers of the model.
+        """
         for i, (opt, loss) in enumerate(zip(opts, losses)):
             opt.zero_grad()
             loss.backward(retain_graph=True if i < len(opts) - 1 else False)
             opt.step()
 
     def _save_checkpoint(self, epoch):
-        r"""Store the model parameters information and training information.
-
-        Args:
-            epoch (int): the current epoch id
-
-        """
         state = {
             'config': self.config,
             'epoch': epoch,
@@ -526,12 +542,28 @@ class GANTrainer(Trainer):
         torch.save(state, self.saved_model_file)
 
     def _add_pad(self, data):
+        r"""Pad the data to the max length of corpus.
+
+        Args:
+            data (torch.Tensor): The data to be padded, shape: [batch_size, max_batch_length].
+
+        Returns:
+            torch.Tensor: The padded data, shape: [batch_size, max_seq_length].
+        """
         batch_size = data.shape[0]
         padded_data = torch.full((batch_size, self.max_length), self.pad_idx, dtype=torch.long, device=self.device)
         padded_data[:, : data.shape[1]] = data
         return padded_data
 
     def _get_real_data(self, train_data):
+        r"""Get the target text index of the corpus train_datas.
+
+        Args:
+            train_data (DataLoader): the train data.
+
+        Returns:
+            torch.Tensor: The target text index, shape: [batch_size, max_batch_length].
+        """
         real_datas = []
         for corpus in train_data:
             real_data = corpus['target_idx']
@@ -614,18 +646,6 @@ class GANTrainer(Trainer):
         return total_loss
 
     def fit(self, train_data, valid_data=None, verbose=True, saved=True):
-        r"""Train the model based on the train data and the valid data.
-
-        Args:
-            train_data (DataLoader): the train data
-            valid_data (DataLoader, optional): the valid data, default: None.
-                                               If it's None, the early_stopping is invalid.
-            verbose (bool, optional): whether to write training and evaluation information to logger, default: True
-            saved (bool, optional): whether to save the model parameters, default: True
-
-        Returns:
-             (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
-        """
         # generator pretraining
         if verbose:
             self.logger.info("Start generator pretraining...")
@@ -686,17 +706,6 @@ class TextGANTrainer(GANTrainer):
         self.adversarail_g_epochs = config['adversarail_g_epochs']
 
     def _d_train_epoch(self, train_data, epoch_idx):
-        r"""Train the discriminator module in an epoch
-
-        Args:
-            train_data (DataLoader): the train data
-            epoch_idx (int): the current epoch id
-
-        Returns:
-            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
-            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
-            tuple which includes the sum of loss in each part.
-        """
         self.model.discriminator.train()
         total_loss = None
         real_data = self._get_real_data(train_data)
@@ -713,17 +722,6 @@ class TextGANTrainer(GANTrainer):
         return total_loss / min(len(real_dataloader), self.d_sample_num // self.model.batch_size) / self.d_sample_training_epochs
 
     def _adversarial_train_epoch(self, train_data, epoch_idx):
-        r"""Adversarial training in an epoch
-
-        Args:
-            train_data (DataLoader): the train data
-            epoch_idx (int): the current epoch id
-
-        Returns:
-            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
-            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
-            tuple which includes the sum of loss in each part.
-        """
         self.model.generator.train()
         total_loss = None
         real_data = self._get_real_data(train_data)

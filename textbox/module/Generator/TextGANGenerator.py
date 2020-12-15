@@ -10,6 +10,8 @@ from textbox.model.abstract_generator import UnconditionalGenerator
 
 
 class TextGANGenerator(UnconditionalGenerator):
+    r"""The generator of TextGAN.
+    """
     def __init__(self, config, dataset):
         super(TextGANGenerator, self).__init__(config, dataset)
 
@@ -27,6 +29,15 @@ class TextGANGenerator(UnconditionalGenerator):
         self.vocab_projection = nn.Linear(self.hidden_size, self.vocab_size)
 
     def calculate_loss(self, corpus, nll_test=False):
+        r"""Calculate the generated loss of corpus.
+
+        Args:
+            corpus (Corpus): The corpus to be calculated.
+            nll_test (Bool): Optional; if nll_test is True the loss is calculated in sentence level rather than in word level.
+        
+        Returns:
+            torch.Tensor: The calculated loss of corpus, shape: [].
+        """
         datas = corpus['target_idx'] # b * len
         datas = datas.permute(1, 0) # len * b
         data_embedding = self.word_embedding(datas[ : -1]) # len * b * e
@@ -47,6 +58,12 @@ class TextGANGenerator(UnconditionalGenerator):
         return loss.mean()
     
     def sample(self):
+        r"""Sample a batch of generated sentence indice.
+
+        Returns:
+            torch.Tensor: The generated sentence indice, shape: [batch_size, max_seq_length].
+            torch.Tensor: The latent code of the generated sentence, shape: [batch_size, hidden_size].
+        """
         self.eval()
         sentences = []
         with torch.no_grad():
@@ -80,6 +97,14 @@ class TextGANGenerator(UnconditionalGenerator):
         return sentences_prob, h_prev.squeeze(0)
 
     def generate(self, eval_data):
+        r"""Generate tokens of sentences using eval_data.
+
+        Args:
+            eval_data (Corpus): The corpus information of evaluation data.
+
+        Returns:
+            List[List[str]]: The generated tokens of each sentence.
+        """
         self.eval()
         generate_corpus = []
         idx2token = eval_data.idx2token
@@ -108,6 +133,15 @@ class TextGANGenerator(UnconditionalGenerator):
         return generate_corpus
     
     def adversarial_loss(self, real_data, discriminator_func):
+        r"""Calculate the adversarial generator loss of real_data guided by discriminator_func.
+
+        Args:
+            real_data (torch.Tensor): The realistic sentence data, shape: [batch_size, max_seq_len].
+            discriminator_func (function): The function provided from discriminator to calculated the loss of generated sentence.
+        
+        Returns:
+            torch.Tensor: The calculated adversarial loss, shape: [].
+        """
         fake_samples, _ = self.sample()
         loss = discriminator_func(real_data, fake_samples)
         return loss

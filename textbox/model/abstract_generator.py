@@ -8,7 +8,7 @@
 # @Email  : steventang@ruc.edu.cn
 
 """
-recbole.model.abstract_recommender
+textbox.model.abstract_recommender
 ##################################
 """
 

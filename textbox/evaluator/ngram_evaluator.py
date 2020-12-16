@@ -9,7 +9,7 @@
 
 """
 textbox.evaluator.ngram_evaluator
-################################
+#################################
 """
 
 import numpy as np
@@ -23,8 +23,8 @@ ngram_metrics = {metric.lower(): metric for metric in ['bleu', 'self_bleu']}
 
 
 class NgramEvaluator(AbstractEvaluator):
-    r"""NgramEvaluator Evaluator is mainly used in ranking tasks. Now, we support two ngram metrics which
-    contain `'bleu', 'self_bleu'.
+    r"""NgramEvaluator Evaluator is mainly used in generation tasks. Now, we support two ngram metrics which
+    contain `'bleu', 'self_bleu'`.
     """
 
     def __init__(self, config):
@@ -36,6 +36,7 @@ class NgramEvaluator(AbstractEvaluator):
 
     def evaluate(self, generate_corpus, reference_corpus):
         """get metrics result
+
         Args:
             generate_corpus: the generated corpus
             reference_corpus: the referenced corpus
@@ -83,6 +84,7 @@ class NgramEvaluator(AbstractEvaluator):
 
     def metrics_info(self, generate_corpus, reference_corpus, metric="bleu"):
         """get metrics result
+
         Args:
             generate_corpus: the generated corpus
             reference_corpus: the referenced corpus

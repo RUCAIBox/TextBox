@@ -9,7 +9,7 @@
 # @Email  : steventang@ruc.edu.cn
 
 """
-recbole.evaluator.metrics
+textbox.evaluator.metrics
 ############################
 """
 

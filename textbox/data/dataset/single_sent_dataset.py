@@ -139,9 +139,6 @@ class SingleSentenceDataset(Dataset):
     def build(self):
         self.shuffle()
 
-        # group_field = eval_setting.group_field
-
-        # split_args = eval_setting.split_args
         split_args = {'strategy': self.strategy, 'ratios': self.split_ratio}
         if split_args['strategy'] == 'by_ratio':
             corpus_list = self.split_by_ratio(split_args['ratios'])

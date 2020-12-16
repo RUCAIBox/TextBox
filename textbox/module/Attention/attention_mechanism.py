@@ -184,10 +184,12 @@ class MonotonicAttention(torch.nn.Module):
     def hard(self, hidden_states, encoder_outputs, encoder_masks, previous_probs=None):
         """
         Hard monotonic attention (Test)
+
         Args:
             encoder_outputs [batch_size, sequence_length, enc_dim]
             decoder_h [batch_size, dec_dim]
             previous_attention [batch_size, sequence_length]
+
         Return:
             alpha [batch_size, sequence_length]
         """

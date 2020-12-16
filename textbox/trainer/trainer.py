@@ -42,14 +42,12 @@ class AbstractTrainer(object):
 
     def fit(self, train_data):
         r"""Train the model based on the train data.
-
         """
 
         raise NotImplementedError('Method [next] should be implemented.')
 
     def evaluate(self, eval_data):
         r"""Evaluate the model based on the eval data.
-
         """
 
         raise NotImplementedError('Method [next] should be implemented.')
@@ -67,7 +65,6 @@ class Trainer(AbstractTrainer):
     Initializing the Trainer needs two parameters: `config` and `model`. `config` records the parameters information
     for controlling training and evaluation, such as `learning_rate`, `epochs`, `eval_step` and so on.
     More information can be found in [placeholder]. `model` is the instantiated object of a Model Class.
-
     """
 
     def __init__(self, config, model):
@@ -79,8 +76,6 @@ class Trainer(AbstractTrainer):
         self.epochs = config['epochs']
         self.eval_step = min(config['eval_step'], self.epochs)
         self.stopping_step = config['stopping_step']
-        self.valid_metric = config['valid_metric'].lower()
-        self.valid_metric_bigger = config['valid_metric_bigger']
         self.test_batch_size = config['eval_batch_size']
         self.device = config['device']
         self.embedding_size = config['embedding_size']
@@ -530,9 +525,11 @@ class GANTrainer(Trainer):
 
     def _g_train_epoch(self, train_data, epoch_idx):
         r"""Train the generator module in an epoch
+
         Args:
             train_data (DataLoader): the train data
             epoch_idx (int): the current epoch id
+
         Returns:
             float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
             multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
@@ -1098,7 +1095,6 @@ class LeakGANTrainer(GANTrainer):
 
     def _load_generated_text(self):
         r"""Load the generated text by our model to log.
-
         """
         with open(self.saved_text_file, 'r') as fin:
             samples = []

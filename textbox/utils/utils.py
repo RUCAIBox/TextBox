@@ -9,7 +9,7 @@
 # @Email  : steventang@ruc.edu.cn
 
 """
-recbole.utils.utils
+textbox.utils.utils
 ################################
 """
 
@@ -77,11 +77,11 @@ def get_trainer(model_type, model_name):
     r"""Automatically select trainer class based on model type and model name
 
     Args:
-        model_type (ModelType): model type
+        model_type (~textbox.utils.enum_type.ModelType): model type
         model_name (str): model name
 
     Returns:
-        Trainer: trainer class
+        ~textbox.trainer.trainer.Trainer: trainer class
     """
     try:
         return getattr(importlib.import_module('textbox.trainer'), model_name + 'Trainer')

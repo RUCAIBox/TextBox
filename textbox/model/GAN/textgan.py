@@ -14,7 +14,7 @@ from textbox.module.Discriminator.TextGANDiscriminator import TextGANDiscriminat
 
 
 class TextGAN(GenerativeAdversarialNet):
-    """Adversarial Feature Matching for Text Generation
+    r"""TextGAN followed "Adversarial Feature Matching for Text Generation".
 
     """
     input_type = InputType.NOISE
@@ -39,6 +39,9 @@ class TextGAN(GenerativeAdversarialNet):
         self.discriminator.train()
         return loss
     
+    def calculate_nll_test(self, corpus, epoch_idx):
+        return self.generator.calculate_loss(corpus, nll_test=True)
+
     def generate(self, eval_data):
         return self.generator.generate(eval_data)
 

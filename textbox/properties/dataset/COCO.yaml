@@ -1,5 +1,5 @@
 # special tokens
 max_vocab_size: 5000
 max_seq_length: 40
-strategy: "load_split"
+split_strategy: "load_split"
 source_language: "English"

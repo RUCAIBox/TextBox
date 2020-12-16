@@ -11,6 +11,8 @@ from textbox.model.abstract_generator import UnconditionalGenerator
 
 
 class MaliGANGenerator(UnconditionalGenerator):
+    r"""MaliGANGenerator is a generative model with the LSTMs.
+    """
     def __init__(self, config, dataset):
         super(MaliGANGenerator, self).__init__(config, dataset)
 
@@ -29,6 +31,15 @@ class MaliGANGenerator(UnconditionalGenerator):
         self.vocab_projection = nn.Linear(self.hidden_size, self.vocab_size)
 
     def calculate_loss(self, corpus, nll_test=False):
+        r"""Calculate the generated loss of corpus.
+
+        Args:
+            corpus (Corpus): The corpus to be calculated.
+            nll_test (Bool): Optional; if nll_test is True the loss is calculated in sentence level rather than in word level.
+        
+        Returns:
+            torch.Tensor: The calculated loss of corpus, shape: [].
+        """
         datas = corpus['target_idx']  # b * len
         datas = datas.permute(1, 0)  # len * b
         data_embedding = self.word_embedding(datas[ : -1])  # len * b * e
@@ -46,6 +57,11 @@ class MaliGANGenerator(UnconditionalGenerator):
         return loss.mean()
     
     def sample_batch(self):
+        r"""Sample a batch of generated sentence indice.
+
+        Returns:
+            torch.Tensor: The generated sentence indice, shape: [batch_size, max_seq_length].
+        """
         self.eval()
         sentences = []
         with torch.no_grad():
@@ -74,6 +90,14 @@ class MaliGANGenerator(UnconditionalGenerator):
         return sentences
 
     def sample(self, sample_num):
+        r"""Sample sample_num generated sentence indice.
+
+        Args:
+            sample_num (int): The number to generate.
+
+        Returns:
+            torch.Tensor: The generated sentence indice, shape: [sample_num, max_seq_length].
+        """
         samples = []
         batch_num = math.ceil(sample_num // self.batch_size)
         for _ in range(batch_num):
@@ -82,6 +106,14 @@ class MaliGANGenerator(UnconditionalGenerator):
         return samples[:sample_num, :]
 
     def generate(self, eval_data):
+        r"""Generate tokens of sentences using eval_data.
+
+        Args:
+            eval_data (Corpus): The corpus information of evaluation data.
+
+        Returns:
+            List[List[str]]: The generated tokens of each sentence.
+        """
         self.eval()
         generate_corpus = []
         idx2token = eval_data.idx2token
@@ -110,6 +142,19 @@ class MaliGANGenerator(UnconditionalGenerator):
         return generate_corpus
 
     def adversarial_loss(self, discriminator_func):
+        r"""Calculate the adversarial generator loss guided by discriminator_func.
+        A noval objective for the generator to optimize, using importance sampling.
+        The training procedure is closer to maximum likelihood (MLE) training.
+
+        .. math::
+            r_D(x) = \frac{D(x)}{1-D(x)}
+
+        Args:
+            discriminator_func (function): The function provided from discriminator to calculated the loss of generated sentence.
+        
+        Returns:
+            torch.Tensor: The calculated adversarial loss, shape: [].
+        """
         fake_samples = self.sample(self.batch_size)
 
         rewards = []

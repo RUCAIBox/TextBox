@@ -1,11 +1,36 @@
+gpu_id: 0
+learning_rate: 0.001
+train_batch_size: 32
+eval_batch_size: 32
 generator_embedding_size: 32
 discriminator_embedding_size: 64
 hidden_size: 32
 dropout_rate: 0.25
 l2_reg_lambda: 0.2
-filter_sizes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
-filter_nums: [100, 200, 200, 200, 200, 100, 100, 100, 100, 100, 160, 160]
+filter_sizes: [ 2, 3 ]
+filter_nums: [ 100, 200 ]
 Monte_Carlo_num: 4
 step_size: 4
 goal_size: 16
 temperature: 1.5
+gen_learning_rate: 0.001
+dis_learning_rate: 5e-5
+g_pretraining_epochs: 80
+d_pretraining_epochs: 80
+d_sample_num: 10000
+d_sample_training_epochs: 3
+iter_num: 10
+adversarail_training_epochs: 10
+adversarail_d_epochs: 15
+adversarail_g_epochs: 1
+grad_clip: 5.0
+task_type: "unconditional"
+#interleaved_pretrain_epoch: 1
+#g_pretraining_epochs: 1
+#d_pretraining_epochs: 1
+#d_sample_num: 200
+#d_sample_training_epochs: 1
+#iter_num: 1
+#adversarail_training_epochs: 1
+#adversarail_d_epochs: 1
+#adversarail_g_epochs: 1

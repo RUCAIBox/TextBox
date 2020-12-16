@@ -51,15 +51,15 @@ class TranslationEvaluator(AbstractEvaluator):
         bleu_dict = self._calc_metrics_info(generate_corpus=generate_corpus,
                                             reference_corpus=reference_corpus,
                                             metric='bleu')
-        bleu_sum = 0.0
+        # bleu_sum = 0.0
         for n_gram in bleu_dict:
             key = 'bleu-{}'.format(n_gram)
             tp_list = bleu_dict[n_gram]
             tp_val = np.mean(tp_list)
             metric_dict[key] = round(tp_val, 4)
-            bleu_sum += tp_val
-        avg_bleu = bleu_sum / 4.0
-        metric_dict['avg-bleu'] = round(avg_bleu, 4)
+            # bleu_sum += tp_val
+        # avg_bleu = bleu_sum / 4.0
+        # metric_dict['avg-bleu'] = round(avg_bleu, 4)
         return metric_dict
 
     def _check_args(self):
@@ -92,12 +92,15 @@ class TranslationEvaluator(AbstractEvaluator):
         bleu_dict = {}
         for i in self.n_grams:
             bleu_dict[i] = []
+        bleu_dict['avg-bleu'] = []
         for i in range(len(generate_corpus)):
             pred_sent = generate_corpus[i]
             gold_sent = reference_corpus[i]
-            result = metric_fuc(generate_corpus=[pred_sent], reference_corpus=[gold_sent], n_grams=self.n_grams)
+            result, avg_bleu = metric_fuc(generate_corpus=[pred_sent], reference_corpus=[gold_sent],
+                                          n_grams=self.n_grams, get_avg=True)
             for i in self.n_grams:
                 bleu_dict[i].append(result[i-1])
+            bleu_dict['avg-bleu'].append(avg_bleu)
         return bleu_dict
 
     def __str__(self):

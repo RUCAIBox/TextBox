@@ -15,23 +15,20 @@ from textbox.data.dataset import Dataset
 class SingleSentenceDataset(Dataset):
     def __init__(self, config, saved_dataset=None):
         self.source_language = config['source_language'].lower()
-        self.strategy = config['strategy']
+        self.strategy = config['split_strategy']
+        assert self.strategy is not None
         self.split_ratio = config['split_ratio']
         super().__init__(config, saved_dataset)
 
     def _get_preset(self):
-        """Initialization useful inside attributes.
-        """
         self.token2idx = {}
         self.idx2token = {}
         self.text_data = []
 
     def _load_splitted_data(self, dataset_path):
-        """Load features.
-        Firstly load interaction features, then user/item features optionally,
-        finally load additional features if ``config['additional_feat_suffix']`` is set.
+        """Load dataset from split (train, dev, test).
+        This is designed for single sentence format, unconditional task.
         Args:
-            dataset_name (str): dataset name.
             dataset_path (str): path of dataset dir.
         """
         train_src_file = os.path.join(dataset_path, 'train.txt')
@@ -48,11 +45,9 @@ class SingleSentenceDataset(Dataset):
             self.text_data.append(source_text)
 
     def _load_single_data(self, dataset_path):
-        """Load features.
-        Firstly load interaction features, then user/item features optionally,
-        finally load additional features if ``config['additional_feat_suffix']`` is set.
+        """Load full corpus.
+        This is designed for single sentence format, unconditional task.
         Args:
-            dataset_name (str): dataset name.
             dataset_path (str): path of dataset dir.
         """
         dataset_file = os.path.join(dataset_path, 'corpus_large.txt')
@@ -111,17 +106,6 @@ class SingleSentenceDataset(Dataset):
         random.shuffle(self.text_data)
 
     def split_by_ratio(self, ratios):
-        """Split dataset by ratios.
-
-        Args:
-            ratios (list): List of split ratios. No need to be normalized.
-
-        Returns:
-            list: List of : `list -> int`, whose interaction features has been splitted.
-
-        Note:
-            Other than the first one, each part is rounded down.
-        """
         self.logger.debug('split by ratios [{}]'.format(ratios))
         tot_ratio = sum(ratios)
         ratios = [_ / tot_ratio for _ in ratios]
@@ -140,7 +124,7 @@ class SingleSentenceDataset(Dataset):
         return corpus_list
 
     def load_split(self):
-        """Load existing dataset.
+        """Load splitted dataset.
         """
         corpus_list = []
         for sent_list in self.text_data:
@@ -152,7 +136,7 @@ class SingleSentenceDataset(Dataset):
             corpus_list.append(tp_data)
         return corpus_list
 
-    def build(self, eval_setting=None):
+    def build(self):
         self.shuffle()
 
         # group_field = eval_setting.group_field

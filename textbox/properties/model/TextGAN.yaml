@@ -8,3 +8,4 @@ recon_lambda: 0.01
 filter_sizes: [2, 3, 4]
 filter_nums: [200, 200, 200]
 gaussian_sigmas : [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1., 5., 1e1, 15., 20., 25., 30., 35., 1e2, 1e3, 1e4, 1e5, 1e6]
+adversarail_g_epochs: 30

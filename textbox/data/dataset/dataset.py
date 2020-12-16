@@ -25,10 +25,11 @@ class Dataset(object):
         self.max_vocab_size = config['max_vocab_size']
         self.max_seq_length = config['max_seq_length']
 
-        if saved_dataset is None:
-            self._from_scratch()
-        else:
-            self._restore_saved_dataset(saved_dataset)
+        self._from_scratch()
+        # if saved_dataset is None:
+        #     self._from_scratch()
+        # else:
+        #     self._restore_saved_dataset(saved_dataset)
 
     def _from_scratch(self):
         """Load dataset from scratch.
@@ -73,20 +74,24 @@ class Dataset(object):
     #     self._get_field_from_config()
 
     def _load_data(self, dataset_path):
-        """Load dataset from file.
+        r"""Load dataset with dataset split strategy.
+        Args:
+            dataset_path (str): path of dataset dir.
         """
         raise NotImplementedError('Method [_load_data] should be implemented.')
 
     def _data_processing(self):
+        r"""Necessary processing steps for dataset.
+        """
         raise NotImplementedError('Method [_data_processing] should be implemented.')
 
     def _build_vocab(self):
-        """Shuffle the order of data, and it will be called by :meth:`__iter__()` if self.shuffle is True.
-                """
+        r"""Shuffle the order of data, and it will be called by :meth:`__iter__()` if self.shuffle is True.
+        """
         raise NotImplementedError('Method [_build_vocab] should be implemented.')
 
     def shuffle(self):
-        """Shuffle the order of data, and it will be called by :meth:`__iter__()` if self.shuffle is True.
+        r"""Shuffle the order of data, and it will be called by :meth:`__iter__()` if self.shuffle is True.
         """
         raise NotImplementedError('Method [shuffle] should be implemented.')
 
@@ -122,7 +127,7 @@ class Dataset(object):
 
     @staticmethod
     def _calcu_split_ids(tot, ratios):
-        """Given split ratios, and total number, calculate the number of each part after splitting.
+        r"""Given split ratios, and total number, calculate the number of each part after splitting.
 
         Other than the first one, each part is rounded down.
 
@@ -139,7 +144,7 @@ class Dataset(object):
         return list(split_ids)
 
     def split_by_ratio(self, ratios):
-        """Split dataset by ratios.
+        r"""Split dataset by ratios.
 
         Args:
             ratios (list): List of split ratios. No need to be normalized.
@@ -152,15 +157,10 @@ class Dataset(object):
         """
         pass
 
-    def build(self, eval_setting=None):
-        """Processing dataset according to evaluation setting, including Group, Order and Split.
-        See :class:`~textbox.config.eval_setting.EvalSetting` for details.
-
-        Args:
-            eval_setting (:class:`~textbox.config.eval_setting.EvalSetting`):
-                Object contains evaluation settings, which guide the data processing procedure.
+    def build(self):
+        r"""Prepare splitted data elements for dataloader.
 
         Returns:
-            list: List of builded :class:`Dataset`.
+            list: List of dict : provide necessary elements for dataloader.
         """
-        raise NotImplementedError('Method [shuffle] should be implemented.')
+        raise NotImplementedError('Method [build] should be implemented.')

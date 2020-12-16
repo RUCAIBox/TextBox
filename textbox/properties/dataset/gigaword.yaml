@@ -1,9 +1,9 @@
 # special tokens
 max_vocab_size: 30000
-max_seq_length: 100
+max_seq_length: 200
 source_max_vocab_size: 30000
 target_max_vocab_size: 30000
-source_max_seq_length: 100
+source_max_seq_length: 200
 target_max_seq_length: 50
 source_language: english
 target_language: english

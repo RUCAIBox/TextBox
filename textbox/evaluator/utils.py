@@ -26,7 +26,6 @@ def pad_sequence(sequences, len_list, pad_to=None, padding_value=0):
 
     Returns:
         torch.Tensor: [seq_num, max_len] or [seq_num, pad_to]
-
     """
     max_len = np.max(len_list) if pad_to is None else pad_to
     min_len = np.min(len_list)

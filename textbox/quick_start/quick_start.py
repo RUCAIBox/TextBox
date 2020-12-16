@@ -73,14 +73,6 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
 
     logger.info('test result: {}'.format(test_result))
 
-    # return {
-    #     'best_valid_score': best_valid_score,
-    #     'valid_score_bigger': config['valid_metric_bigger'],
-    #     'best_valid_result': best_valid_result,
-    #     'test_result': test_result
-    # }
-
-
 def objective_function(config_dict=None, config_file_list=None, saved=True):
     r""" The default objective_function used in HyperTuning
 
@@ -102,7 +94,6 @@ def objective_function(config_dict=None, config_file_list=None, saved=True):
 
     return {
         'best_valid_score': best_valid_score,
-        'valid_score_bigger': config['valid_metric_bigger'],
         'best_valid_result': best_valid_result,
         'test_result': test_result
     }

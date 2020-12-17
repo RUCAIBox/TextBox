@@ -18,8 +18,10 @@ from textbox.module.strategy import topk_sampling
 
 
 class TransformerEncDec(ConditionalGenerator):
-    r"""RNN-based Encoder-Decoder architecture is a basic framework for conditional text generation.
+    r"""Transformer-based Encoder-Decoder architecture is a powerful framework for conditional text generation.
 
+    Reference:
+        https://arxiv.org/abs/1706.03762
     """
 
     def __init__(self, config, dataset):

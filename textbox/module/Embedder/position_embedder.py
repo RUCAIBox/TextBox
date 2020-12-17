@@ -11,14 +11,13 @@ import math
 
 
 class LearnedPositionalEmbedding(nn.Module):
-    """This module produces LearnedPositionalEmbedding.
+    r"""This module produces Learned Positional Embedding.
     """
     def __init__(self, embedding_size, max_length=512):
         super(LearnedPositionalEmbedding, self).__init__()
         self.weights = nn.Embedding(max_length, embedding_size)
 
     def forward(self, input_seq, offset=0):
-        """Input is expected to be of size [batch_size x seq_len]."""
         batch_size, seq_len = input_seq.size()
         positions = (offset + torch.arange(seq_len))
         pos_embeddings = self.weights(positions).unsqueeze(0).expand(batch_size, -1, -1)
@@ -26,7 +25,7 @@ class LearnedPositionalEmbedding(nn.Module):
 
 
 class SinusoidalPositionalEmbedding(nn.Module):
-    """This module produces sinusoidal positional embeddings of any length.
+    r"""This module produces sinusoidal positional embeddings of any length.
     """
     def __init__(self, embedding_size, max_length=512):
         super(SinusoidalPositionalEmbedding, self).__init__()
@@ -38,7 +37,7 @@ class SinusoidalPositionalEmbedding(nn.Module):
 
     @staticmethod
     def get_embedding(max_length, embedding_size):
-        """Build sinusoidal embeddings.
+        r"""Build sinusoidal embeddings.
         This matches the implementation in tensor2tensor, but differs slightly
         from the description in Section 3.5 of "Attention Is All You Need".
         """
@@ -53,7 +52,6 @@ class SinusoidalPositionalEmbedding(nn.Module):
         return emb
 
     def forward(self, input_seq, offset=0):
-        """Input is expected to be of size [batch_size x seq_len]."""
         batch_size, seq_len = input_seq.size()
         max_position = seq_len + offset
         if self.weights is None or max_position > self.weights.size(0):

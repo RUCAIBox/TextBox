@@ -14,8 +14,10 @@ from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPT2Config
 
 
 class GPT2(UnconditionalGenerator):
-    r"""GPT2
+    r"""GPT2 is an auto-regressive language model.
 
+    Reference:
+        Language Models are Unsupervised Multitask Learners.
     """
     input_type = InputType.NOISE
 

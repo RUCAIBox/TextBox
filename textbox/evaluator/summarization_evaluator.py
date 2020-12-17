@@ -9,7 +9,7 @@
 
 """
 textbox.evaluator.ngram_evaluator
-################################
+#################################
 """
 
 import numpy as np
@@ -24,8 +24,8 @@ summarization_metrics = ['rouge-1', 'rouge-2', 'rouge-l', 'rouge-w']
 
 
 class SummarizationEvaluator(AbstractEvaluator):
-    r"""NgramEvaluator Evaluator is mainly used in ranking tasks. Now, we support two ngram metrics which
-    contain `'bleu', 'self_bleu'.
+    r"""Summarization Evaluator is mainly used in summarization tasks. Now, we support rouge-based ngram metrics which
+    contain rouge-n, rouge-l and rouge-w.
     """
 
     def __init__(self, config):
@@ -54,6 +54,7 @@ class SummarizationEvaluator(AbstractEvaluator):
 
     def evaluate(self, generate_corpus, reference_corpus):
         """get metrics result
+
         Args:
             generate_corpus: the generated corpus
             reference_corpus: the referenced corpus

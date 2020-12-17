@@ -2,6 +2,15 @@
 # @Author : Xiaoxuan Hu
 # @Email  : huxiaoxuan@ruc.edu.cn
 
+r"""
+RankGAN
+################################################
+Reference:
+    Kevin Lin et al. "Adversarial Ranking for Language Generation." in NIPS 2017.
+Reference code:
+    https://github.com/cookielee77/RankGan-NIPS2017
+
+"""
 
 import torch
 import torch.nn as nn
@@ -14,8 +23,10 @@ from textbox.module.Discriminator.RankGANDiscriminator import RankGANDiscriminat
 
 
 class RankGAN(GenerativeAdversarialNet):
-    """Adversarial Ranking for Language Generation
-
+    r"""RankGAN is a generative adversarial network consisting of a generator and a ranker.
+    The ranker is trained to rank the machine-written sentences lower than human-written sentences with respect to reference sentences.
+    The generator is trained to synthesize sentences that can be ranked higher than the human-written one.
+    We implement the model following the original author.
     """
     input_type = InputType.NOISE
 

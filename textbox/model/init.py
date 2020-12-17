@@ -3,7 +3,7 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 """
-recbole.model.init
+textbox.model.init
 ########################
 """
 

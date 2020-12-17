@@ -9,7 +9,7 @@
 
 
 """
-recbole.utils.enum_type
+textbox.utils.enum_type
 #######################
 """
 

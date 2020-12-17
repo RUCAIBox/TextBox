@@ -3,7 +3,7 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 """
-recbole.trainer.hyper_tuning
+textbox.trainer.hyper_tuning
 ############################
 """
 

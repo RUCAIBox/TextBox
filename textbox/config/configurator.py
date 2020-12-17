@@ -3,7 +3,7 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 """
-recbole.config.configurator
+textbox.config.configurator
 ################################
 """
 
@@ -234,10 +234,6 @@ class Config(object):
 
         eval_type = None
         self.final_config_dict['eval_type'] = eval_type
-
-        smaller_metric = ['rmse', 'mae', 'logloss']
-        valid_metric = self.final_config_dict['valid_metric'].split('@')[0]
-        self.final_config_dict['valid_metric_bigger'] = False if valid_metric in smaller_metric else True
 
         if 'additional_feat_suffix' in self.final_config_dict:
             ad_suf = self.final_config_dict['additional_feat_suffix']

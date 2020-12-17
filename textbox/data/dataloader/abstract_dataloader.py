@@ -16,14 +16,15 @@ from textbox.utils.enum_type import SpecialTokens
 
 
 class AbstractDataLoader(object):
-    """:class:`AbstractDataLoader` is an abstract object which would return a batch of data which is loaded by
-    :class:`~recbole.data.interaction.Interaction` when it is iterated.
-    And it is also the ancestor of all other dataloader.
+    """:class:`AbstractDataLoader` is an abstract object which would return a batch of data.
+        And it is also the ancestor of all other dataloader.
+
     Args:
         config (Config): The config of dataloader.
         dataset (Corpus): The corpus for partition of dataset.
         batch_size (int, optional): The batch_size of dataloader. Defaults to ``1``.
         shuffle (bool): If ``True``, dataloader will shuffle before every epoch.
+
     Attributes:
         dataset (dict): The necessary elements of this dataloader.
         pr (int): Pointer of dataloader.
@@ -190,6 +191,7 @@ class AbstractDataLoader(object):
 
     def set_batch_size(self, batch_size):
         r"""Reset the batch_size of the dataloader, but it can't be called when dataloader is being iterated.
+
         Args:
             batch_size (int): the new batch_size of dataloader.
         """

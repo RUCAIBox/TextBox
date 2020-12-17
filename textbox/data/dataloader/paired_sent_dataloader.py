@@ -19,14 +19,12 @@ from textbox.utils import DataLoaderType, InputType
 
 
 class PairedSentenceDataLoader(AbstractDataLoader):
-    """:class:`GeneralDataLoader` is used for general model and it just return the origin data.
+    r""":class:`GeneralDataLoader` is used for general model and it just return the origin data.
 
     Args:
         config (Config): The config of dataloader.
         dataset (SingleSentenceDataset): The dataset of dataloader. Corpus, see textbox.data.corpus for more details
         batch_size (int, optional): The batch_size of dataloader. Defaults to ``1``.
-        dl_format (InputType, optional): The input type of dataloader. Defaults to
-            :obj:`~textbox.utils.enum_type.InputType.POINTWISE`.
         shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
     """
 

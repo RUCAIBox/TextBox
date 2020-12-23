@@ -8,7 +8,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import UnconditionalGenerator
 from textbox.module.Encoder.cnn_encoder import BasicCNNEncoder
 from textbox.module.Decoder.cnn_decoder import HybridDecoder
@@ -26,7 +25,6 @@ class HybridVAE(UnconditionalGenerator):
     r"""HybridVAE blends fully feed-forward convolutional and deconvolutional components
      with a recurrent language model.
     """
-    input_type = InputType.NOISE
 
     def __init__(self, config, dataset):
         super(HybridVAE, self).__init__(config, dataset)

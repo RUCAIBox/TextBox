@@ -16,7 +16,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from textbox.utils import ModelType, InputType, FeatureSource, FeatureType
+from textbox.utils import ModelType
 
 
 class AbstractModel(nn.Module):

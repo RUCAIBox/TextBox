@@ -16,7 +16,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import GenerativeAdversarialNet
 from textbox.module.Generator.RankGANGenerator import RankGANGenerator
 from textbox.module.Discriminator.RankGANDiscriminator import RankGANDiscriminator
@@ -28,7 +27,6 @@ class RankGAN(GenerativeAdversarialNet):
     The generator is trained to synthesize sentences that can be ranked higher than the human-written one.
     We implement the model following the original author.
     """
-    input_type = InputType.NOISE
 
     def __init__(self, config, dataset):
         super(RankGAN, self).__init__(config, dataset)

@@ -11,7 +11,6 @@ import math
 import torch
 from logging import getLogger
 
-from textbox.utils import InputType
 from textbox.utils.enum_type import SpecialTokens
 
 

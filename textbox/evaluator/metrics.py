@@ -13,8 +13,6 @@ textbox.evaluator.metrics
 ############################
 """
 
-from logging import getLogger
-
 import numpy as np
 from fast_bleu import BLEU, SelfBLEU
 

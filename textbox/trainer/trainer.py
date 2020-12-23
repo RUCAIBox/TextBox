@@ -13,7 +13,6 @@ textbox.trainer.trainer
 """
 
 import os
-import itertools
 import torch
 import torch.optim as optim
 import numpy as np
@@ -26,8 +25,7 @@ from logging import getLogger
 
 from textbox.module.Optimizer.optim import ScheduledOptim
 from textbox.evaluator import NgramEvaluator, TranslationEvaluator, SummarizationEvaluator
-from textbox.utils import ensure_dir, get_local_time, early_stopping, calculate_valid_score, dict2str, \
-    DataLoaderType, EvaluatorType
+from textbox.utils import ensure_dir, get_local_time, early_stopping
 
 
 class AbstractTrainer(object):
@@ -103,11 +101,6 @@ class Trainer(AbstractTrainer):
             self.evaluator = SummarizationEvaluator(config)
         else:
             self.evaluator = NgramEvaluator(config)
-        # self.eval_type = config['eval_type']
-        # if self.eval_type == EvaluatorType.INDIVIDUAL:
-        #     self.evaluator = LossEvaluator(config)
-        # else:
-        #     self.evaluator = TopKEvaluator(config)
 
         self.item_tensor = None
         self.tot_item_num = None
@@ -150,7 +143,6 @@ class Trainer(AbstractTrainer):
         self.model.train()
         total_loss = None
         for batch_idx, data in enumerate(train_data):
-            # interaction = interaction.to(self.device)
             self.optimizer.zero_grad()
             losses = self.model.calculate_loss(data, epoch_idx=epoch_idx)
             if isinstance(losses, tuple):
@@ -179,8 +171,6 @@ class Trainer(AbstractTrainer):
         self.model.eval()
         total_loss = None
         for batch_idx, data in enumerate(valid_data):
-            # interaction = interaction.to(self.device)
-            # self.optimizer.zero_grad()
             losses = self.model.calculate_loss(data)
             if isinstance(losses, tuple):
                 loss = sum(losses)
@@ -190,7 +180,6 @@ class Trainer(AbstractTrainer):
                 loss = losses
                 total_loss = losses.item() if total_loss is None else total_loss + losses.item()
             self._check_nan(loss)
-        # self.optimizer.zero_grad()
         valid_loss = total_loss / len(valid_data)
         ppl = np.exp(valid_loss)
         return valid_loss, ppl
@@ -273,8 +262,6 @@ class Trainer(AbstractTrainer):
         Returns:
              (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
         """
-        # if hasattr(self.model, 'train_preparation'):
-        #     self.model.train_preparation(train_data=train_data, valid_data=valid_data)
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
             training_start_time = time()
@@ -539,7 +526,6 @@ class GANTrainer(Trainer):
         total_loss = None
 
         for batch_idx, data in enumerate(train_data):
-            # interaction = interaction.to(self.device)
             losses = self.model.calculate_g_train_loss(data, epoch_idx=epoch_idx)
             total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
         total_loss = [l / len(train_data) for l in total_loss] if isinstance(total_loss, tuple) else total_loss / len(
@@ -751,8 +737,6 @@ class RankGANTrainer(GANTrainer):
             d_loss += self._d_train_epoch(train_data, epoch_idx=epoch_idx)
         d_loss = d_loss / self.adversarail_d_epochs
 
-        # d_output = "d_loss: %f" % (d_loss)
-        # self.logger.info(d_output)
         return total_loss
 
 

@@ -9,7 +9,6 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 import numpy as np
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import GenerativeAdversarialNet
 from textbox.module.Encoder.rnn_encoder import BasicRNNEncoder
 from textbox.module.Decoder.rnn_decoder import BasicRNNDecoder, AttentionalRNNDecoder
@@ -20,8 +19,6 @@ class MaskGANGenerator(GenerativeAdversarialNet):
     r"""RNN-based Encoder-Decoder architecture is a basic framework for conditional text generation.
 
     """
-
-    # input_type = InputType.PAIRTEXT
 
     def __init__(self, config, dataset):
         super(MaskGANGenerator, self).__init__(config, dataset)

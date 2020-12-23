@@ -12,8 +12,6 @@ import os
 import nltk
 import collections
 import random
-import numpy as np
-from logging import getLogger
 from textbox.data.dataset import Dataset
 
 

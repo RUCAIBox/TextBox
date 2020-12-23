@@ -8,7 +8,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import GenerativeAdversarialNet
 from textbox.module.Generator.MaskGANGenerator import MaskGANGenerator
 from textbox.module.Discriminator.MaskGANDiscriminator import MaskGANDiscriminator
@@ -18,7 +17,6 @@ class MaskGAN(GenerativeAdversarialNet):
     """Sequence Generative Adversarial Nets with Policy Gradient
 
     """
-    input_type = InputType.NOISE
 
     def __init__(self, config, dataset):
         super(MaskGAN, self).__init__(config, dataset)

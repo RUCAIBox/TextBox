@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import UnconditionalGenerator
 from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPT2Config
 
@@ -19,7 +18,6 @@ class GPT2(UnconditionalGenerator):
     Reference:
         Language Models are Unsupervised Multitask Learners.
     """
-    input_type = InputType.NOISE
 
     def __init__(self, config, dataset):
         super(GPT2, self).__init__(config, dataset)

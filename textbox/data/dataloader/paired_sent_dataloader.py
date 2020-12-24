@@ -10,12 +10,9 @@ textbox.data.dataloader.paired_sent_dataloader
 import numpy as np
 import random
 import math
-import pandas as pd
 import torch
-from tqdm import tqdm
 
 from textbox.data.dataloader.abstract_dataloader import AbstractDataLoader
-from textbox.utils import DataLoaderType, InputType
 
 
 class PairedSentenceDataLoader(AbstractDataLoader):
@@ -82,4 +79,3 @@ class PairedSentenceDataLoader(AbstractDataLoader):
             'target_length': target_length.to(self.device)
         }
         return batch_data
-

@@ -140,38 +140,6 @@ def early_stopping(value, best, cur_step, max_step, bigger=True):
     return best, cur_step, stop_flag, update_flag
 
 
-def calculate_valid_score(valid_result, valid_metric=None):
-    r""" return valid score from valid result
-
-    Args:
-        valid_result (dict): valid result
-        valid_metric (str, optional): the selected metric in valid result for valid score
-
-    Returns:
-        float: valid score
-    """
-    if valid_metric:
-        return valid_result[valid_metric]
-    else:
-        return valid_result['Recall@10']
-
-
-def dict2str(result_dict):
-    r""" convert result dict to str
-
-    Args:
-        result_dict (dict): result dict
-
-    Returns:
-        str: result str
-    """
-
-    result_str = ''
-    for metric, value in result_dict.items():
-        result_str += str(metric) + ' : ' + '%.04f' % value + '    '
-    return result_str
-
-
 def init_seed(seed, reproducibility):
     r""" init random seed for random functions in numpy, torch, cuda and cudnn
 

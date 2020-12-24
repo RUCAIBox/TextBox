@@ -6,14 +6,13 @@ import os
 
 from setuptools import setup, find_packages
 
-install_requires = ['numpy>=1.17.2', 'torch>=1.2.0', 'scipy>=1.1.0', 'pandas>=1.0.5', 'tqdm>=4.48.2',
-                    'scikit_learn>=0.20.3', 'pyyaml>=5.3.1']
+install_requires = ['matplotlib>=3.1.3', 'torch>=1.2.0', 'numpy>=1.17.2',
+                    'pyyaml>=5.3.1', 'fast_bleu>=0.0.86', 'rouge>=1.0.0']
 
 setup_requires = []
 
 extras_require = {
     'matplotlib': ['matplotlib>=3.1.3'],
-    'hyperopt': ['hyperopt>=0.2.4']
 }
 
 # Readthedocs requires Sphinx extensions to be specified as part of

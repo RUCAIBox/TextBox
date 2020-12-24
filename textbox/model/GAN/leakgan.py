@@ -9,14 +9,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import GenerativeAdversarialNet
 from textbox.module.Generator.LeakGANGenerator import LeakGANGenerator
 from textbox.module.Discriminator.LeakGANDiscriminator import LeakGANDiscriminator
 
 
 class LeakGAN(GenerativeAdversarialNet):
-    input_type = InputType.NOISE
 
     def __init__(self, config, dataset):
         super(LeakGAN, self).__init__(config, dataset)

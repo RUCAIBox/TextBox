@@ -7,7 +7,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import GenerativeAdversarialNet
 from textbox.module.Generator.TextGANGenerator import TextGANGenerator
 from textbox.module.Discriminator.TextGANDiscriminator import TextGANDiscriminator
@@ -17,7 +16,6 @@ class TextGAN(GenerativeAdversarialNet):
     r"""TextGAN followed "Adversarial Feature Matching for Text Generation".
 
     """
-    input_type = InputType.NOISE
 
     def __init__(self, config, dataset):
         super(TextGAN, self).__init__(config, dataset)

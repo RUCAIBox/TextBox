@@ -9,3 +9,5 @@ dropout_ratio: 0.2
 rnn_type: "gru"
 attention_type: "BahdanauAttention"
 alignment_method: "concat"
+beam_size: 1
+decoding_strategy: 'topk_sampling'

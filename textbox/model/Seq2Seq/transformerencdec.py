@@ -2,7 +2,6 @@
 # @Author : Junyi Li
 # @Email  : lijunyi@ruc.edu.cn
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

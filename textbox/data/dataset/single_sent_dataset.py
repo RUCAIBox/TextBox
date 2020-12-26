@@ -74,7 +74,9 @@ class SingleSentenceDataset(Dataset):
             for sent_list in self.text_data:
                 for text in sent_list:
                     word_list.extend(text)
-            tokens = [token for token, _ in collections.Counter(word_list).items()]
+            token_count = [(count, token) for token, count in collections.Counter(word_list).items()]
+            token_count.sort(reverse=True)
+            tokens = [word for count, word in token_count]
             tokens = [self.padding_token, self.unknown_token, self.sos_token, self.eos_token] + tokens
             tokens = tokens[:self.max_vocab_size]
 
@@ -84,7 +86,9 @@ class SingleSentenceDataset(Dataset):
             word_list = list()
             for text in self.text_data:
                 word_list.extend(text)
-            tokens = [token for token, _ in collections.Counter(word_list).items()]
+            token_count = [(count, token) for token, count in collections.Counter(word_list).items()]
+            token_count.sort(reverse=True)
+            tokens = [word for count, word in token_count]
             tokens = [self.padding_token, self.unknown_token, self.sos_token, self.eos_token] + tokens
             tokens = tokens[:self.max_vocab_size]
 

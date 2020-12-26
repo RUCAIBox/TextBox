@@ -2,6 +2,10 @@
 # @Author : Junyi Li
 # @Email  : lijunyi@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2020/12/25
+# @Author : Tianyi Tang
+# @Email  : steventang@ruc.edu.cn
 
 import torch
 import torch.nn as nn
@@ -36,7 +40,7 @@ class RNNEncDec(ConditionalGenerator):
         self.beam_size = config['beam_size']
         self.strategy = config['decoding_strategy']
 
-        if (self.strategy not in ['topk_sampling', 'beam_search']):
+        if (self.strategy not in ['topk_sampling', 'greedy_search', 'beam_search']):
             raise NotImplementedError("{} decoding strategy not implemented".format(self.strategy))
 
         self.padding_token_idx = dataset.padding_token_idx
@@ -73,7 +77,7 @@ class RNNEncDec(ConditionalGenerator):
         # parameters initialization
         self.apply(xavier_normal_initialization)
 
-    def _topk_sampling_generate(self, bid, encoder_states, encoder_outputs, encoder_masks):
+    def _topk_or_greedy_generate(self, bid, encoder_states, encoder_outputs, encoder_masks, idx2token, strategy):
         decoder_states = encoder_states[:, bid, :].unsqueeze(1)
         generate_tokens = []
         input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
@@ -88,7 +92,10 @@ class RNNEncDec(ConditionalGenerator):
                 decoder_outputs, decoder_states = self.decoder(decoder_input,
                                                             decoder_states)
             token_logits = self.vocab_linear(decoder_outputs)
-            token_idx = topk_sampling(token_logits)
+            if (strategy == 'topk'):
+                token_idx = topk_sampling(token_logits)
+            elif (strategy == 'greedy'):
+                token_idx = token_logits.argmax(dim=-1)
             token_idx = token_idx.item()
 
             if token_idx == self.eos_token_idx:
@@ -97,8 +104,8 @@ class RNNEncDec(ConditionalGenerator):
                 generate_tokens.append(idx2token[token_idx])
                 input_seq = torch.LongTensor([[token_idx]]).to(self.device)
         return generate_tokens
-
-    def _beam_search_generate(self, bid, encoder_states, encoder_outputs, encoder_masks):
+    
+    def _beam_search_generate(self, bid, encoder_states, encoder_outputs, encoder_masks, idx2token):
         decoder_states = encoder_states[:, bid, :].unsqueeze(1)
         encoder_output = encoder_outputs[bid, :, :]
         encoder_mask = encoder_masks[bid, :]
@@ -111,22 +118,21 @@ class RNNEncDec(ConditionalGenerator):
             exp_encoder_output = encoder_output.repeat(hyp_num, 1, 1)
             exp_encoder_mask = encoder_mask.repeat(hyp_num, 1)
             input_seq = [hyp[-1] for hyp in hypthetic_token_idx]
-            input_seq = torch.tensor(input_seq).to(self.device)
+            input_seq = torch.tensor(input_seq).unsqueeze(1).to(self.device)
             decoder_input = self.target_token_embedder(input_seq)
 
             if self.attention_type is not None:
-                decoder_outputs, decoder_states, _ = self.decoder(decoder_input, decoder_states, encoder_output, encoder_mask)
+                decoder_outputs, decoder_states, _ = self.decoder(decoder_input, decoder_states, exp_encoder_output, exp_encoder_mask)
             else:
                 decoder_outputs, decoder_states = self.decoder(decoder_input, decoder_states)
-            token_logits = self.vocab_linear(decoder_outputs)
+            token_logits = self.vocab_linear(decoder_outputs).squeeze(1)
             token_probs = F.log_softmax(token_logits, dim=-1)
-            
+
             live_hyp_num = self.beam_size - len(completed_hypotheses)
             tmp_hyp_scores = (hyp_scores.unsqueeze(1).expand_as(token_probs) + token_probs).view(-1)
             top_scores, top_pos = torch.topk(tmp_hyp_scores, k=live_hyp_num)
-            assert len(self.target_vocab_size) == token_probs.size(-1)
-            hyp_ids = top_pos / len(self.target_vocab_size)
-            word_ids = top_pos % len(self.target_vocab_size)
+            hyp_ids = top_pos / self.target_vocab_size
+            word_ids = top_pos % self.target_vocab_size
 
             new_hypotheses = []
             new_ids = []
@@ -140,16 +146,19 @@ class RNNEncDec(ConditionalGenerator):
                     new_hypotheses.append(new_hyp)
                     new_ids.append(hyp_id)
                     new_scores.append(score)
-            
+
+            if (len(completed_hypotheses) == self.beam_size):
+                break
+
             new_ids = torch.tensor(new_ids).to(self.device)
-            decoder_states = decoder_states[new_ids]
+            decoder_states = decoder_states[:, new_ids, :]
             hypthetic_token_idx = new_hypotheses
             hyp_scores = torch.tensor(new_scores).to(self.device)
         
-        if (len(completed_hypotheses) == 0):
-            return hypthetic_token_idx[0][1:]
-        else:
-            return max(completed_hypotheses, key = lambda hyp: hyp[1])[0]
+        generate_idx = hypthetic_token_idx[0][1:] if (len(completed_hypotheses) == 0) \
+                     else max(completed_hypotheses, key = lambda hyp: hyp[1])[0]
+        generate_tokens = [idx2token[idx.item()] for idx in generate_idx]
+        return generate_tokens
 
     def generate(self, eval_dataloader):
         generate_corpus = []
@@ -167,11 +176,12 @@ class RNNEncDec(ConditionalGenerator):
             encoder_masks = torch.ne(source_text, self.padding_token_idx)
             for bid in range(source_text.size(0)):
                 if (self.strategy == 'topk_sampling'):
-                    generate_tokens = self._topk_sampling_generate(bid, encoder_states, encoder_outputs, encoder_masks)
-                    generate_corpus.append(generate_tokens)
+                    generate_tokens = self._topk_sampling_generate(bid, encoder_states, encoder_outputs, encoder_masks, idx2token, 'topk')
+                elif (self.strategy == 'greedy_search'):
+                    generate_tokens = self._topk_or_greedy_generate(bid, encoder_states, encoder_outputs, encoder_masks, idx2token, 'greedy')
                 elif (self.strategy == 'beam_search'):
-                    generate_tokens = self._beam_search_generate(bid, encoder_states, encoder_outputs, encoder_masks)
-                    generate_corpus.append(generate_tokens)
+                    generate_tokens = self._beam_search_generate(bid, encoder_states, encoder_outputs, encoder_masks, idx2token)
+                generate_corpus.append(generate_tokens)
         
         return generate_corpus
 

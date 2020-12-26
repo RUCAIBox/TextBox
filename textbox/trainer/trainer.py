@@ -891,6 +891,8 @@ class MaskGANTrainer(GANTrainer):
 
 
 class LeakGANTrainer(GANTrainer):
+    r""" Specified for leakgan trainer
+    """
     def __init__(self, config, model):
         super(LeakGANTrainer, self).__init__(config, model)
         self.interleaved_pretrain_epoch = config['interleaved_pretrain_epoch']

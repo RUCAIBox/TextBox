@@ -38,7 +38,6 @@ class LeakGANGenerator(UnconditionalGenerator):
         self.gpu_id = config['gpu_id']
         self.eval_generate_num = config['eval_generate_num']
 
-        # self.LSTM = nn.LSTM(self.embedding_size, self.hidden_size)
         self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size)
         self.vocab_projection = nn.Linear(self.hidden_size, self.vocab_size)
 
@@ -53,7 +52,7 @@ class LeakGANGenerator(UnconditionalGenerator):
         # self.init_params()
 
     def pretrain_loss(self, corpus, dis):
-        """Returns the pretrain_generator Loss for predicting target sequence.
+        r"""Returns the pretrain_generator Loss for predicting target sequence.
 
         Args:
             corpus: include input_idx(bs*seq_len), target_idx(bs*seq_len) ,
@@ -77,7 +76,7 @@ class LeakGANGenerator(UnconditionalGenerator):
         return manager_loss, work_cn_loss
 
     def calculate_loss(self, targets, dis):
-        """Returns the nll for test predicting target sequence.
+        r"""Returns the nll for test predicting target sequence.
 
         Args:
             corpus: include input_idx(bs*seq_len), target_idx(bs*seq_len) ,
@@ -98,7 +97,7 @@ class LeakGANGenerator(UnconditionalGenerator):
         return worker_loss
 
     def forward(self, idx, inp, work_hidden, mana_hidden, feature, real_goal, train=False, pretrain=False):
-        """Embeds input and sample on token at a time (seq_len = 1)
+        r"""Embeds input and sample on token at a time (seq_len = 1)
 
         Args:
             idx: index of current token in sentence
@@ -152,7 +151,7 @@ class LeakGANGenerator(UnconditionalGenerator):
         return out, cur_goal, work_hidden, mana_hidden
 
     def leakgan_forward(self, targets, dis, train=False, pretrain=False):
-        """ Get all feature and goals according to given sentences
+        r""" Get all feature and goals according to given sentences
 
         Args:
             targets: batch_size * max_seq_len, pad eos token if the original sentence length less than max_seq_len
@@ -483,7 +482,7 @@ class LeakGANGenerator(UnconditionalGenerator):
             self.truncated_normal_(param, std=stddev)
 
     def get_reward_leakgan(self, sentences, rollout_num, dis, current_k=0):
-        """get reward via Monte Carlo search for LeakGAN
+        r"""get reward via Monte Carlo search for LeakGAN
 
         Args:
             sentences: size of batch_size * max_seq_len

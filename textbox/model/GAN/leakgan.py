@@ -15,6 +15,9 @@ from textbox.module.Discriminator.LeakGANDiscriminator import LeakGANDiscriminat
 
 
 class LeakGAN(GenerativeAdversarialNet):
+    r""" Long Text Generation via Adversarial Training with Leaked Information
+
+    """
 
     def __init__(self, config, dataset):
         super(LeakGAN, self).__init__(config, dataset)

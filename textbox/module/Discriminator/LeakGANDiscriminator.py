@@ -51,6 +51,8 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         return self.dropout(tau * non_linear + (1 - tau) * data)
 
     def forward(self, data):  # b * len
+        r""" Get current sentence feature by CNN
+        """
         C_tilde = self.get_feature(data)
         # y_hat = torch.sigmoid(self.W_O(C_tilde)).squeeze(1) # b
         pred = self.W_O(C_tilde)
@@ -58,7 +60,7 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         return pred
 
     def get_feature(self, inp):
-        """Get feature vector of given sentences
+        r"""Get feature vector of given sentences
 
         Args:
             inp: batch_size * max_seq_len
@@ -79,7 +81,7 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         return C_tilde
 
     def calculate_loss(self, real_data, fake_data):
-        """ calculate loss and acc
+        r""" calculate loss and acc
         """
         real_y = self.forward(real_data)
         fake_y = self.forward(fake_data)
@@ -99,14 +101,14 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         return loss, acc
 
     def init_params(self):
-        """ used for truncated_normal inti params
+        r""" used for truncated_normal inti params
         """
         for param in self.parameters():
             stddev = 1 / math.sqrt(param.shape[0])
             self.truncated_normal_(param, std=stddev)
 
     def truncated_normal_(self, tensor, mean=0, std=1):
-        """ Implemented by @ruotianluo
+        r""" Implemented by @ruotianluo
         See https://discuss.pytorch.org/t/implementing-truncated-normal-initializer/4778/15
 
         Returns:

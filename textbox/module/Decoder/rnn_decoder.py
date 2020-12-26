@@ -2,6 +2,10 @@
 # @Author : Junyi Li
 # @Email  : lijunyi@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2020/12/26
+# @Author : Jinhao Jiang
+# @Email  : jiangjinhao@std.uestc.edu.cn
 
 import torch
 from torch import nn
@@ -133,7 +137,7 @@ class AttentionalRNNDecoder(torch.nn.Module):
                 inputs = input_embeddings[:, step, :].unsqueeze(1)
                 context = None
 
-            hidden_states = hidden_states.contiguous()
+            # hidden_states = hidden_states.contiguous() # if hidden_states is (h0,c0) can not operate like this
             outputs, hidden_states = self.decoder(inputs, hidden_states)
 
             if self.attention_type == 'LuongAttention' and context is None:

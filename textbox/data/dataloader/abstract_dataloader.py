@@ -2,6 +2,11 @@
 # @Author : Gaole He
 # @email  : hegaole@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2020/12/26
+# @Author : Jinhao Jiang
+# @Email  : jiangjinhao@std.uestc.edu.cn
+
 """
 textbox.data.dataloader.abstract_dataloader
 ################################################
@@ -49,6 +54,7 @@ class AbstractDataLoader(object):
         self.unknown_token = SpecialTokens.UNK
         self.sos_token = SpecialTokens.SOS
         self.eos_token = SpecialTokens.EOS
+        self.mask_token = SpecialTokens.MASK
 
     def get_vocab(self, dataset):
         if 'idx2token' in dataset:
@@ -152,6 +158,12 @@ class AbstractDataLoader(object):
         r"""The `int` index of the special token indicating the padding token.
         """
         return self.token2idx[self.padding_token]
+
+    @property
+    def mask_token_idx(self):
+        r"""The `int` index of the special token indicating the mask token.
+        """
+        return self.token2idx[self.mask_token]
 
     @property
     def unknown_token_idx(self):

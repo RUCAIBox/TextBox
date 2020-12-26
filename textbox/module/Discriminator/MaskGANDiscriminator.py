@@ -13,7 +13,7 @@ from textbox.model.init import xavier_normal_initialization
 
 
 class MaskGANDiscriminator(GenerativeAdversarialNet):
-    r"""RNN-based Encoder-Decoder architecture for MaskGAN discriminator
+    r""" RNN-based Encoder-Decoder architecture for MaskGAN discriminator
     """
 
     def __init__(self, config, dataset):
@@ -141,6 +141,7 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
         components with the Discriminator. This estimates the V(s_t), where the state s_t = x_0,...,x_t-1.
         Args:
             fake_sequence: sequence generated bs*seq_len
+
         Returns:
             values: bs*seq_len
         """

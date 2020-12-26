@@ -12,7 +12,7 @@ from textbox.module.Discriminator.MaskGANDiscriminator import MaskGANDiscriminat
 
 
 class MaskGAN(GenerativeAdversarialNet):
-    r"""MaskGan: better text generation via filling in the mask.
+    r""" MaskGan: better text generation via filling in the mask.
     """
 
     def __init__(self, config, dataset):
@@ -20,7 +20,7 @@ class MaskGAN(GenerativeAdversarialNet):
         self.source_vocab_size = self.vocab_size
         self.target_vocab_size = self.vocab_size
         self.generator = MaskGANGenerator(config, dataset)
-        self.discriminator = MaskGANDiscriminator(config, dataset, self.generator.target_token_embedder)
+        self.discriminator = MaskGANDiscriminator(config, dataset)
         self.pad_idx = dataset.padding_token_idx
         self.eos_idx = dataset.eos_token_idx
         self.mask_strategy = config['mask_strategy']

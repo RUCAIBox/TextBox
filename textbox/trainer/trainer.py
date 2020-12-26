@@ -780,7 +780,6 @@ class ConditionalTrainer(Trainer):
 
         return result
 
-
 class MaskGANTrainer(GANTrainer):
     r""" Trainer specifically designed for MaskGAN training process.
     """
@@ -1540,6 +1539,7 @@ class LeakGANTrainer(GANTrainer):
                 for i, s in enumerate(sample):
                     tmp += str(i)
                     tmp += ": "
+                    tmp += s.strip()
                     tmp += "\n"
                 self.logger.info('>>>> [Adv] Adv and pretrain test result: {}'.format(test_result))
                 self.logger.info('>>>> [Adv] Adv and pretrain test result samples: {}'.format(tmp))

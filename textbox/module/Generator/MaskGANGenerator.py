@@ -16,7 +16,7 @@ from textbox.model.init import xavier_normal_initialization
 
 
 class MaskGANGenerator(GenerativeAdversarialNet):
-    r"""RNN-based Encoder-Decoder architecture for maskgan generator
+    r""" RNN-based Encoder-Decoder architecture for maskgan generator
     """
 
     def __init__(self, config, dataset):
@@ -43,7 +43,6 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         self.eos_token_idx = dataset.eos_token_idx
         self.mask_token_idx = dataset.mask_token_idx
         self.max_length = config['max_seq_length']
-
         self.embedder = nn.Embedding(self.vocab_size, self.embedding_size)
 
         # note!!! batch_first is true

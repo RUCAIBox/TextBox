@@ -2,6 +2,10 @@
 # @Author : Junyi LI
 # @Email  : lijunyi@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2020/12/27
+# @Author : Tianyi Tang
+# @Email  : steventang@ruc.edu.cn
 
 import torch
 import torch.nn as nn
@@ -14,12 +18,12 @@ def topk_sampling(logits, temperature=1.0, top_k=0, top_p=0.9):
     Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
 
     Args:
-        logits: logits distribution
+        logits (torch.Tensor): logits distribution
         top_k >0: keep only top k tokens with highest probability (top-k filtering).
         top_p >0.0: keep the top tokens with cumulative probability >= top_p (nucleus filtering).
 
     Return:
-        torch.tensor, the chosen index of token.
+        torch.Tensor: the chosen index of token.
     """
     logits = logits / temperature
     top_k = min(top_k, logits.size(-1))  # Safety check
@@ -53,3 +57,14 @@ def topk_sampling(logits, temperature=1.0, top_k=0, top_p=0.9):
     token_idx = torch.multinomial(probabilities, 1)
 
     return token_idx
+
+def greedy_search(logits):
+    r"""Find the index of max logits
+
+    Args:
+        logits (torch.Tensor): logits distribution
+
+    Return:
+        torch.Tensor: the chosen index of token
+    """
+    return logits.argmax(dim=-1)

@@ -75,7 +75,7 @@ class SingleSentenceDataset(Dataset):
                 for text in sent_list:
                     word_list.extend(text)
             tokens = [token for token, _ in collections.Counter(word_list).items()]
-            tokens = [self.padding_token, self.unknown_token, self.sos_token, self.eos_token] + tokens
+            tokens = [self.padding_token, self.unknown_token, self.sos_token, self.eos_token, self.mask_token] + tokens
             tokens = tokens[:self.max_vocab_size]
 
             self.idx2token = dict(zip(range(self.max_vocab_size), tokens))
@@ -85,7 +85,7 @@ class SingleSentenceDataset(Dataset):
             for text in self.text_data:
                 word_list.extend(text)
             tokens = [token for token, _ in collections.Counter(word_list).items()]
-            tokens = [self.padding_token, self.unknown_token, self.sos_token, self.eos_token] + tokens
+            tokens = [self.padding_token, self.unknown_token, self.sos_token, self.eos_token, self.mask_token] + tokens
             tokens = tokens[:self.max_vocab_size]
 
             self.idx2token = dict(zip(range(self.max_vocab_size), tokens))

@@ -1,7 +1,11 @@
-# @Time   : 2020/11/16
-# @Author : Gaole He
-# @Email  : hegaole@ruc.edu.cn
+# @Time   : 2020/11/16, 2020/12/27
+# @Author : Gaole He, Jinhao Jiang
+# @Email  : hegaole@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
 
+import os
+import nltk
+import collections
+import random
 import numpy as np
 from logging import getLogger
 from textbox.utils.enum_type import SpecialTokens
@@ -17,6 +21,7 @@ class Dataset(object):
         self.unknown_token = SpecialTokens.UNK
         self.sos_token = SpecialTokens.SOS
         self.eos_token = SpecialTokens.EOS
+        self.mask_token = SpecialTokens.MASK
 
         self.max_vocab_size = config['max_vocab_size']
         self.max_seq_length = config['max_seq_length']
@@ -90,16 +95,19 @@ class Dataset(object):
         """
         return self.token2idx[self.eos_token]
 
+    @property
+    def mask_token_id(self):
+        r"""The `int` index of the special token indicating the mask token.
+        """
+        return self.token2idx[self.mask_token]
+
     @staticmethod
     def _calcu_split_ids(tot, ratios):
         r"""Given split ratios, and total number, calculate the number of each part after splitting.
-
         Other than the first one, each part is rounded down.
-
         Args:
             tot (int): Total number.
             ratios (list): List of split ratios. No need to be normalized.
-
         Returns:
             list: Number of each part after splitting.
         """
@@ -110,13 +118,10 @@ class Dataset(object):
 
     def split_by_ratio(self, ratios):
         r"""Split dataset by ratios.
-
         Args:
             ratios (list): List of split ratios. No need to be normalized.
-
         Returns:
             list: List of : `list -> int`, whose interaction features has been splitted.
-
         Note:
             Other than the first one, each part is rounded down.
         """
@@ -124,7 +129,6 @@ class Dataset(object):
 
     def build(self):
         r"""Prepare splitted data elements for dataloader.
-
         Returns:
             list: List of dict : provide necessary elements for dataloader.
         """

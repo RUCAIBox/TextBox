@@ -1,0 +1,8 @@
+embedding_size: 64
+ffn_size: 128
+num_dec_layers: 6
+num_heads: 8
+attn_dropout_ratio: 0.2
+attn_weight_dropout_ratio: 0.2
+ffn_dropout_ratio: 0.2
+ffn_activation_func: gelu

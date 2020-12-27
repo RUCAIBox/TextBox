@@ -3,9 +3,9 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2020/12/2, 2020/11/27, 2020/12/3
-# @Author : Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang
-# @Email  : jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn
+# @Time   : 2020/12/2, 2020/11/27, 2020/12/3, 2020/12/15
+# @Author : Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang, Jinhao Jiang
+# @Email  : jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
 
 r"""
 textbox.trainer.trainer
@@ -13,7 +13,6 @@ textbox.trainer.trainer
 """
 
 import os
-import itertools
 import torch
 import torch.optim as optim
 import numpy as np
@@ -26,8 +25,7 @@ from logging import getLogger
 
 from textbox.module.Optimizer.optim import ScheduledOptim
 from textbox.evaluator import NgramEvaluator, TranslationEvaluator, SummarizationEvaluator
-from textbox.utils import ensure_dir, get_local_time, early_stopping, calculate_valid_score, dict2str, \
-    DataLoaderType, EvaluatorType
+from textbox.utils import ensure_dir, get_local_time, early_stopping
 
 
 class AbstractTrainer(object):
@@ -42,14 +40,12 @@ class AbstractTrainer(object):
 
     def fit(self, train_data):
         r"""Train the model based on the train data.
-
         """
 
         raise NotImplementedError('Method [next] should be implemented.')
 
     def evaluate(self, eval_data):
         r"""Evaluate the model based on the eval data.
-
         """
 
         raise NotImplementedError('Method [next] should be implemented.')
@@ -67,7 +63,6 @@ class Trainer(AbstractTrainer):
     Initializing the Trainer needs two parameters: `config` and `model`. `config` records the parameters information
     for controlling training and evaluation, such as `learning_rate`, `epochs`, `eval_step` and so on.
     More information can be found in [placeholder]. `model` is the instantiated object of a Model Class.
-
     """
 
     def __init__(self, config, model):
@@ -79,8 +74,6 @@ class Trainer(AbstractTrainer):
         self.epochs = config['epochs']
         self.eval_step = min(config['eval_step'], self.epochs)
         self.stopping_step = config['stopping_step']
-        self.valid_metric = config['valid_metric'].lower()
-        self.valid_metric_bigger = config['valid_metric_bigger']
         self.test_batch_size = config['eval_batch_size']
         self.device = config['device']
         self.embedding_size = config['embedding_size']
@@ -108,11 +101,6 @@ class Trainer(AbstractTrainer):
             self.evaluator = SummarizationEvaluator(config)
         else:
             self.evaluator = NgramEvaluator(config)
-        # self.eval_type = config['eval_type']
-        # if self.eval_type == EvaluatorType.INDIVIDUAL:
-        #     self.evaluator = LossEvaluator(config)
-        # else:
-        #     self.evaluator = TopKEvaluator(config)
 
         self.item_tensor = None
         self.tot_item_num = None
@@ -155,7 +143,6 @@ class Trainer(AbstractTrainer):
         self.model.train()
         total_loss = None
         for batch_idx, data in enumerate(train_data):
-            # interaction = interaction.to(self.device)
             self.optimizer.zero_grad()
             losses = self.model.calculate_loss(data, epoch_idx=epoch_idx)
             if isinstance(losses, tuple):
@@ -184,8 +171,6 @@ class Trainer(AbstractTrainer):
         self.model.eval()
         total_loss = None
         for batch_idx, data in enumerate(valid_data):
-            # interaction = interaction.to(self.device)
-            # self.optimizer.zero_grad()
             losses = self.model.calculate_loss(data)
             if isinstance(losses, tuple):
                 loss = sum(losses)
@@ -195,7 +180,6 @@ class Trainer(AbstractTrainer):
                 loss = losses
                 total_loss = losses.item() if total_loss is None else total_loss + losses.item()
             self._check_nan(loss)
-        # self.optimizer.zero_grad()
         valid_loss = total_loss / len(valid_data)
         ppl = np.exp(valid_loss)
         return valid_loss, ppl
@@ -278,8 +262,6 @@ class Trainer(AbstractTrainer):
         Returns:
              (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
         """
-        # if hasattr(self.model, 'train_preparation'):
-        #     self.model.train_preparation(train_data=train_data, valid_data=valid_data)
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
             training_start_time = time()
@@ -438,52 +420,39 @@ class GANTrainer(Trainer):
     def _build_module_optimizer(self, module):
         r"""Init the Module Optimizer
 
+        Args:
+            module (torch.nn.Mudule): Mudule class of torch.nn needed optimizer
+
         Returns:
             torch.optim: the optimizer
         """
-        multi_flag = False
-        if module._get_name() == 'LeakGANGenerator':
-            manager_params, worker_params = module.split_params()
-            multi_flag = True
-
         if self.learner.lower() == 'adam':
-            if multi_flag:
-                manager_opt = optim.Adam(manager_params, lr=self.learning_rate)
-                worker_opt = optim.Adam(worker_params, lr=self.learning_rate)
-            else:
-                optimizer = optim.Adam(module.parameters(), lr=self.learning_rate)
+            optimizer = optim.Adam(module.parameters(), lr=self.learning_rate)
         elif self.learner.lower() == 'sgd':
-            if multi_flag:
-                manager_opt = optim.SGD(manager_params, lr=self.learning_rate)
-                worker_opt = optim.SGD(worker_params, lr=self.learning_rate)
-            else:
-                optimizer = optim.SGD(module.parameters(), lr=self.learning_rate)
+            optimizer = optim.SGD(module.parameters(), lr=self.learning_rate)
         elif self.learner.lower() == 'adagrad':
-            if multi_flag:
-                manager_opt = optim.Adagrad(manager_params, lr=self.learning_rate)
-                worker_opt = optim.Adagrad(worker_params, lr=self.learning_rate)
-            else:
-                optimizer = optim.Adagrad(module.parameters(), lr=self.learning_rate)
+            optimizer = optim.Adagrad(module.parameters(), lr=self.learning_rate)
         elif self.learner.lower() == 'rmsprop':
-            if multi_flag:
-                manager_opt = optim.RMSprop(manager_params, lr=self.learning_rate)
-                worker_opt = optim.RMSprop(worker_params, lr=self.learning_rate)
-            else:
-                optimizer = optim.RMSprop(module.parameters(), lr=self.learning_rate)
+            optimizer = optim.RMSprop(module.parameters(), lr=self.learning_rate)
         else:
             self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
-            if multi_flag:
-                manager_opt = optim.Adam(manager_params, lr=self.learning_rate)
-                worker_opt = optim.Adam(worker_params, lr=self.learning_rate)
-            else:
-                optimizer = optim.Adam(module.parameters(), lr=self.learning_rate)
+            optimizer = optim.Adam(module.parameters(), lr=self.learning_rate)
 
-        if multi_flag:
-            return (manager_opt, worker_opt)
-        else:
-            return optimizer
+        return optimizer
 
     def _optimize_step(self, losses, total_loss, model, opt):
+        r"""The opt uses the cliped losses to conduct an optimize step to optimize model
+        and sum up losses to the total_loss.
+
+        Args:
+            losses (torch.Tensor or tuple): The loss to be backward.
+            total_loss (Float): Total loss in an epoch.
+            model (torch.nn.Mudule): The model to be optimized.
+            opt (torch.optim): The optimizer of the model.
+
+        Returns:
+            torch.Tensor or tuple: Total loss in an epoch, shape: [].
+        """
         if isinstance(losses, tuple):
             loss = sum(losses)
             loss_tuple = tuple(per_loss.item() for per_loss in losses)
@@ -493,29 +462,13 @@ class GANTrainer(Trainer):
             total_loss = losses.item() if total_loss is None else total_loss + losses.item()
         self._check_nan(loss)
 
-        if model._get_name() == "LeakGANGenerator":
-            self._optimize_multi_step(losses, model, opt)
-            return total_loss
-
         opt.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
         opt.step()
         return total_loss
 
-    def _optimize_multi_step(self, losses, model, opts):
-        for i, (opt, loss) in enumerate(zip(opts, losses)):
-            opt.zero_grad()
-            loss.backward(retain_graph=True if i < len(opts) - 1 else False)
-            opt.step()
-
     def _save_checkpoint(self, epoch):
-        r"""Store the model parameters information and training information.
-
-        Args:
-            epoch (int): the current epoch id
-
-        """
         state = {
             'config': self.config,
             'epoch': epoch,
@@ -526,12 +479,28 @@ class GANTrainer(Trainer):
         torch.save(state, self.saved_model_file)
 
     def _add_pad(self, data):
+        r"""Pad the data to the max length of corpus.
+
+        Args:
+            data (torch.Tensor): The data to be padded, shape: [batch_size, max_batch_length].
+
+        Returns:
+            torch.Tensor: The padded data, shape: [batch_size, max_seq_length].
+        """
         batch_size = data.shape[0]
         padded_data = torch.full((batch_size, self.max_length), self.pad_idx, dtype=torch.long, device=self.device)
         padded_data[:, : data.shape[1]] = data
         return padded_data
 
     def _get_real_data(self, train_data):
+        r"""Get the target text index of the corpus train_datas.
+
+        Args:
+            train_data (DataLoader): the train data.
+
+        Returns:
+            torch.Tensor: The target text index, shape: [batch_size, max_batch_length].
+        """
         real_datas = []
         for corpus in train_data:
             real_data = corpus['target_idx']
@@ -557,7 +526,6 @@ class GANTrainer(Trainer):
         total_loss = None
 
         for batch_idx, data in enumerate(train_data):
-            # interaction = interaction.to(self.device)
             losses = self.model.calculate_g_train_loss(data, epoch_idx=epoch_idx)
             total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
         total_loss = [l / len(train_data) for l in total_loss] if isinstance(total_loss, tuple) else total_loss / len(
@@ -584,7 +552,7 @@ class GANTrainer(Trainer):
         fake_data = self.model.sample(self.d_sample_num)
         fake_dataloader = DataLoader(fake_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
 
-        for _ in range(self.d_sample_training_epochs):
+        for _ in range(self.d_sample_training_epochs):  # d_epoch
             for real_data, fake_data in zip(real_dataloader, fake_dataloader):
                 losses = self.model.calculate_d_train_loss(real_data, fake_data, epoch_idx=epoch_idx)
                 total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
@@ -614,18 +582,6 @@ class GANTrainer(Trainer):
         return total_loss
 
     def fit(self, train_data, valid_data=None, verbose=True, saved=True):
-        r"""Train the model based on the train data and the valid data.
-
-        Args:
-            train_data (DataLoader): the train data
-            valid_data (DataLoader, optional): the valid data, default: None.
-                                               If it's None, the early_stopping is invalid.
-            verbose (bool, optional): whether to write training and evaluation information to logger, default: True
-            saved (bool, optional): whether to save the model parameters, default: True
-
-        Returns:
-             (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
-        """
         # generator pretraining
         if verbose:
             self.logger.info("Start generator pretraining...")
@@ -683,57 +639,40 @@ class TextGANTrainer(GANTrainer):
 
     def __init__(self, config, model):
         super(TextGANTrainer, self).__init__(config, model)
+        self.adversarail_g_epochs = config['adversarail_g_epochs']
 
     def _d_train_epoch(self, train_data, epoch_idx):
-        r"""Train the discriminator module in an epoch
-
-        Args:
-            train_data (DataLoader): the train data
-            epoch_idx (int): the current epoch id
-
-        Returns:
-            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
-            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
-            tuple which includes the sum of loss in each part.
-        """
         self.model.discriminator.train()
         total_loss = None
         real_data = self._get_real_data(train_data)
         real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
 
         for _ in range(self.d_sample_training_epochs):
-            for real_data in real_dataloader:
+            for idx, real_data in enumerate(real_dataloader):
                 fake_data, z = self.model.sample()
                 losses = self.model.calculate_d_train_loss(real_data, fake_data, z, epoch_idx=epoch_idx)
                 total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
+                if (idx * self.model.batch_size >= self.d_sample_num):
+                    break
 
-        return total_loss / len(real_dataloader) / self.d_sample_training_epochs
+        return total_loss / min(len(real_dataloader), self.d_sample_num // self.model.batch_size) / self.d_sample_training_epochs
 
     def _adversarial_train_epoch(self, train_data, epoch_idx):
-        r"""Adversarial training in an epoch
-
-        Args:
-            train_data (DataLoader): the train data
-            epoch_idx (int): the current epoch id
-
-        Returns:
-            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
-            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
-            tuple which includes the sum of loss in each part.
-        """
         self.model.generator.train()
         total_loss = None
         real_data = self._get_real_data(train_data)
         real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
 
-        for real_data in real_dataloader:
+        for idx, real_data in enumerate(real_dataloader):
+            if (idx == self.adversarail_g_epochs):
+                break
             losses = self.model.calculate_g_adversarial_loss(real_data, epoch_idx=epoch_idx)
             total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
 
         for epoch_idx in range(self.adversarail_d_epochs):
             self._d_train_epoch(train_data, epoch_idx=epoch_idx)
 
-        return total_loss / len(real_dataloader)
+        return total_loss / min(len(real_dataloader), self.adversarail_g_epochs)
 
 
 class RankGANTrainer(GANTrainer):
@@ -798,8 +737,6 @@ class RankGANTrainer(GANTrainer):
             d_loss += self._d_train_epoch(train_data, epoch_idx=epoch_idx)
         d_loss = d_loss / self.adversarail_d_epochs
 
-        # d_output = "d_loss: %f" % (d_loss)
-        # self.logger.info(d_output)
         return total_loss
 
 
@@ -951,3 +888,369 @@ class MaskGANTrainer(GANTrainer):
             critic_total_loss = self._optimize_step(critic_losses, critic_total_loss, self.model.discriminator,
                                                     self.d_optimizer)
         return (dis_total_loss / d_num, gen_total_loss / g_num, critic_total_loss / g_num)
+
+
+class LeakGANTrainer(GANTrainer):
+    def __init__(self, config, model):
+        super(LeakGANTrainer, self).__init__(config, model)
+        self.interleaved_pretrain_epoch = config['interleaved_pretrain_epoch']
+        self.adversarail_g_epochs = config['adversarail_g_epochs']
+        self.g_optimizer = self._build_module_optimizer(self.model.generator)  # (manager_opt, worker_opt)
+        self.d_optimizer = self._build_module_optimizer(self.model.discriminator)
+        self.iters_num = config['iter_num']
+        self.end_idx = model.end_idx
+
+    def _build_module_optimizer(self, module):
+        # specified for leakgan
+        gen_lr = 0.001
+        dis_lr = 0.00005
+        multi_flag = False
+        if module._get_name() == 'LeakGANGenerator':
+            manager_params, worker_params = module.split_params()
+            multi_flag = True
+
+        if self.learner.lower() == 'adam':
+            if multi_flag:
+                manager_opt = optim.Adam(manager_params, lr=gen_lr)
+                worker_opt = optim.Adam(worker_params, lr=gen_lr)
+            else:
+                optimizer = optim.Adam(module.parameters(), lr=dis_lr)
+        elif self.learner.lower() == 'sgd':
+            if multi_flag:
+                manager_opt = optim.SGD(manager_params, lr=gen_lr)
+                worker_opt = optim.SGD(worker_params, lr=gen_lr)
+            else:
+                optimizer = optim.SGD(module.parameters(), lr=dis_lr)
+        elif self.learner.lower() == 'adagrad':
+            if multi_flag:
+                manager_opt = optim.Adagrad(manager_params, lr=gen_lr)
+                worker_opt = optim.Adagrad(worker_params, lr=gen_lr)
+            else:
+                optimizer = optim.Adagrad(module.parameters(), lr=dis_lr)
+        elif self.learner.lower() == 'rmsprop':
+            if multi_flag:
+                manager_opt = optim.RMSprop(manager_params, lr=gen_lr)
+                worker_opt = optim.RMSprop(worker_params, lr=gen_lr)
+            else:
+                optimizer = optim.RMSprop(module.parameters(), lr=dis_lr)
+        else:
+            self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
+            if multi_flag:
+                manager_opt = optim.Adam(manager_params, lr=gen_lr)
+                worker_opt = optim.Adam(worker_params, lr=gen_lr)
+            else:
+                optimizer = optim.Adam(module.parameters(), lr=dis_lr)
+        if multi_flag:
+            return (manager_opt, worker_opt)
+        else:
+            return optimizer
+
+    def _optimize_step(self, losses, total_loss, model, opt):
+        if isinstance(losses, tuple):
+            loss = sum(losses)
+            loss_tuple = tuple(per_loss.item() for per_loss in losses)
+            total_loss = loss_tuple if total_loss is None else tuple(map(sum, zip(total_loss, loss_tuple)))
+        else:
+            loss = losses
+            total_loss = losses.item() if total_loss is None else total_loss + losses.item()
+        self._check_nan(loss)
+
+        if isinstance(losses, tuple):
+            for i, (o, loss) in enumerate(zip(opt, losses)):
+                o.zero_grad()
+                loss.backward(retain_graph=True if i < len(opt) - 1 else False)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
+                o.step()
+        else:
+            opt.zero_grad()
+            losses.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
+            opt.step()
+
+        return total_loss
+
+    def _generate_train_loss_output(self, epoch_idx, s_time, e_time, losses, train_info=""):
+        train_loss_output = "%straining [time: %.2fs, " % (train_info, e_time - s_time)
+        if isinstance(losses, dict):
+            for key, loss in losses.items():
+                train_loss_output += '%s: %.4f, ' % (key, loss)
+            train_loss_output = train_loss_output[:-2]
+        else:
+            train_loss_output += "train loss: %.4f" % losses
+        return train_loss_output + ']'
+
+    def _add_eos(self, data, length):
+        batch_size = data.shape[0]
+        padded_data = torch.full((batch_size, self.max_length), self.end_idx, dtype=torch.long, device=self.device)
+        for i in range(batch_size):
+            len = length[i].cpu().data
+            padded_data[i, :len] = data[i, :len]
+        return padded_data
+
+    def _get_real_data(self, train_data):
+        # use eos_idx pad not pad_idx
+        real_datas = []
+        for corpus in train_data:
+            real_data = corpus['target_idx']
+            length = corpus['target_length']
+            real_data = self._add_eos(real_data, length)
+            real_datas.append(real_data)
+
+        real_datas = torch.cat(real_datas, dim=0)
+        return real_datas
+
+    def _adversarial_train_epoch(self, train_data, epoch_idx):
+        self.model.generator.train()
+        total_g_loss = None
+        total_d_loss = 0
+        total_d_acc = 0
+        adv_mana_loss = 0
+        adv_work_loss = 0
+        adv_d_loss = 0
+        for e in range(self.adversarail_g_epochs):
+            losses = self.model.calculate_g_adversarial_loss(epoch_idx=e)
+            total_g_loss = self._optimize_step(losses, total_g_loss, self.model.generator, self.g_optimizer)
+        adv_mana_loss, adv_work_loss = total_g_loss
+        adv_mana_loss = adv_mana_loss / self.adversarail_g_epochs
+        adv_work_loss = adv_work_loss / self.adversarail_g_epochs
+
+        for e in range(self.adversarail_d_epochs):
+            loss_dict = self._d_train_epoch(train_data, epoch_idx=epoch_idx)
+            total_d_loss = total_d_loss + loss_dict['total_loss']
+            total_d_acc = total_d_acc + loss_dict['train_acc']
+        adv_d_loss = total_d_loss / self.adversarail_d_epochs
+        adv_c_loss = total_d_acc / self.adversarail_d_epochs
+        return {"mana_loss": adv_mana_loss, "work_loss": adv_work_loss, "dis_loss": adv_d_loss, "train_acc": adv_c_loss}
+
+    def _g_train_epoch(self, train_data, epoch_idx):
+        total_loss = None
+        real_data = self._get_real_data(train_data)
+        real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+        for batch_idx, data in enumerate(real_dataloader):
+            # interaction = interaction.to(self.device)
+            losses = self.model.calculate_g_train_loss(data, epoch_idx=epoch_idx)
+            total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
+        total_loss = [l / len(real_dataloader) for l in total_loss] if isinstance(total_loss,
+                                                                                  tuple) else total_loss / len(
+            train_data)
+        mana_loss, work_loss = total_loss
+        return {"mana_loss": mana_loss, "work_loss": work_loss}
+
+    def _d_train_epoch(self, train_data, epoch_idx):
+        total_loss = None
+        total_acc = 0
+        real_data = self._get_real_data(train_data)
+        real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+        # not need sample self.d_sample_num numbers becauese only train discriminator 5 batch
+        d_sample_num = (self.d_sample_training_epochs + 1) * self.model.batch_size
+        fake_data = self.model.sample(d_sample_num)
+
+        fake_dataloader = DataLoader(fake_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+
+        idx = 0
+        for real_data, fake_data in zip(real_dataloader, fake_dataloader):
+            # self.model.discriminator.eval() # pretraining not use dropout
+            if idx == self.d_sample_training_epochs:
+                break
+            losses, acc = self.model.calculate_d_train_loss(real_data, fake_data, epoch_idx=epoch_idx)
+            total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
+            total_acc = total_acc + acc
+            idx += 1
+
+        total_loss = total_loss / self.d_sample_training_epochs
+        total_acc = total_acc / self.d_sample_training_epochs
+
+        return {"total_loss": total_loss, "train_acc": total_acc}
+
+    def _save_checkpoint(self, epoch, postfix=None):
+        state = {
+            'config': self.config,
+            'epoch': epoch,
+            'cur_step': self.cur_step,
+            'best_valid_score': self.best_valid_score,
+            'state_dict': self.model.state_dict()
+        }
+        if postfix is not None:
+            path = self.saved_model_file + "_" + str(epoch) + "_" + postfix
+            torch.save(state, path)
+            return path
+        else:
+            torch.save(state, self.saved_model_file)
+
+    def _load_generated_text(self):
+        r"""Load the generated text by our model to log.
+        """
+        with open(self.saved_text_file, 'r') as fin:
+            samples = []
+            for i in range(5):
+                text = fin.readline()
+                samples.append(text)
+            return samples
+
+    def fit(self, train_data, valid_data=None, verbose=True, saved=True):
+        # pretraining
+        if verbose:
+            self.logger.info(">> Start pretraining")
+        # generator pretraining
+        for epoch_idx in range(self.g_pretraining_epochs):  # 80
+            if verbose:
+                self.logger.info(">>>> [Pretrain Gen] Start %d / %d epochs generator pretraining" % (
+                    epoch_idx + 1, self.g_pretraining_epochs))
+            training_start_time = time()
+            train_loss = self._g_train_epoch(train_data, epoch_idx)
+            # self.g_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
+            training_end_time = time()
+            train_loss_output = \
+                self._generate_train_loss_output(epoch_idx + 1, training_start_time, training_end_time, train_loss,
+                                                 "generator pre")
+            train_loss_output = ">>>> " + train_loss_output
+            if verbose:
+                self.logger.info(train_loss_output)
+
+            if epoch_idx % 15 == 0:
+                self.logger.info(">>>> [Pretrain Gen] Save pretrain gen in epoch %d ..." % (epoch_idx + 1))
+                path = self._save_checkpoint(epoch_idx + 1, postfix="pretrain_gen")
+
+                self.model.eval()
+                test_result = self.evaluate(valid_data, model_file=path)
+                self.model.train()
+                sample = self._load_generated_text()
+                tmp = "\n"
+                for i, s in enumerate(sample):
+                    tmp += str(i)
+                    tmp += ": "
+                    tmp += s.strip()
+                    tmp += "\n"
+                self.logger.info('>>>> [Pretrain Gen] test result: {}'.format(test_result))
+                self.logger.info('>>>> [Pretrain Gen] test result samples: {}'.format(tmp))
+
+        # discriminator pretraining
+        for epoch_idx in range(self.d_pretraining_epochs):  # 5
+            if verbose:
+                self.logger.info(">>>> [Pretrain Dis]Start %d / %d epochs discriminator pretraining..." % (
+                epoch_idx + 1, self.d_pretraining_epochs))
+            training_start_time = time()
+            train_loss = self._d_train_epoch(train_data, epoch_idx)
+            # self.d_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss,
+            #                                                                         tuple) else train_loss
+            training_end_time = time()
+            train_loss_output = \
+                self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss,
+                                                 "discriminator pre")
+            train_loss_output = ">>>> " + train_loss_output
+            if verbose:
+                self.logger.info(train_loss_output)
+
+            if epoch_idx + 1 == self.d_pretraining_epochs:
+                self.logger.info(">>>> [Pretrain Gen] Save pretrain dis in epoch %d ..." % (epoch_idx + 1))
+                path = self._save_checkpoint(epoch_idx + 1, postfix="pretrain_dis")
+
+                self.model.eval()
+                test_result = self.evaluate(valid_data, model_file=path)
+                self.model.train()
+
+                sample = self._load_generated_text()
+                tmp = "\n"
+                for i, s in enumerate(sample):
+                    tmp += str(i)
+                    tmp += ": "
+                    tmp += s.strip()
+                    tmp += "\n"
+                self.logger.info('>>>> [Pretrain Gen] test result: {}'.format(test_result))
+                self.logger.info('>>>> [Pretrain Gen] test result samples: {}'.format(tmp))
+
+        if verbose:
+            self.logger.info(">> End pretraining")
+
+        # adversarial training
+        if verbose:
+            self.logger.info(">> Start adversarial training")
+        for epoch in range(int(self.iters_num / self.adversarail_training_epochs)):
+            if verbose:
+                self.logger.info(">>>> [Adv] Start epoch %d / 10 interleaved adversarial training" % (epoch + 1))
+
+            for epoch_idx in range(self.adversarail_training_epochs):
+                if verbose:
+                    self.logger.info(">>>>>> [Adv] Start epoch %d / %d adversarial training" % (
+                    epoch_idx + 1, self.adversarail_training_epochs))
+                training_start_time = time()
+                train_loss = self._adversarial_train_epoch(train_data, epoch_idx)
+                # self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
+                training_end_time = time()
+                train_loss_output = \
+                    self._generate_train_loss_output((epoch_idx + 1), training_start_time, training_end_time,
+                                                     train_loss,
+                                                     train_info="adv ")
+                train_loss_output = ">>>>>> " + train_loss_output
+                if verbose:
+                    self.logger.info(train_loss_output)
+                if (epoch_idx + 1) % 5 == 0:
+                    path = self._save_checkpoint((epoch_idx + 1), postfix="adv_train")
+                    self.model.eval()
+                    test_result = self.evaluate(valid_data, model_file=path)
+                    self.model.train()
+
+                    sample = self._load_generated_text()
+                    tmp = "\n"
+                    for i, s in enumerate(sample):
+                        tmp += str(i)
+                        tmp += ": "
+                        tmp += s.strip()
+                        tmp += "\n"
+                    self.logger.info('>>>>>> [Adv] test result: {}'.format(test_result))
+                    self.logger.info('>>>>>> [Adv] test result samples: {}'.format(tmp))
+
+            # gen pretrain
+            for epoch_idx in range(5):
+                if verbose:
+                    self.logger.info(">>>>>> [Adv] Start epoch %d / 5 pretrain generator" % (epoch_idx + 1))
+                training_start_time = time()
+                train_loss = self._g_train_epoch(train_data, epoch_idx)
+                # self.g_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
+                training_end_time = time()
+                train_loss_output = \
+                    self._generate_train_loss_output((epoch_idx + 1), training_start_time, training_end_time,
+                                                     train_loss,
+                                                     "adv generator pre")
+                train_loss_output = ">>>>>> " + train_loss_output
+                if verbose:
+                    self.logger.info(train_loss_output)
+
+                if (epoch_idx + 1) % 5 == 0:
+                    path = self._save_checkpoint((epoch_idx + 1), postfix="adv_pretrain")
+                    self.model.eval()
+                    test_result = self.evaluate(valid_data, model_file=path)
+                    self.model.train()
+                    self.logger.info('>>>>>> [Adv] test result: {}'.format(test_result))
+
+            # dis pretrain
+            for epoch_idx in range(5):  # d_steps
+                if verbose:
+                    self.logger.info(">>>>>> [Adv] Start epoch %d / 5 pretrain discriminator" % (epoch_idx + 1))
+                training_start_time = time()
+                train_loss = self._d_train_epoch(train_data, epoch_idx)
+                # self.d_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss,
+                #                                                                         tuple) else train_loss
+                training_end_time = time()
+                train_loss_output = \
+                    self._generate_train_loss_output((epoch_idx + 1), training_start_time, training_end_time,
+                                                     train_loss,
+                                                     "adv discriminator pre")
+                train_loss_output = ">>>>>> " + train_loss_output
+                if verbose:
+                    self.logger.info(train_loss_output)
+
+            if (epoch + 1) % 3 == 0:
+                path = self._save_checkpoint((epoch + 1), postfix="adv and pre train")
+                test_result = self.evaluate(valid_data, model_file=path)
+                sample = self._load_generated_text()
+                tmp = "\n"
+                for i, s in enumerate(sample):
+                    tmp += str(i)
+                    tmp += ": "
+                    tmp += "\n"
+                self.logger.info('>>>> [Adv] Adv and pretrain test result: {}'.format(test_result))
+                self.logger.info('>>>> [Adv] Adv and pretrain test result samples: {}'.format(tmp))
+
+        self._save_checkpoint(self.adversarail_training_epochs)
+        return -1, None

@@ -7,7 +7,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import ConditionalGenerator
 from textbox.module.Encoder.transformer_encoder import TransformerEncoder
 from textbox.module.Decoder.transformer_decoder import TransformerDecoder
@@ -18,8 +17,10 @@ from textbox.module.strategy import topk_sampling
 
 
 class TransformerEncDec(ConditionalGenerator):
-    r"""RNN-based Encoder-Decoder architecture is a basic framework for conditional text generation.
+    r"""Transformer-based Encoder-Decoder architecture is a powerful framework for conditional text generation.
 
+    Reference:
+        https://arxiv.org/abs/1706.03762
     """
 
     def __init__(self, config, dataset):
@@ -92,29 +93,23 @@ class TransformerEncDec(ConditionalGenerator):
 
                 for bid in range(source_text.size(0)):
                     generate_tokens = []
-                    input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
-                    prev_decoder_outputs = None
+                    prev_token_ids = [self.sos_token_idx]
                     for gen_idx in range(self.max_target_length):
+                        input_seq = torch.LongTensor([prev_token_ids]).to(self.device)
                         decoder_input = self.target_token_embedder(input_seq) + \
-                                        self.position_embedder(input_seq, offset=gen_idx).to(self.device)
+                                        self.position_embedder(input_seq).to(self.device)
                         decoder_outputs = self.decoder(decoder_input,
-                                                       kv=prev_decoder_outputs,
                                                        external_states=encoder_outputs[bid, :, :].unsqueeze(0),
                                                        external_padding_mask=source_padding_mask[bid, :].unsqueeze(0))
 
-                        if prev_decoder_outputs is None:
-                            prev_decoder_outputs = decoder_outputs
-                        else:
-                            prev_decoder_outputs = torch.cat((prev_decoder_outputs, decoder_outputs), dim=1)
-
-                        token_logits = self.vocab_linear(decoder_outputs)
+                        token_logits = self.vocab_linear(decoder_outputs[:, -1, :].unsqueeze(1))
                         token_idx = topk_sampling(token_logits)
                         token_idx = token_idx.item()
                         if token_idx == self.eos_token_idx:
                             break
                         else:
                             generate_tokens.append(idx2token[token_idx])
-                            input_seq = torch.LongTensor([[token_idx]]).to(self.device)
+                            prev_token_ids.append(token_idx)
                     generate_corpus.append(generate_tokens)
         return generate_corpus
 
@@ -128,8 +123,7 @@ class TransformerEncDec(ConditionalGenerator):
             self.device)
         source_padding_mask = torch.eq(source_text, self.padding_token_idx).to(self.device)
         encoder_outputs = self.encoder(source_embeddings,
-                                       self_padding_mask=source_padding_mask,
-                                       output_all_encoded_layers=False)
+                                       self_padding_mask=source_padding_mask)
 
         input_embeddings = self.target_token_embedder(input_text) + self.position_embedder(input_text).to(self.device)
         self_padding_mask = torch.eq(input_text, self.padding_token_idx).to(self.device)

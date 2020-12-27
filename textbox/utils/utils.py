@@ -9,7 +9,7 @@
 # @Email  : steventang@ruc.edu.cn
 
 """
-recbole.utils.utils
+textbox.utils.utils
 ################################
 """
 
@@ -77,11 +77,11 @@ def get_trainer(model_type, model_name):
     r"""Automatically select trainer class based on model type and model name
 
     Args:
-        model_type (ModelType): model type
+        model_type (~textbox.utils.enum_type.ModelType): model type
         model_name (str): model name
 
     Returns:
-        Trainer: trainer class
+        ~textbox.trainer.trainer.Trainer: trainer class
     """
     try:
         return getattr(importlib.import_module('textbox.trainer'), model_name + 'Trainer')
@@ -138,38 +138,6 @@ def early_stopping(value, best, cur_step, max_step, bigger=True):
             if cur_step > max_step:
                 stop_flag = True
     return best, cur_step, stop_flag, update_flag
-
-
-def calculate_valid_score(valid_result, valid_metric=None):
-    r""" return valid score from valid result
-
-    Args:
-        valid_result (dict): valid result
-        valid_metric (str, optional): the selected metric in valid result for valid score
-
-    Returns:
-        float: valid score
-    """
-    if valid_metric:
-        return valid_result[valid_metric]
-    else:
-        return valid_result['Recall@10']
-
-
-def dict2str(result_dict):
-    r""" convert result dict to str
-
-    Args:
-        result_dict (dict): result dict
-
-    Returns:
-        str: result str
-    """
-
-    result_str = ''
-    for metric, value in result_dict.items():
-        result_str += str(metric) + ' : ' + '%.04f' % value + '    '
-    return result_str
 
 
 def init_seed(seed, reproducibility):

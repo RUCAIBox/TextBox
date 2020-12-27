@@ -2,13 +2,11 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-'''
-Reference
-https://github.com/rohithreddy024/VAE-Text-Generation/blob/master/model.py
-'''
-
 
 class BasicCNNEncoder(nn.Module):
+    r"""
+    Code reference: https://github.com/rohithreddy024/VAE-Text-Generation/
+    """
     def __init__(self, input_size, latent_size):
         super(BasicCNNEncoder, self).__init__()
 
@@ -38,10 +36,6 @@ class BasicCNNEncoder(nn.Module):
         )
 
     def forward(self, input):
-        """
-        :param input: An float tensor with shape of [batch_size, seq_len, embed_size]
-        :return: An float tensor with shape of [batch_size, latent_variable_size]
-        """
         input = input.transpose(1, 2).contiguous()
         output = self.cnn(input)
         output = torch.mean(output, dim=-1)

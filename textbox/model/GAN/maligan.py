@@ -2,22 +2,29 @@
 # @Author : Xiaoxuan Hu
 # @Email  : huxiaoxuan@ruc.edu.cn
 
+r"""
+MaliGAN
+################################################
+Reference:
+    Tong Che et al. "Maximum-Likelihood Augmented Discrete Generative Adversarial Networks." in NIPS 2017.
+Reference code:
+    https://github.com/williamSYSU/TextGAN-PyTorch
+
+"""
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import GenerativeAdversarialNet
 from textbox.module.Generator.MaliGANGenerator import MaliGANGenerator
 from textbox.module.Discriminator.MaliGANDiscriminator import MaliGANDiscriminator
 
 
 class MaliGAN(GenerativeAdversarialNet):
-    """Maximum-Likelihood Augmented Discrete Generative Adversarial Networks
+    r"""MaliGAN is a generative adversarial network using a normalized maximum likelihood optimization.
 
     """
-    input_type = InputType.NOISE
 
     def __init__(self, config, dataset):
         super(MaliGAN, self).__init__(config, dataset)

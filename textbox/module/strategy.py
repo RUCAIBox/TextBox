@@ -17,6 +17,9 @@ def topk_sampling(logits, temperature=1.0, top_k=0, top_p=0.9):
         logits: logits distribution
         top_k >0: keep only top k tokens with highest probability (top-k filtering).
         top_p >0.0: keep the top tokens with cumulative probability >= top_p (nucleus filtering).
+
+    Return:
+        torch.tensor, the chosen index of token.
     """
     logits = logits / temperature
     top_k = min(top_k, logits.size(-1))  # Safety check
@@ -59,7 +62,7 @@ def greedy_sampling(logits):
     Args:
         logits: logits distribution
     """
-    topv, topi = torch.log(F.softmax(logits, dim=-1) + 1e-12).data.topk(k=4)
+    topv, topi = F.softmax(logits, dim=-1).data.topk(k=4)
     topi = topi.squeeze()
     token_idx = topi[0].item()
 

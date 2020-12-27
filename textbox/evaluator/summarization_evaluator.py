@@ -9,23 +9,22 @@
 
 """
 textbox.evaluator.ngram_evaluator
-################################
+#################################
 """
 
 import numpy as np
 import torch
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 from textbox.evaluator.metrics import metrics_dict
-from torch.nn.utils.rnn import pad_sequence
 import rouge
-# These metrics are typical in topk recommendations
-# ngram_metrics = {metric.lower(): metric for metric in ['bleu']}
+
+
 summarization_metrics = ['rouge-1', 'rouge-2', 'rouge-l', 'rouge-w']
 
 
 class SummarizationEvaluator(AbstractEvaluator):
-    r"""NgramEvaluator Evaluator is mainly used in ranking tasks. Now, we support two ngram metrics which
-    contain `'bleu', 'self_bleu'.
+    r"""Summarization Evaluator is mainly used in summarization tasks. Now, we support rouge-based ngram metrics which
+    contain rouge-n, rouge-l and rouge-w.
     """
 
     def __init__(self, config):
@@ -42,9 +41,6 @@ class SummarizationEvaluator(AbstractEvaluator):
                                      alpha=0.5,  # Default F1_score
                                      weight_factor=1.2,
                                      stemming=True)
-        # [1, 2, 3, 4]
-        # config['n_grams']
-        # self._check_args()
 
     def transform_words2str(self, corpus):
         new_corpus = []
@@ -54,6 +50,7 @@ class SummarizationEvaluator(AbstractEvaluator):
 
     def evaluate(self, generate_corpus, reference_corpus):
         """get metrics result
+
         Args:
             generate_corpus: the generated corpus
             reference_corpus: the referenced corpus
@@ -65,7 +62,6 @@ class SummarizationEvaluator(AbstractEvaluator):
         generate_corpus = self.transform_words2str(generate_corpus)
         reference_corpus = self.transform_words2str(reference_corpus)
         metric_dict = {}
-        # result_dict = self._calculate_metrics(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
         rouge_dict = self._calc_metrics_info(generate_corpus=generate_corpus,
                                              reference_corpus=reference_corpus)
         for metric in rouge_dict:
@@ -98,13 +94,11 @@ class SummarizationEvaluator(AbstractEvaluator):
 
     def calc_rouge(self, gen_corpus, ref_corpus):
         '''
-
         :param gen_corpus: [singe sentence]
         :param ref_corpus: [multiple sentence]
         :return: scores (dict-> dict -> value)
         '''
         scores = self.evaluator.get_scores(gen_corpus, ref_corpus)
-        # return scores['rouge-1']['f'], scores['rouge-2']['f'], scores['rouge-l']['f'], scores['rouge-w']['f']
         return scores
 
     def __str__(self):

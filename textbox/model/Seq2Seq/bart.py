@@ -8,16 +8,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import ConditionalGenerator
 from transformers import BartTokenizer, BartConfig, BartForConditionalGeneration
 
 
 class BART(ConditionalGenerator):
-    r"""BPR is a basic matrix factorization model that be trained in the pairwise way.
+    r"""BART is a powerful sequence-to-sequence model based on Transformer.
 
+    Reference:
+        https://arxiv.org/abs/1910.13461
     """
-
     def __init__(self, config, dataset):
         super(BART, self).__init__(config, dataset)
 

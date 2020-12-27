@@ -11,6 +11,12 @@ import math
 
 
 class LuongAttention(torch.nn.Module):
+    r"""Luong Attention is proposed in the following paper:
+        Effective Approaches to Attention-based Neural Machine Translation.
+
+    Reference:
+        https://arxiv.org/abs/1508.04025
+    """
     def __init__(self, source_size, target_size, alignment_method='concat'):
         super(LuongAttention, self).__init__()
         self.source_size = source_size
@@ -28,13 +34,14 @@ class LuongAttention(torch.nn.Module):
             raise ValueError("The alignment method for Luong Attention must be in ['general', 'concat', 'dot'].")
 
     def score(self, hidden_states, encoder_outputs):
+        r"""Calculate the attention scores between encoder outputs and decoder states."""
         tgt_len = hidden_states.size(1)
         src_len = encoder_outputs.size(1)
 
         if self.alignment_method == 'general':
-            energy = self.energy_linear(hidden_states)  # B * tgt_len * src_size
-            encoder_outputs = encoder_outputs.permute(0, 2, 1)  # B * src_size * src_len
-            energy = energy.bmm(encoder_outputs)  # B * tgt_len * src_len
+            energy = self.energy_linear(hidden_states)
+            encoder_outputs = encoder_outputs.permute(0, 2, 1)
+            energy = energy.bmm(encoder_outputs)
             return energy
         elif self.alignment_method == 'concat':
             hidden_states = hidden_states.unsqueeze(2).repeat(1, 1, src_len, 1)  # B * tgt_len * src_len * target_size
@@ -51,11 +58,17 @@ class LuongAttention(torch.nn.Module):
                 "No such alignment method {} for computing Luong scores.".format(self.alignment_method))
 
     def forward(self, hidden_states, encoder_outputs, encoder_masks):
-        """
-        :param hidden_states: B * tgt_len * hidden_size
-        :param encoder_outputs: B * src_len * hidden_size
-        :param encoder_masks: B * src_len
-        :return:
+        r"""
+        Luong attention
+
+        Args:
+            hidden_states [batch_size, tgt_len, target_size]
+            encoder_outputs [batch_size, src_len, source_size]
+            encoder_masks [batch_size, src_len]
+
+        Return:
+            context [batch_size, tgt_len, source_size]
+            probs [batch_size, tgt_len, src_len]
         """
         tgt_len = hidden_states.size(1)
         energy = self.score(hidden_states, encoder_outputs)
@@ -67,6 +80,12 @@ class LuongAttention(torch.nn.Module):
 
 
 class BahdanauAttention(torch.nn.Module):
+    r"""Bahdanau Attention is proposed in the following paper:
+            Neural Machine Translation by Jointly Learning to Align and Translate.
+
+        Reference:
+            https://arxiv.org/abs/1409.0473
+        """
     def __init__(self, source_size, target_size):
         super(BahdanauAttention, self).__init__()
         self.source_size = source_size
@@ -76,26 +95,26 @@ class BahdanauAttention(torch.nn.Module):
         self.v = nn.Parameter(torch.FloatTensor(target_size))
 
     def score(self, hidden_states, encoder_outputs):
-        """
-        :param hidden_states: B * target_size
-        :param encoder_outputs: B * src_len * source_size
-        :return:
-        """
+        r"""Calculate the attention scores between encoder outputs and decoder states."""
         src_len = encoder_outputs.size(1)
-        hidden_states = hidden_states.unsqueeze(1).repeat(1, src_len, 1)  # B * src_len * target_size
-        # print(hidden_states.size(), encoder_outputs.size())
+        hidden_states = hidden_states.unsqueeze(1).repeat(1, src_len, 1)
 
         energy = torch.tanh(self.energy_linear(torch.cat((hidden_states, encoder_outputs), dim=-1)))
         energy = self.v.mul(energy).sum(dim=-1)
         return energy
 
     def forward(self, hidden_states, encoder_outputs, encoder_masks):
-        """
-        :param hidden_states: B * target_size
-        :param encoder_outputs: B * src_len * source_size
-        :param encoder_masks: B * src_len
-        :return:
-            context: B * 1 * source_size
+        r"""
+        Bahdanau attention
+
+        Args:
+            hidden_states [batch_size, tgt_len, target_size]
+            encoder_outputs [batch_size, src_len, source_size]
+            encoder_masks [batch_size, src_len]
+
+        Return:
+            context [batch_size, tgt_len, source_size]
+            probs [batch_size, tgt_len, src_len]
         """
         energy = self.score(hidden_states, encoder_outputs)
         probs = F.softmax(energy, dim=-1) * encoder_masks
@@ -108,6 +127,12 @@ class BahdanauAttention(torch.nn.Module):
 
 
 class MonotonicAttention(torch.nn.Module):
+    r"""Monotonic Attention is proposed in the following paper:
+        Online and Linear-Time Attention by Enforcing Monotonic Alignments.
+
+    Reference:
+        https://arxiv.org/abs/1704.00784
+    """
     def __init__(self, source_size, target_size, init_r=-4):
         super(MonotonicAttention, self).__init__()
         self.source_size = source_size
@@ -123,21 +148,22 @@ class MonotonicAttention(torch.nn.Module):
         self.r = nn.Parameter(torch.Tensor([init_r]))
 
     def gaussian_noise(self, *size):
-        """Additive gaussian nosie to encourage discreteness"""
+        r"""Additive gaussian nosie to encourage discreteness"""
         return torch.FloatTensor(*size).normal_()
 
     def safe_cumprod(self, x):
-        """Numerically stable cumulative product by cumulative sum in log-space"""
+        r"""Numerically stable cumulative product by cumulative sum in log-space"""
         return torch.exp(torch.cumsum(torch.log(torch.clamp(x, min=1e-10, max=1)), dim=1))
 
     def exclusive_cumprod(self, x):
-        """Exclusive cumulative product [a, b, c] => [1, a, a * b]"""
+        r"""Exclusive cumulative product [a, b, c] => [1, a, a * b]"""
         batch_size = x.size(0)
         ones = torch.ones(batch_size, 1).to(x.device)
         one_x = torch.cat((ones, x), dim=1)[:, :-1]
         return torch.cumprod(one_x, dim=1)
 
     def score(self, hidden_states, encoder_outputs):
+        r"""Calculate the attention scores between encoder outputs and decoder states."""
         tgt_len = hidden_states.size(1)
         src_len = encoder_outputs.size(1)
         energy = torch.tanh(self.w_linear(encoder_outputs).unsqueeze(1).repeat(1, tgt_len, 1, 1) +
@@ -151,12 +177,13 @@ class MonotonicAttention(torch.nn.Module):
         Soft monotonic attention (Train)
 
         Args:
-            hidden_states: [batch_size, tgt_len, target_size]
+            hidden_states [batch_size, tgt_len, target_size]
             encoder_outputs [batch_size, src_len, source_size]
             encoder_masks [batch_size, src_len]
-            previous_alpha [batch_size, tgt_len, src_len]
+            previous_probs [batch_size, tgt_len, src_len]
 
         Return:
+            context [batch_size, tgt_len, source_size]
             probs [batch_size, tgt_len, src_len]
         """
         device = hidden_states.device
@@ -182,14 +209,18 @@ class MonotonicAttention(torch.nn.Module):
         return context, probs
 
     def hard(self, hidden_states, encoder_outputs, encoder_masks, previous_probs=None):
-        """
+        r"""
         Hard monotonic attention (Test)
+
         Args:
-            encoder_outputs [batch_size, sequence_length, enc_dim]
-            decoder_h [batch_size, dec_dim]
-            previous_attention [batch_size, sequence_length]
+            hidden_states [batch_size, tgt_len, target_size]
+            encoder_outputs [batch_size, src_len, source_size]
+            encoder_masks [batch_size, src_len]
+            previous_probs [batch_size, tgt_len, src_len]
+
         Return:
-            alpha [batch_size, sequence_length]
+            context [batch_size, tgt_len, source_size]
+            probs [batch_size, tgt_len, src_len]
         """
         device = hidden_states.device
         tgt_len = hidden_states.size(1)
@@ -225,6 +256,12 @@ class MonotonicAttention(torch.nn.Module):
 
 
 class MultiHeadAttention(torch.nn.Module):
+    r"""Multi-head Attention is proposed in the following paper:
+            Attention Is All You Need.
+
+    Reference:
+        https://arxiv.org/abs/1706.03762
+    """
     def __init__(self, embedding_size, num_heads, attn_weight_dropout_ratio=0.0):
         super(MultiHeadAttention, self).__init__()
         self.embedding_size = embedding_size
@@ -256,9 +293,18 @@ class MultiHeadAttention(torch.nn.Module):
         nn.init.constant_(self.out_proj.bias, 0.)
 
     def forward(self, query, key, value, key_padding_mask=None, attn_mask=None):
-        """ Input shape: batch_size * time * embedding_size
-            key_padding_mask: batch_size * time
-            attention_mask:  tgt_len x src_len
+        r"""
+        Multi-head attention
+
+        Args:
+            query [batch_size, tgt_len, embedding_size]
+            key and value [batch_size, src_len, embedding_size]
+            key_padding_mask [batch_size, src_len]
+            attn_mask [batch_size, tgt_len, src_len]
+
+        Return:
+            attn_repre [batch_size, tgt_len, embedding_size]
+            attn_weights [batch_size, tgt_len, src_len]
         """
         batch_size, tgt_len, embedding_size = query.size()
         src_len = key.size(1)
@@ -276,21 +322,19 @@ class MultiHeadAttention(torch.nn.Module):
         assert list(attn_weights.size()) == [batch_size, self.num_heads, tgt_len, src_len]
 
         if attn_mask is not None:
-            # don't attend to future symbols
             attn_weights.masked_fill_(
                 attn_mask.unsqueeze(0).unsqueeze(1),
                 float('-inf')
             )
 
         if key_padding_mask is not None:
-            # don't attend to padding symbols
             attn_weights.masked_fill_(
                 key_padding_mask.unsqueeze(1).unsqueeze(2),
                 float('-inf')
             )
 
         attn_weights = self.weight_dropout(F.softmax(attn_weights, dim=-1))
-        attn_repre = torch.matmul(attn_weights, v)  # [batch_size, num_heads, tgt_len, head_size]
+        attn_repre = torch.matmul(attn_weights, v)
 
         assert list(attn_repre.size()) == [batch_size, self.num_heads, tgt_len, self.head_size]
 

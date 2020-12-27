@@ -9,22 +9,20 @@
 
 """
 textbox.evaluator.ngram_evaluator
-################################
+#################################
 """
 
 import numpy as np
 import torch
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 from textbox.evaluator.metrics import metrics_dict
-from torch.nn.utils.rnn import pad_sequence
 
-# These metrics are typical in topk recommendations
+
 ngram_metrics = {metric.lower(): metric for metric in ['bleu']}
 
 
 class TranslationEvaluator(AbstractEvaluator):
-    r"""NgramEvaluator Evaluator is mainly used in ranking tasks. Now, we support two ngram metrics which
-    contain `'bleu', 'self_bleu'.
+    r"""Translation Evaluator is mainly used in translation tasks. Now, we support a ngram metric `'bleu'`.
     """
 
     def __init__(self, config):
@@ -37,35 +35,30 @@ class TranslationEvaluator(AbstractEvaluator):
 
     def evaluate(self, generate_corpus, reference_corpus):
         """get metrics result
+
         Args:
             generate_corpus: the generated corpus
             reference_corpus: the referenced corpus
 
         Returns:
-            dict: such as ``{'bleu-1': xxx, 'self-bleu-4': yyyy}``
+            dict: such as ``{'bleu-1': xxx}``
         """
-        # assert len(generate_corpus) == len(reference_corpus)
         # get metrics
         metric_dict = {}
-        # result_dict = self._calculate_metrics(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
         bleu_dict = self._calc_metrics_info(generate_corpus=generate_corpus,
                                             reference_corpus=reference_corpus,
                                             metric='bleu')
-        # bleu_sum = 0.0
         for n_gram in bleu_dict:
             key = 'bleu-{}'.format(n_gram)
             tp_list = bleu_dict[n_gram]
             tp_val = np.mean(tp_list)
             metric_dict[key] = round(tp_val, 4)
-            # bleu_sum += tp_val
-        # avg_bleu = bleu_sum / 4.0
-        # metric_dict['avg-bleu'] = round(avg_bleu, 4)
         return metric_dict
 
     def _check_args(self):
         self.metrics = ['bleu']
 
-        # Check topk:
+        # Check ngram
         if isinstance(self.n_grams, (int, list)):
             if isinstance(self.n_grams, int):
                 self.n_grams = [self.n_grams]
@@ -78,6 +71,7 @@ class TranslationEvaluator(AbstractEvaluator):
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus, metric="bleu"):
         """get metrics result
+
         Args:
             generate_corpus: the generated corpus
             reference_corpus: the referenced corpus

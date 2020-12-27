@@ -7,17 +7,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import GenerativeAdversarialNet
 from textbox.module.Generator.TextGANGenerator import TextGANGenerator
 from textbox.module.Discriminator.TextGANDiscriminator import TextGANDiscriminator
 
 
 class TextGAN(GenerativeAdversarialNet):
-    """Adversarial Feature Matching for Text Generation
+    r"""TextGAN followed "Adversarial Feature Matching for Text Generation".
 
     """
-    input_type = InputType.NOISE
 
     def __init__(self, config, dataset):
         super(TextGAN, self).__init__(config, dataset)
@@ -39,6 +37,9 @@ class TextGAN(GenerativeAdversarialNet):
         self.discriminator.train()
         return loss
     
+    def calculate_nll_test(self, corpus, epoch_idx):
+        return self.generator.calculate_loss(corpus, nll_test=True)
+
     def generate(self, eval_data):
         return self.generator.generate(eval_data)
 

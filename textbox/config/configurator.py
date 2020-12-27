@@ -3,7 +3,7 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 """
-recbole.config.configurator
+textbox.config.configurator
 ################################
 """
 
@@ -14,8 +14,8 @@ import yaml
 import torch
 from logging import getLogger
 
-from textbox.utils import get_model, Enum, EvaluatorType, ModelType, InputType, \
-    general_arguments, training_arguments, evaluation_arguments, dataset_arguments
+from textbox.utils import get_model, Enum, general_arguments, training_arguments, \
+    evaluation_arguments, dataset_arguments
 
 
 class Config(object):
@@ -200,10 +200,6 @@ class Config(object):
                         self.internal_config_dict.update(config_dict)
 
         self.internal_config_dict['MODEL_TYPE'] = get_model(model).type
-        # if self.internal_config_dict['MODEL_TYPE'] == ModelType.UNCONDITIONAL:
-        #     pass
-        # else:
-        #     raise NotImplementedError("Unknown model type: {}".format(self.internal_config_dict['MODEL_TYPE']))
 
     def _get_final_config_dict(self):
         final_config_dict = dict()
@@ -215,29 +211,10 @@ class Config(object):
 
         self.final_config_dict['dataset'] = self.dataset
         self.final_config_dict['model'] = self.model
-        if self.dataset == 'ml-100k':
-            current_path = os.path.dirname(os.path.realpath(__file__))
-            self.final_config_dict['data_path'] = os.path.join(current_path, '../dataset_example/' + self.dataset)
-        else:
-            self.final_config_dict['data_path'] = os.path.join(self.final_config_dict['data_path'], self.dataset)
-
-        # if hasattr(get_model(self.model), 'input_type'):
-        #     self.final_config_dict['MODEL_INPUT_TYPE'] = get_model(self.model).input_type
-        # elif 'loss_type' in self.final_config_dict:
-        #     if self.final_config_dict['loss_type'] in ['CE']:
-        #         self.final_config_dict['MODEL_INPUT_TYPE'] = InputType.POINTWISE
-        #     elif self.final_config_dict['loss_type'] in ['BPR']:
-        #         self.final_config_dict['MODEL_INPUT_TYPE'] = InputType.PAIRWISE
-        # else:
-        #     raise ValueError('Either Model has attr \'input_type\','
-        #                      'or arg \'loss_type\' should exist in config.')
+        self.final_config_dict['data_path'] = os.path.join(self.final_config_dict['data_path'], self.dataset)
 
         eval_type = None
         self.final_config_dict['eval_type'] = eval_type
-
-        smaller_metric = ['rmse', 'mae', 'logloss']
-        valid_metric = self.final_config_dict['valid_metric'].split('@')[0]
-        self.final_config_dict['valid_metric_bigger'] = False if valid_metric in smaller_metric else True
 
         if 'additional_feat_suffix' in self.final_config_dict:
             ad_suf = self.final_config_dict['additional_feat_suffix']

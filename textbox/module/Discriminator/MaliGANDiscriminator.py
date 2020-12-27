@@ -10,6 +10,8 @@ from textbox.model.abstract_generator import UnconditionalGenerator
 
 
 class MaliGANDiscriminator(UnconditionalGenerator):
+    r"""MaliGANDiscriminator is LSTMs.
+    """
     def __init__(self, config, dataset):
         super(MaliGANDiscriminator, self).__init__(config, dataset)
 
@@ -31,10 +33,13 @@ class MaliGANDiscriminator(UnconditionalGenerator):
         self.dropout = nn.Dropout(self.dropout_rate)
 
     def forward(self, data):
-        """
-        Get final predictions of discriminator
-        :param input: batch_size * seq_len
-        :return: batch_size
+        r"""Calculate the probability that the data is realistic.
+
+        Args:
+            data (torch.Tensor): The sentence data, shape: [batch_size, max_seq_len].
+
+        Returns:
+            torch.Tensor: The probability that each sentence is realistic, shape: [batch_size].
         """
         data_embedding = self.word_embedding(data)  # b * l * e
         _, (hidden, _) = self.LSTM(data_embedding)   # hidden: b * num_layers * h
@@ -44,6 +49,16 @@ class MaliGANDiscriminator(UnconditionalGenerator):
         return pred
 
     def calculate_loss(self, real_data, fake_data):
+        r"""Calculate the loss for real data and fake data.
+        The discriminator is trained with the standard objective that GAN employs.
+
+        Args:
+            real_data (torch.Tensor): The realistic sentence data, shape: [batch_size, max_seq_len].
+            fake_data (torch.Tensor): The generated sentence data, shape: [batch_size, max_seq_len].
+
+        Returns:
+            torch.Tensor: The calculated loss of real data and fake data, shape: [].
+        """
         real_y = self.forward(real_data)  # b * l --> b
         fake_y = self.forward(fake_data)
         logits = torch.cat((real_y, fake_y), dim=0)

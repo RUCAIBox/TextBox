@@ -8,12 +8,13 @@
 # @Email  : jiangjinhao@std.uestc.edu.cn
 
 import numpy as np
+import os
 from logging import getLogger
 from textbox.utils.enum_type import SpecialTokens
 
 
 class Dataset(object):
-    def __init__(self, config, saved_dataset=None):
+    def __init__(self, config):
         self.config = config
         self.dataset_path = config['data_path']
         self.logger = getLogger()
@@ -27,17 +28,37 @@ class Dataset(object):
         self.max_vocab_size = config['max_vocab_size']
         self.max_seq_length = config['max_seq_length']
 
-        self._from_scratch()
+        restored_exist = self.detect_restored(self.dataset_path)
+        if restored_exist:
+            self._load_restored()
+        else:
+            self._from_scratch()
 
     def _from_scratch(self):
         """Load dataset from scratch.
         Initialize attributes firstly, then load data from atomic files, pre-process the dataset lastly.
         """
-        self.logger.debug('Loading {} from scratch'.format(self.__class__))
+        self.logger.info('Loading data from scratch')
 
         self._get_preset()
         self._load_data(self.dataset_path)
         self._data_processing()
+        self._dump_data(self.dataset_path)
+
+    def _load_restored(self):
+        """Load dataset from restored.
+        Initialize attributes firstly, then load data from binary files.
+        """
+        self.logger.info('Loading data from restored')
+
+        self._get_preset()
+        self.load_restored(self.dataset_path)
+
+    @staticmethod
+    def check_file_exist(filename):
+        if not os.path.isfile(filename):
+            return False
+        return True
 
     def _get_preset(self):
         """Initialization useful inside attributes.
@@ -50,6 +71,51 @@ class Dataset(object):
             dataset_path (str): path of dataset dir.
         """
         raise NotImplementedError('Method [_load_data] should be implemented.')
+
+    def _dump_data(self, dataset_path):
+        r"""dump dataset with processed dataset.
+        Args:
+            dataset_path (str): path of dataset dir.
+        """
+        raise NotImplementedError('Method [_dump_data] should be implemented.')
+
+    def _text2id(self, text_data, token2idx):
+        r"""transform text to id. but out of vocab word will still be saved as original word
+        input:
+            text_data: list -> list -> word, original text
+            token2idx: dict, map token to index
+        output:
+            text_idx_data: list -> list -> int, list of word index
+        """
+        text_idx_data = []
+        for text in text_data:
+            text_idx = self._token2idx(text, token2idx)
+            text_idx_data.append(text_idx)
+        return text_idx_data
+
+    def _id2text(self, idx_data, idx2token):
+        r"""transform id to text.
+        input:
+            idx_data: list -> list -> int, list of word idx
+            idx2token: dict, map token to index
+        output:
+            text_data: list -> list -> word, list of word
+        """
+        text_data = []
+        for text in idx_data:
+            text = self._idx2token(text, idx2token)
+            text_data.append(text)
+        return text_data
+
+    def _token2idx(self, inputs, token2idx):
+        if isinstance(inputs, list):
+            return [self._token2idx(x, token2idx) for x in inputs]
+        return token2idx.get(inputs, inputs)
+
+    def _idx2token(self, inputs, idx2token):
+        if isinstance(inputs, list):
+            return [self._idx2token(x, idx2token) for x in inputs]
+        return idx2token.get(inputs, inputs)
 
     def _data_processing(self):
         r"""Necessary processing steps for dataset.

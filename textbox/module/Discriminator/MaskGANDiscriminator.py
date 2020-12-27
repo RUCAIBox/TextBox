@@ -65,10 +65,12 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
           targets_present = [1, 0, 1, 0]
         then,
           masked_input = [a, b, <missing>, d]
+
         Args:
           inputs:  Tensor of shape [batch_size, sequence_length]
           targets_present:  Bool tensor of shape [batch_size, sequence_length] with
             1 representing the presence of the word.
+
         Returns:
           masked_input:  Tensor of shape [batch_size, sequence_length]
             which takes on value of inputs when the input is present and takes on
@@ -87,12 +89,14 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
 
     def forward(self, inputs, inputs_length, sequence, targets_present, embedder):
         r""" Predict the real prob of the filled_in token using real sentence and fake sentence
+
         Args:
             inputs: real input bs*seq_len
             inputs_length:  sentences length list[bs]
             sequence: real target or the generated sentence by Generator
             targets_present: target sentences present matrix bs*seq_len
             embedder: shared embedding with generator
+
         Returns:
             prediction: the real prob of filled_in token predicted by discriminator
         """
@@ -139,6 +143,7 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
         r"""Define the Critic graph which is derived from the seq2seq Discriminator. This will be
         initialized with the same parameters as the language model and will share the forward RNN
         components with the Discriminator. This estimates the V(s_t), where the state s_t = x_0,...,x_t-1.
+
         Args:
             fake_sequence: sequence generated bs*seq_len
 

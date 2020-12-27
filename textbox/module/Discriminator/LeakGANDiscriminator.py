@@ -12,6 +12,8 @@ from textbox.model.abstract_generator import UnconditionalGenerator
 
 
 class LeakGANDiscriminator(UnconditionalGenerator):
+    r""" CNN based discriminator for leakgan extracting feature of current sentence
+    """
     def __init__(self, config, dataset):
         super(LeakGANDiscriminator, self).__init__(config, dataset)
 
@@ -60,7 +62,7 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         return pred
 
     def get_feature(self, inp):
-        r"""Get feature vector of given sentences
+        r""" Get feature vector of given sentences
 
         Args:
             inp: batch_size * max_seq_len

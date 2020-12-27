@@ -7,10 +7,6 @@
 # @Author : Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn
 
-import os
-import nltk
-import collections
-import random
 import numpy as np
 from logging import getLogger
 from textbox.utils.enum_type import SpecialTokens
@@ -109,10 +105,13 @@ class Dataset(object):
     @staticmethod
     def _calcu_split_ids(tot, ratios):
         r"""Given split ratios, and total number, calculate the number of each part after splitting.
+
         Other than the first one, each part is rounded down.
+
         Args:
             tot (int): Total number.
             ratios (list): List of split ratios. No need to be normalized.
+
         Returns:
             list: Number of each part after splitting.
         """
@@ -121,12 +120,20 @@ class Dataset(object):
         split_ids = np.cumsum(cnt)[:-1]
         return list(split_ids)
 
+    def detect_restored(self, dataset_path):
+        r"""Detect whether restored datasets exisit in dataset_path.
+        """
+        raise NotImplementedError('Method [detect_restored] should be implemented.')
+
     def split_by_ratio(self, ratios):
         r"""Split dataset by ratios.
+
         Args:
             ratios (list): List of split ratios. No need to be normalized.
+
         Returns:
             list: List of : `list -> int`, whose interaction features has been splitted.
+
         Note:
             Other than the first one, each part is rounded down.
         """
@@ -134,6 +141,7 @@ class Dataset(object):
 
     def build(self):
         r"""Prepare splitted data elements for dataloader.
+
         Returns:
             list: List of dict : provide necessary elements for dataloader.
         """

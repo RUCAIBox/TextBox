@@ -2,12 +2,10 @@
 # @Author : Junyi Li
 # @Email  : lijunyi@ruc.edu.cn
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import ConditionalGenerator
 from textbox.module.Encoder.transformer_encoder import TransformerEncoder
 from textbox.module.Decoder.transformer_decoder import TransformerDecoder

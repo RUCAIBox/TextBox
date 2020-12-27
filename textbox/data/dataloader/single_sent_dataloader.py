@@ -10,12 +10,9 @@ textbox.data.dataloader.single_sent_dataloader
 import numpy as np
 import random
 import math
-import pandas as pd
 import torch
-from tqdm import tqdm
 
 from textbox.data.dataloader.abstract_dataloader import AbstractDataLoader
-from textbox.utils import DataLoaderType, InputType
 
 
 class SingleSentenceDataLoader(AbstractDataLoader):
@@ -27,7 +24,6 @@ class SingleSentenceDataLoader(AbstractDataLoader):
         batch_size (int, optional): The batch_size of dataloader. Defaults to ``1``.
         shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
     """
-    dl_type = DataLoaderType.UNCONDITIONAL
 
     def __init__(self, config, dataset, batch_size=1, shuffle=False):
 

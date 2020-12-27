@@ -67,4 +67,3 @@ def init_logger(config):
         level=level,
         handlers=[fh, sh]
     )
-

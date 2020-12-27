@@ -9,3 +9,5 @@ ffn_dropout_ratio: 0.1
 learning_rate: 1.0
 learner: schedule
 warmup_steps: 4000
+beam_size: 1
+decoding_strategy: 'topk_sampling'

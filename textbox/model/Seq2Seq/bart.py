@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import ConditionalGenerator
 from transformers import BartTokenizer, BartConfig, BartForConditionalGeneration
 

@@ -9,16 +9,15 @@
 # @Email  : hegaole@ruc.edu.cn
 
 import os
+import pickle
 import nltk
 import collections
 import random
-import numpy as np
-from logging import getLogger
 from textbox.data.dataset import Dataset
 
 
 class PairedSentenceDataset(Dataset):
-    def __init__(self, config, saved_dataset=None):
+    def __init__(self, config):
         self.source_language = config['source_language'].lower()
         self.target_language = config['target_language'].lower()
         self.source_suffix = config['source_suffix']
@@ -37,7 +36,7 @@ class PairedSentenceDataset(Dataset):
         else:
             self.source_max_seq_length = config['source_max_seq_length']
             self.target_max_seq_length = config['target_max_seq_length']
-        super().__init__(config, saved_dataset)
+        super().__init__(config)
 
     def _get_preset(self):
         self.source_token2idx = {}
@@ -86,7 +85,9 @@ class PairedSentenceDataset(Dataset):
         for text_data in text_data_list:
             for text in text_data:
                 word_list.extend(text)
-        tokens = [token for token, _ in collections.Counter(word_list).items()]
+        token_count = [(count, token) for token, count in collections.Counter(word_list).items()]
+        token_count.sort(reverse=True)
+        tokens = [word for count, word in token_count]
         tokens = [self.padding_token, self.unknown_token, self.sos_token, self.eos_token] + tokens
         tokens = tokens[:max_vocab_size]
         idx2token = dict(zip(range(max_vocab_size), tokens))
@@ -111,6 +112,78 @@ class PairedSentenceDataset(Dataset):
 
     def shuffle(self):
         pass
+
+    def detect_restored(self, dataset_path):
+        required_files = []
+        for prefix in ['train', 'dev', 'test']:
+            for suffix in [self.source_suffix, self.target_suffix]:
+                filename = os.path.join(dataset_path, '{}.{}.bin'.format(prefix, suffix))
+                required_files.append(filename)
+        src_vocab_file = os.path.join(dataset_path, '{}.vocab'.format(self.source_suffix))
+        tar_vocab_file = os.path.join(dataset_path, '{}.vocab'.format(self.target_suffix))
+        required_files.append(src_vocab_file)
+        required_files.append(tar_vocab_file)
+        absent_file_flag = False
+        for filename in required_files:
+            if not self.check_file_exist(filename):
+                self.logger.info('File {} not exist'.format(filename))
+                absent_file_flag = True
+        if absent_file_flag:
+            return False
+        return True
+
+    def _dump_data(self, dataset_path):
+        info_str = ''
+        src_vocab_file = os.path.join(dataset_path, '{}.vocab'.format(self.source_suffix))
+        tar_vocab_file = os.path.join(dataset_path, '{}.vocab'.format(self.target_suffix))
+        with open(src_vocab_file, "wb") as f_src_vocab:
+            pickle.dump([self.source_token2idx, self.source_idx2token], f_src_vocab)
+        with open(tar_vocab_file, "wb") as f_tar_vocab:
+            pickle.dump([self.target_token2idx, self.target_idx2token], f_tar_vocab)
+        self.logger.info("Vocab size: source {}, target {}".format(len(self.source_token2idx),
+                                                                   len(self.target_token2idx)))
+        for i, prefix in enumerate(['train', 'dev', 'test']):
+            source_text_data = self.source_text_data[i]
+            target_text_data = self.target_text_data[i]
+            source_text_data = self._text2id(source_text_data, self.source_token2idx)
+            target_text_data = self._text2id(target_text_data, self.target_token2idx)
+            src_idx_filename = os.path.join(dataset_path, '{}.{}.bin'.format(prefix, self.source_suffix))
+            tar_idx_filename = os.path.join(dataset_path, '{}.{}.bin'.format(prefix, self.target_suffix))
+            with open(src_idx_filename, "wb") as f_src:
+                pickle.dump(source_text_data, f_src)
+            with open(tar_idx_filename, "wb") as f_tar:
+                pickle.dump(target_text_data, f_tar)
+            if prefix == 'test':
+                info_str += '{}: {} cases'.format(prefix, len(source_text_data))
+            else:
+                info_str += '{}: {} cases, '.format(prefix, len(source_text_data))
+        self.logger.info(info_str)
+        self.logger.info("Dump finished!")
+
+    def load_restored(self, dataset_path):
+        """Load dataset from restored binary files (train, dev, test).
+        Args:
+            dataset_path (str): path of dataset dir.
+        """
+        src_vocab_file = os.path.join(dataset_path, '{}.vocab'.format(self.source_suffix))
+        tar_vocab_file = os.path.join(dataset_path, '{}.vocab'.format(self.target_suffix))
+        with open(src_vocab_file, "rb") as f_src:
+            self.source_token2idx, self.source_idx2token = pickle.load(f_src)
+        with open(tar_vocab_file, "rb") as f_tar:
+            self.target_token2idx, self.target_idx2token = pickle.load(f_tar)
+        self.logger.info("Restore Vocab!")
+        for prefix in ['train', 'dev', 'test']:
+            src_idx_filename = os.path.join(dataset_path, '{}.{}.bin'.format(prefix, self.source_suffix))
+            tar_idx_filename = os.path.join(dataset_path, '{}.{}.bin'.format(prefix, self.target_suffix))
+            with open(src_idx_filename, "rb") as f_src:
+                source_text_data = pickle.load(f_src)
+                source_text_data = self._id2text(source_text_data, self.source_idx2token)
+            with open(tar_idx_filename, "rb") as f_tar:
+                target_text_data = pickle.load(f_tar)
+                target_text_data = self._id2text(target_text_data, self.target_idx2token)
+            self.source_text_data.append(source_text_data)
+            self.target_text_data.append(target_text_data)
+        self.logger.info("Restore finished!")
 
     def build(self, eval_setting=None):
         info_str = ''

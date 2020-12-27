@@ -2,17 +2,14 @@
 # @Author : Gaole He
 # @Email  : hegaole@ruc.edu.cn
 
-import os
-import nltk
-import collections
-import random
 import numpy as np
+import os
 from logging import getLogger
 from textbox.utils.enum_type import SpecialTokens
 
 
 class Dataset(object):
-    def __init__(self, config, saved_dataset=None):
+    def __init__(self, config):
         self.config = config
         self.dataset_path = config['data_path']
         self.logger = getLogger()
@@ -25,53 +22,42 @@ class Dataset(object):
         self.max_vocab_size = config['max_vocab_size']
         self.max_seq_length = config['max_seq_length']
 
-        self._from_scratch()
-        # if saved_dataset is None:
-        #     self._from_scratch()
-        # else:
-        #     self._restore_saved_dataset(saved_dataset)
+        restored_exist = self.detect_restored(self.dataset_path)
+        if restored_exist:
+            self._load_restored()
+        else:
+            self._from_scratch()
 
     def _from_scratch(self):
         """Load dataset from scratch.
         Initialize attributes firstly, then load data from atomic files, pre-process the dataset lastly.
         """
-        self.logger.debug('Loading {} from scratch'.format(self.__class__))
+        self.logger.info('Loading data from scratch')
 
         self._get_preset()
         self._load_data(self.dataset_path)
         self._data_processing()
+        self._dump_data(self.dataset_path)
+
+    def _load_restored(self):
+        """Load dataset from restored.
+        Initialize attributes firstly, then load data from binary files.
+        """
+        self.logger.info('Loading data from restored')
+
+        self._get_preset()
+        self.load_restored(self.dataset_path)
+
+    @staticmethod
+    def check_file_exist(filename):
+        if not os.path.isfile(filename):
+            return False
+        return True
 
     def _get_preset(self):
         """Initialization useful inside attributes.
         """
         raise NotImplementedError('Method [_get_preset] should be implemented.')
-
-    # def _restore_saved_dataset(self, saved_dataset):
-    #     """Restore saved dataset from ``saved_dataset``.
-    #     Args:
-    #         saved_dataset (str): path for the saved dataset.
-    #     """
-    #     self.logger.debug('Restoring dataset from [{}]'.format(saved_dataset))
-    #
-    #     if (saved_dataset is None) or (not os.path.isdir(saved_dataset)):
-    #         raise ValueError('filepath [{}] need to be a dir'.format(saved_dataset))
-    #
-    #     with open(os.path.join(saved_dataset, 'basic-info.json')) as file:
-    #         basic_info = json.load(file)
-    #
-    #     for k in basic_info:
-    #         setattr(self, k, basic_info[k])
-    #
-    #     feats = ['inter', 'user', 'item']
-    #     for name in feats:
-    #         cur_file_name = os.path.join(saved_dataset, '{}.csv'.format(name))
-    #         if os.path.isfile(cur_file_name):
-    #             df = pd.read_csv(cur_file_name)
-    #             setattr(self, '{}_feat'.format(name), df)
-    #         else:
-    #             setattr(self, '{}_feat'.format(name), None)
-    #
-    #     self._get_field_from_config()
 
     def _load_data(self, dataset_path):
         r"""Load dataset with dataset split strategy.
@@ -79,6 +65,51 @@ class Dataset(object):
             dataset_path (str): path of dataset dir.
         """
         raise NotImplementedError('Method [_load_data] should be implemented.')
+
+    def _dump_data(self, dataset_path):
+        r"""dump dataset with processed dataset.
+        Args:
+            dataset_path (str): path of dataset dir.
+        """
+        raise NotImplementedError('Method [_dump_data] should be implemented.')
+
+    def _text2id(self, text_data, token2idx):
+        r"""transform text to id. but out of vocab word will still be saved as original word
+        input:
+            text_data: list -> list -> word, original text
+            token2idx: dict, map token to index
+        output:
+            text_idx_data: list -> list -> int, list of word index
+        """
+        text_idx_data = []
+        for text in text_data:
+            text_idx = self._token2idx(text, token2idx)
+            text_idx_data.append(text_idx)
+        return text_idx_data
+
+    def _id2text(self, idx_data, idx2token):
+        r"""transform id to text.
+        input:
+            idx_data: list -> list -> int, list of word idx
+            idx2token: dict, map token to index
+        output:
+            text_data: list -> list -> word, list of word
+        """
+        text_data = []
+        for text in idx_data:
+            text = self._idx2token(text, idx2token)
+            text_data.append(text)
+        return text_data
+
+    def _token2idx(self, inputs, token2idx):
+        if isinstance(inputs, list):
+            return [self._token2idx(x, token2idx) for x in inputs]
+        return token2idx.get(inputs, inputs)
+
+    def _idx2token(self, inputs, idx2token):
+        if isinstance(inputs, list):
+            return [self._idx2token(x, idx2token) for x in inputs]
+        return idx2token.get(inputs, inputs)
 
     def _data_processing(self):
         r"""Necessary processing steps for dataset.
@@ -142,6 +173,11 @@ class Dataset(object):
         cnt[0] = tot - sum(cnt[1:])
         split_ids = np.cumsum(cnt)[:-1]
         return list(split_ids)
+
+    def detect_restored(self, dataset_path):
+        r"""Detect whether restored datasets exisit in dataset_path.
+        """
+        raise NotImplementedError('Method [detect_restored] should be implemented.')
 
     def split_by_ratio(self, ratios):
         r"""Split dataset by ratios.

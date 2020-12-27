@@ -16,9 +16,8 @@ import numpy as np
 import torch
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 from textbox.evaluator.metrics import metrics_dict
-from torch.nn.utils.rnn import pad_sequence
 
-# These metrics are typical in topk recommendations
+
 ngram_metrics = {metric.lower(): metric for metric in ['bleu', 'self_bleu']}
 
 
@@ -44,7 +43,6 @@ class NgramEvaluator(AbstractEvaluator):
         Returns:
             dict: such as ``{'bleu-1': xxx, 'self-bleu-4': yyyy}``
         """
-        # assert len(generate_corpus) == len(reference_corpus)
         # get metrics
         metric_dict = {}
         result_dict = self._calculate_metrics(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
@@ -57,7 +55,6 @@ class NgramEvaluator(AbstractEvaluator):
         return metric_dict
 
     def _check_args(self):
-
         # Check metrics
         if isinstance(self.metrics, (str, list)):
             if isinstance(self.metrics, str):
@@ -71,7 +68,7 @@ class NgramEvaluator(AbstractEvaluator):
                 raise ValueError("There is no user grouped ngram metric named {}!".format(m))
         self.metrics = [metric.lower() for metric in self.metrics]
 
-        # Check topk:
+        # Check n_gram
         if isinstance(self.n_grams, (int, list)):
             if isinstance(self.n_grams, int):
                 self.n_grams = [self.n_grams]

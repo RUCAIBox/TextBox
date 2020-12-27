@@ -8,7 +8,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import UnconditionalGenerator
 from textbox.module.Encoder.rnn_encoder import BasicRNNEncoder
 from textbox.module.Decoder.rnn_decoder import BasicRNNDecoder
@@ -25,7 +24,6 @@ class RNNVAE(UnconditionalGenerator):
     r"""LSTMVAE is the first text generation model with VAE,
      we modify its architecture to fit all RNN type, and rename it as RNNVAE
     """
-    input_type = InputType.NOISE
 
     def __init__(self, config, dataset):
         super(RNNVAE, self).__init__(config, dataset)

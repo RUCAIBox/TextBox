@@ -11,10 +11,6 @@ textbox.data.utils
 ########################
 """
 
-import copy
-import os
-import importlib
-
 from textbox.data.dataloader import *
 
 
@@ -103,7 +99,6 @@ def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False):
     if len(dataset) != len(batch_size):
         raise ValueError('dataset {} and batch_size {} should have the same length'.format(dataset, batch_size))
 
-    # model_type = config['MODEL_TYPE']
     task_type = config['task_type'].lower()
     logger = getLogger()
     logger.info('Build [{}] DataLoader for [{}]'.format(task_type, name))
@@ -111,7 +106,6 @@ def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False):
 
     DataLoader = get_data_loader(config)
 
-    # try:
     ret = [
         DataLoader(
             config=config,
@@ -120,8 +114,6 @@ def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False):
             shuffle=shuffle
         ) for ds, bs in zip(dataset, batch_size)
     ]
-    # except TypeError:
-    #     raise ValueError('training_neg_sample_num should be 0')
 
     if len(ret) == 1:
         return ret[0]
@@ -143,11 +135,6 @@ def save_datasets(save_path, name, dataset):
     if len(name) != len(dataset):
         raise ValueError('len of name {} should equal to len of dataset'.format(name, dataset))
     print("To be designed, nothing to save")
-    # for i, d in enumerate(dataset):
-    #     cur_path = os.path.join(save_path, name[i])
-    #     if not os.path.isdir(cur_path):
-    #         os.makedirs(cur_path)
-    #     d.save(cur_path)
 
 
 def get_data_loader(config):
@@ -166,4 +153,3 @@ def get_data_loader(config):
         return PairedSentenceDataLoader
     else:
         raise NotImplementedError("No such data loader for TASK_TYPE: {}".format(task_type))
-

@@ -3,6 +3,7 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 import os
+import pickle
 import nltk
 import collections
 import random
@@ -74,7 +75,9 @@ class SingleSentenceDataset(Dataset):
             for sent_list in self.text_data:
                 for text in sent_list:
                     word_list.extend(text)
-            tokens = [token for token, _ in collections.Counter(word_list).items()]
+            token_count = [(count, token) for token, count in collections.Counter(word_list).items()]
+            token_count.sort(reverse=True)
+            tokens = [word for count, word in token_count]
             tokens = [self.padding_token, self.unknown_token, self.sos_token, self.eos_token] + tokens
             tokens = tokens[:self.max_vocab_size]
 
@@ -84,7 +87,9 @@ class SingleSentenceDataset(Dataset):
             word_list = list()
             for text in self.text_data:
                 word_list.extend(text)
-            tokens = [token for token, _ in collections.Counter(word_list).items()]
+            token_count = [(count, token) for token, count in collections.Counter(word_list).items()]
+            token_count.sort(reverse=True)
+            tokens = [word for count, word in token_count]
             tokens = [self.padding_token, self.unknown_token, self.sos_token, self.eos_token] + tokens
             tokens = tokens[:self.max_vocab_size]
 
@@ -168,9 +173,9 @@ class SingleSentenceDataset(Dataset):
             with open(idx_filename, "wb") as f_text:
                 pickle.dump(text_data, f_text)
             if prefix == 'test':
-                info_str += '{}: {} cases'.format(prefix, len(source_text_data))
+                info_str += '{}: {} cases'.format(prefix, len(text_data))
             else:
-                info_str += '{}: {} cases, '.format(prefix, len(source_text_data))
+                info_str += '{}: {} cases, '.format(prefix, len(text_data))
         self.logger.info(info_str)
         self.logger.info("Dump finished!")
 
@@ -179,14 +184,14 @@ class SingleSentenceDataset(Dataset):
         Args:
             dataset_path (str): path of dataset dir.
         """
-        vocab_file = os.path.join(dataset_path, '.vocab')
+        vocab_file = os.path.join(dataset_path, 'vocab')
         with open(vocab_file, "rb") as f_vocab:
             self.token2idx, self.idx2token = pickle.load(f_vocab)
         for prefix in ['train', 'dev', 'test']:
             idx_filename = os.path.join(dataset_path, '{}.bin'.format(prefix))
             with open(idx_filename, "rb") as f_text:
                 text_data = pickle.load(f_text)
-                text_data = self._id2text(text_data)
+                text_data = self._id2text(text_data, self.idx2token)
             self.text_data.append(text_data)
         self.logger.info("Restore finished!")
 

@@ -14,7 +14,8 @@ training_arguments = ['epochs', 'train_batch_size',
                       'training_neg_sample_num',
                       'eval_step', 'stopping_step']
 
-evaluation_arguments = ['metrics', 'n_grams',
+evaluation_arguments = ['beam_size', 'decoding_strategy', 
+                        'metrics', 'n_grams',
                         'eval_batch_size', 'eval_generate_num']
 
 dataset_arguments = ['max_vocab_size', 'source_max_vocab_size', 'target_max_vocab_size', 

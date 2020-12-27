@@ -2,6 +2,10 @@
 # @Author : Junyi LI
 # @Email  : lijunyi@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2020/12/27
+# @Author : Tianyi Tang
+# @Email  : steventang@ruc.edu.cn
 
 import torch
 import torch.nn as nn
@@ -14,12 +18,12 @@ def topk_sampling(logits, temperature=1.0, top_k=0, top_p=0.9):
     Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
 
     Args:
-        logits: logits distribution
+        logits (torch.Tensor): logits distribution
         top_k >0: keep only top k tokens with highest probability (top-k filtering).
         top_p >0.0: keep the top tokens with cumulative probability >= top_p (nucleus filtering).
 
     Return:
-        torch.tensor, the chosen index of token.
+        torch.Tensor: the chosen index of token.
     """
     logits = logits / temperature
     top_k = min(top_k, logits.size(-1))  # Safety check
@@ -54,16 +58,54 @@ def topk_sampling(logits, temperature=1.0, top_k=0, top_p=0.9):
 
     return token_idx
 
-
-def greedy_sampling(logits):
-    r"""
-    Basic greedy sampling strategy
+def greedy_search(logits):
+    r"""Find the index of max logits
 
     Args:
-        logits: logits distribution
-    """
-    topv, topi = F.softmax(logits, dim=-1).data.topk(k=4)
-    topi = topi.squeeze()
-    token_idx = topi[0].item()
+        logits (torch.Tensor): logits distribution
 
-    return token_idx
+    Return:
+        torch.Tensor: the chosen index of token
+    """
+    return logits.argmax(dim=-1)
+
+def beam_search(gen_idx, token_logits, completed_hypotheses, hypthetic_token_idx, hyp_scores,
+                decoder_states, encoder_output=None, encoder_mask=None, beam_size, eos_token_idx, device):
+    
+    token_probs = F.log_softmax(token_logits, dim=-1).squeeze(1)
+    vocab_size = token_probs.shape[-1]
+
+    live_hyp_num = beam_size - len(completed_hypotheses)
+    tmp_hyp_scores = (hyp_scores.unsqueeze(1).expand_as(token_probs) + token_probs).view(-1)
+    top_scores, top_pos = torch.topk(tmp_hyp_scores, k=live_hyp_num)
+    hyp_ids = top_pos / vocab_size
+    word_ids = top_pos % vocab_size
+
+    new_hypotheses = []
+    new_ids = []
+    new_scores = []
+
+    for hyp_id, word_id, score in zip(hyp_ids, word_ids, top_scores):
+        new_hyp = hypthetic_token_idx[hyp_id] + [word_id]
+        if (word_id == eos_token_idx):
+            completed_hypotheses.append((new_hyp[1:-1], score / (gen_idx - 1)))
+        else:
+            new_hypotheses.append(new_hyp)
+            new_ids.append(hyp_id)
+            new_scores.append(score)
+
+    if (len(completed_hypotheses) == beam_size):
+        return completed_hypotheses, None, None, None, None, None, None
+
+    new_ids = torch.tensor(new_ids).to(device)
+    decoder_states = decoder_states[:, new_ids, :]
+    hypthetic_token_idx = new_hypotheses
+    hyp_scores = torch.tensor(new_scores).to(device)
+
+    hyp_num = len(hypthetic_token_idx)
+    encoder_output = encoder_output.repeat(hyp_num, 1, 1)
+    encoder_mask = encoder_mask.repeat(hyp_num, 1)
+    input_seq = [hyp[-1] for hyp in hypthetic_token_idx]
+    input_seq = torch.tensor(input_seq).unsqueeze(1).to(device)
+
+    return completed_hypotheses, hypthetic_token_idx, hyp_scores, input_seq, decoder_states, encoder_output, encoder_mask

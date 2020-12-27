@@ -7,31 +7,19 @@ general_arguments = ['gpu_id', 'use_gpu',
                      'seed',
                      'reproducibility',
                      'state',
-                     'data_path']
+                     'data_path', 'checkpoint_dir', 'generated_text_dir']
 
 training_arguments = ['epochs', 'train_batch_size',
                       'learner', 'learning_rate',
                       'training_neg_sample_num',
-                      'eval_step', 'stopping_step',
-                      'checkpoint_dir']
+                      'eval_step', 'stopping_step']
 
-evaluation_arguments = ['eval_setting',
-                        'group_by_user',
-                        'split_ratio', 'leave_one_num',
-                        'real_time_process',
-                        'metrics', 'topk', 'valid_metric',
-                        'eval_batch_size']
+evaluation_arguments = ['metrics', 'n_grams',
+                        'eval_batch_size', 'eval_generate_num']
 
-dataset_arguments = ['field_separator', 'seq_separator',
-                     'USER_ID_FIELD', 'ITEM_ID_FIELD', 'RATING_FIELD', 'TIME_FIELD'
-                     'seq_len',
-                     'LABEL_FIELD', 'threshold',
-                     'NEG_PREFIX',
-                     'ITEM_LIST_LENGTH_FIELD', 'LIST_SUFFIX', 'MAX_ITEM_LIST_LENGTH', 'POSITION_FIELD',
-                     'HEAD_ENTITY_ID_FIELD', 'TAIL_ENTITY_ID_FIELD', 'RELATION_ID_FIELD', 'ENTITY_ID_FIELD',
-                     'load_col', 'unload_col', 'additional_feat_suffix',
-                     'max_user_inter_num', 'min_user_inter_num', 'max_item_inter_num', 'min_item_inter_num',
-                     'lowest_val', 'highest_val', 'equal_val', 'not_equal_val', 'drop_filter_field',
-                     'fields_in_same_space', 'fill_nan',
-                     'preload_weight', 'drop_preload_weight',
-                     'normalize_field', 'normalize_all']
+dataset_arguments = ['max_vocab_size', 'source_max_vocab_size', 'target_max_vocab_size', 
+                     'source_max_seq_length', 'target_max_seq_length',
+                     'source_language', 'target_language',
+                     'source_suffix', 'target_suffix',
+                     'split_strategy', 'split_ratio', 
+                     'share_vocab']

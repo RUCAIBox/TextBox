@@ -5,6 +5,9 @@ from torch.nn import Parameter
 
 
 class BasicCNNDecoder(torch.nn.Module):
+    """
+    Code Reference: https://github.com/kefirski/contiguous-succotash
+    """
     def __init__(self,
                  input_size,
                  latent_size,
@@ -47,19 +50,9 @@ class BasicCNNDecoder(torch.nn.Module):
 
     @staticmethod
     def effective_k(k, d):
-        """
-        :param k: kernel width
-        :param d: dilation size
-        :return: effective kernel width when dilation is performed
-        """
         return (k - 1) * d + 1
 
     def forward(self, decoder_input, noise):
-        '''
-        :param decoder_input: [batch_size, length, embedding_size]
-        :param noise: [batch_size, latent_size]
-        :return:
-        '''
         device = decoder_input.device
         batch_size, seq_len, _ = decoder_input.size()
 
@@ -86,10 +79,9 @@ class BasicCNNDecoder(torch.nn.Module):
 
 
 class HybridDecoder(nn.Module):
-    '''
+    """
     Code Reference: https://github.com/kefirski/hybrid_rvae
-    '''
-
+    """
     def __init__(self, embedding_size, latent_size, hidden_size, num_dec_layers, rnn_type, vocab_size):
         super(HybridDecoder, self).__init__()
 
@@ -136,12 +128,6 @@ class HybridDecoder(nn.Module):
         self.token_vocab = nn.Linear(self.hidden_size, self.vocab_size)
 
     def forward(self, decoder_input, latent_variable):
-        """
-        :param latent_variable: An float tensor with shape of [batch_size, latent_size]
-        :param decoder_input: An float tensot with shape of [batch_size, max_seq_len, embed_size]
-        :return: two tensors with shape of [batch_size, max_seq_len, vocab_size]
-                    for estimating likelihood for whole model and for auxiliary target respectively
-        """
         cnn_logits = self.conv_decoder(latent_variable)
         cnn_logits = cnn_logits[:, :decoder_input.size(1), :].contiguous()  # seq_len
         rnn_logits, _ = self.rnn_decoder(cnn_logits, decoder_input)

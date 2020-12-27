@@ -11,17 +11,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import GenerativeAdversarialNet
 from textbox.module.Generator.SeqGANGenerator import SeqGANGenerator
 from textbox.module.Discriminator.SeqGANDiscriminator import SeqGANDiscriminator
 
 
 class SeqGAN(GenerativeAdversarialNet):
-    """Sequence Generative Adversarial Nets with Policy Gradient
+    r"""SeqGAN model followed "Sequence Generative Adversarial Nets with Policy Gradient".
 
     """
-    input_type = InputType.NOISE
 
     def __init__(self, config, dataset):
         super(SeqGAN, self).__init__(config, dataset)

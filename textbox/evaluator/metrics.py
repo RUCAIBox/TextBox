@@ -9,23 +9,23 @@
 # @Email  : steventang@ruc.edu.cn
 
 """
-recbole.evaluator.metrics
+textbox.evaluator.metrics
 ############################
 """
-
-from logging import getLogger
 
 import numpy as np
 from fast_bleu import BLEU, SelfBLEU
 
 
-def bleu_(generate_corpus, reference_corpus, n_grams):
+def bleu_(generate_corpus, reference_corpus, n_grams, get_avg=False):
     weight = [0] * max(n_grams)
     weights = {}
     for n_gram in n_grams:
         weight[n_gram - 1] = 1.0
         weights[n_gram] = tuple(weight)
         weight[n_gram - 1] = 0.0
+    if get_avg:
+        weights['avg-bleu'] = tuple([0.25] * 4)
 
     bleu = BLEU(reference_corpus, weights)
     scores = bleu.get_score(generate_corpus)
@@ -34,7 +34,11 @@ def bleu_(generate_corpus, reference_corpus, n_grams):
     for n_gram in n_grams:
         score = np.array(scores[n_gram])
         results.append(score.mean())
+    if get_avg:
+        avg_bleu = np.array(scores['avg-bleu']).mean()
+        return results, avg_bleu
     return results
+
 
 def self_bleu_(generate_corpus, n_grams, reference_corpus=None):
     weight = [0] * max(n_grams)

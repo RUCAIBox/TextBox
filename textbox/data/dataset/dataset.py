@@ -2,10 +2,6 @@
 # @Author : Gaole He
 # @Email  : hegaole@ruc.edu.cn
 
-import os
-import nltk
-import collections
-import random
 import numpy as np
 from logging import getLogger
 from textbox.utils.enum_type import SpecialTokens
@@ -26,10 +22,6 @@ class Dataset(object):
         self.max_seq_length = config['max_seq_length']
 
         self._from_scratch()
-        # if saved_dataset is None:
-        #     self._from_scratch()
-        # else:
-        #     self._restore_saved_dataset(saved_dataset)
 
     def _from_scratch(self):
         """Load dataset from scratch.
@@ -45,33 +37,6 @@ class Dataset(object):
         """Initialization useful inside attributes.
         """
         raise NotImplementedError('Method [_get_preset] should be implemented.')
-
-    # def _restore_saved_dataset(self, saved_dataset):
-    #     """Restore saved dataset from ``saved_dataset``.
-    #     Args:
-    #         saved_dataset (str): path for the saved dataset.
-    #     """
-    #     self.logger.debug('Restoring dataset from [{}]'.format(saved_dataset))
-    #
-    #     if (saved_dataset is None) or (not os.path.isdir(saved_dataset)):
-    #         raise ValueError('filepath [{}] need to be a dir'.format(saved_dataset))
-    #
-    #     with open(os.path.join(saved_dataset, 'basic-info.json')) as file:
-    #         basic_info = json.load(file)
-    #
-    #     for k in basic_info:
-    #         setattr(self, k, basic_info[k])
-    #
-    #     feats = ['inter', 'user', 'item']
-    #     for name in feats:
-    #         cur_file_name = os.path.join(saved_dataset, '{}.csv'.format(name))
-    #         if os.path.isfile(cur_file_name):
-    #             df = pd.read_csv(cur_file_name)
-    #             setattr(self, '{}_feat'.format(name), df)
-    #         else:
-    #             setattr(self, '{}_feat'.format(name), None)
-    #
-    #     self._get_field_from_config()
 
     def _load_data(self, dataset_path):
         r"""Load dataset with dataset split strategy.

@@ -3,11 +3,6 @@
 # @Email  : huxiaoxuan@ruc.edu.cn
 
 
-'''
-Code Reference: https://github.com/cookielee77/RankGan-NIPS2017
-'''
-
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,6 +10,9 @@ from textbox.model.abstract_generator import UnconditionalGenerator
 
 
 class RankGANDiscriminator(UnconditionalGenerator):
+    r"""RankGANDiscriminator is a ranker which can endow a relative rank among the sequences when given a reference.
+    The ranker is designed with the convolutional neural network.
+    """
     def __init__(self, config, dataset):
         super(RankGANDiscriminator, self).__init__(config, dataset)
 
@@ -44,11 +42,27 @@ class RankGANDiscriminator(UnconditionalGenerator):
         self.W_H = nn.Linear(self.filter_sum, self.filter_sum, bias = False)
     
     def highway(self, data):
+        r"""Apply the highway net to data.
+
+        Args:
+            data (torch.Tensor): The original data, shape: [batch_size, total_filter_num].
+
+        Returns:
+            torch.Tensor: The data processed after highway net, shape: [batch_size, total_filter_num].
+        """
         tau = torch.sigmoid(self.W_T(data))
         non_linear = F.relu(self.W_H(data))
         return self.dropout(tau * non_linear + (1 - tau) * data)
 
-    def forward(self, data): # b * len
+    def forward(self, data):
+        r"""Maps concatenated sequence matrices into the embedded feature vectors.
+
+        Args:
+            data (torch.Tensor): The sentence data, shape: [batch_size, max_seq_len].
+
+        Returns:
+            torch.Tensor: The embedded feature vectors, shape: [batch_size, total_filter_num].
+        """
         data = self.word_embedding(data).unsqueeze(1) # b * len * e -> b * 1 * len * e
         combined_outputs = []
         for CNN_filter in self.filters:
@@ -61,6 +75,18 @@ class RankGANDiscriminator(UnconditionalGenerator):
         return feature
 
     def get_rank_scores(self, sample_data, ref_data):
+        r"""Get the ranking score (before softmax) for sample s given reference u.
+        
+        .. math::
+            \alpha(s|u) = cosine(y_s,y_u) = \frac{y_s \cdot y_u}{\parallel y_s \parallel \parallel y_u \parallel}
+
+        Args:
+            sample_data (torch.Tensor): The realistic or generated sentence data, shape: [sample_size, max_seq_len].
+            ref_data (torch.Tensor): The reference sentence data, shape: [ref_size, max_seq_len].
+
+        Returns:
+            torch.Tensor: The ranking score of sample data, shape: [batch_size].
+        """
         feature = self.forward(sample_data)  # sample_size * tot_f_n
         ref_feature = self.forward(ref_data)  # ref_size * tot_f_n
 
@@ -71,6 +97,17 @@ class RankGANDiscriminator(UnconditionalGenerator):
 
     
     def calculate_loss(self, real_data, fake_data, ref_data):
+        r"""Calculate the loss for real data and fake data.
+        To rank the human_written sentences higher than the machine-written sentences.
+
+        Args:
+            real_data (torch.Tensor): The realistic sentence data, shape: [batch_size, max_seq_len].
+            fake_data (torch.Tensor): The generated sentence data, shape: [batch_size, max_seq_len].
+            ref_data (torch.Tensor): The reference sentence data, shape: [ref_size, max_seq_len].
+
+        Returns:
+            torch.Tensor: The calculated loss of real data and fake data, shape: [].
+        """
         # ranking
         sample_data = torch.cat((real_data, fake_data), dim=0)  # 2b * l
         scores = self.get_rank_scores(sample_data, ref_data)  # 2b

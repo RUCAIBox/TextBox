@@ -3,7 +3,7 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 """
-recbole.utils.logger
+textbox.utils.logger
 ###############################
 """
 
@@ -67,4 +67,3 @@ def init_logger(config):
         level=level,
         handlers=[fh, sh]
     )
-

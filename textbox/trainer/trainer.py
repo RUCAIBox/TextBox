@@ -13,7 +13,6 @@ textbox.trainer.trainer
 """
 
 import os
-import itertools
 import torch
 import torch.optim as optim
 import numpy as np
@@ -26,8 +25,7 @@ from logging import getLogger
 
 from textbox.module.Optimizer.optim import ScheduledOptim
 from textbox.evaluator import NgramEvaluator, TranslationEvaluator, SummarizationEvaluator
-from textbox.utils import ensure_dir, get_local_time, early_stopping, calculate_valid_score, dict2str, \
-    DataLoaderType, EvaluatorType
+from textbox.utils import ensure_dir, get_local_time, early_stopping
 
 
 class AbstractTrainer(object):
@@ -42,14 +40,12 @@ class AbstractTrainer(object):
 
     def fit(self, train_data):
         r"""Train the model based on the train data.
-
         """
 
         raise NotImplementedError('Method [next] should be implemented.')
 
     def evaluate(self, eval_data):
         r"""Evaluate the model based on the eval data.
-
         """
 
         raise NotImplementedError('Method [next] should be implemented.')
@@ -67,7 +63,6 @@ class Trainer(AbstractTrainer):
     Initializing the Trainer needs two parameters: `config` and `model`. `config` records the parameters information
     for controlling training and evaluation, such as `learning_rate`, `epochs`, `eval_step` and so on.
     More information can be found in [placeholder]. `model` is the instantiated object of a Model Class.
-
     """
 
     def __init__(self, config, model):
@@ -79,8 +74,6 @@ class Trainer(AbstractTrainer):
         self.epochs = config['epochs']
         self.eval_step = min(config['eval_step'], self.epochs)
         self.stopping_step = config['stopping_step']
-        self.valid_metric = config['valid_metric'].lower()
-        self.valid_metric_bigger = config['valid_metric_bigger']
         self.test_batch_size = config['eval_batch_size']
         self.device = config['device']
         self.embedding_size = config['embedding_size']
@@ -108,11 +101,6 @@ class Trainer(AbstractTrainer):
             self.evaluator = SummarizationEvaluator(config)
         else:
             self.evaluator = NgramEvaluator(config)
-        # self.eval_type = config['eval_type']
-        # if self.eval_type == EvaluatorType.INDIVIDUAL:
-        #     self.evaluator = LossEvaluator(config)
-        # else:
-        #     self.evaluator = TopKEvaluator(config)
 
         self.item_tensor = None
         self.tot_item_num = None
@@ -155,7 +143,6 @@ class Trainer(AbstractTrainer):
         self.model.train()
         total_loss = None
         for batch_idx, data in enumerate(train_data):
-            # interaction = interaction.to(self.device)
             self.optimizer.zero_grad()
             losses = self.model.calculate_loss(data, epoch_idx=epoch_idx)
             if isinstance(losses, tuple):
@@ -184,8 +171,6 @@ class Trainer(AbstractTrainer):
         self.model.eval()
         total_loss = None
         for batch_idx, data in enumerate(valid_data):
-            # interaction = interaction.to(self.device)
-            # self.optimizer.zero_grad()
             losses = self.model.calculate_loss(data)
             if isinstance(losses, tuple):
                 loss = sum(losses)
@@ -195,7 +180,6 @@ class Trainer(AbstractTrainer):
                 loss = losses
                 total_loss = losses.item() if total_loss is None else total_loss + losses.item()
             self._check_nan(loss)
-        # self.optimizer.zero_grad()
         valid_loss = total_loss / len(valid_data)
         ppl = np.exp(valid_loss)
         return valid_loss, ppl
@@ -278,8 +262,6 @@ class Trainer(AbstractTrainer):
         Returns:
              (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
         """
-        # if hasattr(self.model, 'train_preparation'):
-        #     self.model.train_preparation(train_data=train_data, valid_data=valid_data)
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
             training_start_time = time()
@@ -438,6 +420,9 @@ class GANTrainer(Trainer):
     def _build_module_optimizer(self, module):
         r"""Init the Module Optimizer
 
+        Args:
+            module (torch.nn.Mudule): Mudule class of torch.nn needed optimizer
+
         Returns:
             torch.optim: the optimizer
         """
@@ -456,6 +441,18 @@ class GANTrainer(Trainer):
         return optimizer
 
     def _optimize_step(self, losses, total_loss, model, opt):
+        r"""The opt uses the cliped losses to conduct an optimize step to optimize model
+        and sum up losses to the total_loss.
+
+        Args:
+            losses (torch.Tensor or tuple): The loss to be backward.
+            total_loss (Float): Total loss in an epoch.
+            model (torch.nn.Mudule): The model to be optimized.
+            opt (torch.optim): The optimizer of the model.
+
+        Returns:
+            torch.Tensor or tuple: Total loss in an epoch, shape: [].
+        """
         if isinstance(losses, tuple):
             loss = sum(losses)
             loss_tuple = tuple(per_loss.item() for per_loss in losses)
@@ -472,12 +469,6 @@ class GANTrainer(Trainer):
         return total_loss
 
     def _save_checkpoint(self, epoch):
-        r"""Store the model parameters information and training information.
-
-        Args:
-            epoch (int): the current epoch id
-
-        """
         state = {
             'config': self.config,
             'epoch': epoch,
@@ -488,12 +479,28 @@ class GANTrainer(Trainer):
         torch.save(state, self.saved_model_file)
 
     def _add_pad(self, data):
+        r"""Pad the data to the max length of corpus.
+
+        Args:
+            data (torch.Tensor): The data to be padded, shape: [batch_size, max_batch_length].
+
+        Returns:
+            torch.Tensor: The padded data, shape: [batch_size, max_seq_length].
+        """
         batch_size = data.shape[0]
         padded_data = torch.full((batch_size, self.max_length), self.pad_idx, dtype=torch.long, device=self.device)
         padded_data[:, : data.shape[1]] = data
         return padded_data
 
     def _get_real_data(self, train_data):
+        r"""Get the target text index of the corpus train_datas.
+
+        Args:
+            train_data (DataLoader): the train data.
+
+        Returns:
+            torch.Tensor: The target text index, shape: [batch_size, max_batch_length].
+        """
         real_datas = []
         for corpus in train_data:
             real_data = corpus['target_idx']
@@ -505,9 +512,11 @@ class GANTrainer(Trainer):
 
     def _g_train_epoch(self, train_data, epoch_idx):
         r"""Train the generator module in an epoch
+
         Args:
             train_data (DataLoader): the train data
             epoch_idx (int): the current epoch id
+
         Returns:
             float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
             multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
@@ -517,7 +526,6 @@ class GANTrainer(Trainer):
         total_loss = None
 
         for batch_idx, data in enumerate(train_data):
-            # interaction = interaction.to(self.device)
             losses = self.model.calculate_g_train_loss(data, epoch_idx=epoch_idx)
             total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
         total_loss = [l / len(train_data) for l in total_loss] if isinstance(total_loss, tuple) else total_loss / len(
@@ -574,18 +582,6 @@ class GANTrainer(Trainer):
         return total_loss
 
     def fit(self, train_data, valid_data=None, verbose=True, saved=True):
-        r"""Train the model based on the train data and the valid data.
-
-        Args:
-            train_data (DataLoader): the train data
-            valid_data (DataLoader, optional): the valid data, default: None.
-                                               If it's None, the early_stopping is invalid.
-            verbose (bool, optional): whether to write training and evaluation information to logger, default: True
-            saved (bool, optional): whether to save the model parameters, default: True
-
-        Returns:
-             (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
-        """
         # generator pretraining
         if verbose:
             self.logger.info("Start generator pretraining...")
@@ -643,57 +639,40 @@ class TextGANTrainer(GANTrainer):
 
     def __init__(self, config, model):
         super(TextGANTrainer, self).__init__(config, model)
+        self.adversarail_g_epochs = config['adversarail_g_epochs']
 
     def _d_train_epoch(self, train_data, epoch_idx):
-        r"""Train the discriminator module in an epoch
-
-        Args:
-            train_data (DataLoader): the train data
-            epoch_idx (int): the current epoch id
-
-        Returns:
-            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
-            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
-            tuple which includes the sum of loss in each part.
-        """
         self.model.discriminator.train()
         total_loss = None
         real_data = self._get_real_data(train_data)
         real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
 
         for _ in range(self.d_sample_training_epochs):
-            for real_data in real_dataloader:
+            for idx, real_data in enumerate(real_dataloader):
                 fake_data, z = self.model.sample()
                 losses = self.model.calculate_d_train_loss(real_data, fake_data, z, epoch_idx=epoch_idx)
                 total_loss = self._optimize_step(losses, total_loss, self.model.discriminator, self.d_optimizer)
+                if (idx * self.model.batch_size >= self.d_sample_num):
+                    break
 
-        return total_loss / len(real_dataloader) / self.d_sample_training_epochs
+        return total_loss / min(len(real_dataloader), self.d_sample_num // self.model.batch_size) / self.d_sample_training_epochs
 
     def _adversarial_train_epoch(self, train_data, epoch_idx):
-        r"""Adversarial training in an epoch
-
-        Args:
-            train_data (DataLoader): the train data
-            epoch_idx (int): the current epoch id
-
-        Returns:
-            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
-            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
-            tuple which includes the sum of loss in each part.
-        """
         self.model.generator.train()
         total_loss = None
         real_data = self._get_real_data(train_data)
         real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
 
-        for real_data in real_dataloader:
+        for idx, real_data in enumerate(real_dataloader):
+            if (idx == self.adversarail_g_epochs):
+                break
             losses = self.model.calculate_g_adversarial_loss(real_data, epoch_idx=epoch_idx)
             total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
 
         for epoch_idx in range(self.adversarail_d_epochs):
             self._d_train_epoch(train_data, epoch_idx=epoch_idx)
 
-        return total_loss / len(real_dataloader)
+        return total_loss / min(len(real_dataloader), self.adversarail_g_epochs)
 
 
 class RankGANTrainer(GANTrainer):
@@ -758,8 +737,6 @@ class RankGANTrainer(GANTrainer):
             d_loss += self._d_train_epoch(train_data, epoch_idx=epoch_idx)
         d_loss = d_loss / self.adversarail_d_epochs
 
-        # d_output = "d_loss: %f" % (d_loss)
-        # self.logger.info(d_output)
         return total_loss
 
 
@@ -1102,7 +1079,6 @@ class LeakGANTrainer(GANTrainer):
 
     def _load_generated_text(self):
         r"""Load the generated text by our model to log.
-
         """
         with open(self.saved_text_file, 'r') as fin:
             samples = []

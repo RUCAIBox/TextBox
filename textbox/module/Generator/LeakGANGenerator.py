@@ -99,6 +99,7 @@ class LeakGANGenerator(UnconditionalGenerator):
 
     def forward(self, idx, inp, work_hidden, mana_hidden, feature, real_goal, train=False, pretrain=False):
         """Embeds input and sample on token at a time (seq_len = 1)
+
         Args:
             idx: index of current token in sentence
             inp: current input token for a batch [batch_size]

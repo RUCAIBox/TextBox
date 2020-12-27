@@ -8,7 +8,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import UnconditionalGenerator
 from textbox.module.Encoder.rnn_encoder import BasicRNNEncoder
 from textbox.module.Decoder.cnn_decoder import BasicCNNDecoder
@@ -27,7 +26,6 @@ class CNNVAE(UnconditionalGenerator):
     r""" CNNVAE use a dilated CNN as decoder, which made a trade-off between contextual capacity of the decoder and
     effective use of encoding information.
     """
-    input_type = InputType.NOISE
 
     def __init__(self, config, dataset):
         super(CNNVAE, self).__init__(config, dataset)

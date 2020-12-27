@@ -133,7 +133,6 @@ class AttentionalRNNDecoder(torch.nn.Module):
                 inputs = input_embeddings[:, step, :].unsqueeze(1)
                 context = None
 
-            # outputs shape: [batch_size, 1, hidden_size]
             hidden_states = hidden_states.contiguous()
             outputs, hidden_states = self.decoder(inputs, hidden_states)
 

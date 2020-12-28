@@ -15,7 +15,7 @@ from textbox.model.abstract_generator import ConditionalGenerator
 from textbox.module.Encoder.rnn_encoder import BasicRNNEncoder
 from textbox.module.Decoder.rnn_decoder import BasicRNNDecoder, AttentionalRNNDecoder
 from textbox.model.init import xavier_normal_initialization
-from textbox.module.strategy import topk_sampling, greedy_search, beam_search
+from textbox.module.strategy import topk_sampling, greedy_search, Beam_Search_Hypothesis
 
 
 class RNNEncDec(ConditionalGenerator):
@@ -81,6 +81,7 @@ class RNNEncDec(ConditionalGenerator):
     def generate(self, eval_dataloader):
         generate_corpus = []
         idx2token = eval_dataloader.target_idx2token
+
         for batch_data in eval_dataloader:
             source_text = batch_data['source_idx']
             source_length = batch_data['source_length']
@@ -100,27 +101,26 @@ class RNNEncDec(ConditionalGenerator):
                 input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
 
                 if (self.strategy == 'beam_search'):
-                    hypthetic_token_idx = [[self.sos_token_idx]]
-                    completed_hypotheses = []
-                    hyp_scores = torch.zeros(1).to(self.device)
+                    hypothesis = Beam_Search_Hypothesis(self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token)
 
                 for gen_idx in range(self.max_target_length):
                     decoder_input = self.target_token_embedder(input_seq)
                     if self.attention_type is not None:
                         decoder_outputs, decoder_states, _ = self.decoder(decoder_input, decoder_states, encoder_output, encoder_mask)
                     else:
-                        decoder_outputs, decoder_states = self.decoder(decoder_input,
-                                                                    decoder_states)
+                        decoder_outputs, decoder_states = self.decoder(decoder_input, decoder_states)
+
                     token_logits = self.vocab_linear(decoder_outputs)
                     if (self.strategy == 'topk_sampling'):
                         token_idx = topk_sampling(token_logits).item()
                     elif (self.strategy == 'greedy_search'):
                         token_idx = greedy_search(token_logits).item()
                     elif (self.strategy == 'beam_search'):
-                        completed_hypotheses, hypthetic_token_idx, hyp_scores, input_seq, decoder_states, encoder_output, encoder_mask = \
-                            beam_search(gen_idx, token_logits, completed_hypotheses, hypthetic_token_idx, hyp_scores, 
-                                        decoder_states, encoder_outputs[bid, :, :].unsqueeze(0), encoder_masks[bid, :].unsqueeze(0),
-                                        self.beam_size, self.eos_token_idx, self.device)
+                        if self.attention_type is not None:
+                            input_seq, decoder_states, encoder_output, encoder_mask = \
+                                hypothesis.step(gen_idx, token_logits, decoder_states, encoder_output, encoder_mask)
+                        else:
+                            input_seq, decoder_states = hypothesis.step(gen_idx, token_logits, decoder_states)
 
                     if (self.strategy in ['topk_sampling', 'greedy_search']):
                         if token_idx == self.eos_token_idx:
@@ -129,13 +129,11 @@ class RNNEncDec(ConditionalGenerator):
                             generate_tokens.append(idx2token[token_idx])
                             input_seq = torch.LongTensor([[token_idx]]).to(self.device)
                     elif (self.strategy == 'beam_search'):
-                        if (len(completed_hypotheses) == self.beam_size):
+                        if (hypothesis.stop()):
                             break
 
                 if (self.strategy == 'beam_search'):
-                    generate_idx = hypthetic_token_idx[0][1:] if (len(completed_hypotheses) == 0) \
-                              else max(completed_hypotheses, key = lambda hyp: hyp[1])[0]
-                    generate_tokens = [idx2token[idx.item()] for idx in generate_idx]
+                    generate_tokens = hypothesis.generate()
 
                 generate_corpus.append(generate_tokens)
         

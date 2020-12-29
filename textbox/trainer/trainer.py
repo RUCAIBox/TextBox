@@ -1180,21 +1180,22 @@ class MaskGANTrainer(GANTrainer):
         return -1, None
 
 class LeakGANTrainer(GANTrainer):
-    r""" Specified for leakgan trainer
+    r"""Specified for leakgan trainer
     """
     def __init__(self, config, model):
         super(LeakGANTrainer, self).__init__(config, model)
         self.interleaved_pretrain_epoch = config['interleaved_pretrain_epoch']
         self.adversarail_g_epochs = config['adversarail_g_epochs']
-        self.g_optimizer = self._build_module_optimizer(self.model.generator)  # (manager_opt, worker_opt)
-        self.d_optimizer = self._build_module_optimizer(self.model.discriminator)
+        gen_lr = config['generator_lr'] # 0.001
+        dis_lr = config['discriminator_lr'] # 0.00005
+        self.g_optimizer = self._build_module_optimizer_(self.model.generator, gen_lr)  # (manager_opt, worker_opt)
+        self.d_optimizer = self._build_module_optimizer_(self.model.discriminator, dis_lr)
         self.iters_num = config['iter_num']
         self.end_idx = model.end_idx
 
-    def _build_module_optimizer(self, module):
-        # specified for leakgan
-        gen_lr = 0.001
-        dis_lr = 0.00005
+    def _build_module_optimizer_(self, module, learing_rate):
+        r"""Specified for leakgan
+        """
         multi_flag = False
         if module._get_name() == 'LeakGANGenerator':
             manager_params, worker_params = module.split_params()
@@ -1202,41 +1203,43 @@ class LeakGANTrainer(GANTrainer):
 
         if self.learner.lower() == 'adam':
             if multi_flag:
-                manager_opt = optim.Adam(manager_params, lr=gen_lr)
-                worker_opt = optim.Adam(worker_params, lr=gen_lr)
+                manager_opt = optim.Adam(manager_params, lr=learing_rate)
+                worker_opt = optim.Adam(worker_params, lr=learing_rate)
             else:
-                optimizer = optim.Adam(module.parameters(), lr=dis_lr)
+                optimizer = optim.Adam(module.parameters(), lr=learing_rate)
         elif self.learner.lower() == 'sgd':
             if multi_flag:
-                manager_opt = optim.SGD(manager_params, lr=gen_lr)
-                worker_opt = optim.SGD(worker_params, lr=gen_lr)
+                manager_opt = optim.SGD(manager_params, lr=learing_rate)
+                worker_opt = optim.SGD(worker_params, lr=learing_rate)
             else:
-                optimizer = optim.SGD(module.parameters(), lr=dis_lr)
+                optimizer = optim.SGD(module.parameters(), lr=learing_rate)
         elif self.learner.lower() == 'adagrad':
             if multi_flag:
-                manager_opt = optim.Adagrad(manager_params, lr=gen_lr)
-                worker_opt = optim.Adagrad(worker_params, lr=gen_lr)
+                manager_opt = optim.Adagrad(manager_params, lr=learing_rate)
+                worker_opt = optim.Adagrad(worker_params, lr=learing_rate)
             else:
-                optimizer = optim.Adagrad(module.parameters(), lr=dis_lr)
+                optimizer = optim.Adagrad(module.parameters(), lr=learing_rate)
         elif self.learner.lower() == 'rmsprop':
             if multi_flag:
-                manager_opt = optim.RMSprop(manager_params, lr=gen_lr)
-                worker_opt = optim.RMSprop(worker_params, lr=gen_lr)
+                manager_opt = optim.RMSprop(manager_params, lr=learing_rate)
+                worker_opt = optim.RMSprop(worker_params, lr=learing_rate)
             else:
-                optimizer = optim.RMSprop(module.parameters(), lr=dis_lr)
+                optimizer = optim.RMSprop(module.parameters(), lr=learing_rate)
         else:
             self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
             if multi_flag:
-                manager_opt = optim.Adam(manager_params, lr=gen_lr)
-                worker_opt = optim.Adam(worker_params, lr=gen_lr)
+                manager_opt = optim.Adam(manager_params, lr=learing_rate)
+                worker_opt = optim.Adam(worker_params, lr=learing_rate)
             else:
-                optimizer = optim.Adam(module.parameters(), lr=dis_lr)
+                optimizer = optim.Adam(module.parameters(), lr=learing_rate)
         if multi_flag:
             return (manager_opt, worker_opt)
         else:
             return optimizer
 
     def _optimize_step(self, losses, total_loss, model, opt):
+        r"""Specified for leakgan optimize
+        """
         if isinstance(losses, tuple):
             loss = sum(losses)
             loss_tuple = tuple(per_loss.item() for per_loss in losses)
@@ -1261,6 +1264,8 @@ class LeakGANTrainer(GANTrainer):
         return total_loss
 
     def _generate_train_loss_output(self, epoch_idx, s_time, e_time, losses, train_info=""):
+        r"""Specified for leakgan output format
+        """
         train_loss_output = "%straining [time: %.2fs, " % (train_info, e_time - s_time)
         if isinstance(losses, dict):
             for key, loss in losses.items():
@@ -1279,7 +1284,8 @@ class LeakGANTrainer(GANTrainer):
         return padded_data
 
     def _get_real_data(self, train_data):
-        # use eos_idx pad not pad_idx
+        r"""Specified for leakgan which use eos_idx pad not pad_idx
+        """
         real_datas = []
         for corpus in train_data:
             real_data = corpus['target_idx']
@@ -1291,6 +1297,8 @@ class LeakGANTrainer(GANTrainer):
         return real_datas
 
     def _adversarial_train_epoch(self, train_data, epoch_idx):
+        r"""Specified for leakgan adversarial training
+        """
         self.model.generator.train()
         total_g_loss = None
         total_d_loss = 0
@@ -1353,31 +1361,6 @@ class LeakGANTrainer(GANTrainer):
 
         return {"total_loss": total_loss, "train_acc": total_acc}
 
-    def _save_checkpoint(self, epoch, postfix=None):
-        state = {
-            'config': self.config,
-            'epoch': epoch,
-            'cur_step': self.cur_step,
-            'best_valid_score': self.best_valid_score,
-            'state_dict': self.model.state_dict()
-        }
-        if postfix is not None:
-            path = self.saved_model_file + "_" + str(epoch) + "_" + postfix
-            torch.save(state, path)
-            return path
-        else:
-            torch.save(state, self.saved_model_file)
-
-    def _load_generated_text(self):
-        r"""Load the generated text by our model to log.
-        """
-        with open(self.saved_text_file, 'r') as fin:
-            samples = []
-            for i in range(5):
-                text = fin.readline()
-                samples.append(text)
-            return samples
-
     def fit(self, train_data, valid_data=None, verbose=True, saved=True):
         # pretraining
         if verbose:
@@ -1389,7 +1372,6 @@ class LeakGANTrainer(GANTrainer):
                     epoch_idx + 1, self.g_pretraining_epochs))
             training_start_time = time()
             train_loss = self._g_train_epoch(train_data, epoch_idx)
-            # self.g_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             training_end_time = time()
             train_loss_output = \
                 self._generate_train_loss_output(epoch_idx + 1, training_start_time, training_end_time, train_loss,
@@ -1398,23 +1380,6 @@ class LeakGANTrainer(GANTrainer):
             if verbose:
                 self.logger.info(train_loss_output)
 
-            if epoch_idx % 15 == 0:
-                self.logger.info(">>>> [Pretrain Gen] Save pretrain gen in epoch %d ..." % (epoch_idx + 1))
-                path = self._save_checkpoint(epoch_idx + 1, postfix="pretrain_gen")
-
-                self.model.eval()
-                test_result = self.evaluate(valid_data, model_file=path)
-                self.model.train()
-                sample = self._load_generated_text()
-                tmp = "\n"
-                for i, s in enumerate(sample):
-                    tmp += str(i)
-                    tmp += ": "
-                    tmp += s.strip()
-                    tmp += "\n"
-                self.logger.info('>>>> [Pretrain Gen] test result: {}'.format(test_result))
-                self.logger.info('>>>> [Pretrain Gen] test result samples: {}'.format(tmp))
-
         # discriminator pretraining
         for epoch_idx in range(self.d_pretraining_epochs):  # 5
             if verbose:
@@ -1422,8 +1387,6 @@ class LeakGANTrainer(GANTrainer):
                 epoch_idx + 1, self.d_pretraining_epochs))
             training_start_time = time()
             train_loss = self._d_train_epoch(train_data, epoch_idx)
-            # self.d_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss,
-            #                                                                         tuple) else train_loss
             training_end_time = time()
             train_loss_output = \
                 self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss,
@@ -1431,25 +1394,6 @@ class LeakGANTrainer(GANTrainer):
             train_loss_output = ">>>> " + train_loss_output
             if verbose:
                 self.logger.info(train_loss_output)
-
-            if epoch_idx + 1 == self.d_pretraining_epochs:
-                self.logger.info(">>>> [Pretrain Gen] Save pretrain dis in epoch %d ..." % (epoch_idx + 1))
-                path = self._save_checkpoint(epoch_idx + 1, postfix="pretrain_dis")
-
-                self.model.eval()
-                test_result = self.evaluate(valid_data, model_file=path)
-                self.model.train()
-
-                sample = self._load_generated_text()
-                tmp = "\n"
-                for i, s in enumerate(sample):
-                    tmp += str(i)
-                    tmp += ": "
-                    tmp += s.strip()
-                    tmp += "\n"
-                self.logger.info('>>>> [Pretrain Gen] test result: {}'.format(test_result))
-                self.logger.info('>>>> [Pretrain Gen] test result samples: {}'.format(tmp))
-
         if verbose:
             self.logger.info(">> End pretraining")
 
@@ -1475,21 +1419,6 @@ class LeakGANTrainer(GANTrainer):
                 train_loss_output = ">>>>>> " + train_loss_output
                 if verbose:
                     self.logger.info(train_loss_output)
-                if (epoch_idx + 1) % 5 == 0:
-                    path = self._save_checkpoint((epoch_idx + 1), postfix="adv_train")
-                    self.model.eval()
-                    test_result = self.evaluate(valid_data, model_file=path)
-                    self.model.train()
-
-                    sample = self._load_generated_text()
-                    tmp = "\n"
-                    for i, s in enumerate(sample):
-                        tmp += str(i)
-                        tmp += ": "
-                        tmp += s.strip()
-                        tmp += "\n"
-                    self.logger.info('>>>>>> [Adv] test result: {}'.format(test_result))
-                    self.logger.info('>>>>>> [Adv] test result samples: {}'.format(tmp))
 
             # gen pretrain
             for epoch_idx in range(5):
@@ -1497,7 +1426,6 @@ class LeakGANTrainer(GANTrainer):
                     self.logger.info(">>>>>> [Adv] Start epoch %d / 5 pretrain generator" % (epoch_idx + 1))
                 training_start_time = time()
                 train_loss = self._g_train_epoch(train_data, epoch_idx)
-                # self.g_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
                 training_end_time = time()
                 train_loss_output = \
                     self._generate_train_loss_output((epoch_idx + 1), training_start_time, training_end_time,
@@ -1507,21 +1435,12 @@ class LeakGANTrainer(GANTrainer):
                 if verbose:
                     self.logger.info(train_loss_output)
 
-                if (epoch_idx + 1) % 5 == 0:
-                    path = self._save_checkpoint((epoch_idx + 1), postfix="adv_pretrain")
-                    self.model.eval()
-                    test_result = self.evaluate(valid_data, model_file=path)
-                    self.model.train()
-                    self.logger.info('>>>>>> [Adv] test result: {}'.format(test_result))
-
             # dis pretrain
             for epoch_idx in range(5):  # d_steps
                 if verbose:
                     self.logger.info(">>>>>> [Adv] Start epoch %d / 5 pretrain discriminator" % (epoch_idx + 1))
                 training_start_time = time()
                 train_loss = self._d_train_epoch(train_data, epoch_idx)
-                # self.d_pretraining_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss,
-                #                                                                         tuple) else train_loss
                 training_end_time = time()
                 train_loss_output = \
                     self._generate_train_loss_output((epoch_idx + 1), training_start_time, training_end_time,
@@ -1530,19 +1449,6 @@ class LeakGANTrainer(GANTrainer):
                 train_loss_output = ">>>>>> " + train_loss_output
                 if verbose:
                     self.logger.info(train_loss_output)
-
-            if (epoch + 1) % 3 == 0:
-                path = self._save_checkpoint((epoch + 1), postfix="adv and pre train")
-                test_result = self.evaluate(valid_data, model_file=path)
-                sample = self._load_generated_text()
-                tmp = "\n"
-                for i, s in enumerate(sample):
-                    tmp += str(i)
-                    tmp += ": "
-                    tmp += s.strip()
-                    tmp += "\n"
-                self.logger.info('>>>> [Adv] Adv and pretrain test result: {}'.format(test_result))
-                self.logger.info('>>>> [Adv] Adv and pretrain test result samples: {}'.format(tmp))
 
         self._save_checkpoint(self.adversarail_training_epochs)
         return -1, None

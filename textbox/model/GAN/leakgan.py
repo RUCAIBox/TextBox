@@ -2,12 +2,7 @@
 # @Author : Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn
 
-
-from random import sample
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import DataLoader
 
 from textbox.model.abstract_generator import GenerativeAdversarialNet
 from textbox.module.Generator.LeakGANGenerator import LeakGANGenerator
@@ -15,8 +10,7 @@ from textbox.module.Discriminator.LeakGANDiscriminator import LeakGANDiscriminat
 
 
 class LeakGAN(GenerativeAdversarialNet):
-    r""" Long Text Generation via Adversarial Training with Leaked Information
-
+    r"""Long Text Generation via Adversarial Training with Leaked Information
     """
 
     def __init__(self, config, dataset):
@@ -67,7 +61,8 @@ class LeakGAN(GenerativeAdversarialNet):
         return padded_data
 
     def _get_real_data_for_nll_test(self, train_data):
-        # specified for nll test and use eos_idx pad not pad_idx to pad
+        r"""specified for nll test and use eos_idx pad not pad_idx to pad
+        """
         real_data = train_data['target_idx']
         length = train_data['target_length']
         real_data = self._add_eos(real_data, length)  # bs * seq_len

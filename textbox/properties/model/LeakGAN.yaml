@@ -1,7 +1,8 @@
 gpu_id: 0
-learning_rate: 0.001
-train_batch_size: 32
-eval_batch_size: 32
+generator_lr: 0.001
+discriminator_lr: 0.00005
+train_batch_size: 128
+eval_batch_size: 128
 generator_embedding_size: 32
 discriminator_embedding_size: 64
 hidden_size: 32
@@ -13,8 +14,6 @@ Monte_Carlo_num: 4
 step_size: 4
 goal_size: 16
 temperature: 1.5
-gen_learning_rate: 0.001
-dis_learning_rate: 5e-5
 g_pretraining_epochs: 80
 d_pretraining_epochs: 80
 d_sample_num: 10000
@@ -25,12 +24,3 @@ adversarail_d_epochs: 15
 adversarail_g_epochs: 1
 grad_clip: 5.0
 task_type: "unconditional"
-#interleaved_pretrain_epoch: 1
-#g_pretraining_epochs: 1
-#d_pretraining_epochs: 1
-#d_sample_num: 200
-#d_sample_training_epochs: 1
-#iter_num: 1
-#adversarail_training_epochs: 1
-#adversarail_d_epochs: 1
-#adversarail_g_epochs: 1

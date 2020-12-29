@@ -12,7 +12,7 @@ from textbox.model.abstract_generator import UnconditionalGenerator
 
 
 class LeakGANDiscriminator(UnconditionalGenerator):
-    r""" CNN based discriminator for leakgan extracting feature of current sentence
+    r"""CNN based discriminator for leakgan extracting feature of current sentence
     """
     def __init__(self, config, dataset):
         super(LeakGANDiscriminator, self).__init__(config, dataset)
@@ -44,8 +44,6 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         self.W_H = nn.Linear(self.filter_sum, self.filter_sum, bias=False)
         self.W_O = nn.Linear(self.filter_sum, 2)
 
-        self.init_params()
-
     def highway(self, data):
         tau = torch.sigmoid(self.W_T(data))
         non_linear = F.relu(self.W_H(data))
@@ -53,16 +51,15 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         return self.dropout(tau * non_linear + (1 - tau) * data)
 
     def forward(self, data):  # b * len
-        r""" Get current sentence feature by CNN
+        r"""Get current sentence feature by CNN
         """
         C_tilde = self.get_feature(data)
-        # y_hat = torch.sigmoid(self.W_O(C_tilde)).squeeze(1) # b
         pred = self.W_O(C_tilde)
 
         return pred
 
     def get_feature(self, inp):
-        r""" Get feature vector of given sentences
+        r"""Get feature vector of given sentences
 
         Args:
             inp: batch_size * max_seq_len
@@ -83,7 +80,7 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         return C_tilde
 
     def calculate_loss(self, real_data, fake_data):
-        r""" calculate loss and acc
+        r"""Calculate discriminator loss and acc
         """
         real_y = self.forward(real_data)
         fake_y = self.forward(fake_data)
@@ -101,25 +98,3 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         acc = torch.sum((pred.argmax(dim=-1) == target)).item()
         acc = acc / pred.size()[0]
         return loss, acc
-
-    def init_params(self):
-        r""" used for truncated_normal inti params
-        """
-        for param in self.parameters():
-            stddev = 1 / math.sqrt(param.shape[0])
-            self.truncated_normal_(param, std=stddev)
-
-    def truncated_normal_(self, tensor, mean=0, std=1):
-        r""" Implemented by @ruotianluo
-        See https://discuss.pytorch.org/t/implementing-truncated-normal-initializer/4778/15
-
-        Returns:
-            tensor: initialized tensor
-        """
-        size = tensor.shape
-        tmp = tensor.new_empty(size + (4,)).normal_()
-        valid = (tmp < 2) & (tmp > -2)
-        ind = valid.max(-1, keepdim=True)[1]
-        tensor.data.copy_(tmp.gather(-1, ind).squeeze(-1))
-        tensor.data.mul_(std).add_(mean)
-        return tensor

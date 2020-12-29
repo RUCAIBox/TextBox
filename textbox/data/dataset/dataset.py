@@ -2,11 +2,6 @@
 # @Author : Gaole He
 # @Email  : hegaole@ruc.edu.cn
 
-# UPDATE:
-# @Time   : 2020/12/26
-# @Author : Jinhao Jiang
-# @Email  : jiangjinhao@std.uestc.edu.cn
-
 import numpy as np
 import os
 from logging import getLogger
@@ -23,7 +18,6 @@ class Dataset(object):
         self.unknown_token = SpecialTokens.UNK
         self.sos_token = SpecialTokens.SOS
         self.eos_token = SpecialTokens.EOS
-        self.mask_token = SpecialTokens.MASK
 
         self.max_vocab_size = config['max_vocab_size']
         self.max_seq_length = config['max_seq_length']
@@ -161,12 +155,6 @@ class Dataset(object):
         r"""The `int` index of the special token indicating the end of sequence.
         """
         return self.token2idx[self.eos_token]
-
-    @property
-    def mask_token_id(self):
-        r"""The `int` index of the special token indicating the mask token.
-        """
-        return self.token2idx[self.mask_token]
 
     @staticmethod
     def _calcu_split_ids(tot, ratios):

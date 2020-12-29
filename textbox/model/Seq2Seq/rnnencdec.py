@@ -2,6 +2,10 @@
 # @Author : Junyi Li
 # @Email  : lijunyi@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2020/12/25
+# @Author : Tianyi Tang
+# @Email  : steventang@ruc.edu.cn
 
 import torch
 import torch.nn as nn
@@ -11,7 +15,7 @@ from textbox.model.abstract_generator import ConditionalGenerator
 from textbox.module.Encoder.rnn_encoder import BasicRNNEncoder
 from textbox.module.Decoder.rnn_decoder import BasicRNNDecoder, AttentionalRNNDecoder
 from textbox.model.init import xavier_normal_initialization
-from textbox.module.strategy import topk_sampling
+from textbox.module.strategy import topk_sampling, greedy_search, Beam_Search_Hypothesis
 
 
 class RNNEncDec(ConditionalGenerator):
@@ -33,6 +37,12 @@ class RNNEncDec(ConditionalGenerator):
         self.attention_type = config['attention_type']
         self.alignment_method = config['alignment_method']
         self.context_size = config['context_size']
+        self.strategy = config['decoding_strategy']
+
+        if (self.strategy not in ['topk_sampling', 'greedy_search', 'beam_search']):
+            raise NotImplementedError("{} decoding strategy not implemented".format(self.strategy))
+        if (self.strategy == 'beam_search'):
+            self.beam_size = config['beam_size']
 
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
@@ -71,6 +81,7 @@ class RNNEncDec(ConditionalGenerator):
     def generate(self, eval_dataloader):
         generate_corpus = []
         idx2token = eval_dataloader.target_idx2token
+
         for batch_data in eval_dataloader:
             source_text = batch_data['source_idx']
             source_length = batch_data['source_length']
@@ -84,33 +95,48 @@ class RNNEncDec(ConditionalGenerator):
             encoder_masks = torch.ne(source_text, self.padding_token_idx)
             for bid in range(source_text.size(0)):
                 decoder_states = encoder_states[:, bid, :].unsqueeze(1)
+                encoder_output = encoder_outputs[bid, :, :].unsqueeze(0)
+                encoder_mask = encoder_masks[bid, :].unsqueeze(0)
                 generate_tokens = []
                 input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
+
+                if (self.strategy == 'beam_search'):
+                    hypothesis = Beam_Search_Hypothesis(self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token)
+
                 for gen_idx in range(self.max_target_length):
                     decoder_input = self.target_token_embedder(input_seq)
                     if self.attention_type is not None:
-                        decoder_outputs, decoder_states, _ = self.decoder(decoder_input,
-                                                                          decoder_states,
-                                                                          encoder_outputs[bid, :, :].unsqueeze(0),
-                                                                          encoder_masks[bid, :].unsqueeze(0))
+                        decoder_outputs, decoder_states, _ = self.decoder(decoder_input, decoder_states, encoder_output, encoder_mask)
                     else:
-                        decoder_outputs, decoder_states = self.decoder(decoder_input,
-                                                                       decoder_states)
+                        decoder_outputs, decoder_states = self.decoder(decoder_input, decoder_states)
+
                     token_logits = self.vocab_linear(decoder_outputs)
-                    token_idx = topk_sampling(token_logits)
-                    token_idx = token_idx.item()
+                    if (self.strategy == 'topk_sampling'):
+                        token_idx = topk_sampling(token_logits).item()
+                    elif (self.strategy == 'greedy_search'):
+                        token_idx = greedy_search(token_logits).item()
+                    elif (self.strategy == 'beam_search'):
+                        if self.attention_type is not None:
+                            input_seq, decoder_states, encoder_output, encoder_mask = \
+                                hypothesis.step(gen_idx, token_logits, decoder_states, encoder_output, encoder_mask)
+                        else:
+                            input_seq, decoder_states = hypothesis.step(gen_idx, token_logits, decoder_states)
 
-                    # topv, topi = torch.log(F.softmax(token_logits, dim=-1) + 1e-12).data.topk(k=4)
-                    # topi = topi.squeeze()
-                    # token_idx = topi[0].item()
+                    if (self.strategy in ['topk_sampling', 'greedy_search']):
+                        if token_idx == self.eos_token_idx:
+                            break
+                        else:
+                            generate_tokens.append(idx2token[token_idx])
+                            input_seq = torch.LongTensor([[token_idx]]).to(self.device)
+                    elif (self.strategy == 'beam_search'):
+                        if (hypothesis.stop()):
+                            break
 
-                    # print(token_idx)
-                    if token_idx == self.eos_token_idx:
-                        break
-                    else:
-                        generate_tokens.append(idx2token[token_idx])
-                        input_seq = torch.LongTensor([[token_idx]]).to(self.device)
+                if (self.strategy == 'beam_search'):
+                    generate_tokens = hypothesis.generate()
+
                 generate_corpus.append(generate_tokens)
+        
         return generate_corpus
 
     def calculate_loss(self, corpus, epoch_idx=0):
@@ -119,11 +145,9 @@ class RNNEncDec(ConditionalGenerator):
 
         input_text = corpus['target_idx'][:, :-1]
         target_text = corpus['target_idx'][:, 1:]
-        # print(type(source_text), type(source_length))
 
         source_embeddings = self.dropout(self.source_token_embedder(source_text))
         input_embeddings = self.dropout(self.target_token_embedder(input_text))
-        # print(source_embeddings.device, input_embeddings.device, self.encoder.device)
         encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
 
         if self.bidirectional:
@@ -139,8 +163,6 @@ class RNNEncDec(ConditionalGenerator):
             decoder_outputs, decoder_states = self.decoder(input_embeddings, encoder_states)
 
         token_logits = self.vocab_linear(decoder_outputs)
-        # token_logits = token_logits.view(-1, token_logits.size(-1))
-        # target_text = target_text.contiguous().view(-1)
 
         loss = self.loss(token_logits.view(-1, token_logits.size(-1)), target_text.contiguous().view(-1))
         loss = loss.reshape_as(target_text)

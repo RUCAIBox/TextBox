@@ -18,6 +18,18 @@ from fast_bleu import BLEU, SelfBLEU
 
 
 def bleu_(generate_corpus, reference_corpus, n_grams, get_avg=False):
+    r""" Calculate the BLEU metrics of the generated corpus in referenced corpus.
+
+    Args:
+        generate_corpus (List[List[str]]): the generated corpus
+        reference_corpus (List[List[str]]): the referenced corpus
+        n_grams (List): the n-gram metric to be calculated
+        get_avg (Bool, optional): whether to calculate the average BLEU score, default: False
+
+    Returns:
+        List or (List, float): the BLEU results and optinal average BLEU score
+    """
+
     weight = [0] * max(n_grams)
     weights = {}
     for n_gram in n_grams:
@@ -39,8 +51,17 @@ def bleu_(generate_corpus, reference_corpus, n_grams, get_avg=False):
         return results, avg_bleu
     return results
 
+def self_bleu_(generate_corpus, n_grams):
+    r""" Calculate the Self-BLEU metrics of the generated corpus.
 
-def self_bleu_(generate_corpus, n_grams, reference_corpus=None):
+    Args:
+        generate_corpus (List[List[str]]): the generated corpus
+        n_grams (List): the n-gram metric to be calculated
+
+    Returns:
+        List: the Self-BLEU results
+    """
+
     weight = [0] * max(n_grams)
     weights = {}
     for n_gram in n_grams:

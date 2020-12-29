@@ -11,9 +11,7 @@ install_requires = ['matplotlib>=3.1.3', 'torch>=1.2.0', 'numpy>=1.17.2',
 
 setup_requires = []
 
-extras_require = {
-    'matplotlib': ['matplotlib>=3.1.3'],
-}
+extras_require = {}
 
 # Readthedocs requires Sphinx extensions to be specified as part of
 # install_requires in order to build properly.

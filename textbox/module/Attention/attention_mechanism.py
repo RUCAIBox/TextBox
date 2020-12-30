@@ -83,9 +83,9 @@ class BahdanauAttention(torch.nn.Module):
     r"""Bahdanau Attention is proposed in the following paper:
             Neural Machine Translation by Jointly Learning to Align and Translate.
 
-        Reference:
-            https://arxiv.org/abs/1409.0473
-        """
+    Reference:
+        https://arxiv.org/abs/1409.0473
+    """
     def __init__(self, source_size, target_size):
         super(BahdanauAttention, self).__init__()
         self.source_size = source_size

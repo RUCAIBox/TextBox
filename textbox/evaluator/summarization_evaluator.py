@@ -49,7 +49,7 @@ class SummarizationEvaluator(AbstractEvaluator):
         return new_corpus
 
     def evaluate(self, generate_corpus, reference_corpus):
-        """get metrics result
+        r"""get metrics result
 
         Args:
             generate_corpus: the generated corpus
@@ -71,14 +71,14 @@ class SummarizationEvaluator(AbstractEvaluator):
         return metric_dict
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus):
-        """get metrics result
+        r"""get metrics result
+
         Args:
             generate_corpus: the generated corpus
             reference_corpus: the referenced corpus
 
         Returns:
             list: a list of metrics <metric> which record the results according to self.ngrams
-
         """
         assert len(generate_corpus) == len(reference_corpus)
         rouge_dict = {}
@@ -93,11 +93,6 @@ class SummarizationEvaluator(AbstractEvaluator):
         return rouge_dict
 
     def calc_rouge(self, gen_corpus, ref_corpus):
-        '''
-        :param gen_corpus: [singe sentence]
-        :param ref_corpus: [multiple sentence]
-        :return: scores (dict-> dict -> value)
-        '''
         scores = self.evaluator.get_scores(gen_corpus, ref_corpus)
         return scores
 

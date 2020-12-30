@@ -18,6 +18,11 @@ class Dataset(object):
         self.unknown_token = SpecialTokens.UNK
         self.sos_token = SpecialTokens.SOS
         self.eos_token = SpecialTokens.EOS
+        self.special_token_list = [self.padding_token, self.unknown_token, self.sos_token, self.eos_token]
+        if ('user_token_list' in config):
+            self.user_token_list = config['user_token_list']
+            self.user_token_idx = [4 + i for i, _ in enumerate(self.user_token_list)]
+            self.special_token_list += self.user_token_list
 
         self.max_vocab_size = config['max_vocab_size']
         self.max_seq_length = config['max_seq_length']

@@ -19,6 +19,7 @@ is_present_rate: 0.5
 advantage_clipping: 5
 rl_discount_rate: 0.8835659
 task_type: "unconditional"
+user_token_list: ["<|mask|>"]
 
 # GAN training settings
 gen_learning_rate: 0.0016624 #2e-3

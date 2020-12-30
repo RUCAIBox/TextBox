@@ -88,7 +88,7 @@ class PairedSentenceDataset(Dataset):
         token_count = [(count, token) for token, count in collections.Counter(word_list).items()]
         token_count.sort(reverse=True)
         tokens = [word for count, word in token_count]
-        tokens = [self.padding_token, self.unknown_token, self.sos_token, self.eos_token] + tokens
+        tokens = self.special_token_list + tokens
         tokens = tokens[:max_vocab_size]
         idx2token = dict(zip(range(max_vocab_size), tokens))
         token2idx = dict(zip(tokens, range(max_vocab_size)))

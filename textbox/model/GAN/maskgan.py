@@ -12,7 +12,7 @@ from textbox.module.Discriminator.MaskGANDiscriminator import MaskGANDiscriminat
 
 
 class MaskGAN(GenerativeAdversarialNet):
-    r""" MaskGan: better text generation via filling in the mask.
+    r"""MaskGan: better text generation via filling in the mask.
     """
 
     def __init__(self, config, dataset):
@@ -29,7 +29,7 @@ class MaskGAN(GenerativeAdversarialNet):
         self.max_length = config['max_seq_length']
 
     def calculate_g_train_loss(self, corpus, epoch_idx=0, validate=False):
-        r""" Specified for maskgan calculate generator masked token predicted
+        r"""Specified for maskgan calculate generator masked token predicted
         """
         real_inputs = corpus[:, :-1]  # bs * self.max_len - 1
         target_inputs = corpus[:, 1:]
@@ -43,7 +43,7 @@ class MaskGAN(GenerativeAdversarialNet):
                                                    validate=validate)
 
     def calculate_d_train_loss(self, data, epoch_idx):
-        r""" Specified for maskgan calculate discriminator masked token predicted
+        r"""Specified for maskgan calculate discriminator masked token predicted
         """
         self.generator.eval()
         inputs = data[:, :-1]
@@ -84,7 +84,7 @@ class MaskGAN(GenerativeAdversarialNet):
         return p
 
     def calculate_g_adversarial_loss(self, data, epoch_idx):
-        r""" Specified for maskgan calculate adversarial masked token predicted
+        r"""Specified for maskgan calculate adversarial masked token predicted
         """
         real_inputs = data[:, :-1]
         target_inputs = data[:, 1:]
@@ -99,7 +99,7 @@ class MaskGAN(GenerativeAdversarialNet):
         return loss
 
     def calculate_nll_test(self, eval_batch, epoch_idx):
-        r""" Specified for maskgan calculating the negative log-likelihood of the batch.
+        r"""Specified for maskgan calculating the negative log-likelihood of the batch.
         """
         real_inputs = eval_batch[:, :-1]
         target_inputs = eval_batch[:, 1:]

@@ -35,7 +35,7 @@ class AbstractModel(nn.Module):
         raise NotImplementedError
 
     def generate(self, corpus):
-        r"""Predict the scores between users and items.
+        r"""Predict the texts conditioned on a noise or sequence.
 
         Args:
             corpus (Corpus): Corpus class of the batch.
@@ -66,8 +66,8 @@ class AbstractModel(nn.Module):
 
 
 class UnconditionalGenerator(AbstractModel):
-    """This is a abstract general recommender. All the general model should implement this class.
-    The base general recommender class provide the basic dataset and parameters information.
+    """This is a abstract general unconditional generator. All the general model should implement this class.
+    The base general unconditional generator class provide the basic parameters information.
     """
     type = ModelType.UNCONDITIONAL
 
@@ -82,8 +82,8 @@ class UnconditionalGenerator(AbstractModel):
 
 
 class ConditionalGenerator(AbstractModel):
-    """This is a abstract general recommender. All the general model should implement this class.
-    The base general recommender class provide the basic dataset and parameters information.
+    """This is a abstract general conditional generator. All the general model should implement this class.
+    The base general conditional generator class provide the basic parameters information.
     """
     type = ModelType.CONDITIONAL
 
@@ -98,8 +98,8 @@ class ConditionalGenerator(AbstractModel):
         self.device = config['device']
 
 class GenerativeAdversarialNet(AbstractModel):
-    """This is a abstract general recommender. All the general model should implement this class.
-    The base general recommender class provide the basic dataset and parameters information.
+    """This is a abstract general generative adversarial network. All the general model should implement this class.
+    The base general generative adversarial network class provide the basic parameters information.
     """
     type = ModelType.GAN
 

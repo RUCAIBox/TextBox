@@ -40,11 +40,11 @@ class TransformerEncDec(ConditionalGenerator):
         self.attn_weight_dropout_ratio = config['attn_weight_dropout_ratio']
         self.ffn_dropout_ratio = config['ffn_dropout_ratio']
 
-        self.strategy = config['decoding_strategy']
+        self.decoding_strategy = config['decoding_strategy']
 
-        if (self.strategy not in ['topk_sampling', 'greedy_search', 'beam_search']):
+        if (self.decoding_strategy not in ['topk_sampling', 'greedy_search', 'beam_search']):
             raise NotImplementedError("{} decoding strategy not implemented".format(self.strategy))
-        if (self.strategy == 'beam_search'):
+        if (self.decoding_strategy == 'beam_search'):
             self.beam_size = config['beam_size']
 
         self.padding_token_idx = dataset.padding_token_idx
@@ -107,7 +107,7 @@ class TransformerEncDec(ConditionalGenerator):
                 generate_tokens = []
                 input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
 
-                if (self.strategy == 'beam_search'):
+                if (self.decoding_strategy == 'beam_search'):
                     hypothesis = Beam_Search_Hypothesis(self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token)
                 
                 for gen_idx in range(self.max_target_length):
@@ -119,25 +119,25 @@ class TransformerEncDec(ConditionalGenerator):
 
                     token_logits = self.vocab_linear(decoder_outputs[:, -1, :].unsqueeze(1))
 
-                    if (self.strategy == 'topk_sampling'):
+                    if (self.decoding_strategy == 'topk_sampling'):
                         token_idx = topk_sampling(token_logits).item()
-                    elif (self.strategy == 'greedy_search'):
+                    elif (self.decoding_strategy == 'greedy_search'):
                         token_idx = greedy_search(token_logits).item()
-                    elif (self.strategy == 'beam_search'):
+                    elif (self.decoding_strategy == 'beam_search'):
                         input_seq, encoder_output, encoder_mask = \
                             hypothesis.step(gen_idx, token_logits, encoder_output=encoder_output, encoder_mask=encoder_mask)
                     
-                    if (self.strategy in ['topk_sampling', 'greedy_search']):
+                    if (self.decoding_strategy in ['topk_sampling', 'greedy_search']):
                         if token_idx == self.eos_token_idx:
                             break
                         else:
                             generate_tokens.append(idx2token[token_idx])
                             input_seq = torch.LongTensor([[token_idx]]).to(self.device)
-                    elif (self.strategy == 'beam_search'):
+                    elif (self.decoding_strategy == 'beam_search'):
                         if (hypothesis.stop()):
                             break
 
-                if (self.strategy == 'beam_search'):
+                if (self.decoding_strategy == 'beam_search'):
                     generate_tokens = hypothesis.generate()
 
                 generate_corpus.append(generate_tokens)

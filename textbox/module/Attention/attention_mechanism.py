@@ -2,6 +2,10 @@
 # @Author : Junyi Li
 # @Email  : lijunyi@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2020/12/26
+# @Author : Jinhao Jiang
+# @Email  : jiangjinhao@std.uestc.edu.cn
 
 import torch
 from torch import nn
@@ -27,7 +31,7 @@ class LuongAttention(torch.nn.Module):
             self.energy_linear = nn.Linear(target_size, source_size)
         elif self.alignment_method == 'concat':
             self.energy_linear = nn.Linear(source_size + target_size, target_size)
-            self.v = nn.Parameter(torch.FloatTensor(target_size))
+            self.v = nn.Parameter(torch.rand(target_size, dtype=torch.float32))
         elif self.alignment_method == 'dot':
             assert self.source_size == target_size
         else:
@@ -83,9 +87,9 @@ class BahdanauAttention(torch.nn.Module):
     r"""Bahdanau Attention is proposed in the following paper:
             Neural Machine Translation by Jointly Learning to Align and Translate.
 
-        Reference:
-            https://arxiv.org/abs/1409.0473
-        """
+    Reference:
+        https://arxiv.org/abs/1409.0473
+    """
     def __init__(self, source_size, target_size):
         super(BahdanauAttention, self).__init__()
         self.source_size = source_size

@@ -34,7 +34,7 @@ class TranslationEvaluator(AbstractEvaluator):
         self._check_args()
 
     def evaluate(self, generate_corpus, reference_corpus):
-        """get metrics result
+        r"""get metrics result
 
         Args:
             generate_corpus: the generated corpus
@@ -70,7 +70,7 @@ class TranslationEvaluator(AbstractEvaluator):
             raise TypeError('The n_gram must be a integer, list')
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus, metric="bleu"):
-        """get metrics result
+        r"""get metrics result
 
         Args:
             generate_corpus: the generated corpus
@@ -78,7 +78,6 @@ class TranslationEvaluator(AbstractEvaluator):
 
         Returns:
             list: a list of metrics <metric> which record the results according to self.ngrams
-
         """
         assert metric in metrics_dict
         metric_fuc = metrics_dict[metric.lower()]

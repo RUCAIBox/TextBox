@@ -1,15 +1,35 @@
-embedding_size: 64
-hidden_size: 128
+train_batch_size: 128
+eval_batch_size: 128
+embedding_size: 650
+gen_share_embedding: True
+dis_share_embedding: True
+hidden_size: 650
 num_enc_layers: 2
 bidirectional: False
-combine_method: concat
-context_size: 128
+combine_method: "concat"
+context_size: 650
 num_dec_layers: 2
-dropout_ratio: 0.2
+dropout_ratio: 0.5
 rnn_type: "lstm"
+attention_type: "LuongAttention"
 source_language: "english"
 target_language: "english"
 mask_strategy: "random"
 is_present_rate: 0.5
-advantage_clipping: 0.2
-rl_discount_rate: 0.15
+advantage_clipping: 5
+rl_discount_rate: 0.8835659
+task_type: "unconditional"
+
+# GAN training settings
+gen_learning_rate: 0.0016624 #2e-3
+dis_learning_rate: 0.0000585 #5e-5
+critic_learning_rate: 0.0009756 #5e-3
+pretrain_lm_epochs: 40
+g_mask_pretraining_epochs: 50
+d_pretraining_epochs: 1
+d_sample_num: 10000
+eval_generate_num: 10000
+adversarail_training_epochs: 40
+adversarail_d_epochs: 10
+adversarail_c_epochs: 8
+grad_clip: 10.0

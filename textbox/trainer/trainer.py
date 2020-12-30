@@ -29,7 +29,7 @@ from textbox.utils import ensure_dir, get_local_time, early_stopping
 
 
 class AbstractTrainer(object):
-    r"""Trainer Class is used to manage the training and evaluation processes of recommender system models.
+    r"""Trainer Class is used to manage the training and evaluation processes of text generation system models.
     AbstractTrainer is an abstract class in which the fit() and evaluate() method should be implemented according
     to different training and evaluation strategies.
     """
@@ -52,12 +52,12 @@ class AbstractTrainer(object):
 
 
 class Trainer(AbstractTrainer):
-    r"""The basic Trainer for basic training and evaluation strategies in recommender systems. This class defines common
-    functions for training and evaluation processes of most recommender system models, including fit(), evalute(),
-    resume_checkpoint() and some other features helpful for model training and evaluation.
+    r"""The basic Trainer for basic training and evaluation strategies in text generation systems.
+    This class defines common functions for training and evaluation processes of most text generation system models,
+    including fit(), evalute(), resume_checkpoint() and some other features helpful for model training and evaluation.
 
-    Generally speaking, this class can serve most recommender system models, If the training process of the model is to
-    simply optimize a single loss without involving any complex training strategies, such as adversarial learning,
+    Generally speaking, this class can serve most text generation system models, If the training process of the model
+    is to simply optimize a single loss without involving any complex training strategies, such as adversarial learning,
     pre-training and so on.
 
     Initializing the Trainer needs two parameters: `config` and `model`. `config` records the parameters information
@@ -741,7 +741,7 @@ class RankGANTrainer(GANTrainer):
 
 
 class ConditionalTrainer(Trainer):
-    r"""TranslationTrainer is designed for seq2seq testing, which is a typically used setting.
+    r"""ConditionalTrainer is designed for seq2seq testing, which is a typically used setting.
     """
 
     def __init__(self, config, model):

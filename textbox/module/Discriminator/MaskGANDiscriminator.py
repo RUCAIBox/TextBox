@@ -35,7 +35,7 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
         self.eos_token_idx = dataset.eos_token_idx
-        self.mask_token_idx = dataset.mask_token_idx
+        self.mask_token_idx = dataset.token2idx[config["user_token_list"][0]]
 
         self.encoder = BasicRNNEncoder(self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type,
                                        self.dropout_ratio, self.bidirectional)
@@ -88,7 +88,7 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
         return masked_input
 
     def forward(self, inputs, inputs_length, sequence, targets_present, embedder):
-        r""" Predict the real prob of the filled_in token using real sentence and fake sentence
+        r"""Predict the real prob of the filled_in token using real sentence and fake sentence
 
         Args:
             inputs: real input bs*seq_len
@@ -201,7 +201,7 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
         return l
 
     def calculate_loss(self, real_sequence, lengths, fake_sequence, targets_present, embedder):
-        r""" Calculate discriminator loss
+        r"""Calculate discriminator loss
         """
         fake_prediction, _ = self.forward(real_sequence, lengths, fake_sequence, targets_present, embedder)
         real_prediction, _ = self.forward(real_sequence, lengths, real_sequence, targets_present, embedder)

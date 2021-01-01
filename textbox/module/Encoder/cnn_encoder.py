@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 class BasicCNNEncoder(nn.Module):
     r"""
+    Basic Convolution Neural Network (CNN) encoder.
     Code reference: https://github.com/rohithreddy024/VAE-Text-Generation/
     """
     def __init__(self, input_size, latent_size):
@@ -36,6 +37,14 @@ class BasicCNNEncoder(nn.Module):
         )
 
     def forward(self, input):
+        r""" Implement the encoding process.
+
+        Args:
+            input (Torch.Tensor): source sequence embedding, shape: [batch_size, sequence_length, embedding_size].
+
+        Returns:
+            torch.Tensor: output features, shape: [batch_size, sequence_length, feature_size].
+        """
         input = input.transpose(1, 2).contiguous()
         output = self.cnn(input)
         output = torch.mean(output, dim=-1)

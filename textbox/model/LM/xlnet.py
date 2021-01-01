@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 
 
-from textbox.utils import InputType
 from textbox.model.abstract_generator import UnconditionalGenerator
 from transformers import XLNetLMHeadModel, XLNetTokenizer, XLNetConfig
 
@@ -20,8 +19,7 @@ class XLNet(UnconditionalGenerator):
     r""" XLnet is an extension of the Transformer-XL model pre-trained using an autoregressive method to learn
     bidirectional contexts by maximizing the expected likelihood over all permutations of the input sequence
     factorization order.
-        """
-    input_type = InputType.NOISE
+    """
 
     def __init__(self, config, dataset):
         super(XLNet, self).__init__(config, dataset)

@@ -6,6 +6,9 @@ import torch.nn.functional as F
 
 
 class TransformerEncoder(torch.nn.Module):
+    r"""
+    The stacked Transformer encoder layers.
+    """
     def __init__(self,
                  embedding_size,
                  ffn_size,
@@ -23,6 +26,17 @@ class TransformerEncoder(torch.nn.Module):
                                  ffn_dropout_ratio))
 
     def forward(self, x, kv=None, self_padding_mask=None, output_all_encoded_layers=False):
+        r""" Implement the encoding process step by step.
+
+        Args:
+            x (Torch.Tensor): target sequence embedding, shape: [batch_size, sequence_length, embedding_size].
+            kv (Torch.Tensor): the cached history latent vector, shape: [batch_size, sequence_length, embedding_size], default: None.
+            self_padding_mask (Torch.Tensor): padding mask of target sequence, shape: [batch_size, sequence_length], default: None.
+            output_all_encoded_layers (Bool): whether to output all the encoder layers, default: ``False``.
+
+        Returns:
+            Torch.Tensor: output features, shape: [batch_size, sequence_length, ffn_size].
+        """
         all_encoded_layers = []
         for idx, layer in enumerate(self.transformer_layers):
             x, _, _ = layer(x, kv, self_padding_mask)

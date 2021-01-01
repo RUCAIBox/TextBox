@@ -6,10 +6,7 @@ r"""
 MaliGAN
 ################################################
 Reference:
-    Tong Che et al. "Maximum-Likelihood Augmented Discrete Generative Adversarial Networks." in NIPS 2017.
-Reference code:
-    https://github.com/williamSYSU/TextGAN-PyTorch
-
+    Che et al. "Maximum-Likelihood Augmented Discrete Generative Adversarial Networks".
 """
 
 import torch

@@ -2,6 +2,13 @@
 # @Author : Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn
 
+r"""
+LeakGAN
+##############################
+Reference:
+    Guo et al. "Long Text Generation via Adversarial Training with Leaked Information" in AAAI 2018.
+"""
+
 import torch
 
 from textbox.model.abstract_generator import GenerativeAdversarialNet
@@ -10,7 +17,10 @@ from textbox.module.Discriminator.LeakGANDiscriminator import LeakGANDiscriminat
 
 
 class LeakGAN(GenerativeAdversarialNet):
-    r"""Long Text Generation via Adversarial Training with Leaked Information
+    r"""LeakGAN is a generative adversarial network to address the problem for long text generation.
+        We allow the discriminative net to leak its own high-level extracted features to the generative net to further help the guidance.
+        The generator incorporates such informative signals into all generation steps through an additional Manager module, 
+        which takes the extracted features of current generated words and outputs a latent vector to guide the Worker module for next-word generation.
     """
 
     def __init__(self, config, dataset):

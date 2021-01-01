@@ -7,6 +7,13 @@
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
+"""
+textbox.module.strategy
+#############################
+Common Strategys in text generation
+"""
+
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

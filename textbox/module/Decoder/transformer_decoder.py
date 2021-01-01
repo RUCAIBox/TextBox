@@ -1,3 +1,13 @@
+# @Time   : 2020/11/14
+# @Author : Junyi Li
+# @Email  : lijunyi@ruc.edu.cn
+
+r"""
+Transformer Decoder
+###################
+"""
+
+
 import torch
 from torch import nn
 from torch.nn import Parameter

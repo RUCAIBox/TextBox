@@ -7,7 +7,7 @@ import os
 from setuptools import setup, find_packages
 
 install_requires = ['matplotlib>=3.1.3', 'torch>=1.2.0', 'numpy>=1.17.2',
-                    'pyyaml>=5.3.1', 'fast_bleu>=0.0.86', 'rouge>=1.0.0']
+                    'pyyaml>=5.3.1', 'fast_bleu>=0.0.86', 'rouge>=1.0.0','transformers>=4.0.1']
 
 setup_requires = []
 

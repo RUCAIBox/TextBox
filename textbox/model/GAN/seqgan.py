@@ -7,6 +7,14 @@
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
+r"""
+SeqGAN
+################################################
+Reference:
+    Yu et al. "SeqGAN: Sequence Generative Adversarial Nets with Policy Gradient" in AAAI 2017.
+"""
+
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -17,8 +25,11 @@ from textbox.module.Discriminator.SeqGANDiscriminator import SeqGANDiscriminator
 
 
 class SeqGAN(GenerativeAdversarialNet):
-    r"""SeqGAN model followed "Sequence Generative Adversarial Nets with Policy Gradient".
-
+    r"""SeqGAN is a generative adversarial network consisting of a generator and a discriminator.
+        Modeling the data generator as a stochastic policy in reinforcement learning (RL), 
+        SeqGAN bypasses the generator differentiation problem by directly performing gradient policy update.
+        The RL reward signal comes from the GAN discriminator judged on a complete sequence,
+        and is passed back to the intermediate state-action steps using Monte Carlo search.
     """
 
     def __init__(self, config, dataset):

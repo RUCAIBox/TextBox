@@ -1,3 +1,13 @@
+# @Time   : 2020/11/14
+# @Author : Junyi Li
+# @Email  : lijunyi@ruc.edu.cn
+
+r"""
+CNN Encoder
+############
+"""
+
+
 import torch
 from torch import nn
 import torch.nn.functional as F

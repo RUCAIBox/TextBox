@@ -8,8 +8,8 @@
 # @Email  : steventang@ruc.edu.cn
 
 """
-textbox.evaluator.ngram_evaluator
-#################################
+textbox.evaluator.translation_evaluator
+#######################################
 """
 
 import numpy as np

@@ -2,6 +2,13 @@
 # @Author : Gaole He
 # @Email  : hegaole@ruc.edu.cn
 
+r"""
+HybridVAE
+################################################
+Reference:
+    Rothe et al. "A Hybrid Convolutional Variational Autoencoder for Text Generation" in EMNLP 2017.
+"""
+
 
 import torch
 import torch.nn as nn
@@ -13,12 +20,6 @@ from textbox.module.Encoder.cnn_encoder import BasicCNNEncoder
 from textbox.module.Decoder.cnn_decoder import HybridDecoder
 from textbox.model.init import xavier_normal_initialization
 from textbox.module.strategy import topk_sampling
-
-
-'''
-Reference: A Hybrid Convolutional Variational Autoencoder for Text Generation. EMNLP 2017
-Code Reference: https://github.com/kefirski/hybrid_rvae
-'''
 
 
 class HybridVAE(UnconditionalGenerator):

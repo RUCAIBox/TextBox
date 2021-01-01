@@ -7,6 +7,15 @@
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
+
+r"""
+RNNEncDec
+################################################
+Reference:
+    Sutskever et al. "Sequence to Sequence Learning with Neural Networks" in NIPS 2014.
+"""
+
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -20,7 +29,6 @@ from textbox.module.strategy import topk_sampling, greedy_search, Beam_Search_Hy
 
 class RNNEncDec(ConditionalGenerator):
     r"""RNN-based Encoder-Decoder architecture is a basic framework for conditional text generation.
-
     """
 
     def __init__(self, config, dataset):

@@ -2,6 +2,14 @@
 # @Author : Junyi Li
 # @Email  : lijunyi@ruc.edu.cn
 
+r"""
+BART
+################################################
+Reference:
+    Lewis et al. "BART: Denoising Sequence-to-Sequence Pre-training for Natural Language
+    Generation, Translation, and Comprehensio" at ACL 2020.
+"""
+
 
 import random
 import torch
@@ -14,9 +22,6 @@ from transformers import BartTokenizer, BartConfig, BartForConditionalGeneration
 
 class BART(ConditionalGenerator):
     r"""BART is a powerful sequence-to-sequence model based on Transformer.
-
-    Reference:
-        https://arxiv.org/abs/1910.13461
     """
     def __init__(self, config, dataset):
         super(BART, self).__init__(config, dataset)

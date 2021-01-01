@@ -2,6 +2,10 @@
 # @Author : Xiaoxuan Hu
 # @Email  : huxiaoxuan@ruc.edu.cn
 
+r"""
+MaliGAN Discriminator
+#####################
+"""
 
 import torch
 import torch.nn as nn

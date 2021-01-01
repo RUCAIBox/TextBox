@@ -2,6 +2,10 @@
 # @Author : Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn
 
+r"""
+MaskGAN Discriminator
+#####################
+"""
 
 import torch
 import torch.nn as nn
@@ -35,7 +39,7 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
         self.eos_token_idx = dataset.eos_token_idx
-        self.mask_token_idx = dataset.token2idx[config["user_token_list"][0]]
+        self.mask_token_idx = dataset.user_token_idx[0]
 
         self.encoder = BasicRNNEncoder(self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type,
                                        self.dropout_ratio, self.bidirectional)

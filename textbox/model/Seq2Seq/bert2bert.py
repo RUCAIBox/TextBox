@@ -2,6 +2,13 @@
 # @Author : Puzhao Xie
 # @Email  : xiepuzhao@ruc.edu.cn
 
+r"""
+BERT2BERT
+################################################
+Reference:
+    Rothe et al. "Leveraging Pre-trained Checkpoints for Sequence Generation Tasks" in TACL 2020.
+"""
+
 
 import torch
 import torch.nn as nn
@@ -9,16 +16,9 @@ from textbox.model.abstract_generator import ConditionalGenerator
 from transformers import BertTokenizer, EncoderDecoderConfig, BertConfig, BertGenerationEncoder, BertGenerationDecoder, \
     EncoderDecoderModel
 
-'''
-Reference:  Leveraging Pre-trained Checkpoints for Sequence Generation Tasks 
-Code Reference: https://huggingface.co/transformers/model_doc/bertgeneration.html
-'''
-
 
 class BERT2BERT(ConditionalGenerator):
-    r"""The BertGeneration model is a BERT model that can be leveraged for sequence-to-sequence tasks using
-    EncoderDecoderModel as proposed in Leveraging Pre-trained Checkpoints for Sequence Generation Tasks by
-    Sascha Rothe, Shashi Narayan, Aliaksei Severyn
+    r"""The BertGeneration model is a BERT model that can be leveraged for sequence-to-sequence tasks using EncoderDecoderModel.
     """
 
     def __init__(self, config, dataset):

@@ -1,18 +1,21 @@
 # @Time   : 2020/12/25
 # @Author : Puzhao Xie
 # @Email  : xiepuzhao@ruc.edu.cn
+
+r"""
+XLNet
+################################################
+Reference:
+    Yang et al. "XLNet: Generalized Autoregressive Pretraining for Language Understanding" in NIPS 2019.
+"""
+
+
 import random
 import torch
 import torch.nn as nn
 
-
 from textbox.model.abstract_generator import UnconditionalGenerator
 from transformers import XLNetLMHeadModel, XLNetTokenizer, XLNetConfig
-
-'''
-Reference: XLNet: Generalized Autoregressive Pretraining for Language Understanding. NeurIPS 2019 
-Code Reference: https://github.com/huggingface/transformers/tree/master/src/transformers/models/xlnet
-'''
 
 
 class XLNet(UnconditionalGenerator):

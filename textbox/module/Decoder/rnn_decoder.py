@@ -7,6 +7,12 @@
 # @Author : Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn
 
+r"""
+RNN Decoder
+###############
+"""
+
+
 import torch
 from torch import nn
 import torch.nn.functional as F

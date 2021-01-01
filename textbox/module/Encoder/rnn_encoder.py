@@ -2,6 +2,11 @@
 # @Author : Junyi Li
 # @Email  : lijunyi@ruc.edu.cn
 
+r"""
+RNN Encoder
+############
+"""
+
 
 import torch
 from torch import nn

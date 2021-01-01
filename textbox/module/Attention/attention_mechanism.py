@@ -7,6 +7,12 @@
 # @Author : Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn
 
+r"""
+Attention Layers
+################################################
+"""
+
+
 import torch
 from torch import nn
 from torch.nn import Parameter
@@ -15,8 +21,7 @@ import math
 
 
 class LuongAttention(torch.nn.Module):
-    r"""Luong Attention is proposed in the following paper:
-        Effective Approaches to Attention-based Neural Machine Translation.
+    r"""Luong Attention is proposed in the following paper: Effective Approaches to Attention-based Neural Machine Translation.
 
     Reference:
         https://arxiv.org/abs/1508.04025

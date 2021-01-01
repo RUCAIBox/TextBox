@@ -2,6 +2,10 @@
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
+r"""
+TextGAN Generator
+#####################
+"""
 
 import torch
 import torch.nn as nn

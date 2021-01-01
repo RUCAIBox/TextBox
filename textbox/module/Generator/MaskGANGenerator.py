@@ -2,6 +2,10 @@
 # @Author : Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn
 
+r"""
+MaskGAN Generator
+#####################
+"""
 
 import torch
 import torch.nn as nn
@@ -42,7 +46,7 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         self.sos_token_idx = dataset.sos_token_idx
         self.eos_token_idx = dataset.eos_token_idx
 
-        self.mask_token_idx = dataset.token2idx[config["user_token_list"][0]]
+        self.mask_token_idx = dataset.user_token_idx[0]
         self.max_length = config['max_seq_length']
         self.embedder = nn.Embedding(self.vocab_size, self.embedding_size)
 

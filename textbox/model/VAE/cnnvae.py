@@ -2,6 +2,13 @@
 # @Author : Gaole He
 # @Email  : hegaole@ruc.edu.cn
 
+r"""
+CNNVAE
+################################################
+Reference:
+    Yang et al. "Improved Variational Autoencoders for Text Modeling using Dilated Convolutions" in ICML 2017.
+"""
+
 
 import torch
 import torch.nn as nn
@@ -14,12 +21,6 @@ from textbox.module.Decoder.cnn_decoder import BasicCNNDecoder
 from textbox.module.layers import Highway
 from textbox.model.init import xavier_normal_initialization
 from textbox.module.strategy import topk_sampling
-
-
-'''
-Reference: Improved Variational Autoencoders for Text Modeling using Dilated Convolutions. ICML 2017
-Code Reference: https://github.com/kefirski/contiguous-succotash
-'''
 
 
 class CNNVAE(UnconditionalGenerator):

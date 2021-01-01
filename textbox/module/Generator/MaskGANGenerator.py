@@ -16,7 +16,7 @@ from textbox.model.init import xavier_normal_initialization
 
 
 class MaskGANGenerator(GenerativeAdversarialNet):
-    r""" RNN-based Encoder-Decoder architecture for maskgan generator
+    r"""RNN-based Encoder-Decoder architecture for maskgan generator
     """
 
     def __init__(self, config, dataset):
@@ -41,7 +41,8 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
         self.eos_token_idx = dataset.eos_token_idx
-        self.mask_token_idx = dataset.mask_token_idx
+
+        self.mask_token_idx = dataset.token2idx[config["user_token_list"][0]]
         self.max_length = config['max_seq_length']
         self.embedder = nn.Embedding(self.vocab_size, self.embedding_size)
 
@@ -102,13 +103,15 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         return masked_input
 
     def forward(self, inputs, input_length, targets, targets_present, pretrain=False, validate=False):
-        r""" Input real padded input and target sentence which not start from sos and end with eos(According to origin
+        r"""Input real padded input and target sentence which not start from sos and end with eos(According to origin
         code). And input length used for LSTM
+
         Args:
             inputs: bs*seq_len
             input_length:  list[bs]
             targets_present: target present matrix bs*seq_len 1: not mask 0: mask
             pretrain: control whether LM pretrain
+
         Returns:
             output: samples
             log_probs: log prob
@@ -172,7 +175,7 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         return outputs, log_probs, logits
 
     def mask_cross_entropy_loss(self, targets, logits, targets_present):
-        r""" Calculate the filling token cross entropy loss
+        r"""Calculate the filling token cross entropy loss
         """
         targets = targets.long()
         cl = nn.CrossEntropyLoss(reduction="none")
@@ -184,14 +187,14 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         return missing_cl_loss
 
     def calculate_train_loss(self, inputs, lengths, targets, targets_present, validate=False):
-        r""" Calculate train loss for generator
+        r"""Calculate train loss for generator
         """
         outputs, log_probs, logits = self.forward(inputs, lengths, targets, targets_present, validate=validate)
         loss = self.mask_cross_entropy_loss(targets, logits, targets_present)
         return loss
 
     def adversarial_loss(self, inputs, lengths, targets, targets_present, discriminator):
-        r""" Calculate adversarial loss
+        r"""Calculate adversarial loss
         """
         outputs, log_probs, logits = self.forward(inputs, lengths, targets, targets_present)
         fake_predictions, _ = discriminator(inputs, lengths, outputs, targets_present, self.embedder)
@@ -301,7 +304,7 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         return final_gen_objective, critic_loss
 
     def calculate_loss(self, logits, target_inputs):
-        r""" Calculate nll test loss
+        r"""Calculate nll test loss
         """
         targets = target_inputs.long()  # bs*seq_len
         bs, seq_len = targets.size()
@@ -316,7 +319,7 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         return nll_losses
 
     def generate(self, corpus):
-        r""" Sample sentence
+        r"""Sample sentence
         """
         number_to_gen = self.eval_generate_num
         real_data = self._get_real_data(corpus)

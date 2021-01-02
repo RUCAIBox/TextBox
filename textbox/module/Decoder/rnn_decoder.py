@@ -80,7 +80,7 @@ class BasicRNNDecoder(torch.nn.Module):
         if hidden_states is None:
             hidden_states = self.init_hidden(input_embeddings)
 
-        hidden_states = hidden_states.contiguous()
+        # hidden_states = hidden_states.contiguous()
         outputs, hidden_states = self.decoder(input_embeddings, hidden_states)
         return outputs, hidden_states
 
@@ -189,7 +189,8 @@ class AttentionalRNNDecoder(torch.nn.Module):
                 inputs = input_embeddings[:, step, :].unsqueeze(1)
                 context = None
 
-            # hidden_states = hidden_states.contiguous() # if hidden_states is (h0,c0) can not operate like this
+            if (not isinstance(hidden_states, tuple)):
+                hidden_states = hidden_states.contiguous()
             outputs, hidden_states = self.decoder(inputs, hidden_states)
 
             if self.attention_type == 'LuongAttention' and context is None:

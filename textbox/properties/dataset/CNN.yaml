@@ -1,3 +1,0 @@
-max_vocab_size: 1000
-max_source_length: 1024
-max_target_length: 256

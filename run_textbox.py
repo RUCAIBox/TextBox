@@ -11,7 +11,7 @@ from textbox.quick_start import run_textbox
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', '-m', type=str, default='RNN', help='name of models')
-    parser.add_argument('--dataset', '-d', type=str, default='IMDB', help='name of datasets')
+    parser.add_argument('--dataset', '-d', type=str, default='COCO', help='name of datasets')
     parser.add_argument('--task_type', '-t', type=str, default='unconditional', help='name of tasks')
     parser.add_argument('--config_files', type=str, default=None, help='config files')
 

@@ -71,13 +71,14 @@ class LuongAttention(torch.nn.Module):
         Luong attention
 
         Args:
-            hidden_states [batch_size, tgt_len, target_size]
-            encoder_outputs [batch_size, src_len, source_size]
-            encoder_masks [batch_size, src_len]
+            hidden_states: shape: [batch_size, tgt_len, target_size]
+            encoder_outputs: shape: [batch_size, src_len, source_size]
+            encoder_masks: shape: [batch_size, src_len]
 
         Return:
-            context [batch_size, tgt_len, source_size]
-            probs [batch_size, tgt_len, src_len]
+            tuple:
+                - context: shape: [batch_size, tgt_len, source_size]
+                - sprobs: shape: [batch_size, tgt_len, src_len]
         """
         tgt_len = hidden_states.size(1)
         energy = self.score(hidden_states, encoder_outputs)
@@ -117,13 +118,14 @@ class BahdanauAttention(torch.nn.Module):
         Bahdanau attention
 
         Args:
-            hidden_states [batch_size, tgt_len, target_size]
-            encoder_outputs [batch_size, src_len, source_size]
-            encoder_masks [batch_size, src_len]
+            hidden_states: shape: [batch_size, tgt_len, target_size]
+            encoder_outputs: shape: [batch_size, src_len, source_size]
+            encoder_masks: shape: [batch_size, src_len]
 
         Return:
-            context [batch_size, tgt_len, source_size]
-            probs [batch_size, tgt_len, src_len]
+            tuple:
+                - context: shape: [batch_size, tgt_len, source_size]
+                - probs: shape: [batch_size, tgt_len, src_len]
         """
         energy = self.score(hidden_states, encoder_outputs)
         probs = F.softmax(energy, dim=-1) * encoder_masks
@@ -186,14 +188,15 @@ class MonotonicAttention(torch.nn.Module):
         Soft monotonic attention (Train)
 
         Args:
-            hidden_states [batch_size, tgt_len, target_size]
-            encoder_outputs [batch_size, src_len, source_size]
-            encoder_masks [batch_size, src_len]
-            previous_probs [batch_size, tgt_len, src_len]
+            hidden_states: shape: [batch_size, tgt_len, target_size]
+            encoder_outputs: shape: [batch_size, src_len, source_size]
+            encoder_masks: shape: [batch_size, src_len]
+            previous_probs: shape: [batch_size, tgt_len, src_len]
 
         Return:
-            context [batch_size, tgt_len, source_size]
-            probs [batch_size, tgt_len, src_len]
+            tuple:
+                - context: shape: [batch_size, tgt_len, source_size]
+                - probs: shape: [batch_size, tgt_len, src_len]
         """
         device = hidden_states.device
         tgt_len = hidden_states.size(1)
@@ -222,14 +225,15 @@ class MonotonicAttention(torch.nn.Module):
         Hard monotonic attention (Test)
 
         Args:
-            hidden_states [batch_size, tgt_len, target_size]
-            encoder_outputs [batch_size, src_len, source_size]
-            encoder_masks [batch_size, src_len]
-            previous_probs [batch_size, tgt_len, src_len]
+            hidden_states: shape: [batch_size, tgt_len, target_size]
+            encoder_outputs: shape: [batch_size, src_len, source_size]
+            encoder_masks: shape: [batch_size, src_len]
+            previous_probs: shape: [batch_size, tgt_len, src_len]
 
         Return:
-            context [batch_size, tgt_len, source_size]
-            probs [batch_size, tgt_len, src_len]
+            tuple:
+                - context: shape: [batch_size, tgt_len, source_size]
+                - probs: shape: [batch_size, tgt_len, src_len]
         """
         device = hidden_states.device
         tgt_len = hidden_states.size(1)
@@ -306,14 +310,15 @@ class MultiHeadAttention(torch.nn.Module):
         Multi-head attention
 
         Args:
-            query [batch_size, tgt_len, embedding_size]
-            key and value [batch_size, src_len, embedding_size]
-            key_padding_mask [batch_size, src_len]
-            attn_mask [batch_size, tgt_len, src_len]
+            query: shape: [batch_size, tgt_len, embedding_size]
+            key and value: shape: [batch_size, src_len, embedding_size]
+            key_padding_mask: shape: [batch_size, src_len]
+            attn_mask: shape: [batch_size, tgt_len, src_len]
 
         Return:
-            attn_repre [batch_size, tgt_len, embedding_size]
-            attn_weights [batch_size, tgt_len, src_len]
+            tuple:
+                - attn_repre: shape: [batch_size, tgt_len, embedding_size]
+                - attn_weights: shape: [batch_size, tgt_len, src_len]
         """
         batch_size, tgt_len, embedding_size = query.size()
         src_len = key.size(1)

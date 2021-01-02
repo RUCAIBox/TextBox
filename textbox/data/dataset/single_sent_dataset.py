@@ -2,17 +2,18 @@
 # @Author : Junyi Li, Gaole He
 # @Email  : lijunyi@ruc.edu.cn
 
+"""
+textbox.data.dataset.single_sent_dataset
+########################################
+"""
+
+
 import os
 import pickle
 import nltk
 import collections
 import random
 from textbox.data.dataset import Dataset
-
-"""
-textbox.data.dataset.single_sent_dataset
-########################################
-"""
 
 
 class SingleSentenceDataset(Dataset):

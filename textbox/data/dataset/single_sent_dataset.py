@@ -2,6 +2,12 @@
 # @Author : Junyi Li, Gaole He
 # @Email  : lijunyi@ruc.edu.cn
 
+"""
+textbox.data.dataset.single_sent_dataset
+########################################
+"""
+
+
 import os
 import pickle
 import nltk
@@ -37,8 +43,9 @@ class SingleSentenceDataset(Dataset):
             source_text = []
             fin = open(source_file, "r")
             for line in fin:
-                words = nltk.word_tokenize(line.strip(), language=self.source_language)[:self.max_seq_length]
-                source_text.append(words)
+                words = nltk.word_tokenize(line.strip(), language=self.source_language)
+                if (len(words) <= self.max_seq_length):
+                    source_text.append(words)
             fin.close()
             self.text_data.append(source_text)
 
@@ -54,8 +61,9 @@ class SingleSentenceDataset(Dataset):
 
         fin = open(dataset_file, "r")
         for line in fin:
-            words = nltk.word_tokenize(line.strip(), language=self.source_language.lower())[:self.max_seq_length]
-            self.text_data.append(words)
+            words = nltk.word_tokenize(line.strip(), language=self.source_language.lower())
+            if (len(words) <= self.max_seq_length):
+                self.text_data.append(words)
         fin.close()
 
     def _load_data(self, dataset_path):

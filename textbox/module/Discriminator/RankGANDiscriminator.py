@@ -2,6 +2,10 @@
 # @Author : Xiaoxuan Hu
 # @Email  : huxiaoxuan@ruc.edu.cn
 
+r"""
+RankGAN Discriminator
+#####################
+"""
 
 import torch
 import torch.nn as nn

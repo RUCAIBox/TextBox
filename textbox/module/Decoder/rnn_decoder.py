@@ -7,6 +7,12 @@
 # @Author : Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn
 
+r"""
+RNN Decoder
+###############
+"""
+
+
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -14,6 +20,9 @@ from textbox.module.Attention.attention_mechanism import LuongAttention, Bahdana
 
 
 class BasicRNNDecoder(torch.nn.Module):
+    r"""
+    Basic Recurrent Neural Network (RNN) decoder.
+    """
     def __init__(self,
                  embedding_size,
                  hidden_size,
@@ -36,6 +45,14 @@ class BasicRNNDecoder(torch.nn.Module):
             raise ValueError("The RNN type in decoder must in ['lstm', 'gru', 'rnn'].")
 
     def init_hidden(self, input_embeddings):
+        r""" Initialize initial hidden states of RNN.
+
+        Args:
+            input_embeddings (Torch.Tensor): input sequence embedding, shape: [batch_size, sequence_length, embedding_size].
+
+        Returns:
+            Torch.Tensor: the initial hidden states.
+        """
         batch_size = input_embeddings.size(0)
         device = input_embeddings.device
         if self.rnn_type == 'lstm':
@@ -49,15 +66,29 @@ class BasicRNNDecoder(torch.nn.Module):
             raise NotImplementedError("No such rnn type {} for initializing decoder states.".format(self.rnn_type))
 
     def forward(self, input_embeddings, hidden_states=None):
+        r""" Implement the decoding process.
+
+        Args:
+            input_embeddings (Torch.Tensor): target sequence embedding, shape: [batch_size, sequence_length, embedding_size].
+            hidden_states (Torch.Tensor): initial hidden states, default: None.
+
+        Returns:
+            tuple:
+                - Torch.Tensor: output features, shape: [batch_size, sequence_length, num_directions * hidden_size].
+                - Torch.Tensor: hidden states, shape: [batch_size, num_layers * num_directions, hidden_size].
+        """
         if hidden_states is None:
             hidden_states = self.init_hidden(input_embeddings)
 
-        hidden_states = hidden_states.contiguous()
+        # hidden_states = hidden_states.contiguous()
         outputs, hidden_states = self.decoder(input_embeddings, hidden_states)
         return outputs, hidden_states
 
 
 class AttentionalRNNDecoder(torch.nn.Module):
+    r"""
+    Attention-based Recurrent Neural Network (RNN) decoder.
+    """
     def __init__(self,
                  embedding_size,
                  hidden_size,
@@ -101,6 +132,14 @@ class AttentionalRNNDecoder(torch.nn.Module):
         self.attention_dense = nn.Linear(hidden_size + context_size, hidden_size)
 
     def init_hidden(self, input_embeddings):
+        r""" Initialize initial hidden states of RNN.
+
+        Args:
+            input_embeddings (Torch.Tensor): input sequence embedding, shape: [batch_size, sequence_length, embedding_size].
+
+        Returns:
+            Torch.Tensor: the initial hidden states.
+        """
         batch_size = input_embeddings.size(0)
         device = input_embeddings.device
         if self.rnn_type == 'lstm':
@@ -115,6 +154,19 @@ class AttentionalRNNDecoder(torch.nn.Module):
 
     def forward(self, input_embeddings, hidden_states=None, encoder_outputs=None, encoder_masks=None,
                 previous_probs=None):
+        r""" Implement the attention-based decoding process.
+
+        Args:
+            input_embeddings (Torch.Tensor): source sequence embedding, shape: [batch_size, sequence_length, embedding_size].
+            hidden_states (Torch.Tensor): initial hidden states, default: None.
+            encoder_outputs (Torch.Tensor): encoder output features, shape: [batch_size, sequence_length, hidden_size], default: None.
+            encoder_masks (Torch.Tensor): encoder state masks, shape: [batch_size, sequence_length], default: None.
+
+        Returns:
+            tuple:
+                - Torch.Tensor: output features, shape: [batch_size, sequence_length, num_directions * hidden_size].
+                - Torch.Tensor: hidden states, shape: [batch_size, num_layers * num_directions, hidden_size].
+        """
         if hidden_states is None:
             hidden_states = self.init_hidden(input_embeddings)
 
@@ -137,7 +189,8 @@ class AttentionalRNNDecoder(torch.nn.Module):
                 inputs = input_embeddings[:, step, :].unsqueeze(1)
                 context = None
 
-            # hidden_states = hidden_states.contiguous() # if hidden_states is (h0,c0) can not operate like this
+            if (not isinstance(hidden_states, tuple)):
+                hidden_states = hidden_states.contiguous()
             outputs, hidden_states = self.decoder(inputs, hidden_states)
 
             if self.attention_type == 'LuongAttention' and context is None:

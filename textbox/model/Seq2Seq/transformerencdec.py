@@ -7,6 +7,14 @@
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
+
+r"""
+TransformerEncDec
+################################################
+Reference:
+    Vaswani et al. "Attention is All you Need" in NIPS 2017.
+"""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -22,9 +30,6 @@ from textbox.module.strategy import topk_sampling, greedy_search, Beam_Search_Hy
 
 class TransformerEncDec(ConditionalGenerator):
     r"""Transformer-based Encoder-Decoder architecture is a powerful framework for conditional text generation.
-
-    Reference:
-        https://arxiv.org/abs/1706.03762
     """
 
     def __init__(self, config, dataset):

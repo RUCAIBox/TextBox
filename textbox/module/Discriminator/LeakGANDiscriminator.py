@@ -2,6 +2,11 @@
 # @Author : Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn
 
+r"""
+LeakGAN Discriminator
+#####################
+"""
+
 
 import torch
 import torch.nn as nn

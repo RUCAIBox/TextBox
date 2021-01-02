@@ -2,6 +2,10 @@
 # @Author : Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn
 
+r"""
+MaskGAN Discriminator
+#####################
+"""
 
 import torch
 import torch.nn as nn
@@ -35,7 +39,7 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
         self.eos_token_idx = dataset.eos_token_idx
-        self.mask_token_idx = dataset.token2idx[config["user_token_list"][0]]
+        self.mask_token_idx = dataset.user_token_idx[0]
 
         self.encoder = BasicRNNEncoder(self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type,
                                        self.dropout_ratio, self.bidirectional)
@@ -59,22 +63,28 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
         r"""Transforms the inputs to have missing tokens when it's masked out.  The
         mask is for the targets, so therefore, to determine if an input at time t is
         masked, we have to check if the target at time t - 1 is masked out.
+
         e.g.
-          inputs = [a, b, c, d]
-          targets = [b, c, d, e]
-          targets_present = [1, 0, 1, 0]
+        
+        - inputs = [a, b, c, d]
+
+        - targets = [b, c, d, e]
+
+        - targets_present = [1, 0, 1, 0]
+
         then,
-          masked_input = [a, b, <missing>, d]
+
+        - masked_input = [a, b, <missing>, d]
 
         Args:
-          inputs:  Tensor of shape [batch_size, sequence_length]
-          targets_present:  Bool tensor of shape [batch_size, sequence_length] with
-            1 representing the presence of the word.
+            inputs: Tensor of shape [batch_size, sequence_length]
+            targets_present: Bool tensor of shape [batch_size, sequence_length] with
+                           1 representing the presence of the word.
 
         Returns:
-          masked_input:  Tensor of shape [batch_size, sequence_length]
-            which takes on value of inputs when the input is present and takes on
-            value=mask_token_idx to indicate a missing token.
+            masked_input: Tensor of shape [batch_size, sequence_length]
+                          which takes on value of inputs when the input is present and takes on
+                          value=mask_token_idx to indicate a missing token.
         """
         inputs_missing = torch.zeros_like(inputs)
         inputs_missing[:, :] = self.mask_token_idx

@@ -2,6 +2,10 @@
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
+r"""
+SeqGAN Discriminator
+#####################
+"""
 
 import torch
 import torch.nn as nn

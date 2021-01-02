@@ -51,7 +51,7 @@ def bleu_(generate_corpus, reference_corpus, n_grams, get_avg=False):
         return results, avg_bleu
     return results
 
-def self_bleu_(generate_corpus, n_grams):
+def self_bleu_(generate_corpus, n_grams, reference_corpus=None):
     r""" Calculate the Self-BLEU metrics of the generated corpus.
 
     Args:

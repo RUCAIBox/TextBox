@@ -2,6 +2,13 @@
 # @Author : Gaole He
 # @Email  : hegaole@ruc.edu.cn
 
+r"""
+RNNVAE
+################################################
+Reference:
+    Bowman et al. "Generating Sentences from a Continuous Space" in CoNLL 2016.
+"""
+
 
 import torch
 import torch.nn as nn
@@ -13,11 +20,6 @@ from textbox.module.Encoder.rnn_encoder import BasicRNNEncoder
 from textbox.module.Decoder.rnn_decoder import BasicRNNDecoder
 from textbox.model.init import xavier_normal_initialization
 from textbox.module.strategy import topk_sampling
-
-'''
-Reference: Generating Sentences from a Continuous Space.
-Code Reference: https://github.com/timbmg/Sentence-VAE
-'''
 
 
 class RNNVAE(UnconditionalGenerator):

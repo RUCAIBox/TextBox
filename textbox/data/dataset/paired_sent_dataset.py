@@ -8,6 +8,12 @@
 # @Author : Gaole He
 # @Email  : hegaole@ruc.edu.cn
 
+"""
+textbox.data.dataset.paired_sent_dataset
+########################################
+"""
+
+
 import os
 import pickle
 import nltk
@@ -63,8 +69,9 @@ class PairedSentenceDataset(Dataset):
             source_text = []
             fin = open(source_file, "r")
             for line in fin:
-                words = nltk.word_tokenize(line.strip(), language=self.source_language)[:self.source_max_seq_length]
-                source_text.append(words)
+                words = nltk.word_tokenize(line.strip(), language=self.source_language)
+                if (len(words) <= self.source_max_seq_length):
+                    source_text.append(words)
             fin.close()
             self.source_text_data.append(source_text)
 
@@ -72,8 +79,9 @@ class PairedSentenceDataset(Dataset):
             target_text = []
             fin = open(target_file, "r")
             for line in fin:
-                words = nltk.word_tokenize(line.strip(), language=self.target_language)[:self.target_max_seq_length]
-                target_text.append(words)
+                words = nltk.word_tokenize(line.strip(), language=self.target_language)
+                if (len(words) <= self.target_max_seq_length):
+                    target_text.append(words)
             fin.close()
             self.target_text_data.append(target_text)
 

@@ -2,6 +2,12 @@
 # @Author : Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn
 
+r"""
+LeakGAN Generator
+#####################
+"""
+
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

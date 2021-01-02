@@ -2,6 +2,13 @@
 # @Author : Junyi Li
 # @Email  : lijunyi@ruc.edu.cn
 
+r"""
+GPT-2
+################################################
+Reference:
+    Radford et al. "Language models are unsupervised multitask".
+"""
+
 
 import random
 import torch
@@ -13,10 +20,8 @@ from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPT2Config
 
 
 class GPT2(UnconditionalGenerator):
-    r"""GPT2 is an auto-regressive language model.
+    r"""GPT-2 is an auto-regressive language model with stacked Transformer decoders.
 
-    Reference:
-        Language Models are Unsupervised Multitask Learners.
     """
 
     def __init__(self, config, dataset):

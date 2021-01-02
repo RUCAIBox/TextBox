@@ -6,10 +6,7 @@ r"""
 RankGAN
 ################################################
 Reference:
-    Kevin Lin et al. "Adversarial Ranking for Language Generation." in NIPS 2017.
-Reference code:
-    https://github.com/cookielee77/RankGan-NIPS2017
-
+    Lin et al. "Adversarial Ranking for Language Generation" in NIPS 2017.
 """
 
 import torch

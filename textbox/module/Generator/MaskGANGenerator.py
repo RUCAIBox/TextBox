@@ -2,6 +2,10 @@
 # @Author : Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn
 
+r"""
+MaskGAN Generator
+#####################
+"""
 
 import torch
 import torch.nn as nn
@@ -42,7 +46,7 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         self.sos_token_idx = dataset.sos_token_idx
         self.eos_token_idx = dataset.eos_token_idx
 
-        self.mask_token_idx = dataset.token2idx[config["user_token_list"][0]]
+        self.mask_token_idx = dataset.user_token_idx[0]
         self.max_length = config['max_seq_length']
         self.embedder = nn.Embedding(self.vocab_size, self.embedding_size)
 
@@ -68,22 +72,28 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         r"""Transforms the inputs to have missing tokens when it's masked out.  The
         mask is for the targets, so therefore, to determine if an input at time t is
         masked, we have to check if the target at time t - 1 is masked out.
+
         e.g.
-          inputs = [a, b, c, d]
-          targets = [b, c, d, e]
-          targets_present = [1, 0, 1, 0]
+
+        - inputs = [a, b, c, d]
+
+        - targets = [b, c, d, e]
+
+        - targets_present = [1, 0, 1, 0]
+
         then,
-          masked_input = [a, b, <missing>, d]
-
+        
+        - masked_input = [a, b, <missing>, d]
+        
         Args:
-          inputs:  Tensor of shape [batch_size, sequence_length]
-          targets_present:  Bool tensor of shape [batch_size, sequence_length] with
-            1 representing the presence of the word.
-
+            inputs: Tensor of shape [batch_size, sequence_length]
+            targets_present: Bool tensor of shape [batch_size, sequence_length] with
+                             1 representing the presence of the word.
+        
         Returns:
-          masked_input:  Tensor of shape [batch_size, sequence_length]
-            which takes on value of inputs when the input is present and takes on
-            value=mask_token_idx to indicate a missing token.
+            masked_input: Tensor of shape [batch_size, sequence_length]
+                          which takes on value of inputs when the input is present and takes on
+                          value=mask_token_idx to indicate a missing token.
         """
         inputs_missing = torch.zeros_like(inputs)
         inputs_missing[:, :] = self.mask_token_idx
@@ -219,17 +229,17 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         the distribution.  Specifically, for a Discriminator D which outputs probability of real, given the past context,
         r_t = log D(x_t|x_0,x_1,...x_{t-1})
         And the policy for Generator G is the log-probability of taking action x2 given the past context.
-
+        
         Args:
             log_probs: Tensor of log probabilities of the tokens selected by the Generator.
-                        Shape [batch_size, sequence_length].
+                       Shape [batch_size, sequence_length].
             dis_predictions: Tensor of the predictions from the Discriminator.
-                                Shape [batch_size, sequence_length].
+                             Shape [batch_size, sequence_length].
             present: Tensor indicating which tokens are present.
-                        Shape [batch_size, sequence_length].
+                     Shape [batch_size, sequence_length].
             estimated_values: Tensor of estimated state values of tokens.
-                        Shape [batch_size, sequence_length]
-
+                              Shape [batch_size, sequence_length]
+        
         Returns:
             final_gen_objective:  Final REINFORCE objective for the sequence.
             rewards:  Tensor of rewards for sequence of shape [batch_size, sequence_length]

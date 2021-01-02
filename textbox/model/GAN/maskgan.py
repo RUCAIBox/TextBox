@@ -2,6 +2,12 @@
 # @Author : Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn
 
+r"""
+MaskGAN
+################################################
+Reference:
+    Fedus et al. "MaskGAN: Better Text Generation via Filling in the ________" in ICLR 2018.
+"""
 
 import torch
 import numpy as np
@@ -12,7 +18,8 @@ from textbox.module.Discriminator.MaskGANDiscriminator import MaskGANDiscriminat
 
 
 class MaskGAN(GenerativeAdversarialNet):
-    r"""MaskGan: better text generation via filling in the mask.
+    r"""MaskGAN is a generative adversarial network to improve sample quality, 
+        which introduces an actor-critic conditional GAN that fills in missing text conditioned on the surrounding context.
     """
 
     def __init__(self, config, dataset):

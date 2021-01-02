@@ -2,6 +2,13 @@
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
+r"""
+TextGAN
+################################################
+Reference:
+    Zhang et al. "Adversarial Feature Matching for Text Generation" in ICML 2017.
+"""
+
 
 import torch
 import torch.nn as nn
@@ -13,8 +20,9 @@ from textbox.module.Discriminator.TextGANDiscriminator import TextGANDiscriminat
 
 
 class TextGAN(GenerativeAdversarialNet):
-    r"""TextGAN followed "Adversarial Feature Matching for Text Generation".
-
+    r"""TextGAN is a generative adversarial network,
+        which proposes matching the high-dimensional latent feature distributions of real and synthetic sentences,
+        via a kernelized discrepancy metric.
     """
 
     def __init__(self, config, dataset):

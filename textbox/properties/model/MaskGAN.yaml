@@ -7,19 +7,18 @@ dis_share_embedding: True
 hidden_size: 128 # 650 for imdb
 num_enc_layers: 2
 bidirectional: False
-combine_method: "concat"
 context_size: 128 # 650 for imdb
 num_dec_layers: 2
 dropout_ratio: 0.5
 rnn_type: "lstm"
 attention_type: "LuongAttention"
+alignment_method: "concat"
 source_language: "english"
 target_language: "english"
 mask_strategy: "random"
 is_present_rate: 0.5
 advantage_clipping: 5
 rl_discount_rate: 0.8835659
-task_type: "unconditional"
 user_token_list: ["<|mask|>"]
 
 # GAN training settings

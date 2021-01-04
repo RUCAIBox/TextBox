@@ -88,6 +88,7 @@ class SingleSentenceDataset(Dataset):
             tokens = [word for count, word in token_count]
             tokens = self.special_token_list + tokens
             tokens = tokens[:self.max_vocab_size]
+            self.max_vocab_size = len(tokens)
 
             self.idx2token = dict(zip(range(self.max_vocab_size), tokens))
             self.token2idx = dict(zip(tokens, range(self.max_vocab_size)))
@@ -100,6 +101,7 @@ class SingleSentenceDataset(Dataset):
             tokens = [word for count, word in token_count]
             tokens = self.special_token_list + tokens
             tokens = tokens[:self.max_vocab_size]
+            self.max_vocab_size = len(tokens)
 
             self.idx2token = dict(zip(range(self.max_vocab_size), tokens))
             self.token2idx = dict(zip(tokens, range(self.max_vocab_size)))

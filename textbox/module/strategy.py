@@ -131,7 +131,7 @@ class Beam_Search_Hypothesis(object):
         live_hyp_num = self.beam_size - len(self.completed_hypotheses)
         tmp_hyp_scores = (self.hyp_scores.unsqueeze(1).expand_as(token_probs) + token_probs).view(-1)
         top_scores, top_pos = torch.topk(tmp_hyp_scores, k=live_hyp_num)
-        hyp_ids = top_pos / vocab_size
+        hyp_ids = top_pos // vocab_size
         word_ids = top_pos % vocab_size
 
         new_hypotheses = []

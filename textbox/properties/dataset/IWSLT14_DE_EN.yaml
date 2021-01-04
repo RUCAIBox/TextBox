@@ -1,0 +1,11 @@
+# special tokens
+max_vocab_size: 50000
+max_seq_length: 200
+source_max_vocab_size: 50000
+target_max_vocab_size: 50000
+source_max_seq_length: 200
+target_max_seq_length: 200
+source_language: german
+target_language: english
+source_suffix: de
+target_suffix: en

@@ -6,7 +6,7 @@ import os
 
 from setuptools import setup, find_packages
 
-install_requires = ['matplotlib>=3.1.3', 'torch>=1.2.0', 'numpy>=1.17.2', 'nltk>=3.4.5',
+install_requires = ['matplotlib>=3.1.3', 'torch>=1.6.0', 'numpy>=1.17.2', 'nltk>=3.4.5',
                     'pyyaml>=5.3.1', 'fast_bleu>=0.0.86', 'rouge>=1.0.0','transformers>=4.0.1']
 
 setup_requires = []
@@ -21,12 +21,12 @@ if on_rtd:
 
 setup(
     name='textbox',
-    version=
-    '0.0.1',  # please remember to edit textbox/__init__.py in response, once updating the version
+    version='0.0.1',
     description='A package for building text generation systems',
     url='https://github.com/RUCAIBox/TextBox',
     author='TextBoxTeam',
-    author_email='ContactTextBoxTeam',
+    author_email='rucaibox@163.com',
+    python_requires=">=3.7.4",
     packages=[
         package for package in find_packages()
         if package.startswith('textbox')

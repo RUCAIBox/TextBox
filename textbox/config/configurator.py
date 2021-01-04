@@ -65,8 +65,9 @@ class Config(object):
         self.variable_config_dict = self._load_variable_config_dict(config_dict)
         self.cmd_config_dict = self._load_cmd_line()
         self._merge_external_config_dict()
-        self.model, self.dataset = self._get_model_and_dataset(model, dataset)
-        self._load_internal_config_dict(self.model, self.dataset)
+
+        self.model, self.model_class, self.dataset = self._get_model_and_dataset(model, dataset)
+        self._load_internal_config_dict(self.model, self.model_class, self.dataset)
         self.final_config_dict = self._get_final_config_dict()
         self._set_default_parameters()
         self._init_device()
@@ -163,12 +164,17 @@ class Config(object):
     def _get_model_and_dataset(self, model, dataset):
         if model is None:
             try:
-                final_model = self.external_config_dict['model']
+                model = self.external_config_dict['model']
             except KeyError:
-                raise KeyError('model need to be specified in at least one of the these ways: '
-                               '[model variable, config file, config dict, command line] ')
+                raise KeyError(
+                    'model need to be specified in at least one of the these ways: '
+                    '[model variable, config file, config dict, command line] ')
+        if not isinstance(model, str):
+            final_model_class = model
+            final_model = model.__name__
         else:
             final_model = model
+            final_model_class = get_model(final_model)
 
         if dataset is None:
             try:
@@ -179,27 +185,30 @@ class Config(object):
         else:
             final_dataset = dataset
 
-        return final_model, final_dataset
+        return final_model, final_model_class, final_dataset
 
-    def _load_internal_config_dict(self, model, dataset):
+    def _update_internal_config_dict(self, file):
+        with open(file, 'r', encoding='utf-8') as f:
+            config_dict = yaml.load(f.read(), Loader=self.yaml_loader)
+            if config_dict is not None:
+                self.internal_config_dict.update(config_dict)
+        return config_dict
+
+    def _load_internal_config_dict(self, model, model_class, dataset):
         current_path = os.path.dirname(os.path.realpath(__file__))
         overall_init_file = os.path.join(current_path, '../properties/overall.yaml')
         model_init_file = os.path.join(current_path, '../properties/model/' + model + '.yaml')
-        sample_init_file = os.path.join(current_path, '../properties/dataset/sample.yaml')
         dataset_init_file = os.path.join(current_path, '../properties/dataset/' + dataset + '.yaml')
 
         self.internal_config_dict = dict()
-        for file in [overall_init_file, model_init_file, sample_init_file, dataset_init_file]:
+        for file in [overall_init_file, model_init_file, dataset_init_file]:
             if os.path.isfile(file):
-                with open(file, 'r', encoding='utf-8') as f:
-                    config_dict = yaml.load(f.read(), Loader=self.yaml_loader)
-                    if file == dataset_init_file:
-                        self.parameters['Dataset'] += [key for key in config_dict.keys() if
-                                                       key not in self.parameters['Dataset']]
-                    if config_dict is not None:
-                        self.internal_config_dict.update(config_dict)
+                config_dict = self._update_internal_config_dict(file)
+                if file == dataset_init_file:
+                    self.parameters['Dataset'] += [key for key in config_dict.keys() if
+                                                   key not in self.parameters['Dataset']]
 
-        self.internal_config_dict['MODEL_TYPE'] = get_model(model).type
+        self.internal_config_dict['MODEL_TYPE'] = model_class.type
 
     def _get_final_config_dict(self):
         final_config_dict = dict()

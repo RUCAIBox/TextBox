@@ -110,7 +110,9 @@ class TransformerEncDec(ConditionalGenerator):
                 encoder_output = encoder_outputs[bid, :, :].unsqueeze(0)
                 encoder_mask = source_padding_mask[bid, :].unsqueeze(0)
                 generate_tokens = []
-                input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
+                prev_token_ids = [self.sos_token_idx]
+                input_seq = torch.LongTensor([prev_token_ids]).to(self.device)
+                self_attn_mask = self.self_attn_mask(input_seq.size(-1)).bool().to(self.device)
 
                 if (self.decoding_strategy == 'beam_search'):
                     hypothesis = Beam_Search_Hypothesis(self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token)
@@ -118,9 +120,8 @@ class TransformerEncDec(ConditionalGenerator):
                 for gen_idx in range(self.max_target_length):
                     decoder_input = self.target_token_embedder(input_seq) + \
                                     self.position_embedder(input_seq).to(self.device)
-                    decoder_outputs = self.decoder(decoder_input,
-                                                    external_states=encoder_output,
-                                                    external_padding_mask=encoder_mask)
+                    decoder_outputs = self.decoder(decoder_input, self_attn_mask=self_attn_mask,
+                                                   external_states=encoder_output, external_padding_mask=encoder_mask)
 
                     token_logits = self.vocab_linear(decoder_outputs[:, -1, :].unsqueeze(1))
 
@@ -137,7 +138,9 @@ class TransformerEncDec(ConditionalGenerator):
                             break
                         else:
                             generate_tokens.append(idx2token[token_idx])
-                            input_seq = torch.LongTensor([[token_idx]]).to(self.device)
+                            prev_token_ids.append(token_idx)
+                            input_seq = torch.LongTensor([prev_token_ids]).to(self.device)
+                            self_attn_mask = self.self_attn_mask(input_seq.size(-1)).bool().to(self.device)
                     elif (self.decoding_strategy == 'beam_search'):
                         if (hypothesis.stop()):
                             break

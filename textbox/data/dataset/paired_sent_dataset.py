@@ -66,23 +66,22 @@ class PairedSentenceDataset(Dataset):
             raise ValueError('File {} not exist'.format(train_src_file))
         for prefix in ['train', 'dev', 'test']:
             source_file = os.path.join(dataset_path, '{}.{}'.format(prefix, self.source_suffix))
-            source_text = []
-            fin = open(source_file, "r")
-            for line in fin:
-                words = nltk.word_tokenize(line.strip(), language=self.source_language)
-                if (len(words) <= self.source_max_seq_length):
-                    source_text.append(words)
-            fin.close()
-            self.source_text_data.append(source_text)
-
             target_file = os.path.join(dataset_path, '{}.{}'.format(prefix, self.target_suffix))
+            source_text = []
             target_text = []
-            fin = open(target_file, "r")
-            for line in fin:
-                words = nltk.word_tokenize(line.strip(), language=self.target_language)
-                if (len(words) <= self.target_max_seq_length):
-                    target_text.append(words)
-            fin.close()
+            source_fin = open(source_file, "r")
+            target_fin = open(target_file, "r")
+            
+            for source_line, target_line in zip(source_fin, target_fin):
+                source_words = nltk.word_tokenize(source_line.strip(), language=self.source_language)
+                target_words = nltk.word_tokenize(target_line.strip(), language=self.target_language)
+                if (len(source_words) <= self.source_max_seq_length and len(target_words) <= self.target_max_seq_length):
+                    source_text.append(source_words)
+                    target_text.append(target_words)
+            
+            source_fin.close()
+            target_fin.close()
+            self.source_text_data.append(source_text)
             self.target_text_data.append(target_text)
 
     def _data_processing(self):
@@ -98,23 +97,24 @@ class PairedSentenceDataset(Dataset):
         tokens = [word for count, word in token_count]
         tokens = self.special_token_list + tokens
         tokens = tokens[:max_vocab_size]
+        max_vocab_size = len(tokens)
         idx2token = dict(zip(range(max_vocab_size), tokens))
         token2idx = dict(zip(tokens, range(max_vocab_size)))
-        return idx2token, token2idx
+        return idx2token, token2idx, max_vocab_size
 
     def _build_vocab(self):
         if self.share_vocab:
             assert self.source_language == self.target_language
             text_data = self.source_text_data + self.target_text_data
-            self.source_idx2token, self.source_token2idx = self._build_vocab_text(text_data,
-                                                                                  self.source_max_vocab_size)
+            self.source_idx2token, self.source_token2idx, self.source_max_vocab_size = self._build_vocab_text(text_data,
+                                                                                       self.source_max_vocab_size)
             self.target_idx2token, self.target_token2idx = self.source_idx2token, self.source_token2idx
             print("Share Vocabulary between source and target, vocab size: {}".format(len(self.target_idx2token)))
         else:
-            self.source_idx2token, self.source_token2idx = self._build_vocab_text(self.source_text_data,
-                                                                                  max_vocab_size=self.source_max_vocab_size)
-            self.target_idx2token, self.target_token2idx = self._build_vocab_text(self.target_text_data,
-                                                                                  max_vocab_size=self.target_max_vocab_size)
+            self.source_idx2token, self.source_token2idx, self.source_max_vocab_size = self._build_vocab_text(self.source_text_data,
+                                                                                       max_vocab_size=self.source_max_vocab_size)
+            self.target_idx2token, self.target_token2idx, self.target_max_vocab_size = self._build_vocab_text(self.target_text_data,
+                                                                                       max_vocab_size=self.target_max_vocab_size)
             print("Source vocab size: {}, Target vocab size: {}".format(len(self.source_idx2token),
                                                                         len(self.target_idx2token)))
 

@@ -21,7 +21,7 @@ from textbox.utils import get_model, Enum, general_arguments, training_arguments
 class Config(object):
     """ Configurator module that load the defined parameters.
 
-    Configurator module will first load the default parameters from the fixed properties in RecBole and then
+    Configurator module will first load the default parameters from the fixed properties in TextBox and then
     load parameters from the external input.
 
     External input supports three kind of forms: config file, command line and parameter dictionaries.
@@ -150,7 +150,7 @@ class Config(object):
                     cmd_config_dict[cmd_arg_name] = cmd_arg_value
         if len(unrecognized_args) > 0:
             logger = getLogger()
-            logger.warning('command line args [{}] will not be used in Textbox'.format(' '.join(unrecognized_args)))
+            logger.warning('command line args [{}] will not be used in TextBox'.format(' '.join(unrecognized_args)))
         cmd_config_dict = self._convert_config_dict(cmd_config_dict)
         return cmd_config_dict
 

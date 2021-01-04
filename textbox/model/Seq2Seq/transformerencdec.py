@@ -118,6 +118,7 @@ class TransformerEncDec(ConditionalGenerator):
                     hypothesis = Beam_Search_Hypothesis(self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token)
                 
                 for gen_idx in range(self.max_target_length):
+                    self_attn_mask = self.self_attn_mask(input_seq.size(-1)).bool().to(self.device)
                     decoder_input = self.target_token_embedder(input_seq) + \
                                     self.position_embedder(input_seq).to(self.device)
                     decoder_outputs = self.decoder(decoder_input, self_attn_mask=self_attn_mask,
@@ -140,7 +141,6 @@ class TransformerEncDec(ConditionalGenerator):
                             generate_tokens.append(idx2token[token_idx])
                             prev_token_ids.append(token_idx)
                             input_seq = torch.LongTensor([prev_token_ids]).to(self.device)
-                            self_attn_mask = self.self_attn_mask(input_seq.size(-1)).bool().to(self.device)
                     elif (self.decoding_strategy == 'beam_search'):
                         if (hypothesis.stop()):
                             break

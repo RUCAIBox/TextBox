@@ -19,14 +19,29 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 if on_rtd:
     install_requires.extend(setup_requires)
 
+classifiers = ['License :: OSI Approved :: MIT License',
+               'Operating System :: OS Independent',
+               'Programming Language :: Python :: 3',
+               'Programming Language :: Python :: 3.6',
+               'Programming Language :: Python :: 3.7',
+               'Programming Language :: Python :: 3.8']
+
+long_description = '# TextBox\n'\
+                   'TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 16 text generation algorithms, covering two major tasks:\n'\
+                   '\n+ Unconditional (input-free) Generation\n'\
+                   '+ Sequence to Sequence (Seq2Seq) Generation\n'\
+                   '\nWe provide the support for 6 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team.\n'
+
 setup(
     name='textbox',
-    version='0.0.1',
+    version='0.0.3',
     description='A package for building text generation systems',
     url='https://github.com/RUCAIBox/TextBox',
     author='TextBoxTeam',
     author_email='rucaibox@163.com',
-    python_requires=">=3.7.4",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    python_requires=">=3.6.2",
     packages=[
         package for package in find_packages()
         if package.startswith('textbox')

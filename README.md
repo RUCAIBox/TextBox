@@ -6,24 +6,23 @@
 
 [![PyPi Latest Release](https://img.shields.io/pypi/v/textbox)](https://pypi.org/project/textbox/) [![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-[Docs] | [Datasets] | [Paper]
+[Docs] | [Model] | [Dataset] | [Paper]
 
 [Docs]: https://rucaibox.github.io/textbox.github.io/
-[Datasets]: https://github.com/RUCAIBox/RecDatasets
+[Model]: #Model
+[Dataset]: #Dataset
 [Paper]: https://arxiv.org/abs/2011.01731
 
 TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 16 text generation algorithms, covering two major tasks:
 
 + Unconditional (input-free) Generation
-+ Sequence to Sequence (Seq2Seq) Generation, including Machine Translation and Summarization
++ Sequence-to-Sequence (Seq2Seq) Generation, including Machine Translation and Summarization
 
-We provide the support for 6 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team.
-<p align="center">
-  <img src="asset/framework.png" alt="TextBox v0.1 architecture">
-  <br>
-  <b>Figure</b>: TextBox Overall Architecture
-</p>
+We provide the support for 6 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team. 
 
+###### ![framework](asset\framework.png)
+
+<center><b>Figure</b>: TextBox Overall Architecture
 ## Feature
 
 - **Unified and modularized framework.** TextBox is built upon PyTorch and designed to be highly modularized, by decoupling diverse models into a set of highly reusable modules.
@@ -79,11 +78,11 @@ If you want to change the model, the dataset or the task type, just run the scri
 python run_textbox.py --model=[model_name] --dataset=[dataset_name] --task_type=[task_name]
 ```
 
-`model_name` is the model to be run, such as RNN and BART. Models we implemented and their details can be found in [Model](#Model).
+`model_name` is the model to be run, such as RNN and BART. Models we implemented can be found in [Model](#Model).
 
 TextBox covers three major task types of text generation, namely `unconditional`, `translation` and `summarization`.
 
-If you want to change the datasets, please refer to [Data](#Data).
+If you want to change the datasets, please refer to [Dataset](#Dataset).
 
 ### Start from API
 
@@ -104,13 +103,92 @@ If you want to run different models, parameters or datasets, the operations are 
 
 ## Architecture
 
+The above [Figure](# ![framework](asset\framework.png)) presents the overall architecture of our library.
+
 ### Model
 
+We implement TextBox text generation models covering unconditional generation and sequence-to-sequence generation. We summarize the 16 models in the following table:
 
+<table>
+<thead>
+<tr>
+<th align="center">Category</th>
+<th align="center">Task Type</th>
+<th align="center">Model</th>
+<th align="center">Reference</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center" rowspan="3"><strong>VAE</strong></td>
+<td align="center" rowspan="9"><strong>Unconditional</strong></td>
+<td align="center">LSTM-VAE</td>
+<td align="center"><a href="https://arxiv.org/abs/1511.06349">(Bowman et al., 2016)</a></td>
+</tr>
+<tr>
+<td align="center">CNN-VAE</td>
+<td align="center"><a href="https://arxiv.org/abs/1702.08139">(Yang et al., 2017)</a></td>
+</tr>
+<tr>
+<td align="center">Hybrid-VAE</td>
+<td align="center"><a href="https://arxiv.org/abs/1702.02390">(Semeniuta et al., 2017)</a></td>
+</tr>
+<tr>
+<td align="center" rowspan="6"><strong>GAN</strong></td>
+<td align="center">SeqGAN</td>
+<td align="center"><a href="https://arxiv.org/abs/1609.05473">(Yu et al., 2017)</a></td>
+</tr>
+<tr>
+<td align="center">TextGAN</td>
+<td align="center"><a href="https://arxiv.org/abs/1706.03850">(Zhang et al., 2017)</a></td>
+</tr>
+<tr>
+<td align="center">RankGAN</td>
+<td align="center"><a href="https://arxiv.org/abs/1705.11001">(Lin et al., 2017)</a></td>
+</tr>
+<tr>
+<td align="center">MaliGAN</td>
+<td align="center"><a href="https://arxiv.org/abs/1702.07983">(Che et al., 2017)</a></td>
+</tr>
+<tr>
+<td align="center">LeakGAN</td>
+<td align="center"><a href="https://arxiv.org/abs/1709.08624">(Guo et al., 2018)</a></td>
+</tr>
+<tr>
+<td align="center">MaskGAN</td>
+<td align="center"><a href="https://arxiv.org/abs/1801.07736">(Fedus et al., 2018)</a></td>
+</tr>
+<tr>
+<td align="center" rowspan="6"><strong>Seq2Seq</strong></td>
+<td align="center" rowspan="6"><strong>Translation<br></b><br></b>Summarization</strong></td>
+<td align="center">RNN</td>
+<td align="center"><a href="https://arxiv.org/abs/1409.3215">(Sutskever et al., 2014)</a></td>
+</tr>
+<tr>
+<td align="center">Transformer</td>
+<td align="center"><a href="https://arxiv.org/abs/1706.03762">(Vaswani et al., 2017b)</a></td>
+</tr>
+<tr>
+<td align="center">GPT-2</td>
+<td align="center"><a href="https://d4mucfpksywv.cloudfront.net/better-language-models/language-models.pdf">(Radford et al.)</a></td>
+</tr>
+<tr>
+<td align="center">XLNet</td>
+<td align="center"><a href="https://arxiv.org/abs/1906.08237">(Yang et al., 2019)</a></td>
+</tr>
+<tr>
+<td align="center">BERT2BERT</td>
+<td align="center"><a href="https://arxiv.org/abs/1907.12461">(Rothe et al., 2020)</a></td>
+</tr>
+<tr>
+<td align="center">BART</td>
+<td align="center"><a href="https://arxiv.org/abs/1910.13461">(Lewis et al., 2020)</a></td>
+</tr>
+</tbody></table>
+and basic RNN language model including RNN, GRU and LSTM for unconditional generation.
+
+The provided hyper-parameters, APIs and details of our model can be found in our [document](https://rucaibox.github.io/textbox.github.io/)
 
 ### Dataset
-
-
 
 
 

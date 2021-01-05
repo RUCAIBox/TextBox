@@ -68,23 +68,22 @@ If you want to change the parameters, such as `rnn_type`, `max_vocab_size`, just
 
 ```bash
 python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
-					  --rnn_type=lstm --max_vocab_size=4000
+                      --rnn_type=lstm --max_vocab_size=4000
 ```
 
-We also support to modify YAML configuration files in corresponding dataset and model [properties](https://github.com/RUCAIBox/TextBox/tree/main/textbox/properties) folders and include it in the command line.
+We also support to modify YAML configuration files in corresponding dataset and model [properties](/tree/main/textbox/properties) folders and include it in the command line.
 
 If you want to change the model, the dataset or the task type, just run the script by modifying corresponding command parameters: 
 
 ```bash
-python run_textbox.py --model=[model_name] --dataset=[dataset_name] \
-					  --task_type=[task_name]
+python run_textbox.py --model=[model_name] --dataset=[dataset_name] --task_type=[task_name]
 ```
 
-`model_name` is the model to be run, such as RNN and BART. Models we implemented and their details can be found in [Model](https://github.com/RUCAIBox/TextBox/#Model).
+`model_name` is the model to be run, such as RNN and BART. Models we implemented and their details can be found in [Model](/#Model).
 
 TextBox covers three major task types of text generation, namely `unconditional`, `translation` and `summarization`.
 
-If you want to change the datasets, please refer to [Data](https://github.com/RUCAIBox/TextBox/#Data).
+If you want to change the datasets, please refer to [Data](/#Data).
 
 ### Start from API
 
@@ -101,7 +100,7 @@ run_textbox(config_dict={'model': 'RNN',
 
 This will perform the training and test of the RNN model on the COCO dataset.
 
-If you want to run different models, parameters or datasets, the operations are same with [Start from source](https://github.com/RUCAIBox/TextBox/#Start-from-source).
+If you want to run different models, parameters or datasets, the operations are same with [Start from source](/#Start-from-source).
 
 ## Architecture
 

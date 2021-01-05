@@ -195,15 +195,15 @@ We have also collected 6 datasets that are commonly used for above three tasks, 
 
 We list the 6 datasets along with their download source or script in the following table:
 
-<style>.lay_fix{table-layout: fixed}</style>
+<style>.lay_fix{table-layout:fixed}</style>
 <style>.wid20{width:20%}</style>
 <style>.wid60{width:60%}</style>
 <table class="lay_fix">
 <thead>
 <tr>
-<th align="center" class="wid20">Task</th>
-<th align="center" class="wid20">Dataset</th>
-<th align="center" class="wid60">Downloaded Source</th>
+<th class="wid20">Task</th>
+<th class="wid20">Dataset</th>
+<th class="wid60">Downloaded Source</th>
 </tr>
 </thead>
 <tbody><tr>

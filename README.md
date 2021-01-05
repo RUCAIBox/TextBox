@@ -73,7 +73,7 @@ python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
                       --rnn_type=lstm --max_vocab_size=4000
 ```
 
-We also support to modify YAML configuration files in corresponding dataset and model [properties](/tree/main/textbox/properties) folders and include it in the command line.
+We also support to modify YAML configuration files in corresponding dataset and model [`properties`](/tree/main/textbox/properties) folders and include it in the command line.
 
 If you want to change the model, the dataset or the task type, just run the script by modifying corresponding command parameters: 
 
@@ -193,52 +193,54 @@ The provided hyper-parameters, APIs and details of our model can be found in our
 
 We have also collected 6 datasets that are commonly used for above three tasks, which can be downloaded from [Google Drive](https://drive.google.com/drive/folders/1so0lckI6N6_niVEYaBu-LIcpOdZf99kj?usp=sharing) and [Baidu Wangpan](https://pan.baidu.com/s/1p51sWMgVFbAaHQmL4aD_-g) (Password: e272), including raw data and processed data. 
 
-We list the 6 datasets along with their download source or script in the following table:
+We list the 6 datasets in the following table:
 
-<table class="lay_fix">
+<table>
 <thead>
 <tr>
-<th class="wid20">Task</th>
-<th class="wid20">Dataset</th>
-<th class="wid60">Downloaded Source</th>
+<th align="center">Task</th>
+<th align="center">Dataset</th>
 </tr>
 </thead>
 <tbody><tr>
 <td align="center" rowspan="3"><strong>Unconditional</strong></td>
 <td align="center">Image COCO Caption</td>
-<td style="word-break:break-all;"><a href="https://github.com/pclucas14/GansFallingShort/tree/master/real_data_experiments/data/coco">https://github.com/pclucas14/GansFallingShort/tree/master/real_data_experiments/data/coco</a></td>
 </tr>
 <tr>
 <td align="center">EMNLP2017 WMT News</td>
-<td style="word-break:break-all;"><a href="https://github.com/pclucas14/GansFallingShort/tree/master/real_data_experiments/data/news">https://github.com/pclucas14/GansFallingShort/tree/master/real_data_experiments/data/news</a></td>
 </tr>
 <tr>
 <td align="center">IMDB Movie Review</td>
-<td style="word-break:break-all;"><a href="https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz">https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz</a></td>
 </tr>
 <tr>
 <td align="center" rowspan="2"><strong>Translation</strong></td>
 <td align="center">IWSLT2014 German-English</td>
-<td style="word-break:break-all;"><a href="https://github.com/facebookarchive/MIXER/blob/master/prepareData.sh">https://github.com/facebookarchive/MIXER/blob/master/prepareData.sh</a></td>
 </tr>
 <tr>
 <td align="center">WMT2014 English-German</td>
-<td style="word-break:break-all;"><a href="https://github.com/terranceliu/fairseq/blob/efficient_decoding/examples/translation/prepare-wmt14en2de.sh">https://github.com/terranceliu/fairseq/blob/efficient_decoding/examples/translation/prepare-wmt14en2de.sh</a></td>
 </tr>
 <tr>
 <td align="center"><strong>Summarization</strong></td>
 <td align="center">GigaWord</td>
-<td style="word-break:break-all;"><a href="https://github.com/microsoft/unilm/tree/master/unilm-v1#abstractive-summarization---gigaword">https://github.com/microsoft/unilm/tree/master/unilm-v1#abstractive-summarization---gigaword</a></td>
 </tr>
 </tbody>
 </table>
-<style>lay_fix{table-layout:fixed}wid20{width:20%}wid60{width:60%}</style>
-
-
-
-
 
 The downloaded dataset should be placed in the `dataset` folder, just as our main branch.
+
+We also support you to run our model using your own dataset. Just follow the three steps:
+
+1. Create a new folder under the `dataset` folder to put your own corpus file which includes a sequence per line, e.g. `dataset/CNN_DM`;
+
+2. Write a YAML configuration file using the same file name to set the hyper-parameters of your dataset, e.g. `textbox/properties/dataset/CNN_DM.yaml`. 
+
+   If you want to splitted the dataset, please set `split_strategy: "load_split"` in the yaml, just as the [COCO yaml](/tree/main/textbox/properties/dataset/COCO.yaml) or [IWSLT14_DE_EN yaml](/tree/main/textbox/properties/dataset/IWSLT14_DE_EN.yaml).
+
+   If you want to split the dataset by ratio automaticly, please set `split_strategy: "by_ratio"` and your desired `split_ratio` in the yaml, just as the [IMDB yaml](/tree/main/textbox/properties/dataset/IMDB.yaml).
+
+3. For unconditional generation, name the corpus file `corpus_large.txt` if you set  `"load_split"`, name the corpus files `train.txt, valid.txt, dev.txt` if you set  `"load_split"`.
+
+   For sequence-to-sequence generation, we only support to load the splitted data. Please name the corpus files `train.[xx/yy], valid.[xx/yy], dev.[xx/yy]`, and the `xx` or `yy` is the suffix of the source or target file which should be consistent with `source_suffix` and  `target_suffix` in the YAML.
 
 ## Experiment Results
 

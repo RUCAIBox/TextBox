@@ -195,7 +195,6 @@ We have also collected 6 datasets that are commonly used for above three tasks, 
 
 We list the 6 datasets along with their download source or script in the following table:
 
-.lay_fix{table-layout:fixed}.wid20{width:20%}.wid60{width:60%}
 <table class="lay_fix">
 <thead>
 <tr>
@@ -231,7 +230,13 @@ We list the 6 datasets along with their download source or script in the followi
 <td align="center">GigaWord</td>
 <td style="word-break:break-all;"><a href="https://github.com/microsoft/unilm/tree/master/unilm-v1#abstractive-summarization---gigaword">https://github.com/microsoft/unilm/tree/master/unilm-v1#abstractive-summarization---gigaword</a></td>
 </tr>
-</tbody></table>
+</tbody>
+</table>
+<style>lay_fix{table-layout:fixed}wid20{width:20%}wid60{width:60%}</style>
+
+
+
+
 
 The downloaded dataset should be placed in the `dataset` folder, just as our main branch.
 

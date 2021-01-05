@@ -79,7 +79,7 @@ If you want to change the model, the dataset or the task type, just run the scri
 python run_textbox.py --model=[model_name] --dataset=[dataset_name] --task_type=[task_name]
 ```
 
-`model_name` is the model to be run, such as RNN and BART. Models we implemented and their details can be found in [Model](/#Model).
+`model_name` is the model to be run, such as RNN and BART. Models we implemented and their details can be found in [Model](###Model).
 
 TextBox covers three major task types of text generation, namely `unconditional`, `translation` and `summarization`.
 

@@ -100,7 +100,7 @@ run_textbox(config_dict={'model': 'RNN',
 
 This will perform the training and test of the RNN model on the COCO dataset.
 
-If you want to run different models, parameters or datasets, the operations are same with [Start from source](/#Start-from-source).
+If you want to run different models, parameters or datasets, the operations are same with [Start from source](#Start-from-source).
 
 ## Architecture
 

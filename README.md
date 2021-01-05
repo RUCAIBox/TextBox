@@ -20,9 +20,9 @@ TextBox is developed based on Python and PyTorch for reproducing and developing 
 
 We provide the support for 6 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team. 
 
-![framework](asset\framework.png)
+![framework](asset/framework.png)
 
-<center><b>Figure</b>: TextBox Overall Architecture
+<center><b>Figure</b>: TextBox Overall Architecture<\center>
 
 ## Feature
 
@@ -104,11 +104,11 @@ If you want to run different models, parameters or datasets, the operations are 
 
 ## Architecture
 
-The above [Figure](# TextBox (文骏)) presents the overall architecture of our library. The running procedure relies on some experimental configuration, obtained from the files, command line or parameter dictionaries. The dataset and model are prepared and initialized according to the configured settings, and the execution module is responsible for training and evaluating models. The details of interfaces can be read in our documentation[document](https://rucaibox.github.io/textbox.github.io/).
+The above [Figure](#TextBox (文骏)) presents the overall architecture of our library. The running procedure relies on some experimental configuration, obtained from the files, command line or parameter dictionaries. The dataset and model are prepared and initialized according to the configured settings, and the execution module is responsible for training and evaluating models. The details of interfaces can be obtained in our [document](https://rucaibox.github.io/textbox.github.io/).
 
 ### Model
 
-We implement TextBox text generation models covering unconditional generation and sequence-to-sequence generation. We summarize the 16 models in the following table:
+We implement 16 text generation models covering unconditional generation and sequence-to-sequence generation. We include the basic RNN language model for unconditional generation, and the remaining 15 models in the following table:
 
 <table>
 <thead>
@@ -185,8 +185,6 @@ We implement TextBox text generation models covering unconditional generation an
 <td align="center"><a href="https://arxiv.org/abs/1910.13461">(Lewis et al., 2020)</a></td>
 </tr>
 </tbody></table>
-and basic RNN language model including RNN, GRU and LSTM for unconditional generation.
-
 The provided hyper-parameters, APIs and details of our model can be found in our [document](https://rucaibox.github.io/textbox.github.io/).
 
 ### Dataset
@@ -195,42 +193,43 @@ We have also collected 6 datasets that are commonly used for above three tasks, 
 
 We list the 6 datasets along with their download source or script in the following table:
 
-<table>
+<table style="table-layout:fixed;">
 <thead>
 <tr>
-<th align="center">Task</th>
-<th align="center">Dataset</th>
-<th align="center">Downloaded Source</th>
+<th align="center" style="width:20%;">Task</th>
+<th align="center" style="width:20%;">Dataset</th>
+<th align="center" style="width:60%;">Downloaded Source</th>
 </tr>
 </thead>
 <tbody><tr>
 <td align="center" rowspan="3"><strong>Unconditional</strong></td>
 <td align="center">Image COCO Caption</td>
-<td align="center"><a href="https://github.com/pclucas14/GansFallingShort/tree/master/real_data_experiments/data/coco">https://github.com/pclucas14/GansFallingShort/tree/master/real_data_experiments/data/coco</a></td>
+<td style="word-break:break-all;"><a href="https://github.com/pclucas14/GansFallingShort/tree/master/real_data_experiments/data/coco">https://github.com/pclucas14/GansFallingShort/tree/master/real_data_experiments/data/coco</a></td>
 </tr>
 <tr>
 <td align="center">EMNLP2017 WMT News</td>
-<td align="center"><a href="https://github.com/pclucas14/GansFallingShort/tree/master/real_data_experiments/data/news">https://github.com/pclucas14/GansFallingShort/tree/master/real_data_experiments/data/news</a></td>
+<td style="word-break:break-all;"><a href="https://github.com/pclucas14/GansFallingShort/tree/master/real_data_experiments/data/news">https://github.com/pclucas14/GansFallingShort/tree/master/real_data_experiments/data/news</a></td>
 </tr>
 <tr>
 <td align="center">IMDB Movie Review</td>
-<td align="center"><a href="https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz">https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz</a></td>
+<td style="word-break:break-all;"><a href="https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz">https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz</a></td>
 </tr>
 <tr>
 <td align="center" rowspan="2"><strong>Translation</strong></td>
 <td align="center">IWSLT2014 German-English</td>
-<td align="center"><a href="https://github.com/facebookarchive/MIXER/blob/master/prepareData.sh">https://github.com/facebookarchive/MIXER/blob/master/prepareData.sh</a></td>
+<td style="word-break:break-all;"><a href="https://github.com/facebookarchive/MIXER/blob/master/prepareData.sh">https://github.com/facebookarchive/MIXER/blob/master/prepareData.sh</a></td>
 </tr>
 <tr>
 <td align="center">WMT2014 English-German</td>
-<td align="center"><a href="https://github.com/terranceliu/fairseq/blob/efficient_decoding/examples/translation/prepare-wmt14en2de.sh">https://github.com/terranceliu/fairseq/blob/efficient_decoding/examples/translation/prepare-wmt14en2de.sh</a></td>
+<td style="word-break:break-all;"><a href="https://github.com/terranceliu/fairseq/blob/efficient_decoding/examples/translation/prepare-wmt14en2de.sh">https://github.com/terranceliu/fairseq/blob/efficient_decoding/examples/translation/prepare-wmt14en2de.sh</a></td>
 </tr>
 <tr>
 <td align="center"><strong>Summarization</strong></td>
 <td align="center">GigaWord</td>
-<td align="center"><a href="https://github.com/microsoft/unilm/tree/master/unilm-v1#abstractive-summarization---gigaword">https://github.com/microsoft/unilm/tree/master/unilm-v1#abstractive-summarization---gigaword</a></td>
+<td style="word-break:break-all;"><a href="https://github.com/microsoft/unilm/tree/master/unilm-v1#abstractive-summarization---gigaword">https://github.com/microsoft/unilm/tree/master/unilm-v1#abstractive-summarization---gigaword</a></td>
 </tr>
 </tbody></table>
+
 The downloaded dataset should be placed in the `dataset` folder, just as our main branch.
 
 ## Experiment Results

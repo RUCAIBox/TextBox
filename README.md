@@ -368,6 +368,7 @@ BLEU metric on test dataset with three decoding strategies: top-k sampling, gree
 <td align="center">29.49</td>
 </tr>
 </tbody></table>
+
 ## Releases
 
 | Releases |    Date    |   Features    |

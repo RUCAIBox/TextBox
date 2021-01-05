@@ -20,9 +20,11 @@ TextBox is developed based on Python and PyTorch for reproducing and developing 
 
 We provide the support for 6 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team. 
 
-![framework](asset/framework.png)
-
-<center><b>Figure</b>: TextBox Overall Architecture
+<p align="center">
+  <img src="asset/framework.png" alt="TextBox v0.1 architecture">
+  <br>
+  <b>Figure</b>: TextBox Overall Architecture
+</p>
 
 ## Feature
 
@@ -100,7 +102,7 @@ run_textbox(config_dict={'model': 'RNN',
 
 This will perform the training and test of the RNN model on the COCO dataset.
 
-If you want to run different models, parameters or datasets, the operations are same with [Start from source](#Start from source).
+If you want to run different models, parameters or datasets, the operations are same with [Start from source](#Start-from-source).
 
 ## Architecture
 
@@ -193,21 +195,9 @@ We have also collected 6 datasets that are commonly used for above three tasks, 
 
 We list the 6 datasets along with their download source or script in the following table:
 
-<style>
- table.lay_fix{
-     table-layout: fixed,
- }
-</style>
-<style>
- th.wid20{
-     width:20%,
- }
-</style>
-<style>
- th.wid60{
-     width:60%,
- }
-</style>
+<style>table.lay_fix{table-layout: fixed}</style>
+<style>th.wid20{width:20%}</style>
+<style>th.wid60{width:60%}</style>
 <table class="lay_fix">
 <thead>
 <tr>

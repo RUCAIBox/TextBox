@@ -5,3 +5,7 @@
 saved/
 *.lprof
 *.egg-info/
+build/
+dist/
+generated/
+log/

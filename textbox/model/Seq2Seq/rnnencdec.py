@@ -96,10 +96,6 @@ class RNNEncDec(ConditionalGenerator):
             source_embeddings = self.source_token_embedder(source_text)
             encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
 
-            if self.bidirectional:
-                encoder_outputs = encoder_outputs[:, :, :self.hidden_size] + encoder_outputs[:, :, self.hidden_size:]
-                encoder_states = encoder_states[0:encoder_states.size(0):2]
-                
             encoder_masks = torch.ne(source_text, self.padding_token_idx)
             for bid in range(source_text.size(0)):
                 decoder_states = encoder_states[:, bid, :].unsqueeze(1)
@@ -157,10 +153,6 @@ class RNNEncDec(ConditionalGenerator):
         source_embeddings = self.dropout(self.source_token_embedder(source_text))
         input_embeddings = self.dropout(self.target_token_embedder(input_text))
         encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
-
-        if self.bidirectional:
-            encoder_outputs = encoder_outputs[:, :, :self.hidden_size] + encoder_outputs[:, :, self.hidden_size:]
-            encoder_states = encoder_states[0:encoder_states.size(0):2]
 
         encoder_masks = torch.ne(source_text, self.padding_token_idx)
 

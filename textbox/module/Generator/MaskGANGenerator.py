@@ -33,7 +33,7 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         self.num_dec_layers = config['num_dec_layers']
         self.rnn_type = config['rnn_type']
         self.bidirectional = config['bidirectional']
-        self.combine_method = config['combine_method']
+        self.alignment_method = config['alignment_method']
         self.dropout_ratio = config['dropout_ratio']
         self.attention_type = config['attention_type']
         self.context_size = config['context_size']
@@ -57,7 +57,7 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         if self.attention_type is not None:
             self.decoder = AttentionalRNNDecoder(self.embedding_size, self.hidden_size, self.context_size,
                                                  self.num_dec_layers, self.rnn_type, self.dropout_ratio,
-                                                 self.attention_type)
+                                                 self.attention_type, self.alignment_method)
         else:
             self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.num_dec_layers,
                                            self.rnn_type, self.dropout_ratio)

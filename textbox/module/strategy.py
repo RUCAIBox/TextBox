@@ -109,7 +109,7 @@ class Beam_Search_Hypothesis(object):
         """
         return len(self.completed_hypotheses) == self.beam_size
     
-    def step(self, gen_idx, token_logits, decoder_states=None, encoder_output=None, encoder_mask=None):
+    def step(self, gen_idx, token_logits, decoder_states=None, encoder_output=None, encoder_mask=None, input_type='token'):
         r""" A step for beam search.
 
         Args:
@@ -131,7 +131,7 @@ class Beam_Search_Hypothesis(object):
         live_hyp_num = self.beam_size - len(self.completed_hypotheses)
         tmp_hyp_scores = (self.hyp_scores.unsqueeze(1).expand_as(token_probs) + token_probs).view(-1)
         top_scores, top_pos = torch.topk(tmp_hyp_scores, k=live_hyp_num)
-        hyp_ids = top_pos / vocab_size
+        hyp_ids = top_pos // vocab_size
         word_ids = top_pos % vocab_size
 
         new_hypotheses = []
@@ -155,8 +155,13 @@ class Beam_Search_Hypothesis(object):
         self.hyp_scores = torch.tensor(new_scores).to(self.device)
 
         hyp_num = len(self.hypthetic_token_idx)
-        input_seq = [hyp[-1] for hyp in self.hypthetic_token_idx]
-        input_seq = torch.tensor(input_seq).unsqueeze(1).to(self.device)
+        if (input_type == 'token'):
+            input_seq = [hyp[-1] for hyp in self.hypthetic_token_idx]
+            input_seq = torch.tensor(input_seq).unsqueeze(1).to(self.device)
+        elif (input_type == 'whole'):
+            input_seq = torch.tensor(self.hypthetic_token_idx).to(self.device)
+        else:
+            raise ValueError("The input type must be in ['token', 'whole'].")
 
         returns = [input_seq]
 

@@ -106,7 +106,7 @@ If you want to run different models, parameters or datasets, the operations are 
 
 ## Architecture
 
-The above [Figure](#TextBox (文骏)) presents the overall architecture of our library. The running procedure relies on some experimental configuration, obtained from the files, command line or parameter dictionaries. The dataset and model are prepared and initialized according to the configured settings, and the execution module is responsible for training and evaluating models. The details of interfaces can be obtained in our [document](https://rucaibox.github.io/textbox.github.io/).
+The above [Figure](#TextBox-(文骏)) presents the overall architecture of our library. The running procedure relies on some experimental configuration, obtained from the files, command line or parameter dictionaries. The dataset and model are prepared and initialized according to the configured settings, and the execution module is responsible for training and evaluating models. The details of interfaces can be obtained in our [document](https://rucaibox.github.io/textbox.github.io/).
 
 ### Model
 
@@ -187,7 +187,6 @@ We implement 16 text generation models covering unconditional generation and seq
 <td align="center"><a href="https://arxiv.org/abs/1910.13461">(Lewis et al., 2020)</a></td>
 </tr>
 </tbody></table>
-The provided hyper-parameters, APIs and details of our model can be found in our [document](https://rucaibox.github.io/textbox.github.io/).
 
 ### Dataset
 
@@ -234,9 +233,9 @@ We also support you to run our model using your own dataset. Just follow the thr
 
 2. Write a YAML configuration file using the same file name to set the hyper-parameters of your dataset, e.g. `textbox/properties/dataset/CNN_DM.yaml`. 
 
-   If you want to splitted the dataset, please set `split_strategy: "load_split"` in the yaml, just as the [COCO yaml](/tree/main/textbox/properties/dataset/COCO.yaml) or [IWSLT14_DE_EN yaml](/tree/main/textbox/properties/dataset/IWSLT14_DE_EN.yaml).
+   If you want to splitted the dataset, please set `split_strategy: "load_split"` in the yaml, just as the [COCO yaml](/blob/main/textbox/properties/dataset/COCO.yaml) or [IWSLT14_DE_EN yaml](/blob/main/textbox/properties/dataset/IWSLT14_DE_EN.yaml).
 
-   If you want to split the dataset by ratio automaticly, please set `split_strategy: "by_ratio"` and your desired `split_ratio` in the yaml, just as the [IMDB yaml](/tree/main/textbox/properties/dataset/IMDB.yaml).
+   If you want to split the dataset by ratio automaticly, please set `split_strategy: "by_ratio"` and your desired `split_ratio` in the yaml, just as the [IMDB yaml](/blob/main/textbox/properties/dataset/IMDB.yaml).
 
 3. For unconditional generation, name the corpus file `corpus_large.txt` if you set  `"load_split"`, name the corpus files `train.txt, valid.txt, dev.txt` if you set  `"load_split"`.
 
@@ -244,7 +243,144 @@ We also support you to run our model using your own dataset. Just follow the thr
 
 ## Experiment Results
 
+We have implemented various text generation models, and compared their performance on  unconditional and conditional text generation tasks.
 
+### Uncondition Generation
+
+#### Image COCO Caption
+
+Negative Log-Likelihood (NLL), BLEU and Self-BLEU (SBLEU) on test dataset:
+
+|   Model    |  NLL  | BLEU-2 | BLEU-3 | BLEU-4 | BLEU-5 | SBLEU-2 | SBLEU-3 | SBLEU-4 | SBLEU-5 |
+| :--------: | :---: | :----: | :----: | :----: | :----: | :-----: | :-----: | :-----: | :-----: |
+|  LSTM-VAE  | 33.02 | 80.46  |  51.5  | 25.89  | 11.55  |  89.18  |  61.58  |  32.69  |  14.03  |
+|  CNN-VAE   | 36.61 |  0.63  |  0.27  |  0.28  |  0.29  |  3.10   |  0.28   |  0.29   |  0.30   |
+| Hybrid-VAE | 56.44 | 31.96  |  3.75  |  1.61  |  1.76  |  77.79  |  26.77  |  5.71   |  2.49   |
+|   SeqGAN   | 30.56 | 80.15  | 49.88  | 24.95  | 11.10  |  84.45  |  54.26  |  27.42  |  11.87  |
+|  TextGAN   | 32.46 | 77.47  | 45.74  | 21.57  |  9.18  |  82.93  |  51.34  |  24.41  |  10.01  |
+|  RankGAN   | 31.07 | 77.36  | 45.05  | 21.46  |  9.41  |  83.13  |  50.62  |  23.79  |  10.08  |
+|  MaliGAN   | 31.50 | 80.08  | 49.52  | 24.03  | 10.36  |  84.85  |  55.32  |  28.28  |  12.09  |
+|  LeakGAN   | 25.11 | 93.49  | 82.03  | 62.59  | 42.06  |  89.73  |  64.57  |  35.60  |  14.98  |
+|  MaskGAN   | 95.93 | 58.07  | 21.22  |  5.07  |  1.88  |  76.10  |  43.41  |  20.06  |  9.37   |
+|   GPT-2    | 26.82 | 75.51  | 58.87  | 38.22  | 21.66  |  92.78  |  75.47  |  51.74  |  32.39  |
+|   XLNet    | 37.35 | 19.40  |  1.91  |  0.73  |  0.76  |  75.53  |  42.80  |  16.20  |  5.87   |
+
+#### EMNLP2017 WMT News
+
+NLL, BLEU and SBLEU on test dataset:
+
+|   Model    |  NLL   | BLEU-2 | BLEU-3 | BLEU-4 | BLEU-5 | SBLEU-2 | SBLEU-3 | SBLEU-4 | SBLEU-5 |
+| :--------: | :----: | :----: | :----: | :----: | :----: | :-----: | :-----: | :-----: | :-----: |
+|  LSTM-VAE  | 142.23 | 58.81  | 19.70  |  5.57  |  2.01  |  72.79  |  27.04  |  7.85   |  2.73   |
+|  CNN-VAE   | 164.79 |  0.82  |  0.17  |  0.18  |  0.18  |  2.78   |  0.19   |  0.19   |  0.20   |
+| Hybrid-VAE | 177.75 | 29.58  |  1.62  |  0.47  |  0.49  |  59.85  |  10.3   |  1.43   |  1.10   |
+|   SeqGAN   | 142.22 | 63.90  | 20.89  |  5.64  |  1.81  |  70.97  |  25.56  |  7.05   |  2.18   |
+|  TextGAN   | 140.90 | 60.37  | 18.86  |  4.82  |  1.52  |  68.32  |  23.24  |  6.10   |  1.84   |
+|  RankGAN   | 142.27 | 61.28  | 19.81  |  5.58  |  1.82  |  67.71  |  23.15  |  6.63   |  2.09   |
+|  MaliGAN   | 149.93 | 45.00  | 12.69  |  3.16  |  1.17  |  65.10  |  20.55  |  5.41   |  1.91   |
+|  LeakGAN   | 162.70 | 76.61  | 39.14  | 15.84  |  6.08  |  85.04  |  54.70  |  29.35  |  14.63  |
+|  MaskGAN   | 303.00 | 63.08  | 21.14  |  5.40  |  1.80  |  83.92  |  47.79  |  19.96  |  7.51   |
+|   GPT-2    | 88.01  | 55.88  | 21.65  |  5.34  |  1.40  |  75.67  |  36.71  |  12.67  |  3.88   |
+|   XLNet    | 131.95 | 17.14  |  1.68  |  0.45  |  0.45  |  69.33  |  36.19  |  16.59  |  10.00  |
+
+#### IMDB Movie Review
+
+NLL, BLEU and SBLEU on test dataset:
+
+|   Model    |  NLL   | BLEU-2 | BLEU-3 | BLEU-4 | BLEU-5 | SBLEU-2 | SBLEU-3 | SBLEU-4 | SBLEU-5 |
+| :--------: | :----: | :----: | :----: | :----: | :----: | :-----: | :-----: | :-----: | :-----: |
+|  LSTM-VAE  | 445.55 | 29.14  | 13.73  |  4.81  |  1.85  |  38.77  |  14.39  |  6.61   |  5.16   |
+|  CNN-VAE   | 552.09 |  1.88  |  0.11  |  0.11  |  0.11  |  3.08   |  0.13   |  0.13   |  0.13   |
+| Hybrid-VAE | 318.46 | 38.65  |  2.53  |  0.34  |  0.31  |  70.05  |  17.27  |  1.57   |  0.59   |
+|   SeqGAN   | 547.09 | 66.33  | 26.89  |  6.80  |  1.79  |  72.48  |  35.48  |  11.60  |  3.31   |
+|  TextGAN   | 488.37 | 63.95  | 25.82  |  6.81  |  1.51  |  72.11  |  30.56  |  8.20   |  1.96   |
+|  RankGAN   | 518.10 | 58.08  | 23.71  |  6.84  |  1.67  |  69.93  |  31.68  |  11.12  |  3.78   |
+|  MaliGAN   | 552.45 | 44.50  | 15.01  |  3.69  |  1.23  |  57.25  |  22.04  |  7.36   |  3.26   |
+|  LeakGAN   | 499.57 | 78.93  | 58.96  | 32.58  | 12.65  |  92.91  |  79.21  |  60.10  |  39.79  |
+|  MaskGAN   | 509.58 | 56.61  | 21.41  |  4.49  |  0.86  |  92.09  |  77.88  |  59.62  |  42.36  |
+|   GPT-2    | 348.67 | 72.52  | 41.75  | 15.40  |  4.22  |  86.21  |  58.26  |  30.03  |  12.56  |
+|   XLNet    | 520.73 | 14.37  |  0.50  |  0.16  |  0.16  |  83.79  |  53.91  |  24.56  |  11.50  |
+
+### Sequence-to-Sequence Generation
+
+#### IWSLT2014 German-English
+
+BLEU metric on test dataset with three decoding strategies: top-k sampling, greedy search and beam search (with `beam_size` 5):
+
+<table>
+<thead>
+<tr>
+<th align="center">Model</th>
+<th align="center">Metric</th>
+<th align="center">Top-k sampling</th>
+<th align="center">Greedy search</th>
+<th align="center">Beam search</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center" rowspan="4">RNN with Attention</td>
+<td align="center">BLEU-2</td>
+<td align="center">26.68</td>
+<td align="center">33.74</td>
+<td align="center">35.68</td>
+</tr>
+<tr>
+<td align="center">BLEU-3</td>
+<td align="center">16.95</td>
+<td align="center">23.03</td>
+<td align="center">24.94</td>
+</tr>
+<tr>
+<td align="center">BLEU-4</td>
+<td align="center">10.85</td>
+<td align="center">15.79</td>
+<td align="center">17.42</td>
+</tr>
+<tr>
+<td align="center">BLEU</td>
+<td align="center">19.66</td>
+<td align="center">26.23</td>
+<td align="center">28.23</td>
+</tr>
+<tr>
+<td align="center" rowspan="4">Transformer</td>
+<td align="center">BLEU-2</td>
+<td align="center">30.96</td>
+<td align="center">35.48</td>
+<td align="center">36.88</td>
+</tr>
+<tr>
+<td align="center">BLEU-3</td>
+<td align="center">20.83</td>
+<td align="center">24.76</td>
+<td align="center">26.10</td>
+</tr>
+<tr>
+<td align="center">BLEU-4</td>
+<td align="center">14.16</td>
+<td align="center">17.41</td>
+<td align="center">18.54</td>
+</tr>
+<tr>
+<td align="center">BLEU</td>
+<td align="center">23.91</td>
+<td align="center">28.10</td>
+<td align="center">29.49</td>
+</tr>
+</tbody></table>
+## Releases
+
+| Releases |    Date    |   Features    |
+| :------: | :--------: | :-----------: |
+|  v0.1.0  | 01/07/2021 | Basic TextBox |
+
+## Contributing
+
+Please let us know if you encounter a bug or have any suggestions by [filing an issue](https://github.com/RUCAIBox/TextBox/issues).
+
+We welcome all contributions from bug fixes to new features and extensions.
+
+We expect all contributions discussed in the issue tracker and going through PRs.
 
 ## Reference
 

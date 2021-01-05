@@ -377,7 +377,7 @@ BLEU metric on test dataset with three decoding strategies: top-k sampling, gree
 
 ## Contributing
 
-Please let us know if you encounter a bug or have any suggestions by [filing an issue](/TextBox/issues).
+Please let us know if you encounter a bug or have any suggestions by [filing an issue](issues).
 
 We welcome all contributions from bug fixes to new features and extensions.
 

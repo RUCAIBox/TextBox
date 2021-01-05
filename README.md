@@ -83,7 +83,7 @@ python run_textbox.py --model=[model_name] --dataset=[dataset_name] --task_type=
 
 TextBox covers three major task types of text generation, namely `unconditional`, `translation` and `summarization`.
 
-If you want to change the datasets, please refer to [Data](/#Data).
+If you want to change the datasets, please refer to [Data](#Data).
 
 ### Start from API
 
@@ -100,7 +100,7 @@ run_textbox(config_dict={'model': 'RNN',
 
 This will perform the training and test of the RNN model on the COCO dataset.
 
-If you want to run different models, parameters or datasets, the operations are same with [Start from source](#Start-from-source).
+If you want to run different models, parameters or datasets, the operations are same with [Start from source](#Start from source).
 
 ## Architecture
 

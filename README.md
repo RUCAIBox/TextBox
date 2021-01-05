@@ -22,7 +22,7 @@ We provide the support for 6 benchmark text generation datasets. A user can appl
 
 ![framework](asset/framework.png)
 
-<center><b>Figure</b>: TextBox Overall Architecture<\center>
+<center><b>Figure</b>: TextBox Overall Architecture
 
 ## Feature
 
@@ -193,12 +193,27 @@ We have also collected 6 datasets that are commonly used for above three tasks, 
 
 We list the 6 datasets along with their download source or script in the following table:
 
-<table style="table-layout:fixed;">
+<style>
+ table.lay_fix{
+     table-layout: fixed,
+ }
+</style>
+<style>
+ th.wid20{
+     width:20%,
+ }
+</style>
+<style>
+ th.wid60{
+     width:60%,
+ }
+</style>
+<table class="lay_fix">
 <thead>
 <tr>
-<th align="center" style="width:20%;">Task</th>
-<th align="center" style="width:20%;">Dataset</th>
-<th align="center" style="width:60%;">Downloaded Source</th>
+<th align="center" class="wid20">Task</th>
+<th align="center" class="wid20">Dataset</th>
+<th align="center" class="wid60">Downloaded Source</th>
 </tr>
 </thead>
 <tbody><tr>
@@ -229,6 +244,7 @@ We list the 6 datasets along with their download source or script in the followi
 <td style="word-break:break-all;"><a href="https://github.com/microsoft/unilm/tree/master/unilm-v1#abstractive-summarization---gigaword">https://github.com/microsoft/unilm/tree/master/unilm-v1#abstractive-summarization---gigaword</a></td>
 </tr>
 </tbody></table>
+
 
 The downloaded dataset should be placed in the `dataset` folder, just as our main branch.
 

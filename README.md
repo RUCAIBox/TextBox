@@ -73,7 +73,7 @@ python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
                       --rnn_type=lstm --max_vocab_size=4000
 ```
 
-We also support to modify YAML configuration files in corresponding dataset and model [`properties`](/tree/main/textbox/properties) folders and include it in the command line.
+We also support to modify YAML configuration files in corresponding dataset and model [`properties`](/TextBox/properties) folders and include it in the command line.
 
 If you want to change the model, the dataset or the task type, just run the script by modifying corresponding command parameters: 
 
@@ -377,7 +377,7 @@ BLEU metric on test dataset with three decoding strategies: top-k sampling, gree
 
 ## Contributing
 
-Please let us know if you encounter a bug or have any suggestions by [filing an issue](https://github.com/RUCAIBox/TextBox/issues).
+Please let us know if you encounter a bug or have any suggestions by [filing an issue](/TextBox/issues).
 
 We welcome all contributions from bug fixes to new features and extensions.
 

@@ -195,7 +195,9 @@ We have also collected 6 datasets that are commonly used for above three tasks, 
 
 We list the 6 datasets along with their download source or script in the following table:
 
-<style>lay_fix{table-layout:fixed}wid20{width:20%}wid60{width:60%}</style>
+<head>
+    <style>lay_fix{table-layout:fixed}wid20{width:20%}wid60{width:60%}</style>
+</head>
 <table class="lay_fix">
 <thead>
 <tr>

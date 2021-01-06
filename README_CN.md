@@ -10,10 +10,10 @@
 
 [文档] | [模型] | [数据集] | [论文] | [English Version]
 
-[Docs]: https://rucaibox.github.io/textbox.github.io/
-[Model]: #Model
-[Dataset]: #Dataset
-[Paper]: https://arxiv.org/abs/2011.01731
+[文档]: https://rucaibox.github.io/textbox.github.io/
+[模型]: #论文
+[数据集]: #数据集
+[论文]: https://arxiv.org/abs/2011.01731
 [English Version]: README.md
 
 TextBox是基于Python和PyTorch开发的，用于在一个统一的、全面的、高效的框架中复现和开发文本生成算法，主要面向研究者使用。我们的库包括16种文本生成算法，涵盖了两个主要任务：

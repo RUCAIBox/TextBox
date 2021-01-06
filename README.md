@@ -5,15 +5,17 @@
 # TextBox (文骏)
 
 [![PyPi Latest Release](https://img.shields.io/pypi/v/textbox)](https://pypi.org/project/textbox/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![Release](https://img.shields.io/github/v/release/rucaibox/textbox.svg)](https://github.com/rucaibox/textbox/releases)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-[Docs] | [Model] | [Dataset] | [Paper]
+[Docs] | [Model] | [Dataset] | [Paper] | [中文版]
 
 [Docs]: https://rucaibox.github.io/textbox.github.io/
 [Model]: #Model
 [Dataset]: #Dataset
 [Paper]: https://arxiv.org/abs/2011.01731
+[中文版]: README_CN.md
+
 
 TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 16 text generation algorithms, covering two major tasks:
 
@@ -108,7 +110,7 @@ If you want to run different models, parameters or datasets, the operations are 
 
 ## Architecture
 
-The above [Figure](#textBox-文骏) presents the overall architecture of our library. The running procedure relies on some experimental configuration, obtained from the files, command line or parameter dictionaries. The dataset and model are prepared and initialized according to the configured settings, and the execution module is responsible for training and evaluating models. The details of interfaces can be obtained in our [document](https://rucaibox.github.io/textbox.github.io/).
+The above [Figure](#textbox-文骏) presents the overall architecture of our library. The running procedure relies on some experimental configuration, obtained from the files, command line or parameter dictionaries. The dataset and model are prepared and initialized according to the configured settings, and the execution module is responsible for training and evaluating models. The details of interfaces can be obtained in our [document](https://rucaibox.github.io/textbox.github.io/).
 
 ### Model
 
@@ -239,7 +241,7 @@ We also support you to run our model using your own dataset. Just follow the thr
 
    If you want to split the dataset by ratio automaticly, please set `split_strategy: "by_ratio"` and your desired `split_ratio` in the yaml, just as the [IMDB yaml](/textbox/properties/dataset/IMDB.yaml).
 
-3. For unconditional generation, name the corpus file `corpus_large.txt` if you set  `"load_split"`, name the corpus files `train.txt, valid.txt, dev.txt` if you set  `"load_split"`.
+3. For unconditional generation, name the corpus file `corpus_large.txt` if you set  `"by_ratio"`, name the corpus files `train.txt, valid.txt, dev.txt` if you set  `"load_split"`.
 
    For sequence-to-sequence generation, we only support to load the splitted data. Please name the corpus files `train.[xx/yy], valid.[xx/yy], dev.[xx/yy]`, and the `xx` or `yy` is the suffix of the source or target file which should be consistent with `source_suffix` and  `target_suffix` in the YAML.
 

@@ -33,7 +33,7 @@ class Config(object):
 
         train_batch_size: 2048
 
-    - command line: It should be in the format as '---learning_rate=0.001'
+    - command line: It should be in the format as '\-\-learning_rate=0.001'
 
     - parameter dictionaries: It should be a dict, where the key is parameter name and the value is parameter value,
       e.g. config_dict = {'learning_rate': 0.001}

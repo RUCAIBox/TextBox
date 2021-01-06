@@ -26,8 +26,8 @@ class PairedSentenceDataset(Dataset):
     def __init__(self, config):
         self.source_language = config['source_language'].lower()
         self.target_language = config['target_language'].lower()
-        self.source_suffix = config['source_suffix']
-        self.target_suffix = config['target_suffix']
+        self.source_suffix = config['source_suffix'].lower()
+        self.target_suffix = config['target_suffix'].lower()
         self.share_vocab = config['share_vocab']
         if config['target_max_vocab_size'] is None or config['source_max_vocab_size'] is None:
             self.source_max_vocab_size = config['max_vocab_size']
@@ -73,8 +73,8 @@ class PairedSentenceDataset(Dataset):
             target_fin = open(target_file, "r")
             
             for source_line, target_line in zip(source_fin, target_fin):
-                source_words = nltk.word_tokenize(source_line.strip(), language=self.source_language)
-                target_words = nltk.word_tokenize(target_line.strip(), language=self.target_language)
+                source_words = nltk.word_tokenize(source_line.strip().lower(), language=self.source_language)
+                target_words = nltk.word_tokenize(target_line.strip().lower(), language=self.target_language)
                 if (len(source_words) <= self.source_max_seq_length and len(target_words) <= self.target_max_seq_length):
                     source_text.append(source_words)
                     target_text.append(target_words)

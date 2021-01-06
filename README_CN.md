@@ -53,6 +53,7 @@ pip install textbox
 ```
 
 ### 通过源文件安装
+
 ```bash
 git clone https://github.com/RUCAIBox/TextBox.git && cd TextBox
 pip install -e . --verbose

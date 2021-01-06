@@ -4,7 +4,9 @@
 
 # TextBox (文骏)
 
-[![PyPi Latest Release](https://img.shields.io/pypi/v/textbox)](https://pypi.org/project/textbox/) [![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![PyPi Latest Release](https://img.shields.io/pypi/v/textbox)](https://pypi.org/project/textbox/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![Release](https://img.shields.io/github/v/release/rucaibox/textbox.svg)](https://github.com/rucaibox/textbox/releases)
 
 [Docs] | [Model] | [Dataset] | [Paper]
 

@@ -190,7 +190,7 @@ We implement 16 text generation models covering unconditional generation and seq
 
 ### Dataset
 
-We have also collected 6 datasets that are commonly used for above three tasks, which can be downloaded from [Google Drive](https://drive.google.com/drive/folders/1so0lckI6N6_niVEYaBu-LIcpOdZf99kj?usp=sharing) and [Baidu Wangpan](https://pan.baidu.com/s/1p51sWMgVFbAaHQmL4aD_-g) (Password: e272), including raw data and processed data. 
+We have also collected 6 datasets that are commonly used for above three tasks, which can be downloaded from [Google Drive](https://drive.google.com/drive/folders/1iNRErGM3YRDF3hjY8DMpWaQo-prmUtNX?usp=sharing) and [Baidu Wangpan](https://pan.baidu.com/s/1upHl8SXGNjZ2LCfV-L164Q) (Password: lwy6), including raw data and processed data. 
 
 We list the 6 datasets in the following table:
 
@@ -263,7 +263,6 @@ Negative Log-Likelihood (NLL), BLEU and Self-BLEU (SBLEU) on test dataset:
 |  LeakGAN   | 25.11 | 93.49  | 82.03  | 62.59  | 42.06  |  89.73  |  64.57  |  35.60  |  14.98  |
 |  MaskGAN   | 95.93 | 58.07  | 21.22  |  5.07  |  1.88  |  76.10  |  43.41  |  20.06  |  9.37   |
 |   GPT-2    | 26.82 | 75.51  | 58.87  | 38.22  | 21.66  |  92.78  |  75.47  |  51.74  |  32.39  |
-|   XLNet    | 37.35 | 19.40  |  1.91  |  0.73  |  0.76  |  75.53  |  42.80  |  16.20  |  5.87   |
 
 #### EMNLP2017 WMT News
 
@@ -281,7 +280,6 @@ NLL, BLEU and SBLEU on test dataset:
 |  LeakGAN   | 162.70 | 76.61  | 39.14  | 15.84  |  6.08  |  85.04  |  54.70  |  29.35  |  14.63  |
 |  MaskGAN   | 303.00 | 63.08  | 21.14  |  5.40  |  1.80  |  83.92  |  47.79  |  19.96  |  7.51   |
 |   GPT-2    | 88.01  | 55.88  | 21.65  |  5.34  |  1.40  |  75.67  |  36.71  |  12.67  |  3.88   |
-|   XLNet    | 131.95 | 17.14  |  1.68  |  0.45  |  0.45  |  69.33  |  36.19  |  16.59  |  10.00  |
 
 #### IMDB Movie Review
 
@@ -299,7 +297,6 @@ NLL, BLEU and SBLEU on test dataset:
 |  LeakGAN   | 499.57 | 78.93  | 58.96  | 32.58  | 12.65  |  92.91  |  79.21  |  60.10  |  39.79  |
 |  MaskGAN   | 509.58 | 56.61  | 21.41  |  4.49  |  0.86  |  92.09  |  77.88  |  59.62  |  42.36  |
 |   GPT-2    | 348.67 | 72.52  | 41.75  | 15.40  |  4.22  |  86.21  |  58.26  |  30.03  |  12.56  |
-|   XLNet    | 520.73 | 14.37  |  0.50  |  0.16  |  0.16  |  83.79  |  53.91  |  24.56  |  11.50  |
 
 ### Sequence-to-Sequence Generation
 

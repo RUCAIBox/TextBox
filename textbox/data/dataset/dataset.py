@@ -33,8 +33,8 @@ class Dataset(object):
         self.max_vocab_size = config['max_vocab_size']
         self.max_seq_length = config['max_seq_length']
 
-        restored_exist = self.detect_restored(self.dataset_path)
-        if restored_exist:
+        self.restored_exist = self.detect_restored(self.dataset_path)
+        if self.restored_exist:
             self._load_restored()
         else:
             self._from_scratch()

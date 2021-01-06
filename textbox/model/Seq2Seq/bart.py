@@ -26,15 +26,16 @@ class BART(ConditionalGenerator):
     def __init__(self, config, dataset):
         super(BART, self).__init__(config, dataset)
 
-        self.tokenizer = BartTokenizer.from_pretrained('pretrained_model/bart_base',
+        self.pretrained_model_path = config['pretrained_model_path']
+        self.tokenizer = BartTokenizer.from_pretrained(self.pretrained_model_path,
                                                        bos_token=dataset.sos_token,
                                                        eos_token=dataset.eos_token,
                                                        pad_token=dataset.padding_token,
                                                        unk_token=dataset.unknown_token,
                                                        add_prefix_space=True)
-        self.configuration = BartConfig.from_pretrained('pretrained_model/bart_base')
+        self.configuration = BartConfig.from_pretrained(self.pretrained_model_path)
 
-        self.decoder = BartForConditionalGeneration.from_pretrained("pretrained_model/bart_base",
+        self.decoder = BartForConditionalGeneration.from_pretrained(self.pretrained_model_path,
                                                                     config=self.configuration)
         self.decoder.resize_token_embeddings(len(self.tokenizer))
 

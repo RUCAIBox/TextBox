@@ -1,4 +1,4 @@
-# TextBox (ÊñáÈ™è)
+# TextBox (√Ó± )
 TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 16 text generation algorithms, covering two major tasks:
 
 + Unconditional (input-free) Generation

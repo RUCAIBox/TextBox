@@ -28,14 +28,15 @@ class GPT2(UnconditionalGenerator):
         super(GPT2, self).__init__(config, dataset)
 
         self.eval_generate_num = config['eval_generate_num']
-
-        self.tokenizer = GPT2Tokenizer.from_pretrained('pretrained_model/gpt2',
+        
+        self.pretrained_model_path = config['pretrained_model_path']
+        self.tokenizer = GPT2Tokenizer.from_pretrained(self.pretrained_model_path,
                                                        bos_token=dataset.sos_token, eos_token=dataset.eos_token,
                                                        pad_token=dataset.padding_token, unk_token=dataset.eos_token)
 
-        self.configuration = GPT2Config.from_pretrained('pretrained_model/gpt2')
+        self.configuration = GPT2Config.from_pretrained(self.pretrained_model_path)
 
-        self.decoder = GPT2LMHeadModel.from_pretrained('pretrained_model/gpt2', config=self.configuration)
+        self.decoder = GPT2LMHeadModel.from_pretrained(self.pretrained_model_path, config=self.configuration)
         self.decoder.resize_token_embeddings(len(self.tokenizer))
 
         self.sos_token = dataset.sos_token

@@ -13,8 +13,6 @@ setup_requires = []
 
 extras_require = {}
 
-# Readthedocs requires Sphinx extensions to be specified as part of
-# install_requires in order to build properly.
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 if on_rtd:
     install_requires.extend(setup_requires)
@@ -26,15 +24,12 @@ classifiers = ['License :: OSI Approved :: MIT License',
                'Programming Language :: Python :: 3.7',
                'Programming Language :: Python :: 3.8']
 
-long_description = '# TextBox\n'\
-                   'TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 16 text generation algorithms, covering two major tasks:\n'\
-                   '\n+ Unconditional (input-free) Generation\n'\
-                   '+ Sequence to Sequence (Seq2Seq) Generation\n'\
-                   '\nWe provide the support for 6 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team.\n'
+with open("PYPI.md", "r") as f:
+    long_description = f.read()
 
 setup(
     name='textbox',
-    version='0.0.3',
+    version='0.0.4',
     description='A package for building text generation systems',
     url='https://github.com/RUCAIBox/TextBox',
     author='TextBoxTeam',

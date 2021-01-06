@@ -64,6 +64,19 @@ class SingleSentenceDataset(Dataset):
             self.text_data.append(words)
         fin.close()
 
+        ratios = self.split_ratio
+        self.logger.debug('split by ratios [{}]'.format(ratios))
+        tot_ratio = sum(ratios)
+        ratios = [_ / tot_ratio for _ in ratios]
+
+        tot_cnt = self.__len__()
+        split_ids = self._calcu_split_ids(tot=tot_cnt, ratios=ratios)
+        corpus_list = []
+        for start, end in zip([0] + split_ids, split_ids + [tot_cnt]):
+            tp_text_data = self.text_data[start: end]
+            corpus_list.append(tp_text_data)
+        self.text_data = corpus_list
+
     def _load_data(self, dataset_path):
         if self.strategy == "load_split":
             self._load_splitted_data(dataset_path)
@@ -76,35 +89,19 @@ class SingleSentenceDataset(Dataset):
         self._build_vocab()
 
     def _build_vocab(self):
-        if self.strategy == "load_split":
-            word_list = list()
-            for sent_list in self.text_data:
-                for text in sent_list:
-                    word_list.extend(text)
-            token_count = [(count, token) for token, count in collections.Counter(word_list).items()]
-            token_count.sort(reverse=True)
-            tokens = [word for count, word in token_count]
-            tokens = self.special_token_list + tokens
-            tokens = tokens[:self.max_vocab_size]
-            self.max_vocab_size = len(tokens)
-
-            self.idx2token = dict(zip(range(self.max_vocab_size), tokens))
-            self.token2idx = dict(zip(tokens, range(self.max_vocab_size)))
-        elif self.strategy == "by_ratio":
-            word_list = list()
-            for text in self.text_data:
+        word_list = list()
+        for sent_list in self.text_data:
+            for text in sent_list:
                 word_list.extend(text)
-            token_count = [(count, token) for token, count in collections.Counter(word_list).items()]
-            token_count.sort(reverse=True)
-            tokens = [word for count, word in token_count]
-            tokens = self.special_token_list + tokens
-            tokens = tokens[:self.max_vocab_size]
-            self.max_vocab_size = len(tokens)
+        token_count = [(count, token) for token, count in collections.Counter(word_list).items()]
+        token_count.sort(reverse=True)
+        tokens = [word for count, word in token_count]
+        tokens = self.special_token_list + tokens
+        tokens = tokens[:self.max_vocab_size]
+        self.max_vocab_size = len(tokens)
 
-            self.idx2token = dict(zip(range(self.max_vocab_size), tokens))
-            self.token2idx = dict(zip(tokens, range(self.max_vocab_size)))
-        else:
-            raise NotImplementedError("{} split strategy not implemented".format(self.strategy))
+        self.idx2token = dict(zip(range(self.max_vocab_size), tokens))
+        self.token2idx = dict(zip(tokens, range(self.max_vocab_size)))
 
     def __len__(self):
         return len(self.text_data)
@@ -125,13 +122,9 @@ class SingleSentenceDataset(Dataset):
         corpus_list = []
         for start, end in zip([0] + split_ids, split_ids + [tot_cnt]):
             tp_text_data = self.text_data[start: end]
-            tp_data = {
-                'idx2token': self.idx2token,
-                'token2idx': self.token2idx,
-                'text_data': tp_text_data
-            }
-            corpus_list.append(tp_data)
-        return corpus_list
+            corpus_list.append(tp_text_data)
+        self.text_data = corpus_list
+        return self.load_split()
 
     def load_split(self):
         """Load splitted dataset.
@@ -147,9 +140,6 @@ class SingleSentenceDataset(Dataset):
         return corpus_list
 
     def detect_restored(self, dataset_path):
-        if self.strategy == "by_ratio":
-            return False
-        # We don't save dataset split by ratio
         required_files = []
         for prefix in ['train', 'dev', 'test']:
             filename = os.path.join(dataset_path, '{}.bin'.format(prefix))
@@ -166,9 +156,6 @@ class SingleSentenceDataset(Dataset):
         return True
 
     def _dump_data(self, dataset_path):
-        if self.strategy == "by_ratio":
-            self.logger.info("We don't dump dataset splitted by ratio!")
-            pass
         info_str = ''
         vocab_file = os.path.join(dataset_path, 'vocab')
         with open(vocab_file, "wb") as f_vocab:
@@ -205,12 +192,5 @@ class SingleSentenceDataset(Dataset):
 
     def build(self):
         self.shuffle()
-
-        split_args = {'strategy': self.strategy, 'ratios': self.split_ratio}
-        if split_args['strategy'] == 'by_ratio':
-            corpus_list = self.split_by_ratio(split_args['ratios'])
-        elif split_args['strategy'] == 'load_split':
-            corpus_list = self.load_split()
-        else:
-            raise NotImplementedError()
+        corpus_list = self.load_split()
         return corpus_list

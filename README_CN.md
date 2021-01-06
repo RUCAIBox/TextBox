@@ -11,7 +11,7 @@
 [文档] | [模型] | [数据集] | [论文] | [English Version]
 
 [文档]: https://rucaibox.github.io/textbox.github.io/
-[模型]: #论文
+[模型]: #模型
 [数据集]: #数据集
 [论文]: https://arxiv.org/abs/2011.01731
 [English Version]: README.md
@@ -85,11 +85,11 @@ python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
 python run_textbox.py --model=[model_name] --dataset=[dataset_name] --task_type=[task_name]
 ```
 
-`model_name` 是将被运行的模型，比如RNN或者BART。 我们实现了的模型可以在 [Model](#Model) 中找到。
+`model_name` 是将被运行的模型，比如RNN或者BART。 我们实现了的模型可以在 [Model](#模型) 中找到。
 
-TextBox 包含了三种主要类型的文本生成，分别是“无条件”，“翻译”，“摘要”。
+TextBox 包含了三种主要类型的文本生成，分别是`unconditional`（无条件）, `translation`（翻译） and `summarization`（摘要）。
 
-如果你想要修改数据集，请参考 [Dataset](#Dataset)。
+如果你想要修改数据集，请参考 [Dataset](#数据集)。
 
 ### 从API开始
 
@@ -110,7 +110,7 @@ run_textbox(config_dict={'model': 'RNN',
 
 ## 结构
 
-上述[图片](#textbox-文骏)展示了TextBox的整体架构。程序的运行需要从文件、命令行或参数字典中获取实验参数配置，数据集和模型会根据设置的配置进行初始化，之后执行模块负责对模型进行训练和评估。获取更多接口相关的细节可以参考[说明文档](https://rucaibox.github.io/textbox.github.io/)
+上述[图片](#textbox-文骏)展示了TextBox的整体架构。程序的运行需要从文件、命令行或参数字典中获取实验参数配置，数据集和模型会根据设置的配置进行初始化，之后执行模块负责对模型进行训练和评估。获取更多接口相关的细节可以参考[说明文档](https://rucaibox.github.io/textbox.github.io/)。
 
 ### 模型
 

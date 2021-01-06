@@ -59,10 +59,8 @@ class BART(ConditionalGenerator):
                                                            num_beams=4,
                                                            max_length=self.max_target_length,
                                                            early_stopping=True)
-                    generated_text = [self.tokenizer.decode(sample, skip_special_tokens=True) for sample in
-                                      sample_outputs]
-                    generated_text = [text.lower().split() for text in generated_text]
-                    generate_corpus.extend(generated_text)
+                    generated_text = self.tokenizer.decode(sample_outputs[0], skip_special_tokens=True)
+                    generate_corpus.append(generated_text.lower().split())
         return generate_corpus
 
     def calculate_loss(self, corpus, epoch_idx=-1):

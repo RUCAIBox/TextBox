@@ -53,7 +53,6 @@ pip install textbox
 ```
 
 ### 通过源文件安装
-
 ```bash
 git clone https://github.com/RUCAIBox/TextBox.git && cd TextBox
 pip install -e . --verbose
@@ -86,11 +85,11 @@ python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
 python run_textbox.py --model=[model_name] --dataset=[dataset_name] --task_type=[task_name]
 ```
 
-`model_name` 是将被运行的模型，比如RNN或者BART。 我们实现了的模型可以在 [Model](#模型) 中找到。
+`model_name` 是将被运行的模型，比如RNN或者BART。 我们实现了的模型可以在 [模型](#模型) 中找到。
 
 TextBox 包含了三种主要类型的文本生成，分别是`unconditional`（无条件）, `translation`（翻译） and `summarization`（摘要）。
 
-如果你想要修改数据集，请参考 [Dataset](#数据集)。
+如果你想要修改数据集，请参考 [数据集](#数据集)。
 
 ### 从API开始
 

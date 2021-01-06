@@ -393,7 +393,7 @@ BLEU metric on test dataset with three decoding strategies: top-k sampling, gree
 
 | Releases |    Date    |   Features    |
 | :------: | :--------: | :-----------: |
-|  v0.1.0  | 01/07/2021 | Basic TextBox |
+|  v0.1.2  | 01/07/2021 | Basic TextBox |
 
 ## Contributing
 

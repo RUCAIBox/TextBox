@@ -392,7 +392,7 @@ python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
 
 | 发行版本 |    日期    |   特点    |
 | :------: | :--------: | :-----------: |
-|  v0.1.0  | 01/07/2021 | Basic TextBox |
+|  v0.1.2  | 01/07/2021 | Basic TextBox |
 
 ## 贡献
 

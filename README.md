@@ -265,7 +265,7 @@ We also support you to run our model using your own dataset. Just follow the thr
 
 ## Experiment Results
 
-We have implemented various text generation models, and compared their performance on  unconditional and conditional text generation tasks. We also provide part of the [generated_examples](https://github.com/RUCAIBox/TextBox/tree/main/textbox/generated_examples).
+We have implemented various text generation models, and compared their performance on  unconditional and conditional text generation tasks. We also provide part of the [generated_examples](https://github.com/RUCAIBox/TextBox/tree/main/generated_examples).
 
 ### Uncondition Generation
 

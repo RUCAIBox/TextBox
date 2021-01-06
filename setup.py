@@ -7,7 +7,7 @@ import os
 from setuptools import setup, find_packages
 
 install_requires = ['matplotlib>=3.1.3', 'torch>=1.6.0', 'numpy>=1.17.2', 'nltk>=3.4.5',
-                    'pyyaml>=5.3.1', 'fast_bleu>=0.0.86', 'rouge>=1.0.0','transformers>=4.0.1']
+                    'pyyaml>=5.3.1', 'fast_bleu>=0.0.86', 'py-rouge>=1.1','transformers>=4.0.1']
 
 setup_requires = []
 
@@ -29,7 +29,7 @@ with open("PYPI.md", "r") as f:
 
 setup(
     name='textbox',
-    version='0.1.1',
+    version='0.1.2',
     description='A package for building text generation systems',
     url='https://github.com/RUCAIBox/TextBox',
     author='TextBoxTeam',

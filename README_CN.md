@@ -2,7 +2,9 @@
 
 ------
 
-# TextBox (文骏)
+# TextBox (妙笔)
+
+*“李太白少时，梦所用之笔头上生花后天才赡逸，名闻天下。”——王仁裕《开元天宝遗事·梦笔头生花》*
 
 [![PyPi Latest Release](https://img.shields.io/pypi/v/textbox)](https://pypi.org/project/textbox/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
@@ -108,15 +110,28 @@ run_textbox(config_dict={'model': 'RNN',
 
 如果你想运行不同的模型、参数或数据集，可以使用与 [从源文件开始](#从源文件开始) 相同的操作。
 
+### **使用预训练语言模型**
+
+TextBox支持部分预训练语言模型进行文本生成任务，下面以GPT-2为例，展示我们如何利用预训练语言模型进行fine-tuning。
+
+1. 从Hugging Face提供的模型源 (https://huggingface.co/gpt2/tree/main) 中下载GPT-2模型，包括`config.json`, `merges.txt`, `pytorch_model.bin`, `tokenizer.json`和`vocab.json`五个文件，将其放在与`textbox`同级的文件夹下，例如`pretrained_model/gpt2`。
+
+2. 下载好模型之后，直接通过脚本运行：
+
+```bash
+python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
+                      --pretrained_model_path=pretrained_model/gpt2
+```
+
 ## 结构
 
-上述[图片](#textbox-文骏)展示了TextBox的整体架构。程序的运行需要从文件、命令行或参数字典中获取实验参数配置，数据集和模型会根据设置的配置进行初始化，之后执行模块负责对模型进行训练和评估。获取更多接口相关的细节可以参考[说明文档](https://rucaibox.github.io/textbox.github.io/)。
+上述[图片](#textbox-妙笔)展示了TextBox的整体架构。程序的运行需要从文件、命令行或参数字典中获取实验参数配置，数据集和模型会根据设置的配置进行初始化，之后执行模块负责对模型进行训练和评估。获取更多接口相关的细节可以参考[说明文档](https://rucaibox.github.io/textbox.github.io/)。
 
 ### 模型
 
 我们总共实现了包括无条件生成和sequence-to-sequence生成在内的16个文本生成模型，其中基础的RNN语言模型用于无条件文本生成，另外的15个模型可以参照下表：
 
-<table>
+<table align="center">
 <thead>
 <tr>
 <th align="center">类别</th>
@@ -192,13 +207,14 @@ run_textbox(config_dict={'model': 'RNN',
 </tr>
 </tbody></table>
 
+
 ### 数据集
 
 我们总共收集了6个在上述提及的3类文本生成任务中常用的数据集，这些数据集可以通过[Google Drive](https://drive.google.com/drive/folders/1iNRErGM3YRDF3hjY8DMpWaQo-prmUtNX?usp=sharing) 和 [百度网盘](https://pan.baidu.com/s/1upHl8SXGNjZ2LCfV-L164Q) (密码: lwy6)来下载，数据集中包含原始数据以及处理过的数据。 
 
 在下表我们列出了6个数据集：
 
-<table>
+<table align="center">
 <thead>
 <tr>
 <th align="center">任务</th>
@@ -229,6 +245,7 @@ run_textbox(config_dict={'model': 'RNN',
 </tbody>
 </table>
 
+
 下载好的数据集需要放到 `dataset` 目录下面，和我们项目中的结构类似。
 
 我们也支持用户在自己的数据集上训练模型，只需要按照下面三个步骤操作即可：
@@ -247,7 +264,7 @@ run_textbox(config_dict={'model': 'RNN',
 
 ## 实验结果
 
-我们实现了多个文本生成模型，并在有条件文本生成和无条件文本生成任务上对他们的结果进行了比较。
+我们实现了多个文本生成模型，并在有条件文本生成和无条件文本生成任务上对他们的结果进行了比较。我们也提供了部分的[生成实例](https://github.com/RUCAIBox/TextBox/tree/main/textbox/generated_examples)。
 
 ### 无条件文本生成
 
@@ -308,7 +325,7 @@ run_textbox(config_dict={'model': 'RNN',
 
 测试集上的BLEU度量有三种解码策略：top-k采样、贪婪搜索和beam搜索（beam搜索大小 `beam_size` 设置为5):
 
-<table>
+<table align="center">
 <thead>
 <tr>
 <th align="center">模型</th>
@@ -370,11 +387,12 @@ run_textbox(config_dict={'model': 'RNN',
 </tr>
 </tbody></table>
 
+
 ## TextBox重要发布
 
 | 发行版本 |    日期    |   特点    |
 | :------: | :--------: | :-----------: |
-|  v0.1.0  | 01/07/2021 | Basic TextBox |
+|  v0.1.2  | 01/07/2021 | Basic TextBox |
 
 ## 贡献
 

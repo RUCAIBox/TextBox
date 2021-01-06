@@ -2,7 +2,9 @@
 
 ------
 
-# TextBox (文骏)
+# TextBox (妙笔)
+
+*“李太白少时，梦所用之笔头上生花后天才赡逸，名闻天下。”——王仁裕《开元天宝遗事·梦笔头生花》*
 
 [![PyPi Latest Release](https://img.shields.io/pypi/v/textbox)](https://pypi.org/project/textbox/)
 [![Release](https://img.shields.io/github/v/release/rucaibox/textbox.svg)](https://github.com/rucaibox/textbox/releases)
@@ -108,15 +110,29 @@ This will perform the training and test of the RNN model on the COCO dataset.
 
 If you want to run different models, parameters or datasets, the operations are same with [Start from source](#Start-from-source).
 
+### **Using Pretrained Language Model**
+
+TextBox supports to apply part of pretrained language models (PLM) to conduct text generation. Take the GPT-2 for example, we will show you how to use PLMs to fine-tune.
+
+1. Download the GPT-2 model provided from Hugging Face (https://huggingface.co/gpt2/tree/main), including `config.json`, `merges.txt`, `pytorch_model.bin`, `tokenizer.json`and `vocab.json`. Then put them in a folder at the same level as `textbox`, such as `pretrained_model/gpt2`.
+
+2. After downing, you just need to run the command:
+
+```bash
+python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
+                      --pretrained_model_path=pretrained_model/gpt2
+```
+
+
 ## Architecture
 
-The above [Figure](#textbox-文骏) presents the overall architecture of our library. The running procedure relies on some experimental configuration, obtained from the files, command line or parameter dictionaries. The dataset and model are prepared and initialized according to the configured settings, and the execution module is responsible for training and evaluating models. The details of interfaces can be obtained in our [document](https://rucaibox.github.io/textbox.github.io/).
+The above [Figure](#textbox-妙笔) presents the overall architecture of our library. The running procedure relies on some experimental configuration, obtained from the files, command line or parameter dictionaries. The dataset and model are prepared and initialized according to the configured settings, and the execution module is responsible for training and evaluating models. The details of interfaces can be obtained in our [document](https://rucaibox.github.io/textbox.github.io/).
 
 ### Model
 
 We implement 16 text generation models covering unconditional generation and sequence-to-sequence generation. We include the basic RNN language model for unconditional generation, and the remaining 15 models in the following table:
 
-<table>
+<table align="center">
 <thead>
 <tr>
 <th align="center">Category</th>
@@ -192,13 +208,14 @@ We implement 16 text generation models covering unconditional generation and seq
 </tr>
 </tbody></table>
 
+
 ### Dataset
 
 We have also collected 6 datasets that are commonly used for above three tasks, which can be downloaded from [Google Drive](https://drive.google.com/drive/folders/1iNRErGM3YRDF3hjY8DMpWaQo-prmUtNX?usp=sharing) and [Baidu Wangpan](https://pan.baidu.com/s/1upHl8SXGNjZ2LCfV-L164Q) (Password: lwy6), including raw data and processed data. 
 
 We list the 6 datasets in the following table:
 
-<table>
+<table align="center">
 <thead>
 <tr>
 <th align="center">Task</th>
@@ -229,6 +246,7 @@ We list the 6 datasets in the following table:
 </tbody>
 </table>
 
+
 The downloaded dataset should be placed in the `dataset` folder, just as our main branch.
 
 We also support you to run our model using your own dataset. Just follow the three steps:
@@ -247,7 +265,7 @@ We also support you to run our model using your own dataset. Just follow the thr
 
 ## Experiment Results
 
-We have implemented various text generation models, and compared their performance on  unconditional and conditional text generation tasks.
+We have implemented various text generation models, and compared their performance on  unconditional and conditional text generation tasks. We also provide part of the [generated_examples](https://github.com/RUCAIBox/TextBox/tree/main/textbox/generated_examples).
 
 ### Uncondition Generation
 
@@ -308,7 +326,7 @@ NLL, BLEU and SBLEU on test dataset:
 
 BLEU metric on test dataset with three decoding strategies: top-k sampling, greedy search and beam search (with `beam_size` 5):
 
-<table>
+<table align="center">
 <thead>
 <tr>
 <th align="center">Model</th>
@@ -370,11 +388,12 @@ BLEU metric on test dataset with three decoding strategies: top-k sampling, gree
 </tr>
 </tbody></table>
 
+
 ## Releases
 
 | Releases |    Date    |   Features    |
 | :------: | :--------: | :-----------: |
-|  v0.1.0  | 01/07/2021 | Basic TextBox |
+|  v0.1.2  | 01/07/2021 | Basic TextBox |
 
 ## Contributing
 

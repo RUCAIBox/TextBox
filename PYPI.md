@@ -1,4 +1,5 @@
-# TextBox (Ãî±Ê)
+# TextBox (å¦™ç¬”)
+
 TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 16 text generation algorithms, covering two major tasks:
 
 + Unconditional (input-free) Generation
@@ -12,11 +13,13 @@ We provide the support for 6 benchmark text generation datasets. A user can appl
 
 
 ## Feature
+
 - **Unified and modularized framework.** TextBox is built upon PyTorch and designed to be highly modularized, by decoupling diverse models into a set of highly reusable modules.
 - **Comprehensive models, benchmark datasets and standardized evaluations.** TextBox also contains a wide range of text generation models, covering the categories of VAE, GAN, RNN or Transformer based models, and pre-trained language models (PLM).
 - **Extensible and flexible framework.** TextBox provides convenient interfaces of various common functions or modules in text generation models, RNN encoder-decoder, Transformer encoder-decoder and pre-trained language model.
 
 ## Installation
+
 TextBox requires:
 
 - `Python >= 3.6.2`
@@ -26,6 +29,7 @@ TextBox requires:
 - `GCC >= 5.1.0`
 
 ### Install from pip
+
 ```bash
 pip install textbox
 ```
@@ -37,7 +41,9 @@ pip install -e . --verbose
 ```
 
 ## Quick-Start
+
 ### Start from source
+
 With the source code, you can use the provided script for initial usage of our library:
 
 ```bash
@@ -66,6 +72,7 @@ python run_textbox.py --model=[model_name] --dataset=[dataset_name] --task_type=
 TextBox covers three major task types of text generation, namely `unconditional`, `translation` and `summarization`.
 
 ### Start from API
+
 If TextBox is installed from pip, you can create a new python file, download the dataset, and write and run the following code:
 
 ```python
@@ -82,4 +89,9 @@ This will perform the training and test of the RNN model on the COCO dataset.
 If you want to run different models, parameters or datasets, the operations are same with [Start from source](#Start-from-source).
 
 ## The Team
+
 TextBox is developed and maintained by [AI Box](http://aibox.ruc.edu.cn/).
+
+## License
+TextBox uses [MIT License](./LICENSE).
+

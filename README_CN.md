@@ -264,7 +264,7 @@ python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
 
 ## 实验结果
 
-我们实现了多个文本生成模型，并在有条件文本生成和无条件文本生成任务上对他们的结果进行了比较。
+我们实现了多个文本生成模型，并在有条件文本生成和无条件文本生成任务上对他们的结果进行了比较。我们也提供了部分的[生成实例](https://github.com/RUCAIBox/TextBox/tree/main/textbox/generated_examples)。
 
 ### 无条件文本生成
 

@@ -15,7 +15,7 @@
 [文档]: https://rucaibox.github.io/textbox.github.io/
 [模型]: #模型
 [数据集]: #数据集
-[论文]: https://arxiv.org/abs/2011.01731
+[论文]: https://arxiv.org/abs/2101.02046
 [English Version]: README.md
 
 TextBox是基于Python和PyTorch开发的，用于在一个统一的、全面的、高效的框架中复现和开发文本生成算法，主要面向研究者使用。我们的库包括16种文本生成算法，涵盖了两个主要任务：
@@ -404,14 +404,14 @@ python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
 
 ## 引用
 
-如果你觉得TextBox对你的科研工作有帮助，请引用我们的 [论文](https://arxiv.org/abs/2011.01731):
+如果你觉得TextBox对你的科研工作有帮助，请引用我们的 [论文](https://arxiv.org/abs/2101.02046):
 
 ```
 @article{recbole,
     title={TextBox: A Unified, Modularized, and Extensible Framework for Text Generation},
     author={Junyi Li, Tianyi Tang, Gaole He, Jinhao Jiang, Xiaoxuan Hu, Puzhao Xie, Wayne Xin Zhao, Ji-Rong Wen},
     year={2021},
-    journal={arXiv preprint arXiv:2011.01731}
+    journal={arXiv preprint arXiv:2101.02046}
 }
 ```
 

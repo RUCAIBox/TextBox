@@ -15,7 +15,7 @@
 [Docs]: https://rucaibox.github.io/textbox.github.io/
 [Model]: #Model
 [Dataset]: #Dataset
-[Paper]: https://arxiv.org/abs/2011.01731
+[Paper]: https://arxiv.org/abs/2101.02046
 [中文版]: README_CN.md
 
 
@@ -265,7 +265,7 @@ We also support you to run our model using your own dataset. Just follow the thr
 
 ## Experiment Results
 
-We have implemented various text generation models, and compared their performance on  unconditional and conditional text generation tasks. We also provide part of the [generated_examples](https://github.com/RUCAIBox/TextBox/tree/main/textbox/generated_examples).
+We have implemented various text generation models, and compared their performance on  unconditional and conditional text generation tasks. We also provide part of the [generated_examples](https://github.com/RUCAIBox/TextBox/tree/main/generated_examples).
 
 ### Uncondition Generation
 
@@ -405,14 +405,14 @@ We expect all contributions discussed in the issue tracker and going through PRs
 
 ## Reference
 
-If you find TextBox useful for your research or development, please cite the following [paper](https://arxiv.org/abs/2011.01731):
+If you find TextBox useful for your research or development, please cite the following [paper](https://arxiv.org/abs/2101.02046):
 
 ```
 @article{recbole,
     title={TextBox: A Unified, Modularized, and Extensible Framework for Text Generation},
     author={Junyi Li, Tianyi Tang, Gaole He, Jinhao Jiang, Xiaoxuan Hu, Puzhao Xie, Wayne Xin Zhao, Ji-Rong Wen},
     year={2021},
-    journal={arXiv preprint arXiv:2011.01731}
+    journal={arXiv preprint arXiv:2101.02046}
 }
 ```
 

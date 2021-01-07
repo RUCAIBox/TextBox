@@ -9,7 +9,7 @@ We provide the support for 6 benchmark text generation datasets. A user can appl
 
 **View TextBox homepage for more information: [https://github.com/RUCAIBox/TextBox](https://github.com/RUCAIBox/TextBox).**
 
-**View TextBox document for more implement details: [https://github.com/RUCAIBox/TextBox](https://github.com/RUCAIBox/TextBox).**
+**View TextBox document for more implement details: [https://rucaibox.github.io/textbox.github.io/](https://rucaibox.github.io/textbox.github.io/).**
 
 
 ## Feature
@@ -86,7 +86,7 @@ run_textbox(config_dict={'model': 'RNN',
 
 This will perform the training and test of the RNN model on the COCO dataset.
 
-If you want to run different models, parameters or datasets, the operations are same with [Start from source](#Start-from-source).
+If you want to run different models, parameters or datasets, the operations are same with **Start from source**.
 
 ## The Team
 

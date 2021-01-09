@@ -119,10 +119,9 @@ TextBox supports to apply part of pretrained language models (PLM) to conduct te
 2. After downloading, you just need to run the command:
 
 ```bash
-python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
+python run_textbox.py --model=GPT-2 --dataset=COCO --task_type=unconditional \
                       --pretrained_model_path=pretrained_model/gpt2
 ```
-
 
 ## Architecture
 
@@ -208,7 +207,6 @@ We implement 16 text generation models covering unconditional generation and seq
 </tr>
 </tbody></table>
 
-
 ### Dataset
 
 We have also collected 6 datasets that are commonly used for above three tasks, which can be downloaded from [Google Drive](https://drive.google.com/drive/folders/1iNRErGM3YRDF3hjY8DMpWaQo-prmUtNX?usp=sharing) and [Baidu Wangpan](https://pan.baidu.com/s/1upHl8SXGNjZ2LCfV-L164Q) (Password: lwy6), including raw data and processed data. 
@@ -245,7 +243,6 @@ We list the 6 datasets in the following table:
 </tr>
 </tbody>
 </table>
-
 
 The downloaded dataset should be placed in the `dataset` folder, just as our main branch.
 
@@ -389,7 +386,6 @@ BLEU metric on test dataset with three decoding strategies: top-k sampling, gree
 <td align="center">29.49</td>
 </tr>
 </tbody></table>
-
 
 ## Releases
 

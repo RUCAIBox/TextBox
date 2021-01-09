@@ -26,7 +26,7 @@ from logging import getLogger
 
 from textbox.module.Optimizer.optim import ScheduledOptim
 from textbox.evaluator import NgramEvaluator, TranslationEvaluator, SummarizationEvaluator
-from textbox.utils import ensure_dir, get_local_time, early_stopping
+from textbox.utils import ensure_dir, early_stopping
 
 
 class AbstractTrainer(object):
@@ -81,12 +81,12 @@ class Trainer(AbstractTrainer):
         self.warmup_steps = config['warmup_steps']
         self.checkpoint_dir = config['checkpoint_dir']
         ensure_dir(self.checkpoint_dir)
-        saved_model_file = '{}-{}.pth'.format(self.config['model'], get_local_time())
+        saved_model_file = self.config['filename'] + '.pth'
         self.saved_model_file = os.path.join(self.checkpoint_dir, saved_model_file)
 
         self.generated_text_dir = config['generated_text_dir']
         ensure_dir(self.generated_text_dir)
-        saved_text_file = '{}-{}.txt'.format(self.config['model'], get_local_time())
+        saved_text_file = self.config['filename'] + '.txt'
         self.saved_text_file = os.path.join(self.generated_text_dir, saved_text_file)
 
         self.start_epoch = 0

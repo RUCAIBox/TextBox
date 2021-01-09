@@ -96,6 +96,13 @@ class RNNEncDec(ConditionalGenerator):
             source_embeddings = self.source_token_embedder(source_text)
             encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
 
+            if self.bidirectional:
+                encoder_outputs = encoder_outputs[:, :, self.hidden_size:] + encoder_outputs[:, :, :self.hidden_size]
+                if (self.rnn_type == 'lstm'):
+                    encoder_states = (encoder_states[0][::2], encoder_states[1][::2])
+                else:
+                    encoder_states = encoder_states[::2]
+
             encoder_masks = torch.ne(source_text, self.padding_token_idx)
             for bid in range(source_text.size(0)):
                 decoder_states = encoder_states[:, bid, :].unsqueeze(1)
@@ -154,6 +161,13 @@ class RNNEncDec(ConditionalGenerator):
         input_embeddings = self.dropout(self.target_token_embedder(input_text))
         encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
 
+        if self.bidirectional:
+            encoder_outputs = encoder_outputs[:, :, self.hidden_size:] + encoder_outputs[:, :, :self.hidden_size]
+            if (self.rnn_type == 'lstm'):
+                encoder_states = (encoder_states[0][::2], encoder_states[1][::2])
+            else:
+                encoder_states = encoder_states[::2]
+
         encoder_masks = torch.ne(source_text, self.padding_token_idx)
 
         if self.attention_type is not None:
@@ -168,6 +182,6 @@ class RNNEncDec(ConditionalGenerator):
         loss = loss.reshape_as(target_text)
 
         length = corpus['target_length'] - 1
-        loss = loss.sum(dim=1) / length
+        loss = loss.sum(dim=1) / length.float()
         loss = loss.mean()
         return loss

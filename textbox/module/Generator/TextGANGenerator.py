@@ -58,7 +58,7 @@ class TextGANGenerator(UnconditionalGenerator):
             loss = target_word_prob.sum(dim = 0)
         else:
             length = corpus['target_length'] - 1 # b
-            loss = target_word_prob.sum(dim = 0) / length # b
+            loss = target_word_prob.sum(dim = 0) / length.float() # b
         return loss.mean()
     
     def sample(self):
@@ -93,7 +93,7 @@ class TextGANGenerator(UnconditionalGenerator):
             sentences_prob = sentences_prob.permute(1, 0, 2) # b * l * v
 
             for i in range(self.batch_size):
-                end_pos = (sentences[i] == self.end_idx).nonzero()
+                end_pos = (sentences[i] == self.end_idx).nonzero(as_tuple=False)
                 if (end_pos.shape[0]):
                     sentences_prob[i][end_pos[0][0] + 1 : ] = F.one_hot(torch.tensor(self.pad_idx), num_classes = self.vocab_size)
 

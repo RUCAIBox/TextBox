@@ -245,7 +245,7 @@ class LeakGANGenerator(UnconditionalGenerator):
             sentences = sentences.permute(1, 0)  # b * l
 
             for i in range(self.batch_size):
-                end_pos = (sentences[i] == self.end_idx).nonzero()
+                end_pos = (sentences[i] == self.end_idx).nonzero(as_tuple=False)
                 if (end_pos.shape[0]):
                     sentences[i][end_pos[0][0] + 1:] = self.pad_idx
 

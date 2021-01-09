@@ -177,6 +177,6 @@ class TransformerEncDec(ConditionalGenerator):
         loss = loss.reshape_as(target_text)
 
         length = corpus['target_length'] - 1
-        loss = loss.sum(dim=1) / length
+        loss = loss.sum(dim=1) / length.float()
 
         return loss.mean()

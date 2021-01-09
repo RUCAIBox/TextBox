@@ -119,7 +119,7 @@ TextBox支持部分预训练语言模型进行文本生成任务，下面以GPT-
 2. 下载好模型之后，直接通过脚本运行：
 
 ```bash
-python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
+python run_textbox.py --model=GPT-2 --dataset=COCO --task_type=unconditional \
                       --pretrained_model_path=pretrained_model/gpt2
 ```
 
@@ -207,7 +207,6 @@ python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
 </tr>
 </tbody></table>
 
-
 ### 数据集
 
 我们总共收集了6个在上述提及的3类文本生成任务中常用的数据集，这些数据集可以通过[Google Drive](https://drive.google.com/drive/folders/1iNRErGM3YRDF3hjY8DMpWaQo-prmUtNX?usp=sharing) 和 [百度网盘](https://pan.baidu.com/s/1upHl8SXGNjZ2LCfV-L164Q) (密码: lwy6)来下载，数据集中包含原始数据以及处理过的数据。 
@@ -245,14 +244,13 @@ python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
 </tbody>
 </table>
 
-
 下载好的数据集需要放到 `dataset` 目录下面，和我们项目中的结构类似。
 
 我们也支持用户在自己的数据集上训练模型，只需要按照下面三个步骤操作即可：
 
-1. 在 `dataset` 目录下面创建一个新的目录用于放置用户自己的数据集，数据集要求每行包含一个文本序列，例如 `dataset/CNN_DM`;
+1. 在 `dataset` 目录下面创建一个新的目录用于放置用户自己的数据集，数据集要求每行包含一个文本序列，例如 `dataset/YOUR_DATASET`;
 
-2. 创建一个YAML参数配置文件用于对自己数据集的超参数进行配置，YAML的文件名称应与数据集名称相同，例如 `textbox/properties/dataset/CNN_DM.yaml`. 
+2. 创建一个YAML参数配置文件用于对自己数据集的超参数进行配置，YAML的文件名称应与数据集名称相同，例如 `textbox/properties/dataset/YOUR_DATASET.yaml`. 
 
    如果你想对数据集进行分割，请在YAML文件中设置 `split_strategy: "load_split"`，具体可以参考 [COCO yaml](/textbox/properties/dataset/COCO.yaml) 或者 [IWSLT14_DE_EN yaml](/textbox/properties/dataset/IWSLT14_DE_EN.yaml).
 
@@ -265,6 +263,8 @@ python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
 ## 实验结果
 
 我们实现了多个文本生成模型，并在有条件文本生成和无条件文本生成任务上对他们的结果进行了比较。我们也提供了部分的[生成实例](https://github.com/RUCAIBox/TextBox/tree/main/generated_examples)。
+
+*在前期实验中，我们的TextBox得到了以下结果。然而，这些算法是根据我们的理解和经验来实现和调整的，这可能没有达到它们的最佳性能。如果你能在某个具体算法上得到更好的结果，请告知我们。验证结果后，我们会更新该表。*
 
 ### 无条件文本生成
 
@@ -387,12 +387,11 @@ python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
 </tr>
 </tbody></table>
 
-
 ## TextBox重要发布
 
 | 发行版本 |    日期    |   特点    |
 | :------: | :--------: | :-----------: |
-|  v0.1.2  | 01/07/2021 | Basic TextBox |
+|  v0.1.5  | 01/11/2021 | Basic TextBox |
 
 ## 贡献
 

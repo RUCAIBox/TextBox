@@ -117,6 +117,6 @@ class BERT2BERT(ConditionalGenerator):
         loss = loss.reshape_as(target_ids)
 
         length = (target_ids != self.padding_token_idx).sum(dim=1).float()
-        loss = loss.sum(dim=1) / length
+        loss = loss.sum(dim=1) / length.float()
 
         return loss.mean()

@@ -116,13 +116,12 @@ TextBox supports to apply part of pretrained language models (PLM) to conduct te
 
 1. Download the GPT-2 model provided from Hugging Face (https://huggingface.co/gpt2/tree/main), including `config.json`, `merges.txt`, `pytorch_model.bin`, `tokenizer.json`and `vocab.json`. Then put them in a folder at the same level as `textbox`, such as `pretrained_model/gpt2`.
 
-2. After downing, you just need to run the command:
+2. After downloading, you just need to run the command:
 
 ```bash
-python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
+python run_textbox.py --model=GPT-2 --dataset=COCO --task_type=unconditional \
                       --pretrained_model_path=pretrained_model/gpt2
 ```
-
 
 ## Architecture
 
@@ -208,7 +207,6 @@ We implement 16 text generation models covering unconditional generation and seq
 </tr>
 </tbody></table>
 
-
 ### Dataset
 
 We have also collected 6 datasets that are commonly used for above three tasks, which can be downloaded from [Google Drive](https://drive.google.com/drive/folders/1iNRErGM3YRDF3hjY8DMpWaQo-prmUtNX?usp=sharing) and [Baidu Wangpan](https://pan.baidu.com/s/1upHl8SXGNjZ2LCfV-L164Q) (Password: lwy6), including raw data and processed data. 
@@ -246,14 +244,13 @@ We list the 6 datasets in the following table:
 </tbody>
 </table>
 
-
 The downloaded dataset should be placed in the `dataset` folder, just as our main branch.
 
 We also support you to run our model using your own dataset. Just follow the three steps:
 
-1. Create a new folder under the `dataset` folder to put your own corpus file which includes a sequence per line, e.g. `dataset/CNN_DM`;
+1. Create a new folder under the `dataset` folder to put your own corpus file which includes a sequence per line, e.g. `dataset/YOUR_DATASET`;
 
-2. Write a YAML configuration file using the same file name to set the hyper-parameters of your dataset, e.g. `textbox/properties/dataset/CNN_DM.yaml`. 
+2. Write a YAML configuration file using the same file name to set the hyper-parameters of your dataset, e.g. `textbox/properties/dataset/YOUR_DATASET.yaml`. 
 
    If you want to splitted the dataset, please set `split_strategy: "load_split"` in the yaml, just as the [COCO yaml](/textbox/properties/dataset/COCO.yaml) or [IWSLT14_DE_EN yaml](/textbox/properties/dataset/IWSLT14_DE_EN.yaml).
 
@@ -266,6 +263,8 @@ We also support you to run our model using your own dataset. Just follow the thr
 ## Experiment Results
 
 We have implemented various text generation models, and compared their performance on  unconditional and conditional text generation tasks. We also provide part of the [generated_examples](https://github.com/RUCAIBox/TextBox/tree/main/generated_examples).
+
+*The following results were obtained from our TextBox in preliminary experiments. However, these algorithms were implemented and tuned based on our understanding and experiences, which may not achieve their optimal performance. If you could yield a better result for some specific algorithm, please kindly let us know. We will update this table after the results are verified.*
 
 ### Uncondition Generation
 
@@ -388,12 +387,11 @@ BLEU metric on test dataset with three decoding strategies: top-k sampling, gree
 </tr>
 </tbody></table>
 
-
 ## Releases
 
 | Releases |    Date    |   Features    |
 | :------: | :--------: | :-----------: |
-|  v0.1.2  | 01/07/2021 | Basic TextBox |
+|  v0.1.5  | 01/11/2021 | Basic TextBox |
 
 ## Contributing
 

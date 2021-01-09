@@ -44,6 +44,14 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
+source_suffix = ['.rst', '.md']
+autoclass_content = "both"
+
+# napoleon
+napoleon_include_private_with_doc = True
+napoleon_use_admonition_for_examples = True
+napoleon_use_admonition_for_notes = True
+napoleon_use_admonition_for_references = True
 
 # -- Options for HTML output -------------------------------------------------
 

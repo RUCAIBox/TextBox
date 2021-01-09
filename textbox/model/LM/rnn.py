@@ -93,7 +93,7 @@ class RNN(UnconditionalGenerator):
             loss = loss.sum(dim = 1)
         else:
             length = corpus['target_length'] - 1
-            loss = loss.sum(dim = 1) / length
+            loss = loss.sum(dim = 1) / length.float()
         return loss.mean()
     
     def calculate_nll_test(self, corpus, epoch_idx):

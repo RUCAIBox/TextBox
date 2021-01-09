@@ -90,11 +90,4 @@ class BasicRNNEncoder(torch.nn.Module):
 
         outputs, outputs_length = torch.nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
 
-        if self.bidirectional:
-            outputs = outputs[:, :, self.hidden_size:] + outputs[:, :, :self.hidden_size]
-            if (self.rnn_type == 'lstm'):
-                hidden_states = (hidden_states[::2], cell_states[::2])
-            else:
-                hidden_states = hidden_states[::2]
-
         return outputs, hidden_states

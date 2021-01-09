@@ -110,7 +110,7 @@ class XLNet(UnconditionalGenerator):
         loss = loss.reshape_as(labels)
 
         length = (labels != self.padding_token_idx).sum(dim=1).float()
-        loss = loss.sum(dim=1) / length
+        loss = loss.sum(dim=1) / length.float()
         return loss.mean()
 
     def calculate_nll_test(self, corpus, epoch_idx=-1):

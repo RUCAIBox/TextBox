@@ -106,6 +106,6 @@ class BART(ConditionalGenerator):
         loss = loss.reshape_as(decoder_labels)
 
         length = (decoder_labels != self.padding_token_idx).sum(dim=1).float()
-        loss = loss.sum(dim=1) / length
+        loss = loss.sum(dim=1) / length.float()
 
         return loss.mean()

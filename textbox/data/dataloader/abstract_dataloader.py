@@ -49,6 +49,9 @@ class AbstractDataLoader(object):
         self.unknown_token = SpecialTokens.UNK
         self.sos_token = SpecialTokens.SOS
         self.eos_token = SpecialTokens.EOS
+        if ('user_token_list' in config):
+            self.user_token_list = config['user_token_list']
+            self.user_token_idx = [4 + i for i, _ in enumerate(self.user_token_list)]
 
     def get_vocab(self, dataset):
         if 'idx2token' in dataset:

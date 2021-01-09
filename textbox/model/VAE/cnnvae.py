@@ -134,7 +134,7 @@ class CNNVAE(UnconditionalGenerator):
         loss = loss.reshape_as(target_text)
 
         length = corpus['target_length'] - 1
-        loss = loss.sum(dim=1) / length
+        loss = loss.sum(dim=1) / length.float()
 
         kld_coef = float(epoch_idx / self.max_epoch) + 1e-3
         kld = -0.5 * torch.sum(logvar - mean.pow(2) - logvar.exp() + 1, 1).mean()

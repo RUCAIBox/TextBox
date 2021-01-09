@@ -57,7 +57,7 @@ class SeqGANGenerator(UnconditionalGenerator):
             loss = target_word_prob.sum(dim = 0)
         else:
             length = corpus['target_length'] - 1 # b
-            loss = target_word_prob.sum(dim = 0) / length # b
+            loss = target_word_prob.sum(dim = 0) / length.float() # b
         return loss.mean()
 
     def _sample_batch(self):
@@ -86,7 +86,7 @@ class SeqGANGenerator(UnconditionalGenerator):
             sentences = sentences.permute(1, 0) # b * l
 
             for i in range(self.batch_size):
-                end_pos = (sentences[i] == self.end_idx).nonzero()
+                end_pos = (sentences[i] == self.end_idx).nonzero(as_tuple=False)
                 if (end_pos.shape[0]):
                     sentences[i][end_pos[0][0] + 1 : ] = self.pad_idx
 
@@ -191,7 +191,7 @@ class SeqGANGenerator(UnconditionalGenerator):
 
             self.train()
             mask = word_t != self.pad_idx
-            reward = reward * P_t * mask
+            reward = reward * P_t * mask.float()
             mask_sum = mask.sum()
             if (mask_sum):
                 rewards += reward.sum() / mask_sum

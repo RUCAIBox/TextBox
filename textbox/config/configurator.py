@@ -15,7 +15,7 @@ import torch
 from logging import getLogger
 
 from textbox.utils import get_model, Enum, general_arguments, training_arguments, \
-    evaluation_arguments, dataset_arguments
+    evaluation_arguments, dataset_arguments, get_local_time
 
 
 class Config(object):
@@ -152,6 +152,9 @@ class Config(object):
             logger = getLogger()
             logger.warning('command line args [{}] will not be used in TextBox'.format(' '.join(unrecognized_args)))
         cmd_config_dict = self._convert_config_dict(cmd_config_dict)
+
+        if cmd_config_dict['task_type'] not in ['unconditional', 'translation', 'summarization']:
+            raise NotImplementedError("task_type {} can't be found".format(cmd_config_dict['task_type']))
         return cmd_config_dict
 
     def _merge_external_config_dict(self):
@@ -221,6 +224,7 @@ class Config(object):
         self.final_config_dict['dataset'] = self.dataset
         self.final_config_dict['model'] = self.model
         self.final_config_dict['data_path'] = os.path.join(self.final_config_dict['data_path'], self.dataset)
+        self.final_config_dict['filename'] = '{}-{}-{}'.format(self.final_config_dict['model'], self.final_config_dict['dataset'], get_local_time())
 
         eval_type = None
         self.final_config_dict['eval_type'] = eval_type

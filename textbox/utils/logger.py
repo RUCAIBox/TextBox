@@ -10,8 +10,6 @@ textbox.utils.logger
 import logging
 import os
 
-from textbox.utils.utils import get_local_time
-
 
 def init_logger(config):
     """
@@ -32,7 +30,7 @@ def init_logger(config):
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)
 
-    logfilename = '{}-{}.log'.format(config['model'], get_local_time())
+    logfilename = config['filename'] + '.log'
 
     logfilepath = os.path.join(LOGROOT, logfilename)
 

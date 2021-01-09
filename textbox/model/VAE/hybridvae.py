@@ -115,11 +115,11 @@ class HybridVAE(UnconditionalGenerator):
 
         rec_loss = self.loss(token_logits.view(-1, token_logits.size(-1)), target_text.contiguous().view(-1))
         rec_loss = rec_loss.reshape_as(target_text)
-        rec_loss = rec_loss.sum(dim=1) / length
+        rec_loss = rec_loss.sum(dim=1) / length.float()
 
         aux_loss = self.loss(aux_logits.view(-1, aux_logits.size(-1)), target_text.contiguous().view(-1))
         aux_loss = aux_loss.reshape_as(target_text)
-        aux_loss = aux_loss.sum(dim=1) / length
+        aux_loss = aux_loss.sum(dim=1) / length.float()
 
         kld_coef = float(epoch_idx / self.max_epoch) + 1e-3
         # gradually increase the kld weight

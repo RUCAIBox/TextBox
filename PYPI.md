@@ -9,7 +9,7 @@ We provide the support for 6 benchmark text generation datasets. A user can appl
 
 **View TextBox homepage for more information: [https://github.com/RUCAIBox/TextBox](https://github.com/RUCAIBox/TextBox).**
 
-**View TextBox document for more implement details: [https://rucaibox.github.io/textbox.github.io/](https://rucaibox.github.io/textbox.github.io/).**
+**View TextBox document for more implement details: [https://textbox.readthedocs.io/en/latest/](https://textbox.readthedocs.io/en/latest/).**
 
 
 ## Feature

@@ -8,11 +8,12 @@
 
 [![PyPi Latest Release](https://img.shields.io/pypi/v/textbox)](https://pypi.org/project/textbox/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![Documentation Status](https://readthedocs.org/projects/textbox/badge/?version=latest)](https://textbox.readthedocs.io/en/latest/?badge=latest)
 [![Release](https://img.shields.io/github/v/release/rucaibox/textbox.svg)](https://github.com/rucaibox/textbox/releases)
 
 [文档] | [模型] | [数据集] | [论文] | [English Version]
 
-[文档]: https://rucaibox.github.io/textbox.github.io/
+[文档]: https://textbox.readthedocs.io/en/latest/
 [模型]: #模型
 [数据集]: #数据集
 [论文]: https://arxiv.org/abs/2101.02046
@@ -125,7 +126,7 @@ python run_textbox.py --model=GPT-2 --dataset=COCO --task_type=unconditional \
 
 ## 结构
 
-上述[图片](#textbox-妙笔)展示了TextBox的整体架构。程序的运行需要从文件、命令行或参数字典中获取实验参数配置，数据集和模型会根据设置的配置进行初始化，之后执行模块负责对模型进行训练和评估。获取更多接口相关的细节可以参考[说明文档](https://rucaibox.github.io/textbox.github.io/)。
+上述[图片](#textbox-妙笔)展示了TextBox的整体架构。程序的运行需要从文件、命令行或参数字典中获取实验参数配置，数据集和模型会根据设置的配置进行初始化，之后执行模块负责对模型进行训练和评估。获取更多接口相关的细节可以参考[说明文档](https://textbox.readthedocs.io/en/latest/)。
 
 ### 模型
 

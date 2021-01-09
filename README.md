@@ -8,11 +8,12 @@
 
 [![PyPi Latest Release](https://img.shields.io/pypi/v/textbox)](https://pypi.org/project/textbox/)
 [![Release](https://img.shields.io/github/v/release/rucaibox/textbox.svg)](https://github.com/rucaibox/textbox/releases)
+[![Documentation Status](https://readthedocs.org/projects/textbox/badge/?version=latest)](https://textbox.readthedocs.io/en/latest/?badge=latest)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
 [Docs] | [Model] | [Dataset] | [Paper] | [中文版]
 
-[Docs]: https://rucaibox.github.io/textbox.github.io/
+[Docs]: https://textbox.readthedocs.io/en/latest/
 [Model]: #Model
 [Dataset]: #Dataset
 [Paper]: https://arxiv.org/abs/2101.02046
@@ -125,7 +126,7 @@ python run_textbox.py --model=GPT-2 --dataset=COCO --task_type=unconditional \
 
 ## Architecture
 
-The above [Figure](#textbox-妙笔) presents the overall architecture of our library. The running procedure relies on some experimental configuration, obtained from the files, command line or parameter dictionaries. The dataset and model are prepared and initialized according to the configured settings, and the execution module is responsible for training and evaluating models. The details of interfaces can be obtained in our [document](https://rucaibox.github.io/textbox.github.io/).
+The above [Figure](#textbox-妙笔) presents the overall architecture of our library. The running procedure relies on some experimental configuration, obtained from the files, command line or parameter dictionaries. The dataset and model are prepared and initialized according to the configured settings, and the execution module is responsible for training and evaluating models. The details of interfaces can be obtained in our [document](https://textbox.readthedocs.io/en/latest/).
 
 ### Model
 

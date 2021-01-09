@@ -29,7 +29,7 @@ with open("PYPI.md", "r") as f:
 
 setup(
     name='textbox',
-    version='0.1.2',
+    version='0.1.5',
     description='A package for building text generation systems',
     url='https://github.com/RUCAIBox/TextBox',
     author='TextBoxTeam',

@@ -30,7 +30,7 @@ We provide the support for 6 benchmark text generation datasets. A user can appl
 <p align="center">
   <img src="asset/framework.png" alt="TextBox v0.1 architecture">
   <br>
-  <b>Figure</b>: TextBox Overall Architecture
+  <b>Figure</b>: The Overall Architecture of TextBox
 </p>
 
 ## Feature
@@ -38,6 +38,7 @@ We provide the support for 6 benchmark text generation datasets. A user can appl
 - **Unified and modularized framework.** TextBox is built upon PyTorch and designed to be highly modularized, by decoupling diverse models into a set of highly reusable modules.
 - **Comprehensive models, benchmark datasets and standardized evaluations.** TextBox also contains a wide range of text generation models, covering the categories of VAE, GAN, RNN or Transformer based models, and pre-trained language models (PLM).
 - **Extensible and flexible framework.** TextBox provides convenient interfaces of various common functions or modules in text generation models, RNN encoder-decoder, Transformer encoder-decoder and pre-trained language model.
+- **Easy and convenient to get started.** TextBox provides flexible configuration files, which allows green hands to run experiments without modifying source code, and allows researchers to conduct qualitative analysis by modifying few configurations.
 
 ## Installation
 
@@ -257,13 +258,13 @@ We also support you to run our model using your own dataset. Just follow the thr
 
    If you want to split the dataset by ratio automaticly, please set `split_strategy: "by_ratio"` and your desired `split_ratio` in the yaml, just as the [IMDB yaml](/textbox/properties/dataset/IMDB.yaml).
 
-3. For unconditional generation, name the corpus file `corpus_large.txt` if you set  `"by_ratio"`, name the corpus files `train.txt, valid.txt, dev.txt` if you set  `"load_split"`.
+3. For unconditional generation, name the corpus file `corpus_large.txt` if you set`"by_ratio"`, name the corpus files `train.txt, valid.txt, dev.txt` if you set `"load_split"`.
 
-   For sequence-to-sequence generation, we only support to load the splitted data. Please name the corpus files `train.[xx/yy], valid.[xx/yy], dev.[xx/yy]`, and the `xx` or `yy` is the suffix of the source or target file which should be consistent with `source_suffix` and  `target_suffix` in the YAML.
+   For sequence-to-sequence generation, we only support to load the splitted data. Please name the corpus files `train.[xx/yy], valid.[xx/yy], dev.[xx/yy]`, and the `xx` or `yy` is the suffix of the source or target file which should be consistent with `source_suffix` and `target_suffix` in the YAML.
 
 ## Experiment Results
 
-We have implemented various text generation models, and compared their performance on  unconditional and conditional text generation tasks. We also provide part of the [generated_examples](https://github.com/RUCAIBox/TextBox/tree/main/generated_examples).
+We have implemented various text generation models, and compared their performance on unconditional and conditional text generation tasks. We also show a few generated examples, and more examples can be found in [generated_examples](https://github.com/RUCAIBox/TextBox/tree/main/generated_examples).
 
 *The following results were obtained from our TextBox in preliminary experiments. However, these algorithms were implemented and tuned based on our understanding and experiences, which may not achieve their optimal performance. If you could yield a better result for some specific algorithm, please kindly let us know. We will update this table after the results are verified.*
 
@@ -286,6 +287,14 @@ Negative Log-Likelihood (NLL), BLEU and Self-BLEU (SBLEU) on test dataset:
 |  MaskGAN   | 95.93 | 58.07  | 21.22  |  5.07  |  1.88  |  76.10  |  43.41  |  20.06  |  9.37   |
 |   GPT-2    | 26.82 | 75.51  | 58.87  | 38.22  | 21.66  |  92.78  |  75.47  |  51.74  |  32.39  |
 
+Part of generated examples:
+
+| Model    | Examples                                                     |
+| -------- | ------------------------------------------------------------ |
+| LSTM-VAE | people playing polo to eat in the woods .                    |
+| LeakGAN  | a man is standing near a horse on a lush green grassy field . |
+| GPT-2    | cit a large zebra lays down on the ground.                   |
+
 #### EMNLP2017 WMT News
 
 NLL, BLEU and SBLEU on test dataset:
@@ -303,6 +312,14 @@ NLL, BLEU and SBLEU on test dataset:
 |  MaskGAN   | 303.00 | 63.08  | 21.14  |  5.40  |  1.80  |  83.92  |  47.79  |  19.96  |  7.51   |
 |   GPT-2    | 88.01  | 55.88  | 21.65  |  5.34  |  1.40  |  75.67  |  36.71  |  12.67  |  3.88   |
 
+Part of generated examples:
+
+| Model    | Examples                                                     |
+| -------- | ------------------------------------------------------------ |
+| LSTM-VAE | lewis holds us in total because they have had a fighting opportunity to hold any bodies when companies on his assault . |
+| LeakGAN  | we ' re a frustration of area , then we do coming out and play stuff so that we can be able to be ready to find a team in a game , but I know how we ' re going to say it was a problem . |
+| GPT-2    | russ i'm trying to build a house that my kids can live in, too, and it's going to be a beautiful house. |
+
 #### IMDB Movie Review
 
 NLL, BLEU and SBLEU on test dataset:
@@ -319,6 +336,14 @@ NLL, BLEU and SBLEU on test dataset:
 |  LeakGAN   | 499.57 | 78.93  | 58.96  | 32.58  | 12.65  |  92.91  |  79.21  |  60.10  |  39.79  |
 |  MaskGAN   | 509.58 | 56.61  | 21.41  |  4.49  |  0.86  |  92.09  |  77.88  |  59.62  |  42.36  |
 |   GPT-2    | 348.67 | 72.52  | 41.75  | 15.40  |  4.22  |  86.21  |  58.26  |  30.03  |  12.56  |
+
+Part of generated examples (with `max_length` 100):
+
+| Model    | Examples                                                     |
+| -------- | ------------------------------------------------------------ |
+| LSTM-VAE | best brilliant known plot , sound movie , although unfortunately but it also like . the almost five minutes i will have done its bad numbers . so not yet i found the difference from with |
+| LeakGAN  | i saw this film shortly when I storms of a few concentration one before it all time . It doesn t understand the fact that it is a very good example of a modern day , in the <\|unk\|> , I saw it . It is so bad it s a <\|unk\|> . the cast , the stars , who are given a little |
+| GPT-2    | be a very bad, low budget horror flick that is not worth watching and, in my humble opinion, not worth watching any time. the acting is atrocious, there are scenes that you could laugh at and the story, if you can call it that, was completely lacking in logic and |
 
 ### Sequence-to-Sequence Generation
 
@@ -385,6 +410,27 @@ BLEU metric on test dataset with three decoding strategies: top-k sampling, gree
 <td align="center">23.91</td>
 <td align="center">28.10</td>
 <td align="center">29.49</td>
+</tr>
+</tbody></table>
+
+Part of generated examples (with `beam_size` 5):
+
+<table>
+<tbody><tr>
+<td><b>Source (Germany)</b></td>
+<td>wissen sie , eines der großen &lt; unk &gt; beim reisen und eine der freuden bei der &lt; unk &gt; forschung ist , gemeinsam mit den menschen zu leben , die sich noch an die alten tage erinnern können . die ihre vergangenheit noch immer im wind spüren , sie auf vom regen &lt; unk &gt; steinen berühren , sie in den bitteren blättern der pflanzen schmecken .</td>
+</tr>
+<tr>
+<td><b>Gold Target (English)</b></td>
+<td>you know , one of the intense pleasures of travel and one of the delights of &lt; unk &gt; research is the opportunity to live amongst those who have not forgotten the old ways , who still feel their past in the wind , touch it in stones &lt; unk &gt; by rain , taste it in the bitter leaves of plants .</td>
+</tr>
+<tr>
+<td><b>RNN with Attention</b></td>
+<td>you know , one of the great &lt; unk &gt; trips is a travel and one of the friends in the world &amp; apos ; s investigation is located on the old days that you can remember the past day , you &amp; apos ; re &lt; unk &gt; to the rain in the &lt; unk &gt; chamber of plants .</td>
+</tr>
+<tr>
+<td><b>Transformer</b></td>
+<td>you know , one of the great &lt; unk &gt; about travel , and one of the pleasure in the &lt; unk &gt; research is to live with people who remember the old days , and they still remember the wind in the wind , but they &amp; apos ; re touching the &lt; unk &gt; .</td>
 </tr>
 </tbody></table>
 

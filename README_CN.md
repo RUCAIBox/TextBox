@@ -38,6 +38,7 @@ TextBox是基于Python和PyTorch开发的，用于在一个统一的、全面的
 - **统一模块化框架：** TextBox基于PyTorch构建，通过将不同的模型解耦为一组高度可重用的模块，实现高度模块化设计。
 - **全面的基准模型、数据集和标准评估：** TextBox还包含广泛的基准文本生成模型，涵盖VAE、GAN、基于RNN或Transformer的模型，以及预训练语言模型（PLM）等类别。
 - **高度灵活及拓展性强的框架：** TextBox在文本生成模型部分提供了多种常用的函数与模块的接口。例如RNN encoder-decoder, Transformer encoder-decoder以及各种预训练语言模型。
+- **简单便捷的上手：** TextBox提供了灵活的配置文件，生手不用修改源代码即可运行实验，研究者也可以通过修改少量配置文件进行量化实验。
 
 ## 安装
 
@@ -263,7 +264,7 @@ python run_textbox.py --model=GPT-2 --dataset=COCO --task_type=unconditional \
 
 ## 实验结果
 
-我们实现了多个文本生成模型，并在有条件文本生成和无条件文本生成任务上对他们的结果进行了比较。我们也提供了部分的[生成实例](https://github.com/RUCAIBox/TextBox/tree/main/generated_examples)。
+我们实现了多个文本生成模型，并在有条件文本生成和无条件文本生成任务上对他们的结果进行了比较。我们也展示了一些生成实例，更多的实例可以[生成实例](https://github.com/RUCAIBox/TextBox/tree/main/generated_examples)找到。
 
 *在前期实验中，我们的TextBox得到了以下结果。然而，这些算法是根据我们的理解和经验来实现和调整的，这可能没有达到它们的最佳性能。如果你能在某个具体算法上得到更好的结果，请告知我们。验证结果后，我们会更新该表。*
 
@@ -286,6 +287,14 @@ python run_textbox.py --model=GPT-2 --dataset=COCO --task_type=unconditional \
 |  MaskGAN   | 95.93 | 58.07  | 21.22  |  5.07  |  1.88  |  76.10  |  43.41  |  20.06  |  9.37   |
 |   GPT-2    | 26.82 | 75.51  | 58.87  | 38.22  | 21.66  |  92.78  |  75.47  |  51.74  |  32.39  |
 
+部分生成实例展示：
+
+| 模型     | 实例                                                         |
+| -------- | ------------------------------------------------------------ |
+| LSTM-VAE | people playing polo to eat in the woods .                    |
+| LeakGAN  | a man is standing near a horse on a lush green grassy field . |
+| GPT-2    | cit a large zebra lays down on the ground.                   |
+
 #### EMNLP2017 WMT News
 
 测试集结果展示：NLL, BLEU and SBLEU on test dataset:
@@ -303,6 +312,14 @@ python run_textbox.py --model=GPT-2 --dataset=COCO --task_type=unconditional \
 |  MaskGAN   | 303.00 | 63.08  | 21.14  |  5.40  |  1.80  |  83.92  |  47.79  |  19.96  |  7.51   |
 |   GPT-2    | 88.01  | 55.88  | 21.65  |  5.34  |  1.40  |  75.67  |  36.71  |  12.67  |  3.88   |
 
+部分生成实例展示：
+
+| 模型     | 实例                                                         |
+| -------- | ------------------------------------------------------------ |
+| LSTM-VAE | lewis holds us in total because they have had a fighting opportunity to hold any bodies when companies on his assault . |
+| LeakGAN  | we ' re a frustration of area , then we do coming out and play stuff so that we can be able to be ready to find a team in a game , but I know how we ' re going to say it was a problem . |
+| GPT-2    | russ i'm trying to build a house that my kids can live in, too, and it's going to be a beautiful house. |
+
 #### IMDB Movie Review
 
 测试集结果展示：NLL, BLEU and SBLEU on test dataset:
@@ -319,6 +336,14 @@ python run_textbox.py --model=GPT-2 --dataset=COCO --task_type=unconditional \
 |  LeakGAN   | 499.57 | 78.93  | 58.96  | 32.58  | 12.65  |  92.91  |  79.21  |  60.10  |  39.79  |
 |  MaskGAN   | 509.58 | 56.61  | 21.41  |  4.49  |  0.86  |  92.09  |  77.88  |  59.62  |  42.36  |
 |   GPT-2    | 348.67 | 72.52  | 41.75  | 15.40  |  4.22  |  86.21  |  58.26  |  30.03  |  12.56  |
+
+部分生成实例展示（最大长度 `max_length` 为100）：
+
+| 模型     | 实例                                                         |
+| -------- | ------------------------------------------------------------ |
+| LSTM-VAE | best brilliant known plot , sound movie , although unfortunately but it also like . the almost five minutes i will have done its bad numbers . so not yet i found the difference from with |
+| LeakGAN  | i saw this film shortly when I storms of a few concentration one before it all time . It doesn t understand the fact that it is a very good example of a modern day , in the <\|unk\|> , I saw it . It is so bad it s a <\|unk\|> . the cast , the stars , who are given a little |
+| GPT-2    | be a very bad, low budget horror flick that is not worth watching and, in my humble opinion, not worth watching any time. the acting is atrocious, there are scenes that you could laugh at and the story, if you can call it that, was completely lacking in logic and |
 
 ### 序列到序列(seq2seq)文本生成
 
@@ -385,6 +410,27 @@ python run_textbox.py --model=GPT-2 --dataset=COCO --task_type=unconditional \
 <td align="center">23.91</td>
 <td align="center">28.10</td>
 <td align="center">29.49</td>
+</tr>
+</tbody></table>
+部分生成实例展示（beam搜索大小 `beam_size` 设置为5）：
+
+
+<table>
+<tbody><tr>
+<td><b>Source (Germany)</b></td>
+<td>wissen sie , eines der großen &lt; unk &gt; beim reisen und eine der freuden bei der &lt; unk &gt; forschung ist , gemeinsam mit den menschen zu leben , die sich noch an die alten tage erinnern können . die ihre vergangenheit noch immer im wind spüren , sie auf vom regen &lt; unk &gt; steinen berühren , sie in den bitteren blättern der pflanzen schmecken .</td>
+</tr>
+<tr>
+<td><b>Gold Target (English)</b></td>
+<td>you know , one of the intense pleasures of travel and one of the delights of &lt; unk &gt; research is the opportunity to live amongst those who have not forgotten the old ways , who still feel their past in the wind , touch it in stones &lt; unk &gt; by rain , taste it in the bitter leaves of plants .</td>
+</tr>
+<tr>
+<td><b>RNN with Attention</b></td>
+<td>you know , one of the great &lt; unk &gt; trips is a travel and one of the friends in the world &amp; apos ; s investigation is located on the old days that you can remember the past day , you &amp; apos ; re &lt; unk &gt; to the rain in the &lt; unk &gt; chamber of plants .</td>
+</tr>
+<tr>
+<td><b>Transformer</b></td>
+<td>you know , one of the great &lt; unk &gt; about travel , and one of the pleasure in the &lt; unk &gt; research is to live with people who remember the old days , and they still remember the wind in the wind , but they &amp; apos ; re touching the &lt; unk &gt; .</td>
 </tr>
 </tbody></table>
 

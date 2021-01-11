@@ -4,4 +4,3 @@ max_seq_length: 100
 split_strategy: "by_ratio"
 split_ratio: [0.8,0.1,0.1]
 source_language: "English"
-train_batch_size: 100

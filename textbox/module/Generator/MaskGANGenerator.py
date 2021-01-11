@@ -203,7 +203,7 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         outputs, log_probs, logits = self.forward(inputs, lengths, targets, targets_present)
         fake_predictions, _ = discriminator(inputs, lengths, outputs, targets_present, self.embedder)
         fake_predictions = fake_predictions.detach()
-        est_state_values = discriminator.critic(inputs, outputs, self.embedder)
+        est_state_values = discriminator.critic(outputs, self.embedder)
         rl_loss, critic_loss = self.calculate_reinforce_objective(log_probs, fake_predictions, targets_present,
                                                                   est_state_values)
         return (rl_loss, critic_loss)

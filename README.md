@@ -121,7 +121,7 @@ TextBox supports to apply part of pretrained language models (PLM) to conduct te
 2. After downloading, you just need to run the command:
 
 ```bash
-python run_textbox.py --model=GPT-2 --dataset=COCO --task_type=unconditional \
+python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
                       --pretrained_model_path=pretrained_model/gpt2
 ```
 
@@ -145,15 +145,15 @@ We implement 16 text generation models covering unconditional generation and seq
 <tbody><tr>
 <td align="center" rowspan="3"><strong>VAE</strong></td>
 <td align="center" rowspan="9"><strong>Unconditional</strong></td>
-<td align="center">LSTM-VAE</td>
+<td align="center">LSTMVAE</td>
 <td align="center"><a href="https://arxiv.org/abs/1511.06349">(Bowman et al., 2016)</a></td>
 </tr>
 <tr>
-<td align="center">CNN-VAE</td>
+<td align="center">CNNVAE</td>
 <td align="center"><a href="https://arxiv.org/abs/1702.08139">(Yang et al., 2017)</a></td>
 </tr>
 <tr>
-<td align="center">Hybrid-VAE</td>
+<td align="center">HybridVAE</td>
 <td align="center"><a href="https://arxiv.org/abs/1702.02390">(Semeniuta et al., 2017)</a></td>
 </tr>
 <tr>
@@ -274,80 +274,125 @@ We have implemented various text generation models, and compared their performan
 
 Negative Log-Likelihood (NLL), BLEU and Self-BLEU (SBLEU) on test dataset:
 
-|   Model    |  NLL  | BLEU-2 | BLEU-3 | BLEU-4 | BLEU-5 | SBLEU-2 | SBLEU-3 | SBLEU-4 | SBLEU-5 |
-| :--------: | :---: | :----: | :----: | :----: | :----: | :-----: | :-----: | :-----: | :-----: |
-|  LSTM-VAE  | 33.02 | 80.46  |  51.5  | 25.89  | 11.55  |  89.18  |  61.58  |  32.69  |  14.03  |
-|  CNN-VAE   | 36.61 |  0.63  |  0.27  |  0.28  |  0.29  |  3.10   |  0.28   |  0.29   |  0.30   |
-| Hybrid-VAE | 56.44 | 31.96  |  3.75  |  1.61  |  1.76  |  77.79  |  26.77  |  5.71   |  2.49   |
-|   SeqGAN   | 30.56 | 80.15  | 49.88  | 24.95  | 11.10  |  84.45  |  54.26  |  27.42  |  11.87  |
-|  TextGAN   | 32.46 | 77.47  | 45.74  | 21.57  |  9.18  |  82.93  |  51.34  |  24.41  |  10.01  |
-|  RankGAN   | 31.07 | 77.36  | 45.05  | 21.46  |  9.41  |  83.13  |  50.62  |  23.79  |  10.08  |
-|  MaliGAN   | 31.50 | 80.08  | 49.52  | 24.03  | 10.36  |  84.85  |  55.32  |  28.28  |  12.09  |
-|  LeakGAN   | 25.11 | 93.49  | 82.03  | 62.59  | 42.06  |  89.73  |  64.57  |  35.60  |  14.98  |
-|  MaskGAN   | 95.93 | 58.07  | 21.22  |  5.07  |  1.88  |  76.10  |  43.41  |  20.06  |  9.37   |
-|   GPT-2    | 26.82 | 75.51  | 58.87  | 38.22  | 21.66  |  92.78  |  75.47  |  51.74  |  32.39  |
+|     Model     |  NLL  | BLEU-2 | BLEU-3 | BLEU-4 | BLEU-5 | SBLEU-2 | SBLEU-3 | SBLEU-4 | SBLEU-5 |
+| :-----------: | :---: | :----: | :----: | :----: | :----: | :-----: | :-----: | :-----: | :-----: |
+|  **RNNVAE**   | 33.02 | 80.46  |  51.5  | 25.89  | 11.55  |  89.18  |  61.58  |  32.69  |  14.03  |
+|  **CNNVAE**   | 36.61 |  0.63  |  0.27  |  0.28  |  0.29  |  3.10   |  0.28   |  0.29   |  0.30   |
+| **HybridVAE** | 56.44 | 31.96  |  3.75  |  1.61  |  1.76  |  77.79  |  26.77  |  5.71   |  2.49   |
+|  **SeqGAN**   | 30.56 | 80.15  | 49.88  | 24.95  | 11.10  |  84.45  |  54.26  |  27.42  |  11.87  |
+|  **TextGAN**  | 32.46 | 77.47  | 45.74  | 21.57  |  9.18  |  82.93  |  51.34  |  24.41  |  10.01  |
+|  **RankGAN**  | 31.07 | 77.36  | 45.05  | 21.46  |  9.41  |  83.13  |  50.62  |  23.79  |  10.08  |
+|  **MaliGAN**  | 31.50 | 80.08  | 49.52  | 24.03  | 10.36  |  84.85  |  55.32  |  28.28  |  12.09  |
+|  **LeakGAN**  | 25.11 | 93.49  | 82.03  | 62.59  | 42.06  |  89.73  |  64.57  |  35.60  |  14.98  |
+|  **MaskGAN**  | 95.93 | 58.07  | 21.22  |  5.07  |  1.88  |  76.10  |  43.41  |  20.06  |  9.37   |
+|   **GPT-2**   | 26.82 | 75.51  | 58.87  | 38.22  | 21.66  |  92.78  |  75.47  |  51.74  |  32.39  |
 
 Part of generated examples:
 
-| Model    | Examples                                                     |
-| -------- | ------------------------------------------------------------ |
-| LSTM-VAE | people playing polo to eat in the woods .                    |
-| LeakGAN  | a man is standing near a horse on a lush green grassy field . |
-| GPT-2    | cit a large zebra lays down on the ground.                   |
+<table align="center">
+<thead>
+<tr>
+<th align="center">Model</th>
+<th align="center">Examples</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center"><strong>RNNVAE</strong></td>
+<td>people playing polo to eat in the woods .</td>
+</tr>
+<tr>
+<td align="center"><strong>LeakGAN</strong></td>
+<td>a man is standing near a horse on a lush green grassy field .</td>
+</tr>
+<tr>
+<td align="center"><strong>GPT-2</strong></td>
+<td>cit a large zebra lays down on the ground.</td>
+</tr>
+</tbody></table>
 
 #### EMNLP2017 WMT News
 
 NLL, BLEU and SBLEU on test dataset:
 
-|   Model    |  NLL   | BLEU-2 | BLEU-3 | BLEU-4 | BLEU-5 | SBLEU-2 | SBLEU-3 | SBLEU-4 | SBLEU-5 |
-| :--------: | :----: | :----: | :----: | :----: | :----: | :-----: | :-----: | :-----: | :-----: |
-|  LSTM-VAE  | 142.23 | 58.81  | 19.70  |  5.57  |  2.01  |  72.79  |  27.04  |  7.85   |  2.73   |
-|  CNN-VAE   | 164.79 |  0.82  |  0.17  |  0.18  |  0.18  |  2.78   |  0.19   |  0.19   |  0.20   |
-| Hybrid-VAE | 177.75 | 29.58  |  1.62  |  0.47  |  0.49  |  59.85  |  10.3   |  1.43   |  1.10   |
-|   SeqGAN   | 142.22 | 63.90  | 20.89  |  5.64  |  1.81  |  70.97  |  25.56  |  7.05   |  2.18   |
-|  TextGAN   | 140.90 | 60.37  | 18.86  |  4.82  |  1.52  |  68.32  |  23.24  |  6.10   |  1.84   |
-|  RankGAN   | 142.27 | 61.28  | 19.81  |  5.58  |  1.82  |  67.71  |  23.15  |  6.63   |  2.09   |
-|  MaliGAN   | 149.93 | 45.00  | 12.69  |  3.16  |  1.17  |  65.10  |  20.55  |  5.41   |  1.91   |
-|  LeakGAN   | 162.70 | 76.61  | 39.14  | 15.84  |  6.08  |  85.04  |  54.70  |  29.35  |  14.63  |
-|  MaskGAN   | 303.00 | 63.08  | 21.14  |  5.40  |  1.80  |  83.92  |  47.79  |  19.96  |  7.51   |
-|   GPT-2    | 88.01  | 55.88  | 21.65  |  5.34  |  1.40  |  75.67  |  36.71  |  12.67  |  3.88   |
+|     Model     |  NLL   | BLEU-2 | BLEU-3 | BLEU-4 | BLEU-5 | SBLEU-2 | SBLEU-3 | SBLEU-4 | SBLEU-5 |
+| :-----------: | :----: | :----: | :----: | :----: | :----: | :-----: | :-----: | :-----: | :-----: |
+|  **RNNVAE**   | 142.23 | 58.81  | 19.70  |  5.57  |  2.01  |  72.79  |  27.04  |  7.85   |  2.73   |
+|  **CNNVAE**   | 164.79 |  0.82  |  0.17  |  0.18  |  0.18  |  2.78   |  0.19   |  0.19   |  0.20   |
+| **HybridVAE** | 177.75 | 29.58  |  1.62  |  0.47  |  0.49  |  59.85  |  10.3   |  1.43   |  1.10   |
+|  **SeqGAN**   | 142.22 | 63.90  | 20.89  |  5.64  |  1.81  |  70.97  |  25.56  |  7.05   |  2.18   |
+|  **TextGAN**  | 140.90 | 60.37  | 18.86  |  4.82  |  1.52  |  68.32  |  23.24  |  6.10   |  1.84   |
+|  **RankGAN**  | 142.27 | 61.28  | 19.81  |  5.58  |  1.82  |  67.71  |  23.15  |  6.63   |  2.09   |
+|  **MaliGAN**  | 149.93 | 45.00  | 12.69  |  3.16  |  1.17  |  65.10  |  20.55  |  5.41   |  1.91   |
+|  **LeakGAN**  | 162.70 | 76.61  | 39.14  | 15.84  |  6.08  |  85.04  |  54.70  |  29.35  |  14.63  |
+|  **MaskGAN**  | 303.00 | 63.08  | 21.14  |  5.40  |  1.80  |  83.92  |  47.79  |  19.96  |  7.51   |
+|   **GPT-2**   | 88.01  | 55.88  | 21.65  |  5.34  |  1.40  |  75.67  |  36.71  |  12.67  |  3.88   |
 
 Part of generated examples:
 
-| Model    | Examples                                                     |
-| -------- | ------------------------------------------------------------ |
-| LSTM-VAE | lewis holds us in total because they have had a fighting opportunity to hold any bodies when companies on his assault . |
-| LeakGAN  | we ' re a frustration of area , then we do coming out and play stuff so that we can be able to be ready to find a team in a game , but I know how we ' re going to say it was a problem . |
-| GPT-2    | russ i'm trying to build a house that my kids can live in, too, and it's going to be a beautiful house. |
+<table align="center">
+<thead>
+<tr>
+<th align="center">Model</th>
+<th align="center">Examples</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center"><strong>RNNVAE</strong></td>
+<td>lewis holds us in total because they have had a fighting opportunity to hold any bodies when companies on his assault .</td>
+</tr>
+<tr>
+<td align="center"><strong>LeakGAN</strong></td>
+<td>we &#39; re a frustration of area , then we do coming out and play stuff so that we can be able to be ready to find a team in a game , but I know how we &#39; re going to say it was a problem .</td>
+</tr>
+<tr>
+<td align="center"><strong>GPT-2</strong></td>
+<td>russ i&#39;m trying to build a house that my kids can live in, too, and it&#39;s going to be a beautiful house.</td>
+</tr>
+</tbody></table>
 
 #### IMDB Movie Review
 
 NLL, BLEU and SBLEU on test dataset:
 
-|   Model    |  NLL   | BLEU-2 | BLEU-3 | BLEU-4 | BLEU-5 | SBLEU-2 | SBLEU-3 | SBLEU-4 | SBLEU-5 |
-| :--------: | :----: | :----: | :----: | :----: | :----: | :-----: | :-----: | :-----: | :-----: |
-|  LSTM-VAE  | 445.55 | 29.14  | 13.73  |  4.81  |  1.85  |  38.77  |  14.39  |  6.61   |  5.16   |
-|  CNN-VAE   | 552.09 |  1.88  |  0.11  |  0.11  |  0.11  |  3.08   |  0.13   |  0.13   |  0.13   |
-| Hybrid-VAE | 318.46 | 38.65  |  2.53  |  0.34  |  0.31  |  70.05  |  17.27  |  1.57   |  0.59   |
-|   SeqGAN   | 547.09 | 66.33  | 26.89  |  6.80  |  1.79  |  72.48  |  35.48  |  11.60  |  3.31   |
-|  TextGAN   | 488.37 | 63.95  | 25.82  |  6.81  |  1.51  |  72.11  |  30.56  |  8.20   |  1.96   |
-|  RankGAN   | 518.10 | 58.08  | 23.71  |  6.84  |  1.67  |  69.93  |  31.68  |  11.12  |  3.78   |
-|  MaliGAN   | 552.45 | 44.50  | 15.01  |  3.69  |  1.23  |  57.25  |  22.04  |  7.36   |  3.26   |
-|  LeakGAN   | 499.57 | 78.93  | 58.96  | 32.58  | 12.65  |  92.91  |  79.21  |  60.10  |  39.79  |
-|  MaskGAN   | 509.58 | 56.61  | 21.41  |  4.49  |  0.86  |  92.09  |  77.88  |  59.62  |  42.36  |
-|   GPT-2    | 348.67 | 72.52  | 41.75  | 15.40  |  4.22  |  86.21  |  58.26  |  30.03  |  12.56  |
+|     Model     |  NLL   | BLEU-2 | BLEU-3 | BLEU-4 | BLEU-5 | SBLEU-2 | SBLEU-3 | SBLEU-4 | SBLEU-5 |
+| :-----------: | :----: | :----: | :----: | :----: | :----: | :-----: | :-----: | :-----: | :-----: |
+|  **RNNVAE**   | 445.55 | 29.14  | 13.73  |  4.81  |  1.85  |  38.77  |  14.39  |  6.61   |  5.16   |
+|  **CNNVAE**   | 552.09 |  1.88  |  0.11  |  0.11  |  0.11  |  3.08   |  0.13   |  0.13   |  0.13   |
+| **HybridVAE** | 318.46 | 38.65  |  2.53  |  0.34  |  0.31  |  70.05  |  17.27  |  1.57   |  0.59   |
+|  **SeqGAN**   | 547.09 | 66.33  | 26.89  |  6.80  |  1.79  |  72.48  |  35.48  |  11.60  |  3.31   |
+|  **TextGAN**  | 488.37 | 63.95  | 25.82  |  6.81  |  1.51  |  72.11  |  30.56  |  8.20   |  1.96   |
+|  **RankGAN**  | 518.10 | 58.08  | 23.71  |  6.84  |  1.67  |  69.93  |  31.68  |  11.12  |  3.78   |
+|  **MaliGAN**  | 552.45 | 44.50  | 15.01  |  3.69  |  1.23  |  57.25  |  22.04  |  7.36   |  3.26   |
+|  **LeakGAN**  | 499.57 | 78.93  | 58.96  | 32.58  | 12.65  |  92.91  |  79.21  |  60.10  |  39.79  |
+|  **MaskGAN**  | 509.58 | 56.61  | 21.41  |  4.49  |  0.86  |  92.09  |  77.88  |  59.62  |  42.36  |
+|   **GPT-2**   | 348.67 | 72.52  | 41.75  | 15.40  |  4.22  |  86.21  |  58.26  |  30.03  |  12.56  |
 
 Part of generated examples (with `max_length` 100):
 
-| Model    | Examples                                                     |
-| -------- | ------------------------------------------------------------ |
-| LSTM-VAE | best brilliant known plot , sound movie , although unfortunately but it also like . the almost five minutes i will have done its bad numbers . so not yet i found the difference from with |
-| LeakGAN  | i saw this film shortly when I storms of a few concentration one before it all time . It doesn t understand the fact that it is a very good example of a modern day , in the <\|unk\|> , I saw it . It is so bad it s a <\|unk\|> . the cast , the stars , who are given a little |
-| GPT-2    | be a very bad, low budget horror flick that is not worth watching and, in my humble opinion, not worth watching any time. the acting is atrocious, there are scenes that you could laugh at and the story, if you can call it that, was completely lacking in logic and |
+<table align="center">
+<thead>
+<tr>
+<th align="center">Model</th>
+<th align="center">Examples</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center"><strong>RNNVAE</strong></td>
+<td>best brilliant known plot , sound movie , although unfortunately but it also like . the almost five minutes i will have done its bad numbers . so not yet i found the difference from with</td>
+</tr>
+<tr>
+<td align="center"><strong>LeakGAN</strong></td>
+<td>i saw this film shortly when I storms of a few concentration one before it all time . It doesn t understand the fact that it is a very good example of a modern day , in the &lt;|unk|&gt; , I saw it . It is so bad it s a &lt;|unk|&gt; . the cast , the stars , who are given a little</td>
+</tr>
+<tr>
+<td align="center"><strong>GPT-2</strong></td>
+<td>be a very bad, low budget horror flick that is not worth watching and, in my humble opinion, not worth watching any time. the acting is atrocious, there are scenes that you could laugh at and the story, if you can call it that, was completely lacking in logic and</td>
+</tr>
+</tbody></table>
 
 ### Sequence-to-Sequence Generation
 
-#### IWSLT2014 German-English
+#### IWSLT2014 German-English (Translation)
 
 BLEU metric on test dataset with three decoding strategies: top-k sampling, greedy search and beam search (with `beam_size` 5):
 
@@ -362,7 +407,7 @@ BLEU metric on test dataset with three decoding strategies: top-k sampling, gree
 </tr>
 </thead>
 <tbody><tr>
-<td align="center" rowspan="4">RNN with Attention</td>
+<td align="center" rowspan="4"><b>RNN with Attention</b></td>
 <td align="center">BLEU-2</td>
 <td align="center">26.68</td>
 <td align="center">33.74</td>
@@ -387,7 +432,7 @@ BLEU metric on test dataset with three decoding strategies: top-k sampling, gree
 <td align="center">28.23</td>
 </tr>
 <tr>
-<td align="center" rowspan="4">Transformer</td>
+<td align="center" rowspan="4"><b>Transformer</b></td>
 <td align="center">BLEU-2</td>
 <td align="center">30.96</td>
 <td align="center">35.48</td>
@@ -412,27 +457,79 @@ BLEU metric on test dataset with three decoding strategies: top-k sampling, gree
 <td align="center">29.49</td>
 </tr>
 </tbody></table>
+Part of generated examples:
 
-Part of generated examples (with `beam_size` 5):
-
-<table>
+<table align="center">
 <tbody><tr>
-<td><b>Source (Germany)</b></td>
+<td align="center"><b>Source (Germany)</b></td>
 <td>wissen sie , eines der großen &lt; unk &gt; beim reisen und eine der freuden bei der &lt; unk &gt; forschung ist , gemeinsam mit den menschen zu leben , die sich noch an die alten tage erinnern können . die ihre vergangenheit noch immer im wind spüren , sie auf vom regen &lt; unk &gt; steinen berühren , sie in den bitteren blättern der pflanzen schmecken .</td>
 </tr>
 <tr>
-<td><b>Gold Target (English)</b></td>
+<td align="center"><b>Gold Target (English)</b></td>
 <td>you know , one of the intense pleasures of travel and one of the delights of &lt; unk &gt; research is the opportunity to live amongst those who have not forgotten the old ways , who still feel their past in the wind , touch it in stones &lt; unk &gt; by rain , taste it in the bitter leaves of plants .</td>
 </tr>
 <tr>
-<td><b>RNN with Attention</b></td>
+<td align="center"><b>RNN with Attention</b></td>
 <td>you know , one of the great &lt; unk &gt; trips is a travel and one of the friends in the world &amp; apos ; s investigation is located on the old days that you can remember the past day , you &amp; apos ; re &lt; unk &gt; to the rain in the &lt; unk &gt; chamber of plants .</td>
 </tr>
 <tr>
-<td><b>Transformer</b></td>
+<td align="center"><b>Transformer</b></td>
 <td>you know , one of the great &lt; unk &gt; about travel , and one of the pleasure in the &lt; unk &gt; research is to live with people who remember the old days , and they still remember the wind in the wind , but they &amp; apos ; re touching the &lt; unk &gt; .</td>
 </tr>
 </tbody></table>
+
+#### GigaWord (Summarization)
+
+ROUGE metric on test dataset using beam search (with `beam_size` 5):
+
+<table align="center">
+<thead>
+<tr>
+<th align="center">Model</th>
+<th align="center">ROUGE-1</th>
+<th align="center">ROUGE-2</th>
+<th align="center">ROUGE-L</th>
+<th align="center">ROUGE-W</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center"><strong>RNN with Attention</strong></td>
+<td align="center">36.32</td>
+<td align="center">17.63</td>
+<td align="center">38.36</td>
+<td align="center">25.08</td>
+</tr>
+<tr>
+<td align="center"><strong>Transformer</strong></td>
+<td align="center">36.21</td>
+<td align="center">17.64</td>
+<td align="center">38.10</td>
+<td align="center">24.89</td>
+</tr>
+</tbody></table>
+
+Part of generated examples:
+
+<table align="center">
+<tbody><tr>
+<td align="center"><b>Article</b></td>
+<td>japan 's nec corp. and computer corp. of the united states said wednesday they had agreed to join forces in supercomputer sales .
+</td>
+</tr>
+<tr>
+<td align="center"><b>Gold Summary</b></td>
+<td>nec in computer sales tie-up</td>
+</tr>
+<tr>
+<td align="center"><b>RNN with Attention</b></td>
+<td>nec computer corp .</td>
+</tr>
+<tr>
+<td align="center"><b>Transformer</b></td>
+<td>nec computer to join forces in chip sales</td>
+</tr>
+</tbody></table>
+
 
 ## Releases
 
@@ -467,4 +564,3 @@ TextBox is developed and maintained by [AI Box](http://aibox.ruc.edu.cn/).
 
 ## License
 TextBox uses [MIT License](./LICENSE).
-

@@ -17,6 +17,7 @@ We provide the support for 6 benchmark text generation datasets. A user can appl
 - **Unified and modularized framework.** TextBox is built upon PyTorch and designed to be highly modularized, by decoupling diverse models into a set of highly reusable modules.
 - **Comprehensive models, benchmark datasets and standardized evaluations.** TextBox also contains a wide range of text generation models, covering the categories of VAE, GAN, RNN or Transformer based models, and pre-trained language models (PLM).
 - **Extensible and flexible framework.** TextBox provides convenient interfaces of various common functions or modules in text generation models, RNN encoder-decoder, Transformer encoder-decoder and pre-trained language model.
+- **Easy and convenient to get started.** TextBox provides flexible configuration files, which allows green hands to run experiments without modifying source code, and allows researchers to conduct qualitative analysis by modifying few configurations.
 
 ## Installation
 
@@ -87,6 +88,19 @@ run_textbox(config_dict={'model': 'RNN',
 This will perform the training and test of the RNN model on the COCO dataset.
 
 If you want to run different models, parameters or datasets, the operations are same with **Start from source**.
+
+### **Using Pretrained Language Model**
+
+TextBox supports to apply part of pretrained language models (PLM) to conduct text generation. Take the GPT-2 for example, we will show you how to use PLMs to fine-tune.
+
+1. Download the GPT-2 model provided from Hugging Face (https://huggingface.co/gpt2/tree/main), including `config.json`, `merges.txt`, `pytorch_model.bin`, `tokenizer.json`and `vocab.json`. Then put them in a folder at the same level as `textbox`, such as `pretrained_model/gpt2`.
+
+2. After downloading, you just need to run the command:
+
+```bash
+python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
+                      --pretrained_model_path=pretrained_model/gpt2
+```
 
 ## The Team
 

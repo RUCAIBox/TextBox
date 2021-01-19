@@ -69,16 +69,15 @@ pip install -e . --verbose
 下载TextBox源码后，你可以使用下述提供的脚本快速上手使用该库：
 
 ```bash
-python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional
+python run_textbox.py
 ```
 
-上述脚本会在COCO数据集上运行RNN模型。一般而言，这个运行示例会执行几分钟。我们可以获得如 [example.log](asset/example.log) 这样的输出日志。
+上述脚本会在COCO数据集上运行RNN模型进行无条件生成。一般而言，这个运行示例会执行几分钟。我们可以获得如 [example.log](asset/example.log) 这样的输出日志。
 
 如果你想要改变运行的参数，如`rnn_type`，`max_vocab_size`，只需要按照你的需要设定额外的命令参数：
 
 ```bash
-python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
-                      --rnn_type=lstm --max_vocab_size=4000
+python run_textbox.py --rnn_type=lstm --max_vocab_size=4000
 ```
 
 我们也支持修改相应数据集和模型 [properties](https://github.com/RUCAIBox/TextBox/tree/main/textbox/properties) 文件夹中的YAML配置文件，并将其包含在命令行中。

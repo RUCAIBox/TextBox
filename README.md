@@ -69,16 +69,15 @@ pip install -e . --verbose
 With the source code, you can use the provided script for initial usage of our library:
 
 ```bash
-python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional
+python run_textbox.py
 ```
 
-This script will run the RNN model on the COCO dataset. Typically, this example takes a few minutes. We will obtain the output log like [example.log](asset/example.log).
+This script will run the RNN model on the COCO dataset to conduct unconditional generation. Typically, this example takes a few minutes. We will obtain the output log like [example.log](asset/example.log).
 
 If you want to change the parameters, such as `rnn_type`, `max_vocab_size`, just set the additional command parameters as you need:
 
 ```bash
-python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
-                      --rnn_type=lstm --max_vocab_size=4000
+python run_textbox.py --rnn_type=lstm --max_vocab_size=4000
 ```
 
 We also support to modify YAML configuration files in corresponding dataset and model [`properties`](https://github.com/RUCAIBox/TextBox/tree/main/textbox/properties) folders and include it in the command line.

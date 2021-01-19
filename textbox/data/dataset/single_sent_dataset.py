@@ -7,7 +7,6 @@ textbox.data.dataset.single_sent_dataset
 ########################################
 """
 
-
 import os
 import pickle
 import nltk
@@ -17,11 +16,13 @@ from textbox.data.dataset import Dataset
 
 
 class SingleSentenceDataset(Dataset):
+
     def __init__(self, config):
         self.source_language = config['source_language'].lower()
         self.strategy = config['split_strategy']
         assert self.strategy is not None
         self.split_ratio = config['split_ratio']
+        self.tokenize_strategy = config['tokenize_strategy']
         super().__init__(config)
 
     def _get_preset(self):
@@ -43,7 +44,11 @@ class SingleSentenceDataset(Dataset):
             source_text = []
             fin = open(source_file, "r")
             for line in fin:
-                words = nltk.word_tokenize(line.strip().lower(), language=self.source_language)[:self.max_seq_length]
+                if self.tokenize_strategy == 'by_space':
+                    words = line.strip().lower().split()[:self.max_seq_length]
+                else:
+                    words = nltk.word_tokenize(line.strip().lower(),
+                                               language=self.source_language)[:self.max_seq_length]
                 source_text.append(words)
             fin.close()
             self.text_data.append(source_text)
@@ -60,7 +65,10 @@ class SingleSentenceDataset(Dataset):
 
         fin = open(dataset_file, "r")
         for line in fin:
-            words = nltk.word_tokenize(line.strip().lower(), language=self.source_language)[:self.max_seq_length]
+            if self.tokenize_strategy == 'by_space':
+                words = line.strip().lower().split()[:self.max_seq_length]
+            else:
+                words = nltk.word_tokenize(line.strip().lower(), language=self.source_language)[:self.max_seq_length]
             self.text_data.append(words)
         fin.close()
 
@@ -73,7 +81,7 @@ class SingleSentenceDataset(Dataset):
         split_ids = self._calcu_split_ids(tot=tot_cnt, ratios=ratios)
         corpus_list = []
         for start, end in zip([0] + split_ids, split_ids + [tot_cnt]):
-            tp_text_data = self.text_data[start: end]
+            tp_text_data = self.text_data[start:end]
             corpus_list.append(tp_text_data)
         self.text_data = corpus_list
 
@@ -121,7 +129,7 @@ class SingleSentenceDataset(Dataset):
         split_ids = self._calcu_split_ids(tot=tot_cnt, ratios=ratios)
         corpus_list = []
         for start, end in zip([0] + split_ids, split_ids + [tot_cnt]):
-            tp_text_data = self.text_data[start: end]
+            tp_text_data = self.text_data[start:end]
             corpus_list.append(tp_text_data)
         self.text_data = corpus_list
         return self.load_split()
@@ -131,11 +139,7 @@ class SingleSentenceDataset(Dataset):
         """
         corpus_list = []
         for sent_list in self.text_data:
-            tp_data = {
-                'idx2token': self.idx2token,
-                'token2idx': self.token2idx,
-                'text_data': sent_list
-            }
+            tp_data = {'idx2token': self.idx2token, 'token2idx': self.token2idx, 'text_data': sent_list}
             corpus_list.append(tp_data)
         return corpus_list
 

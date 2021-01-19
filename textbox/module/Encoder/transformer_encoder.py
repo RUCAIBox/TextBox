@@ -7,7 +7,6 @@ Transformer Encoder
 ####################
 """
 
-
 import torch
 from torch import nn
 from torch.nn import Parameter
@@ -19,21 +18,27 @@ class TransformerEncoder(torch.nn.Module):
     r"""
     The stacked Transformer encoder layers.
     """
-    def __init__(self,
-                 embedding_size,
-                 ffn_size,
-                 num_enc_layers,
-                 num_heads,
-                 attn_dropout_ratio=0.0,
-                 attn_weight_dropout_ratio=0.0,
-                 ffn_dropout_ratio=0.0):
+
+    def __init__(
+        self,
+        embedding_size,
+        ffn_size,
+        num_enc_layers,
+        num_heads,
+        attn_dropout_ratio=0.0,
+        attn_weight_dropout_ratio=0.0,
+        ffn_dropout_ratio=0.0
+    ):
         super(TransformerEncoder, self).__init__()
 
         self.transformer_layers = nn.ModuleList()
         for _ in range(num_enc_layers):
             self.transformer_layers.append(
-                TransformerLayer(embedding_size, ffn_size, num_heads, attn_dropout_ratio, attn_weight_dropout_ratio,
-                                 ffn_dropout_ratio))
+                TransformerLayer(
+                    embedding_size, ffn_size, num_heads, attn_dropout_ratio, attn_weight_dropout_ratio,
+                    ffn_dropout_ratio
+                )
+            )
 
     def forward(self, x, kv=None, self_padding_mask=None, output_all_encoded_layers=False):
         r""" Implement the encoding process step by step.
@@ -54,7 +59,3 @@ class TransformerEncoder(torch.nn.Module):
         if output_all_encoded_layers:
             return all_encoded_layers
         return all_encoded_layers[-1]
-
-
-
-

@@ -2,7 +2,6 @@
 # @Author : Junyi Li
 # @Email  : lijunyi@ruc.edu.cn
 
-
 # UPDATE:
 # @Time   : 2020/12/04
 # @Author : Gaole He
@@ -13,7 +12,6 @@ textbox.data.dataset.paired_sent_dataset
 ########################################
 """
 
-
 import os
 import pickle
 import nltk
@@ -23,12 +21,14 @@ from textbox.data.dataset import Dataset
 
 
 class PairedSentenceDataset(Dataset):
+
     def __init__(self, config):
         self.source_language = config['source_language'].lower()
         self.target_language = config['target_language'].lower()
         self.source_suffix = config['source_suffix'].lower()
         self.target_suffix = config['target_suffix'].lower()
         self.share_vocab = config['share_vocab']
+        self.tokenize_strategy = config['tokenize_strategy']
         if config['target_max_vocab_size'] is None or config['source_max_vocab_size'] is None:
             self.source_max_vocab_size = config['max_vocab_size']
             self.target_max_vocab_size = config['max_vocab_size']
@@ -71,14 +71,20 @@ class PairedSentenceDataset(Dataset):
             target_text = []
             source_fin = open(source_file, "r")
             target_fin = open(target_file, "r")
-            
+
             for source_line, target_line in zip(source_fin, target_fin):
-                source_words = nltk.word_tokenize(source_line.strip().lower(), language=self.source_language)
-                target_words = nltk.word_tokenize(target_line.strip().lower(), language=self.target_language)
-                if (len(source_words) <= self.source_max_seq_length and len(target_words) <= self.target_max_seq_length):
+                if self.tokenize_strategy == 'by_space':
+                    source_words = source_line.strip().lower().split()
+                    target_words = target_line.strip().lower().split()
+                else:
+                    source_words = nltk.word_tokenize(source_line.strip().lower(), language=self.source_language)
+                    target_words = nltk.word_tokenize(target_line.strip().lower(), language=self.target_language)
+                if (
+                    len(source_words) <= self.source_max_seq_length and len(target_words) <= self.target_max_seq_length
+                ):
                     source_text.append(source_words)
                     target_text.append(target_words)
-            
+
             source_fin.close()
             target_fin.close()
             self.source_text_data.append(source_text)
@@ -106,17 +112,23 @@ class PairedSentenceDataset(Dataset):
         if self.share_vocab:
             assert self.source_language == self.target_language
             text_data = self.source_text_data + self.target_text_data
-            self.source_idx2token, self.source_token2idx, self.source_max_vocab_size = self._build_vocab_text(text_data,
-                                                                                       self.source_max_vocab_size)
+            self.source_idx2token, self.source_token2idx, self.source_max_vocab_size = self._build_vocab_text(
+                text_data, self.source_max_vocab_size
+            )
             self.target_idx2token, self.target_token2idx = self.source_idx2token, self.source_token2idx
             print("Share Vocabulary between source and target, vocab size: {}".format(len(self.target_idx2token)))
         else:
-            self.source_idx2token, self.source_token2idx, self.source_max_vocab_size = self._build_vocab_text(self.source_text_data,
-                                                                                       max_vocab_size=self.source_max_vocab_size)
-            self.target_idx2token, self.target_token2idx, self.target_max_vocab_size = self._build_vocab_text(self.target_text_data,
-                                                                                       max_vocab_size=self.target_max_vocab_size)
-            print("Source vocab size: {}, Target vocab size: {}".format(len(self.source_idx2token),
-                                                                        len(self.target_idx2token)))
+            self.source_idx2token, self.source_token2idx, self.source_max_vocab_size = self._build_vocab_text(
+                self.source_text_data, max_vocab_size=self.source_max_vocab_size
+            )
+            self.target_idx2token, self.target_token2idx, self.target_max_vocab_size = self._build_vocab_text(
+                self.target_text_data, max_vocab_size=self.target_max_vocab_size
+            )
+            print(
+                "Source vocab size: {}, Target vocab size: {}".format(
+                    len(self.source_idx2token), len(self.target_idx2token)
+                )
+            )
 
     def shuffle(self):
         pass
@@ -148,8 +160,9 @@ class PairedSentenceDataset(Dataset):
             pickle.dump([self.source_token2idx, self.source_idx2token], f_src_vocab)
         with open(tar_vocab_file, "wb") as f_tar_vocab:
             pickle.dump([self.target_token2idx, self.target_idx2token], f_tar_vocab)
-        self.logger.info("Vocab size: source {}, target {}".format(len(self.source_token2idx),
-                                                                   len(self.target_token2idx)))
+        self.logger.info(
+            "Vocab size: source {}, target {}".format(len(self.source_token2idx), len(self.target_token2idx))
+        )
         for i, prefix in enumerate(['train', 'dev', 'test']):
             source_text_data = self.source_text_data[i]
             target_text_data = self.target_text_data[i]

@@ -57,9 +57,9 @@ class SingleSentenceDataLoader(AbstractDataLoader):
         self.text_data[:], self.text_idx_data[:], self.idx_length_data[:] = zip(*temp)
 
     def _next_batch_data(self):
-        tp_text_data = self.text_data[self.pr: self.pr + self.step]
-        tp_text_idx_data = self.text_idx_data[self.pr: self.pr + self.step]
-        tp_idx_length_data = self.idx_length_data[self.pr: self.pr + self.step]
+        tp_text_data = self.text_data[self.pr:self.pr + self.step]
+        tp_text_idx_data = self.text_idx_data[self.pr:self.pr + self.step]
+        tp_idx_length_data = self.idx_length_data[self.pr:self.pr + self.step]
         self.pr += self.step
         padded_idx, length = self._pad_batch_sequence(tp_text_idx_data, tp_idx_length_data)
         batch_data = {

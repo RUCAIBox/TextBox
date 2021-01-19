@@ -7,7 +7,6 @@ Positional Embedding
 #####################
 """
 
-
 import torch
 from torch import nn
 from torch.nn import Parameter
@@ -18,6 +17,7 @@ import math
 class LearnedPositionalEmbedding(nn.Module):
     r"""This module produces Learned Positional Embedding.
     """
+
     def __init__(self, embedding_size, max_length=512):
         super(LearnedPositionalEmbedding, self).__init__()
         self.weights = nn.Embedding(max_length, embedding_size)
@@ -32,13 +32,11 @@ class LearnedPositionalEmbedding(nn.Module):
 class SinusoidalPositionalEmbedding(nn.Module):
     r"""This module produces sinusoidal positional embeddings of any length.
     """
+
     def __init__(self, embedding_size, max_length=512):
         super(SinusoidalPositionalEmbedding, self).__init__()
         self.embedding_size = embedding_size
-        self.weights = SinusoidalPositionalEmbedding.get_embedding(
-            max_length,
-            embedding_size
-        )
+        self.weights = SinusoidalPositionalEmbedding.get_embedding(max_length, embedding_size)
 
     @staticmethod
     def get_embedding(max_length, embedding_size):

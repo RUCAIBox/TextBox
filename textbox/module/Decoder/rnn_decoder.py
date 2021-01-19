@@ -12,7 +12,6 @@ RNN Decoder
 ###############
 """
 
-
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -23,12 +22,8 @@ class BasicRNNDecoder(torch.nn.Module):
     r"""
     Basic Recurrent Neural Network (RNN) decoder.
     """
-    def __init__(self,
-                 embedding_size,
-                 hidden_size,
-                 num_dec_layers,
-                 rnn_type,
-                 dropout_ratio=0.0):
+
+    def __init__(self, embedding_size, hidden_size, num_dec_layers, rnn_type, dropout_ratio=0.0):
         super(BasicRNNDecoder, self).__init__()
         self.rnn_type = rnn_type
         self.num_dec_layers = num_dec_layers
@@ -89,15 +84,18 @@ class AttentionalRNNDecoder(torch.nn.Module):
     r"""
     Attention-based Recurrent Neural Network (RNN) decoder.
     """
-    def __init__(self,
-                 embedding_size,
-                 hidden_size,
-                 context_size,
-                 num_dec_layers,
-                 rnn_type,
-                 dropout_ratio=0.0,
-                 attention_type='LuongAttention',
-                 alignment_method='concat'):
+
+    def __init__(
+        self,
+        embedding_size,
+        hidden_size,
+        context_size,
+        num_dec_layers,
+        rnn_type,
+        dropout_ratio=0.0,
+        attention_type='LuongAttention',
+        alignment_method='concat'
+    ):
         super(AttentionalRNNDecoder, self).__init__()
 
         self.embedding_size = embedding_size
@@ -152,8 +150,9 @@ class AttentionalRNNDecoder(torch.nn.Module):
         else:
             raise NotImplementedError("No such rnn type {} for initializing decoder states.".format(self.rnn_type))
 
-    def forward(self, input_embeddings, hidden_states=None, encoder_outputs=None, encoder_masks=None,
-                previous_probs=None):
+    def forward(
+        self, input_embeddings, hidden_states=None, encoder_outputs=None, encoder_masks=None, previous_probs=None
+    ):
         r""" Implement the attention-based decoding process.
 
         Args:

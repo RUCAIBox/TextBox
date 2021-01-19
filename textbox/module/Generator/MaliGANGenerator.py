@@ -17,6 +17,7 @@ from textbox.model.abstract_generator import UnconditionalGenerator
 class MaliGANGenerator(UnconditionalGenerator):
     r"""MaliGANGenerator is a generative model with the LSTMs.
     """
+
     def __init__(self, config, dataset):
         super(MaliGANGenerator, self).__init__(config, dataset)
 
@@ -31,7 +32,7 @@ class MaliGANGenerator(UnconditionalGenerator):
         self.vocab_size = dataset.vocab_size
 
         self.LSTM = nn.LSTM(self.embedding_size, self.hidden_size)
-        self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx = self.pad_idx)
+        self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.pad_idx)
         self.vocab_projection = nn.Linear(self.hidden_size, self.vocab_size)
 
     def calculate_loss(self, corpus, nll_test=False):
@@ -46,20 +47,22 @@ class MaliGANGenerator(UnconditionalGenerator):
         """
         datas = corpus['target_idx']  # b * len
         datas = datas.permute(1, 0)  # len * b
-        data_embedding = self.word_embedding(datas[ : -1])  # len * b * e
+        data_embedding = self.word_embedding(datas[:-1])  # len * b * e
         output, _ = self.LSTM(data_embedding)  # len * b * h
         logits = self.vocab_projection(output)  # len * b * v
-        
-        target_word = datas[1 : ]  # len * b
-        target_word_prob = F.cross_entropy(logits.reshape(-1, self.vocab_size), target_word.reshape(-1), ignore_index=self.pad_idx, reduction='none')  # (len * b)
+
+        target_word = datas[1:]  # len * b
+        target_word_prob = F.cross_entropy(
+            logits.reshape(-1, self.vocab_size), target_word.reshape(-1), ignore_index=self.pad_idx, reduction='none'
+        )  # (len * b)
         target_word_prob = target_word_prob.reshape_as(target_word)  # len * b
         if (nll_test):
-            loss = target_word_prob.sum(dim = 0)
+            loss = target_word_prob.sum(dim=0)
         else:
             length = corpus['target_length'] - 1  # b
-            loss = target_word_prob.sum(dim = 0) / length.float()  # b
+            loss = target_word_prob.sum(dim=0) / length.float()  # b
         return loss.mean()
-    
+
     def sample_batch(self):
         r"""Sample a batch of generated sentence indice.
 
@@ -69,26 +72,28 @@ class MaliGANGenerator(UnconditionalGenerator):
         self.eval()
         sentences = []
         with torch.no_grad():
-            h_prev = torch.zeros(1, self.batch_size, self.hidden_size, device = self.device)  # 1 * b * h
-            o_prev = torch.zeros(1, self.batch_size, self.hidden_size, device = self.device)  # 1 * b * h
+            h_prev = torch.zeros(1, self.batch_size, self.hidden_size, device=self.device)  # 1 * b * h
+            o_prev = torch.zeros(1, self.batch_size, self.hidden_size, device=self.device)  # 1 * b * h
             prev_state = (h_prev, o_prev)
-            X = self.word_embedding(torch.tensor([self.start_idx] * self.batch_size, dtype = torch.long, device = self.device)).unsqueeze(0)  # 1 * b * e
-            sentences = torch.zeros((self.max_length, self.batch_size), dtype = torch.long, device = self.device)
+            X = self.word_embedding(
+                torch.tensor([self.start_idx] * self.batch_size, dtype=torch.long, device=self.device)
+            ).unsqueeze(0)  # 1 * b * e
+            sentences = torch.zeros((self.max_length, self.batch_size), dtype=torch.long, device=self.device)
             sentences[0] = self.start_idx
 
             for i in range(1, self.max_length):
                 output, prev_state = self.LSTM(X, prev_state)
-                P = F.softmax(self.vocab_projection(output), dim = -1).squeeze(0)  # b * v
+                P = F.softmax(self.vocab_projection(output), dim=-1).squeeze(0)  # b * v
                 for j in range(self.batch_size):
                     sentences[i][j] = torch.multinomial(P[j], 1)[0]
                 X = self.word_embedding(sentences[i]).unsqueeze(0)  # 1 * b * e
-            
+
             sentences = sentences.permute(1, 0)  # b * l
 
             for i in range(self.batch_size):
                 end_pos = (sentences[i] == self.end_idx).nonzero(as_tuple=False)
                 if (end_pos.shape[0]):
-                    sentences[i][end_pos[0][0] + 1 : ] = self.pad_idx
+                    sentences[i][end_pos[0][0] + 1:] = self.pad_idx
 
         self.train()
         return sentences
@@ -106,7 +111,7 @@ class MaliGANGenerator(UnconditionalGenerator):
         batch_num = math.ceil(sample_num // self.batch_size)
         for _ in range(batch_num):
             samples.append(self.sample_batch())
-        samples = torch.cat(samples, dim = 0)
+        samples = torch.cat(samples, dim=0)
         return samples[:sample_num, :]
 
     def generate(self, eval_data):
@@ -124,24 +129,26 @@ class MaliGANGenerator(UnconditionalGenerator):
 
         with torch.no_grad():
             for _ in range(self.eval_generate_num):
-                h_prev = torch.zeros(1, 1, self.hidden_size, device = self.device)  # 1 * 1 * h
-                o_prev = torch.zeros(1, 1, self.hidden_size, device = self.device)  # 1 * 1 * h
+                h_prev = torch.zeros(1, 1, self.hidden_size, device=self.device)  # 1 * 1 * h
+                o_prev = torch.zeros(1, 1, self.hidden_size, device=self.device)  # 1 * 1 * h
                 prev_state = (h_prev, o_prev)
-                X = self.word_embedding(torch.tensor([[self.start_idx]], dtype = torch.long, device = self.device))  # 1 * 1 * e
+                X = self.word_embedding(
+                    torch.tensor([[self.start_idx]], dtype=torch.long, device=self.device)
+                )  # 1 * 1 * e
                 generate_tokens = []
 
                 for _ in range(self.max_length):
                     output, prev_state = self.LSTM(X, prev_state)
-                    P = F.softmax(self.vocab_projection(output), dim = -1).squeeze()  # v
+                    P = F.softmax(self.vocab_projection(output), dim=-1).squeeze()  # v
                     token = torch.multinomial(P, 1)[0]
-                    X = self.word_embedding(torch.tensor([[token]], dtype = torch.long, device = self.device))  # 1 * 1 * e
+                    X = self.word_embedding(torch.tensor([[token]], dtype=torch.long, device=self.device))  # 1 * 1 * e
                     if (token.item() == self.end_idx):
                         break
                     else:
                         generate_tokens.append(idx2token[token.item()])
-                
+
                 generate_corpus.append(generate_tokens)
-     
+
         self.train()
         return generate_corpus
 
@@ -174,21 +181,22 @@ class MaliGANGenerator(UnconditionalGenerator):
         rewards = torch.div(rewards, torch.sum(rewards))
         #rewards -= torch.mean(rewards) # To do: set baseline
 
-        h_prev = torch.zeros(1, self.batch_size, self.hidden_size, device = self.device)  # 1 * b * h
-        o_prev = torch.zeros(1, self.batch_size, self.hidden_size, device = self.device)  # 1 * b * h
-        X = self.word_embedding(torch.tensor([self.start_idx] * self.batch_size, device = self.device)).unsqueeze(0)  # 1 * b * e
+        h_prev = torch.zeros(1, self.batch_size, self.hidden_size, device=self.device)  # 1 * b * h
+        o_prev = torch.zeros(1, self.batch_size, self.hidden_size, device=self.device)  # 1 * b * h
+        X = self.word_embedding(torch.tensor([self.start_idx] * self.batch_size,
+                                             device=self.device)).unsqueeze(0)  # 1 * b * e
 
         losses = 0
         for t in range(1, self.max_length):
             output, (h_prev, o_prev) = self.LSTM(X, (h_prev, o_prev))
             logits = self.vocab_projection(output).squeeze(0)  # b * v
-            P = F.log_softmax(logits, dim = -1)  # b * v
-            word_t = fake_samples[ : , t]  # b
+            P = F.log_softmax(logits, dim=-1)  # b * v
+            word_t = fake_samples[:, t]  # b
             P_t = torch.gather(P, 1, word_t.unsqueeze(1)).squeeze(1)  # b
             X = self.word_embedding(word_t).unsqueeze(0)  # 1 * b * e
 
             mask = word_t != self.pad_idx
-            loss = - rewards * P_t * mask.float()
+            loss = -rewards * P_t * mask.float()
             mask_sum = mask.sum()
             if (mask_sum):
                 losses += loss.sum() / mask_sum

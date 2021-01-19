@@ -12,7 +12,6 @@ Attention Layers
 ################################################
 """
 
-
 import torch
 from torch import nn
 from torch.nn import Parameter
@@ -26,6 +25,7 @@ class LuongAttention(torch.nn.Module):
     Reference:
         https://arxiv.org/abs/1508.04025
     """
+
     def __init__(self, source_size, target_size, alignment_method='concat'):
         super(LuongAttention, self).__init__()
         self.source_size = source_size
@@ -64,7 +64,8 @@ class LuongAttention(torch.nn.Module):
             return energy
         else:
             raise NotImplementedError(
-                "No such alignment method {} for computing Luong scores.".format(self.alignment_method))
+                "No such alignment method {} for computing Luong scores.".format(self.alignment_method)
+            )
 
     def forward(self, hidden_states, encoder_outputs, encoder_masks):
         r"""
@@ -96,6 +97,7 @@ class BahdanauAttention(torch.nn.Module):
     Reference:
         https://arxiv.org/abs/1409.0473
     """
+
     def __init__(self, source_size, target_size):
         super(BahdanauAttention, self).__init__()
         self.source_size = source_size
@@ -144,6 +146,7 @@ class MonotonicAttention(torch.nn.Module):
     Reference:
         https://arxiv.org/abs/1704.00784
     """
+
     def __init__(self, source_size, target_size, init_r=-4):
         super(MonotonicAttention, self).__init__()
         self.source_size = source_size
@@ -177,9 +180,10 @@ class MonotonicAttention(torch.nn.Module):
         r"""Calculate the attention scores between encoder outputs and decoder states."""
         tgt_len = hidden_states.size(1)
         src_len = encoder_outputs.size(1)
-        energy = torch.tanh(self.w_linear(encoder_outputs).unsqueeze(1).repeat(1, tgt_len, 1, 1) +
-                            self.v_linear(hidden_states).unsqueeze(2).repeat(1, 1, src_len, 1) +
-                            self.bias)
+        energy = torch.tanh(
+            self.w_linear(encoder_outputs).unsqueeze(1).repeat(1, tgt_len, 1, 1) +
+            self.v_linear(hidden_states).unsqueeze(2).repeat(1, 1, src_len, 1) + self.bias
+        )
         energy = self.v(energy).squeeze(-1) + self.r
         return energy
 
@@ -275,6 +279,7 @@ class MultiHeadAttention(torch.nn.Module):
     Reference:
         https://arxiv.org/abs/1706.03762
     """
+
     def __init__(self, embedding_size, num_heads, attn_weight_dropout_ratio=0.0):
         super(MultiHeadAttention, self).__init__()
         self.embedding_size = embedding_size
@@ -336,16 +341,10 @@ class MultiHeadAttention(torch.nn.Module):
         assert list(attn_weights.size()) == [batch_size, self.num_heads, tgt_len, src_len]
 
         if attn_mask is not None:
-            attn_weights.masked_fill_(
-                attn_mask.unsqueeze(0).unsqueeze(1),
-                float('-inf')
-            )
+            attn_weights.masked_fill_(attn_mask.unsqueeze(0).unsqueeze(1), float('-inf'))
 
         if key_padding_mask is not None:
-            attn_weights.masked_fill_(
-                key_padding_mask.unsqueeze(1).unsqueeze(2),
-                float('-inf')
-            )
+            attn_weights.masked_fill_(key_padding_mask.unsqueeze(1).unsqueeze(2), float('-inf'))
 
         attn_weights = self.weight_dropout(F.softmax(attn_weights, dim=-1))
         attn_repre = torch.matmul(attn_weights, v)
@@ -362,6 +361,7 @@ class MultiHeadAttention(torch.nn.Module):
 
 
 class SelfAttentionMask(torch.nn.Module):
+
     def __init__(self, init_size=100):
         super(SelfAttentionMask, self).__init__()
         self.weights = SelfAttentionMask.get_mask(init_size)

@@ -12,7 +12,6 @@ RNN
 ################################################
 """
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -45,8 +44,9 @@ class RNN(UnconditionalGenerator):
         # define layers and loss
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
 
-        self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.num_dec_layers,
-                                       self.rnn_type, self.dropout_ratio)
+        self.decoder = BasicRNNDecoder(
+            self.embedding_size, self.hidden_size, self.num_dec_layers, self.rnn_type, self.dropout_ratio
+        )
 
         self.dropout = nn.Dropout(self.dropout_ratio)
         self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
@@ -90,11 +90,11 @@ class RNN(UnconditionalGenerator):
 
         loss = self.loss(token_logits, target_text.contiguous().view(-1)).reshape_as(target_text)
         if (nll_test):
-            loss = loss.sum(dim = 1)
+            loss = loss.sum(dim=1)
         else:
             length = corpus['target_length'] - 1
-            loss = loss.sum(dim = 1) / length.float()
+            loss = loss.sum(dim=1) / length.float()
         return loss.mean()
-    
+
     def calculate_nll_test(self, corpus, epoch_idx):
         return self.calculate_loss(corpus, epoch_idx, nll_test=True)

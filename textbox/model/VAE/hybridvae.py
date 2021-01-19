@@ -9,7 +9,6 @@ Reference:
     Rothe et al. "A Hybrid Convolutional Variational Autoencoder for Text Generation" in EMNLP 2017.
 """
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -49,8 +48,9 @@ class HybridVAE(UnconditionalGenerator):
         # define layers and loss
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
         self.encoder = BasicCNNEncoder(self.embedding_size, self.latent_size)
-        self.decoder = HybridDecoder(self.embedding_size, self.latent_size, self.hidden_size, self.num_dec_layers,
-                                     self.rnn_type, self.vocab_size)
+        self.decoder = HybridDecoder(
+            self.embedding_size, self.latent_size, self.hidden_size, self.num_dec_layers, self.rnn_type, self.vocab_size
+        )
 
         self.dropout = nn.Dropout(self.dropout_ratio)
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
@@ -81,9 +81,9 @@ class HybridVAE(UnconditionalGenerator):
                 for gen_idx in range(self.max_length):
                     decoder_input = self.token_embedder(input_seq)
 
-                    token_logits, hidden_states = self.decoder.rnn_decoder(cnn_out[:, gen_idx, :].unsqueeze(1),
-                                                                           decoder_input=decoder_input,
-                                                                           initial_state=hidden_states)
+                    token_logits, hidden_states = self.decoder.rnn_decoder(
+                        cnn_out[:, gen_idx, :].unsqueeze(1), decoder_input=decoder_input, initial_state=hidden_states
+                    )
                     token_idx = topk_sampling(token_logits)
                     token_idx = token_idx.item()
                     if token_idx == self.eos_token_idx:

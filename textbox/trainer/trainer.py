@@ -122,8 +122,10 @@ class Trainer(AbstractTrainer):
         elif self.learner.lower() == 'rmsprop':
             optimizer = optim.RMSprop(self.model.parameters(), lr=self.learning_rate)
         elif self.learner.lower() == 'schedule':
-            optimizer = ScheduledOptim(optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-09),
-                                       self.learning_rate, self.embedding_size, self.warmup_steps)
+            optimizer = ScheduledOptim(
+                optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-09), self.learning_rate,
+                self.embedding_size, self.warmup_steps
+            )
         else:
             self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
             optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
@@ -227,8 +229,10 @@ class Trainer(AbstractTrainer):
 
         # load architecture params from checkpoint
         if checkpoint['config']['model'].lower() != self.config['model'].lower():
-            self.logger.warning('Architecture configuration given in config file is different from that of checkpoint. '
-                                'This may yield an exception while state_dict is being loaded.')
+            self.logger.warning(
+                'Architecture configuration given in config file is different from that of checkpoint. '
+                'This may yield an exception while state_dict is being loaded.'
+            )
         self.model.load_state_dict(checkpoint['state_dict'])
 
         # load optimizer state from checkpoint only when optimizer type is not changed
@@ -289,8 +293,8 @@ class Trainer(AbstractTrainer):
                     valid_score, valid_result = self._valid_epoch(valid_data)
                 # valid_loss, ppl
                 self.best_valid_score, self.cur_step, stop_flag, update_flag = early_stopping(
-                    valid_score, self.best_valid_score, self.cur_step,
-                    max_step=self.stopping_step, bigger=False)
+                    valid_score, self.best_valid_score, self.cur_step, max_step=self.stopping_step, bigger=False
+                )
                 # better model are supposed to provide smaller perplexity and loss
                 valid_end_time = time()
                 valid_score_output = "epoch %d evaluating [time: %.2fs, valid_loss: %f]" % \
@@ -490,7 +494,7 @@ class GANTrainer(Trainer):
         """
         batch_size = data.shape[0]
         padded_data = torch.full((batch_size, self.max_length), self.pad_idx, dtype=torch.long, device=self.device)
-        padded_data[:, : data.shape[1]] = data
+        padded_data[:, :data.shape[1]] = data
         return padded_data
 
     def _get_real_data(self, train_data):
@@ -529,8 +533,8 @@ class GANTrainer(Trainer):
         for batch_idx, data in enumerate(train_data):
             losses = self.model.calculate_g_train_loss(data, epoch_idx=epoch_idx)
             total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
-        total_loss = [l / len(train_data) for l in total_loss] if isinstance(total_loss, tuple) else total_loss / len(
-            train_data)
+        total_loss = [l / len(train_data)
+                      for l in total_loss] if isinstance(total_loss, tuple) else total_loss / len(train_data)
         total_loss = tuple(total_loss) if isinstance(total_loss, list) else total_loss
         return total_loss
 
@@ -656,7 +660,9 @@ class TextGANTrainer(GANTrainer):
                 if (idx * self.model.batch_size >= self.d_sample_num):
                     break
 
-        return total_loss / min(len(real_dataloader), self.d_sample_num // self.model.batch_size) / self.d_sample_training_epochs
+        return total_loss / min(
+            len(real_dataloader), self.d_sample_num // self.model.batch_size
+        ) / self.d_sample_training_epochs
 
     def _adversarial_train_epoch(self, train_data, epoch_idx):
         self.model.generator.train()
@@ -780,6 +786,7 @@ class ConditionalTrainer(Trainer):
 
         return result
 
+
 class MaskGANTrainer(GANTrainer):
     r""" Trainer specifically designed for MaskGAN training process.
     """
@@ -885,13 +892,17 @@ class MaskGANTrainer(GANTrainer):
 
             total_loss = total_loss / len(real_dataloader)
             if verbose:
-                self.logger.info("Epoch {}/{} of LM pretraining loss: {} ".format(epoch+1, self.pretrain_lm_epochs, total_loss))
+                self.logger.info(
+                    "Epoch {}/{} of LM pretraining loss: {} ".format(epoch + 1, self.pretrain_lm_epochs, total_loss)
+                )
 
             ppl = 0.0
-            if (epoch+1) % 1 == 0:
+            if (epoch + 1) % 1 == 0:
                 pre_train_lm.eval()
                 validate_data = self._get_real_data(valid_data)  # bs * self.max_len
-                validate_dataloader = DataLoader(validate_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
+                validate_dataloader = DataLoader(
+                    validate_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True
+                )
                 ppl = 0.0
                 for batch_idx, data in enumerate(validate_dataloader):
                     cross_entropy_loss = lm_forward(data)
@@ -899,24 +910,26 @@ class MaskGANTrainer(GANTrainer):
                 ppl = ppl / len(validate_dataloader)
                 pre_train_lm.train()
                 if verbose:
-                    self.logger.info("Epoch {}/{} of LM pretraining PPL: {}...".format(epoch + 1, self.pretrain_lm_epochs, ppl))
+                    self.logger.info(
+                        "Epoch {}/{} of LM pretraining PPL: {}...".format(epoch + 1, self.pretrain_lm_epochs, ppl)
+                    )
                 if ppl < 110:
                     state_dict = {
                         'embedder': pre_train_lm.embedder,
                         'encoder': pre_train_lm.encoder.encoder,
                         'vocab_linear': pre_train_lm.vocab_linear
                     }
-                    self.pre_lm_weight = "saved/pretrain_lm_weight" + str(epoch+1) + ".pkl"
+                    self.pre_lm_weight = "saved/pretrain_lm_weight" + str(epoch + 1) + ".pkl"
                     torch.save(state_dict, self.pre_lm_weight)
                     if verbose:
                         self.logger.info("End LM pretraining. PPL: {}".format(ppl))
                         self.logger.info("Weigth saved in {}".format(self.pre_lm_weight))
-                    return  pre_train_lm, ppl
+                    return pre_train_lm, ppl
 
     def _g_train_epoch(self, train_data, epoch_idx):
         self.model.generator.train()
         total_loss = None
-        real_data = self._get_real_data(train_data) # bs * self.max_len
+        real_data = self._get_real_data(train_data)  # bs * self.max_len
         real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
         for batch_idx, data in enumerate(real_dataloader):
             loss = self.model.calculate_g_train_loss(data, epoch_idx=epoch_idx)
@@ -964,7 +977,7 @@ class MaskGANTrainer(GANTrainer):
 
         dis_train_data = iter(dis_train_data)
         gen_train_data = iter(gen_train_data)
-        _ = next(dis_train_data) # have one offset
+        _ = next(dis_train_data)  # have one offset
 
         for g_x in gen_train_data:
             g_num += 1
@@ -982,8 +995,14 @@ class MaskGANTrainer(GANTrainer):
 
             gen_losses, critic_losses = self.model.calculate_g_adversarial_loss(g_x, epoch_idx=g_num)
             gen_total_loss = self._optimize_step(gen_losses, gen_total_loss, self.model.generator, self.g_optimizer)
-            critic_total_loss = self._optimize_step(critic_losses, critic_total_loss, self.model.discriminator.critic_fc_linear, self.c_optimizer)
-        return {"dis_loss": dis_total_loss / d_num, "gen_loss": gen_total_loss / g_num, "critic_loss": critic_total_loss / g_num}
+            critic_total_loss = self._optimize_step(
+                critic_losses, critic_total_loss, self.model.discriminator.critic_fc_linear, self.c_optimizer
+            )
+        return {
+            "dis_loss": dis_total_loss / d_num,
+            "gen_loss": gen_total_loss / g_num,
+            "critic_loss": critic_total_loss / g_num
+        }
 
     def _evaluate_nll_test(self, eval_data):
         total_loss = 0
@@ -996,19 +1015,22 @@ class MaskGANTrainer(GANTrainer):
 
     def _add_eos(self, data, length):
         batch_size, pad_seq_len = data.size()
-        padded_data = torch.full((batch_size, self.max_length), self.eos_token_idx, dtype=torch.long, device=self.device)
+        padded_data = torch.full((batch_size, self.max_length),
+                                 self.eos_token_idx,
+                                 dtype=torch.long,
+                                 device=self.device)
         for i in range(batch_size):
             l = int(length[i].cpu().data)
-            if l == self.max_length+2:
-                padded_data[i, :] = data[i, 1:l-1]
+            if l == self.max_length + 2:
+                padded_data[i, :] = data[i, 1:l - 1]
             else:
-                padded_data[i, 0:l-1] = data[i, 1:l]
+                padded_data[i, 0:l - 1] = data[i, 1:l]
         return padded_data
 
     def _get_real_data(self, train_data):
         real_datas = []
         for corpus in train_data:
-            real_data = corpus['target_idx'] # bs*batch_max_seq_len
+            real_data = corpus['target_idx']  # bs*batch_max_seq_len
             length = corpus['target_length']
             real_data = self._add_eos(real_data, length)
             real_datas.append(real_data)
@@ -1025,7 +1047,7 @@ class MaskGANTrainer(GANTrainer):
             'state_dict': self.model.state_dict(),
             'g_opt': self.g_optimizer.state_dict(),
             'd_opt': self.d_optimizer.state_dict(),
-            'c_opt':self.c_optimizer.state_dict()
+            'c_opt': self.c_optimizer.state_dict()
         }
         if postfix is not None:
             path = self.saved_model_file + "_" + str(epoch) + "_" + postfix
@@ -1104,7 +1126,10 @@ class MaskGANTrainer(GANTrainer):
             ppl = self._get_validate_ppl(valid_data, epoch_idx)
             if verbose:
                 self.logger.info(
-                    "Epoch {}/{} of mask pretraining PPL: {}...".format(epoch_idx + 1, self.g_mask_pretraining_epochs, ppl))
+                    "Epoch {}/{} of mask pretraining PPL: {}...".format(
+                        epoch_idx + 1, self.g_mask_pretraining_epochs, ppl
+                    )
+                )
             if ppl <= 90:
                 if verbose:
                     path = self._save_checkpoint(epoch_idx + 1, postfix="pretrain_gen")
@@ -1157,7 +1182,7 @@ class MaskGANTrainer(GANTrainer):
             if verbose:
                 self.logger.info(train_loss_output)
 
-            if (epoch_idx+1) % 10 == 0:
+            if (epoch_idx + 1) % 10 == 0:
                 path = self._save_checkpoint((epoch_idx + 1), postfix="adv_train")
                 self.model.eval()
                 test_result = self.evaluate(valid_data, model_file=path)
@@ -1179,15 +1204,17 @@ class MaskGANTrainer(GANTrainer):
         self._save_checkpoint(self.adversarail_training_epochs)
         return -1, None
 
+
 class LeakGANTrainer(GANTrainer):
     r"""Specified for leakgan trainer
     """
+
     def __init__(self, config, model):
         super(LeakGANTrainer, self).__init__(config, model)
         self.interleaved_pretrain_epoch = config['interleaved_pretrain_epoch']
         self.adversarail_g_epochs = config['adversarail_g_epochs']
-        gen_lr = config['generator_lr'] # 0.001
-        dis_lr = config['discriminator_lr'] # 0.00005
+        gen_lr = config['generator_lr']  # 0.001
+        dis_lr = config['discriminator_lr']  # 0.00005
         self.g_optimizer = self._build_module_optimizer_(self.model.generator, gen_lr)  # (manager_opt, worker_opt)
         self.d_optimizer = self._build_module_optimizer_(self.model.discriminator, dis_lr)
         self.iters_num = config['iter_num']
@@ -1329,9 +1356,8 @@ class LeakGANTrainer(GANTrainer):
             # interaction = interaction.to(self.device)
             losses = self.model.calculate_g_train_loss(data, epoch_idx=epoch_idx)
             total_loss = self._optimize_step(losses, total_loss, self.model.generator, self.g_optimizer)
-        total_loss = [l / len(real_dataloader) for l in total_loss] if isinstance(total_loss,
-                                                                                  tuple) else total_loss / len(
-            train_data)
+        total_loss = [l / len(real_dataloader)
+                      for l in total_loss] if isinstance(total_loss, tuple) else total_loss / len(train_data)
         mana_loss, work_loss = total_loss
         return {"mana_loss": mana_loss, "work_loss": work_loss}
 
@@ -1368,8 +1394,10 @@ class LeakGANTrainer(GANTrainer):
         # generator pretraining
         for epoch_idx in range(self.g_pretraining_epochs):  # 80
             if verbose:
-                self.logger.info(">>>> [Pretrain Gen] Start %d / %d epochs generator pretraining" % (
-                    epoch_idx + 1, self.g_pretraining_epochs))
+                self.logger.info(
+                    ">>>> [Pretrain Gen] Start %d / %d epochs generator pretraining" %
+                    (epoch_idx + 1, self.g_pretraining_epochs)
+                )
             training_start_time = time()
             train_loss = self._g_train_epoch(train_data, epoch_idx)
             training_end_time = time()
@@ -1383,8 +1411,10 @@ class LeakGANTrainer(GANTrainer):
         # discriminator pretraining
         for epoch_idx in range(self.d_pretraining_epochs):  # 5
             if verbose:
-                self.logger.info(">>>> [Pretrain Dis]Start %d / %d epochs discriminator pretraining..." % (
-                epoch_idx + 1, self.d_pretraining_epochs))
+                self.logger.info(
+                    ">>>> [Pretrain Dis]Start %d / %d epochs discriminator pretraining..." %
+                    (epoch_idx + 1, self.d_pretraining_epochs)
+                )
             training_start_time = time()
             train_loss = self._d_train_epoch(train_data, epoch_idx)
             training_end_time = time()
@@ -1406,8 +1436,10 @@ class LeakGANTrainer(GANTrainer):
 
             for epoch_idx in range(self.adversarail_training_epochs):
                 if verbose:
-                    self.logger.info(">>>>>> [Adv] Start epoch %d / %d adversarial training" % (
-                    epoch_idx + 1, self.adversarail_training_epochs))
+                    self.logger.info(
+                        ">>>>>> [Adv] Start epoch %d / %d adversarial training" %
+                        (epoch_idx + 1, self.adversarail_training_epochs)
+                    )
                 training_start_time = time()
                 train_loss = self._adversarial_train_epoch(train_data, epoch_idx)
                 # self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss

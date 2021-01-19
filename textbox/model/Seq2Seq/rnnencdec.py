@@ -7,14 +7,12 @@
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
-
 r"""
 RNNEncDec
 ################################################
 Reference:
     Sutskever et al. "Sequence to Sequence Learning with Neural Networks" in NIPS 2014.
 """
-
 
 import torch
 import torch.nn as nn
@@ -57,30 +55,36 @@ class RNNEncDec(ConditionalGenerator):
         self.eos_token_idx = dataset.eos_token_idx
 
         # define layers and loss
-        self.source_token_embedder = nn.Embedding(self.source_vocab_size, self.embedding_size,
-                                                  padding_idx=self.padding_token_idx)
-        
+        self.source_token_embedder = nn.Embedding(
+            self.source_vocab_size, self.embedding_size, padding_idx=self.padding_token_idx
+        )
+
         if config['share_vocab']:
             self.target_token_embedder = self.source_token_embedder
         else:
-            self.target_token_embedder = nn.Embedding(self.target_vocab_size, self.embedding_size,
-                                                      padding_idx=self.padding_token_idx)
-        
-        self.encoder = BasicRNNEncoder(self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type,
-                                       self.dropout_ratio, self.bidirectional)
+            self.target_token_embedder = nn.Embedding(
+                self.target_vocab_size, self.embedding_size, padding_idx=self.padding_token_idx
+            )
+
+        self.encoder = BasicRNNEncoder(
+            self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type, self.dropout_ratio,
+            self.bidirectional
+        )
 
         if self.attention_type is not None:
-            self.decoder = AttentionalRNNDecoder(self.embedding_size, self.hidden_size, self.context_size,
-                                                 self.num_dec_layers, self.rnn_type, self.dropout_ratio,
-                                                 self.attention_type, self.alignment_method)
+            self.decoder = AttentionalRNNDecoder(
+                self.embedding_size, self.hidden_size, self.context_size, self.num_dec_layers, self.rnn_type,
+                self.dropout_ratio, self.attention_type, self.alignment_method
+            )
         else:
-            self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.num_dec_layers,
-                                           self.rnn_type, self.dropout_ratio)
+            self.decoder = BasicRNNDecoder(
+                self.embedding_size, self.hidden_size, self.num_dec_layers, self.rnn_type, self.dropout_ratio
+            )
 
         self.dropout = nn.Dropout(self.dropout_ratio)
         self.vocab_linear = nn.Linear(self.hidden_size, self.target_vocab_size)
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
-        
+
         self.max_target_length = config['target_max_seq_length']
 
         # parameters initialization
@@ -112,12 +116,16 @@ class RNNEncDec(ConditionalGenerator):
                 input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
 
                 if (self.strategy == 'beam_search'):
-                    hypothesis = Beam_Search_Hypothesis(self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token)
+                    hypothesis = Beam_Search_Hypothesis(
+                        self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token
+                    )
 
                 for gen_idx in range(self.max_target_length):
                     decoder_input = self.target_token_embedder(input_seq)
                     if self.attention_type is not None:
-                        decoder_outputs, decoder_states, _ = self.decoder(decoder_input, decoder_states, encoder_output, encoder_mask)
+                        decoder_outputs, decoder_states, _ = self.decoder(
+                            decoder_input, decoder_states, encoder_output, encoder_mask
+                        )
                     else:
                         decoder_outputs, decoder_states = self.decoder(decoder_input, decoder_states)
 
@@ -147,7 +155,7 @@ class RNNEncDec(ConditionalGenerator):
                     generate_tokens = hypothesis.generate()
 
                 generate_corpus.append(generate_tokens)
-        
+
         return generate_corpus
 
     def calculate_loss(self, corpus, epoch_idx=0):
@@ -171,8 +179,9 @@ class RNNEncDec(ConditionalGenerator):
         encoder_masks = torch.ne(source_text, self.padding_token_idx)
 
         if self.attention_type is not None:
-            decoder_outputs, decoder_states, _ = self.decoder(input_embeddings, encoder_states, encoder_outputs,
-                                                              encoder_masks)
+            decoder_outputs, decoder_states, _ = self.decoder(
+                input_embeddings, encoder_states, encoder_outputs, encoder_masks
+            )
         else:
             decoder_outputs, decoder_states = self.decoder(input_embeddings, encoder_states)
 

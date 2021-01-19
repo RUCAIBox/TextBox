@@ -7,7 +7,6 @@ LeakGAN Discriminator
 #####################
 """
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -19,6 +18,7 @@ from textbox.model.abstract_generator import UnconditionalGenerator
 class LeakGANDiscriminator(UnconditionalGenerator):
     r"""CNN based discriminator for leakgan extracting feature of current sentence
     """
+
     def __init__(self, config, dataset):
         super(LeakGANDiscriminator, self).__init__(config, dataset)
 
@@ -40,8 +40,7 @@ class LeakGANDiscriminator(UnconditionalGenerator):
             self.filters.append(
                 nn.Sequential(
                     nn.Conv2d(1, filter_num, (filter_size, self.embedding_size), stride=1, padding=0, bias=True),
-                    nn.ReLU(),
-                    nn.MaxPool2d((self.max_length - filter_size + 1, 1), stride=1, padding=0)
+                    nn.ReLU(), nn.MaxPool2d((self.max_length - filter_size + 1, 1), stride=1, padding=0)
                 )
             )
 

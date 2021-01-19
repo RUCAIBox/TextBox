@@ -1,11 +1,10 @@
 # special tokens
-max_vocab_size: 50000
-max_seq_length: 50
 source_max_vocab_size: 50000
 target_max_vocab_size: 50000
-source_max_seq_length: 50
-target_max_seq_length: 50
+source_max_seq_length: 250
+target_max_seq_length: 250
 source_language: english
 target_language: german
 source_suffix: en
 target_suffix: de
+tokenize_strategy: 'by_space'

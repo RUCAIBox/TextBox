@@ -1,6 +1,4 @@
 # special tokens
-max_vocab_size: 30000
-max_seq_length: 200
 source_max_vocab_size: 30000
 target_max_vocab_size: 30000
 source_max_seq_length: 200

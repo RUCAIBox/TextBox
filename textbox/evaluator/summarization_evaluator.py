@@ -18,7 +18,6 @@ from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 from textbox.evaluator.metrics import metrics_dict
 import rouge
 
-
 summarization_metrics = ['rouge-1', 'rouge-2', 'rouge-l', 'rouge-w']
 
 
@@ -31,16 +30,18 @@ class SummarizationEvaluator(AbstractEvaluator):
         super().__init__(config)
 
         self.n_grams = config['n_grams']
-        self.evaluator = rouge.Rouge(metrics=['rouge-n', 'rouge-l', 'rouge-w'],
-                                     max_n=2,
-                                     limit_length=True,
-                                     length_limit=config['target_max_seq_length'],
-                                     length_limit_type='words',
-                                     apply_avg=True,
-                                     apply_best=False,
-                                     alpha=0.5,  # Default F1_score
-                                     weight_factor=1.2,
-                                     stemming=True)
+        self.evaluator = rouge.Rouge(
+            metrics=['rouge-n', 'rouge-l', 'rouge-w'],
+            max_n=2,
+            limit_length=True,
+            length_limit=config['target_max_seq_length'],
+            length_limit_type='words',
+            apply_avg=True,
+            apply_best=False,
+            alpha=0.5,  # Default F1_score
+            weight_factor=1.2,
+            stemming=True
+        )
 
     def transform_words2str(self, corpus):
         new_corpus = []
@@ -62,8 +63,7 @@ class SummarizationEvaluator(AbstractEvaluator):
         generate_corpus = self.transform_words2str(generate_corpus)
         reference_corpus = self.transform_words2str(reference_corpus)
         metric_dict = {}
-        rouge_dict = self._calc_metrics_info(generate_corpus=generate_corpus,
-                                             reference_corpus=reference_corpus)
+        rouge_dict = self._calc_metrics_info(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
         for metric in rouge_dict:
             tp_list = rouge_dict[metric]
             tp_val = np.mean(tp_list)

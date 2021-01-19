@@ -9,7 +9,6 @@ Reference:
     Yang et al. "Improved Variational Autoencoders for Text Modeling using Dilated Convolutions" in ICML 2017.
 """
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -54,10 +53,13 @@ class CNNVAE(UnconditionalGenerator):
         # define layers and loss
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
 
-        self.encoder = BasicRNNEncoder(self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type,
-                                       self.dropout_ratio, self.bidirectional)
-        self.decoder = BasicCNNDecoder(self.embedding_size, self.latent_size, self.decoder_kernel_size,
-                                       self.decoder_dilations, self.dropout_ratio)
+        self.encoder = BasicRNNEncoder(
+            self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type, self.dropout_ratio,
+            self.bidirectional
+        )
+        self.decoder = BasicCNNDecoder(
+            self.embedding_size, self.latent_size, self.decoder_kernel_size, self.decoder_dilations, self.dropout_ratio
+        )
         self.highway_1 = Highway(self.num_highway_layers, self.embedding_size)
         self.highway_2 = Highway(self.num_highway_layers, self.num_directions * self.hidden_size)
 

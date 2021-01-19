@@ -7,7 +7,6 @@ LeakGAN Generator
 #####################
 """
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -19,6 +18,7 @@ from torch.distributions import Categorical
 class LeakGANGenerator(UnconditionalGenerator):
     r"""LeakGAN generator consist of worker(LSTM) and manager(LSTM)
     """
+
     def __init__(self, config, dataset):
         super(LeakGANGenerator, self).__init__(config, dataset)
 
@@ -69,8 +69,9 @@ class LeakGANGenerator(UnconditionalGenerator):
         leak_out_array, feature_array, goal_array = self.leakgan_forward(targets, dis, train=False, pretrain=True)
 
         # Manager loss
-        mana_cos_loss = self.manager_cos_loss(batch_size, feature_array,
-                                              goal_array)  # batch_size * (seq_len / step_size)
+        mana_cos_loss = self.manager_cos_loss(
+            batch_size, feature_array, goal_array
+        )  # batch_size * (seq_len / step_size)
         manager_loss = -torch.sum(mana_cos_loss) / (self.batch_size * self.max_length / self.step_size)
         # Worker loss
         work_cn_loss = self.worker_cross_entropy_loss(targets, leak_out_array)
@@ -129,8 +130,9 @@ class LeakGANGenerator(UnconditionalGenerator):
         # Worker
         work_out, work_hidden = self.worker(emb, work_hidden)  # work_out: 1 * batch_size * hidden_dim
         work_out = self.work2goal(work_out.squeeze(dim=0))  # bs * (vocab*goal)
-        work_out = work_out.contiguous().view(-1, self.vocab_size,
-                                              self.goal_size)  # batch_size * vocab_size * goal_size
+        work_out = work_out.contiguous().view(
+            -1, self.vocab_size, self.goal_size
+        )  # batch_size * vocab_size * goal_size
 
         # Sample token
         out = torch.matmul(work_out, _real_goal).squeeze(-1)  # batch_size * vocab_size
@@ -201,8 +203,9 @@ class LeakGANGenerator(UnconditionalGenerator):
             feature_array[:, i, :] = feature.squeeze(0)  # batch_size * total_num_filters
             # using input_t and feature_t to get token_t+1
             # out is the log softmax over vocab distribution
-            out, cur_goal, work_hidden, mana_hidden = self.forward(i, leak_inp_t, work_hidden, mana_hidden, feature,
-                                                                   real_goal, train=train, pretrain=pretrain)
+            out, cur_goal, work_hidden, mana_hidden = self.forward(
+                i, leak_inp_t, work_hidden, mana_hidden, feature, real_goal, train=train, pretrain=pretrain
+            )
             leak_out_array[:, i - 1, :] = out
             # save the current goal_t
             goal_array[:, i, :] = cur_goal
@@ -230,8 +233,8 @@ class LeakGANGenerator(UnconditionalGenerator):
             o_prev = torch.zeros(1, self.batch_size, self.hidden_size, device=self.device)  # 1 * b * h
             prev_state = (h_prev, o_prev)
             X = self.word_embedding(
-                torch.tensor([self.start_idx] * self.batch_size, dtype=torch.long, device=self.device)).unsqueeze(
-                0)  # 1 * b * e
+                torch.tensor([self.start_idx] * self.batch_size, dtype=torch.long, device=self.device)
+            ).unsqueeze(0)  # 1 * b * e
             sentences = torch.zeros((self.max_length, self.batch_size), dtype=torch.long, device=self.device)
             sentences[0] = self.start_idx
 
@@ -287,8 +290,8 @@ class LeakGANGenerator(UnconditionalGenerator):
         for i in range(0, self.max_length):
             if i == 0:
                 leak_inp_t = torch.LongTensor([self.start_idx] * batch_size)  # the input token for worker at step t
-                cur_dis_inp = torch.LongTensor(
-                    [self.pad_idx] * batch_size * seq_len)  # current sentence for dis ar step t
+                cur_dis_inp = torch.LongTensor([self.pad_idx] * batch_size * seq_len
+                                               )  # current sentence for dis ar step t
                 cur_dis_inp = cur_dis_inp.view((batch_size, seq_len))  # bs*seq_len
             else:
                 leak_inp_t = gen_x
@@ -303,8 +306,9 @@ class LeakGANGenerator(UnconditionalGenerator):
 
             # using input_t and feature_t to get token_t+1
             # out is the softmax over vocab distribution
-            out, cur_goal, work_hidden, mana_hidden = self.forward(i, leak_inp_t, work_hidden, mana_hidden, feature,
-                                                                   real_goal, train=train, pretrain=False)
+            out, cur_goal, work_hidden, mana_hidden = self.forward(
+                i, leak_inp_t, work_hidden, mana_hidden, feature, real_goal, train=train, pretrain=False
+            )
             out_dis = Categorical(F.softmax(out, dim=-1))  # bs * vocab
             gen_x = out_dis.sample()  # bs
             gen_x_prob = out_dis.log_prob(gen_x)
@@ -359,8 +363,9 @@ class LeakGANGenerator(UnconditionalGenerator):
         r"""Generate data and calculate adversarial loss
         """
         with torch.no_grad():
-            gen_samples = self.sample(self.batch_size, dis, self.start_idx,
-                                      train=True)  # !!! train=True, the only place
+            gen_samples = self.sample(
+                self.batch_size, dis, self.start_idx, train=True
+            )  # !!! train=True, the only place
 
         rewards = self.get_reward_leakgan(gen_samples, self.monte_carlo_num, dis).cpu()  # reward with MC search
         mana_loss, work_loss = self.get_adv_loss(gen_samples, rewards, dis)
@@ -577,8 +582,9 @@ class LeakGANGenerator(UnconditionalGenerator):
             feature = dis.get_feature(cur_dis_inp).unsqueeze(0)  # !!!note: 1 * batch_size * total_num_filters
             # using input_t and feature_t to get token_t+1
             # out is the log softmax over vocab distribution
-            out, cur_goal, work_hidden, mana_hidden = self.forward(i, leak_inp_t, work_hidden, mana_hidden, feature,
-                                                                   real_goal, train=False, pretrain=False)
+            out, cur_goal, work_hidden, mana_hidden = self.forward(
+                i, leak_inp_t, work_hidden, mana_hidden, feature, real_goal, train=False, pretrain=False
+            )
 
             leak_out_array.append(targets[:, i - 1])
 
@@ -605,8 +611,9 @@ class LeakGANGenerator(UnconditionalGenerator):
             feature = dis.get_feature(cur_dis_inp).unsqueeze(0)  # !!!note: 1 * batch_size * total_num_filters
             # using input_t and feature_t to get token_t+1
             # out is the log softmax over vocab distribution
-            out, cur_goal, work_hidden, mana_hidden = self.forward(i, leak_inp_t, work_hidden, mana_hidden, feature,
-                                                                   real_goal, train=True, pretrain=False)
+            out, cur_goal, work_hidden, mana_hidden = self.forward(
+                i, leak_inp_t, work_hidden, mana_hidden, feature, real_goal, train=True, pretrain=False
+            )
 
             # sample one token
             out_dis = Categorical(F.softmax(out))
@@ -641,14 +648,15 @@ class LeakGANGenerator(UnconditionalGenerator):
         leak_out_array, feature_array, goal_array = self.leakgan_forward(target, dis, train=True)
 
         # Manager Loss
-        mana_cos_loss = self.manager_cos_loss(batch_size, feature_array,
-                                              goal_array)  # batch_size * (seq_len / step_size)
+        mana_cos_loss = self.manager_cos_loss(
+            batch_size, feature_array, goal_array
+        )  # batch_size * (seq_len / step_size)
         mana_loss = -torch.mean(rewards * mana_cos_loss)
 
         # Worker Loss
         work_cn_loss = self.worker_cross_entropy_loss(target, leak_out_array, reduction='none')  # batch_size * seq_len
         work_cos_reward = self.worker_cos_reward(feature_array, goal_array)  # batch_size * seq_len
         work_cos_reward = work_cos_reward.contiguous().reshape((-1))
-        work_loss = - torch.mean(work_cn_loss * work_cos_reward)
+        work_loss = -torch.mean(work_cn_loss * work_cos_reward)
 
         return mana_loss, work_loss

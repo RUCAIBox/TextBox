@@ -7,7 +7,6 @@ textbox.data.dataset.dataset
 ##################################
 """
 
-
 import numpy as np
 import os
 from logging import getLogger
@@ -15,6 +14,7 @@ from textbox.utils.enum_type import SpecialTokens
 
 
 class Dataset(object):
+
     def __init__(self, config):
         self.config = config
         self.dataset_path = config['data_path']

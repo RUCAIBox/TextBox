@@ -34,19 +34,19 @@ class RankGAN(GenerativeAdversarialNet):
 
     def calculate_g_train_loss(self, corpus, epoch_idx):
         return self.generator.calculate_loss(corpus)
-    
+
     def calculate_d_train_loss(self, real_data, fake_data, ref_data, epoch_idx):
         return self.discriminator.calculate_loss(real_data, fake_data, ref_data)
-    
+
     def calculate_g_adversarial_loss(self, ref_data, epoch_idx):
         self.discriminator.eval()
         loss = self.generator.adversarial_loss(ref_data, self.discriminator.get_rank_scores)
         self.discriminator.train()
         return loss
-    
+
     def calculate_nll_test(self, corpus, epoch_idx):
         return self.generator.calculate_loss(corpus, nll_test=True)
-        
+
     def generate(self, eval_data):
         return self.generator.generate(eval_data)
 

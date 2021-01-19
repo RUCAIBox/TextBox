@@ -14,7 +14,6 @@ Reference:
     Yu et al. "SeqGAN: Sequence Generative Adversarial Nets with Policy Gradient" in AAAI 2017.
 """
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

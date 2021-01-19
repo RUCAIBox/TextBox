@@ -17,7 +17,6 @@ import torch
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 from textbox.evaluator.metrics import metrics_dict
 
-
 ngram_metrics = {metric.lower(): metric for metric in ['bleu']}
 
 
@@ -45,9 +44,9 @@ class TranslationEvaluator(AbstractEvaluator):
         """
         # get metrics
         metric_dict = {}
-        bleu_dict = self._calc_metrics_info(generate_corpus=generate_corpus,
-                                            reference_corpus=reference_corpus,
-                                            metric='bleu')
+        bleu_dict = self._calc_metrics_info(
+            generate_corpus=generate_corpus, reference_corpus=reference_corpus, metric='bleu'
+        )
         for n_gram in bleu_dict:
             key = 'bleu-{}'.format(n_gram)
             tp_list = bleu_dict[n_gram]
@@ -65,7 +64,8 @@ class TranslationEvaluator(AbstractEvaluator):
             for n_gram in self.n_grams:
                 if n_gram <= 0:
                     raise ValueError(
-                        'n_gram must be a positive integer or a list of positive integers, but get `{}`'.format(n_gram))
+                        'n_gram must be a positive integer or a list of positive integers, but get `{}`'.format(n_gram)
+                    )
         else:
             raise TypeError('The n_gram must be a integer, list')
 
@@ -89,10 +89,11 @@ class TranslationEvaluator(AbstractEvaluator):
         for i in range(len(generate_corpus)):
             pred_sent = generate_corpus[i]
             gold_sent = reference_corpus[i]
-            result, avg_bleu = metric_fuc(generate_corpus=[pred_sent], reference_corpus=[gold_sent],
-                                          n_grams=self.n_grams, get_avg=True)
+            result, avg_bleu = metric_fuc(
+                generate_corpus=[pred_sent], reference_corpus=[gold_sent], n_grams=self.n_grams, get_avg=True
+            )
             for i in self.n_grams:
-                bleu_dict[i].append(result[i-1])
+                bleu_dict[i].append(result[i - 1])
             bleu_dict['avg-bleu'].append(avg_bleu)
         return bleu_dict
 

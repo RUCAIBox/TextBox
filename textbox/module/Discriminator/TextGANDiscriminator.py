@@ -16,6 +16,7 @@ from textbox.model.abstract_generator import UnconditionalGenerator
 class TextGANDiscriminator(UnconditionalGenerator):
     r"""The discriminator of TextGAN.
     """
+
     def __init__(self, config, dataset):
         super(TextGANDiscriminator, self).__init__(config, dataset)
 
@@ -33,21 +34,22 @@ class TextGANDiscriminator(UnconditionalGenerator):
         self.vocab_size = dataset.vocab_size
         self.filter_sum = sum(self.filter_nums)
 
-        self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx = self.pad_idx)
+        self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.pad_idx)
         self.dropout = nn.Dropout(self.dropout_rate)
         self.filters = nn.ModuleList([])
 
         for (filter_size, filter_num) in zip(self.filter_sizes, self.filter_nums):
             self.filters.append(
                 nn.Sequential(
-                nn.Conv2d(1, filter_num, (filter_size, self.embedding_size)),
-                nn.ReLU(),
-                nn.MaxPool2d((self.max_length - filter_size + 1, 1))))
+                    nn.Conv2d(1, filter_num, (filter_size, self.embedding_size)), nn.ReLU(),
+                    nn.MaxPool2d((self.max_length - filter_size + 1, 1))
+                )
+            )
 
         self.W_O = nn.Linear(self.filter_sum, 1)
         self.recon = nn.Linear(self.filter_sum, self.hidden_size)
-    
-    def feature(self, data): # b * len * v
+
+    def feature(self, data):  # b * len * v
         r"""Get the feature map extracted from CNN for data.
 
         Args:
@@ -56,17 +58,17 @@ class TextGANDiscriminator(UnconditionalGenerator):
         Returns:
             torch.Tensor: The feature of data, shape: [batch_size, total_filter_num].
         """
-        data = torch.matmul(data.float(), self.word_embedding.weight).unsqueeze(1) # b * len * e -> b * 1 * len * e
+        data = torch.matmul(data.float(), self.word_embedding.weight).unsqueeze(1)  # b * len * e -> b * 1 * len * e
         combined_outputs = []
         for CNN_filter in self.filters:
-            output = CNN_filter(data).squeeze(-1).squeeze(-1) # b * f_n * 1 * 1 -> b * f_n
+            output = CNN_filter(data).squeeze(-1).squeeze(-1)  # b * f_n * 1 * 1 -> b * f_n
             combined_outputs.append(output)
-        combined_outputs = torch.cat(combined_outputs, 1) # b * tot_f_n
+        combined_outputs = torch.cat(combined_outputs, 1)  # b * tot_f_n
         combined_outputs = self.dropout(combined_outputs)
 
         return combined_outputs
 
-    def forward(self, data): # b * len * v
+    def forward(self, data):  # b * len * v
         r"""Calculate the probability that the data is realistic.
 
         Args:
@@ -75,10 +77,10 @@ class TextGANDiscriminator(UnconditionalGenerator):
         Returns:
             torch.Tensor: The probability that each sentence is realistic, shape: [batch_size].
         """
-        features = self.feature(data) # b * tot_f_n
-        y_hat = torch.sigmoid(self.W_O(features)).squeeze(1) # b
+        features = self.feature(data)  # b * tot_f_n
+        y_hat = torch.sigmoid(self.W_O(features)).squeeze(1)  # b
         return y_hat
-    
+
     def _calculate_gan_loss(self, real_data, fake_data):
         r"""Calculate the vanilla gan loss for real data and fake data.
 
@@ -100,7 +102,7 @@ class TextGANDiscriminator(UnconditionalGenerator):
 
         return loss
 
-    def _gaussian_kernel_matrix(self, x, y): # b * tot_f_n, b * tot_f_n
+    def _gaussian_kernel_matrix(self, x, y):  # b * tot_f_n, b * tot_f_n
         r"""Conduct gaussian kernel for feature x and y.
 
         Args:
@@ -110,10 +112,11 @@ class TextGANDiscriminator(UnconditionalGenerator):
         Returns:
             torch.Tensor: The result after conducting gaussian kernel, shape: [batch_size, batch_size].
         """
-        beta = 1. / (2. * self.gaussian_sigmas.unsqueeze(1)) # sig_n * 1
-        dist = torch.pow((x.unsqueeze(2) - y.T).norm(dim = 1), 2).T # b * t * 1 - t * b -> b * t * b - b * t * b -> b * t * b -> b * b
-        s = torch.matmul(beta, dist.reshape(1, -1)) # sig_n * 1 x 1 * (b * b) -> sig_n * (b * b)
-        return torch.exp(-s).sum(dim = 0).reshape_as(dist) # sig_n * (b * b) -> (b * b) -> b * b
+        beta = 1. / (2. * self.gaussian_sigmas.unsqueeze(1))  # sig_n * 1
+        dist = torch.pow((x.unsqueeze(2) - y.T).norm(dim=1),
+                         2).T  # b * t * 1 - t * b -> b * t * b - b * t * b -> b * t * b -> b * b
+        s = torch.matmul(beta, dist.reshape(1, -1))  # sig_n * 1 x 1 * (b * b) -> sig_n * (b * b)
+        return torch.exp(-s).sum(dim=0).reshape_as(dist)  # sig_n * (b * b) -> (b * b) -> b * b
 
     def _calculate_mmd_loss(self, x, y):
         r"""Calculate the maximum mean discrepancy loss for feature x and y.
@@ -130,7 +133,7 @@ class TextGANDiscriminator(UnconditionalGenerator):
         cost -= 2 * self._gaussian_kernel_matrix(x, y).mean()
         return cost
 
-    def _calculate_recon_loss(self, fake_feature, z): # b * tot_f_n, b * h
+    def _calculate_recon_loss(self, fake_feature, z):  # b * tot_f_n, b * h
         r"""Calculate the reconstructed loss for fake feature and latent code z.
 
         Args:
@@ -140,8 +143,8 @@ class TextGANDiscriminator(UnconditionalGenerator):
         Returns:
             torch.Tensor: The calculated recon loss of fake feature and latent code z, shape: [].
         """
-        z_hat = self.recon(fake_feature) # b * h
-        return (z - z_hat).norm(dim = 1).mean() # b * h -> b -> 1
+        z_hat = self.recon(fake_feature)  # b * h
+        return (z - z_hat).norm(dim=1).mean()  # b * h -> b -> 1
 
     def calculate_g_loss(self, real_data, fake_data):
         r"""Calculate the maximum mean discrepancy loss for real data and fake data.
@@ -153,8 +156,8 @@ class TextGANDiscriminator(UnconditionalGenerator):
         Returns:
             torch.Tensor: The calculated mmd loss of real data and fake data, shape: [].
         """
-        real_feature = self.feature(real_data) # b * tot_f_n
-        fake_feature = self.feature(fake_data) # b * tot_f_n
+        real_feature = self.feature(real_data)  # b * tot_f_n
+        fake_feature = self.feature(fake_data)  # b * tot_f_n
         mmd_loss = self._calculate_mmd_loss(real_feature, fake_feature)
         return mmd_loss
 
@@ -170,8 +173,8 @@ class TextGANDiscriminator(UnconditionalGenerator):
             torch.Tensor: The calculated loss of real data and fake data, shape: [].
         """
         gan_loss = self._calculate_gan_loss(real_data, fake_data)
-        real_feature = self.feature(real_data) # b * tot_f_n
-        fake_feature = self.feature(fake_data) # b * tot_f_n
+        real_feature = self.feature(real_data)  # b * tot_f_n
+        fake_feature = self.feature(fake_data)  # b * tot_f_n
         mmd_loss = -self.mmd_lambda * self._calculate_mmd_loss(real_feature, fake_feature)
         recon_loss = self.recon_lambda * self._calculate_recon_loss(fake_feature, z)
         l2_reg_loss = self.l2_reg_lambda * (self.W_O.weight.norm() + self.W_O.bias.norm())

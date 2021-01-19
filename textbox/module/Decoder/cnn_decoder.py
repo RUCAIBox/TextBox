@@ -7,7 +7,6 @@ CNN Decoder
 ###############
 """
 
-
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -19,12 +18,8 @@ class BasicCNNDecoder(torch.nn.Module):
     Basic Convolution Neural Network (CNN) decoder.
     Code Reference: https://github.com/kefirski/contiguous-succotash
     """
-    def __init__(self,
-                 input_size,
-                 latent_size,
-                 decoder_kernel_size,
-                 decoder_dilations,
-                 dropout_ratio):
+
+    def __init__(self, input_size, latent_size, decoder_kernel_size, decoder_dilations, dropout_ratio):
         super(BasicCNNDecoder, self).__init__()
         self.latent_size = latent_size
         self.input_size = input_size
@@ -51,8 +46,9 @@ class BasicCNNDecoder(torch.nn.Module):
                 in_channel = self.decoder_kernel_size[i - 1]
             decoder_kernels.append(nn.Parameter(torch.Tensor(out_channel, in_channel, 3).normal_(0, 0.05)))
 
-        decoder_biases = [nn.Parameter(torch.Tensor(out_channel).normal_(0, 0.05))
-                          for out_channel in self.decoder_kernel_size]
+        decoder_biases = [
+            nn.Parameter(torch.Tensor(out_channel).normal_(0, 0.05)) for out_channel in self.decoder_kernel_size
+        ]
 
         decoder_paddings = [2 * self.decoder_dilations[i] for i in range(len(decoder_kernels))]
 
@@ -80,11 +76,13 @@ class BasicCNNDecoder(torch.nn.Module):
 
         for layer, kernel in enumerate(self.decoder_kernels):
             # apply conv layer with non-linearity and drop last elements of sequence to perfrom input shifting
-            x = F.conv1d(x,
-                         weight=kernel.to(device),
-                         bias=self.decoder_biases[layer].to(device),
-                         dilation=self.decoder_dilations[layer],
-                         padding=self.decoder_paddings[layer])
+            x = F.conv1d(
+                x,
+                weight=kernel.to(device),
+                bias=self.decoder_biases[layer].to(device),
+                dilation=self.decoder_dilations[layer],
+                padding=self.decoder_paddings[layer]
+            )
             x_width = x.size(2)
             x = x[:, :, :(x_width - self.decoder_paddings[layer])].contiguous()
             x = F.relu(x)
@@ -98,6 +96,7 @@ class HybridDecoder(nn.Module):
     Hybrid Convolution Neural Network (CNN) and Recurrent Neural Network (RNN) decoder.
     Code Reference: https://github.com/kefirski/hybrid_rvae
     """
+
     def __init__(self, embedding_size, latent_size, hidden_size, num_dec_layers, rnn_type, vocab_size):
         super(HybridDecoder, self).__init__()
 
@@ -109,26 +108,11 @@ class HybridDecoder(nn.Module):
         self.rnn_type = rnn_type
 
         self.cnn = nn.Sequential(
-            nn.ConvTranspose1d(self.latent_size, 512, 4, 2, 0),
-            nn.BatchNorm1d(512),
-            nn.ELU(),
-
-            nn.ConvTranspose1d(512, 512, 4, 2, 0, output_padding=1),
-            nn.BatchNorm1d(512),
-            nn.ELU(),
-
-            nn.ConvTranspose1d(512, 256, 4, 2, 0),
-            nn.BatchNorm1d(256),
-            nn.ELU(),
-
-            nn.ConvTranspose1d(256, 256, 4, 2, 0, output_padding=1),
-            nn.BatchNorm1d(256),
-            nn.ELU(),
-
-            nn.ConvTranspose1d(256, 128, 4, 2, 0),
-            nn.BatchNorm1d(128),
-            nn.ELU(),
-
+            nn.ConvTranspose1d(self.latent_size, 512, 4, 2, 0), nn.BatchNorm1d(512), nn.ELU(),
+            nn.ConvTranspose1d(512, 512, 4, 2, 0, output_padding=1), nn.BatchNorm1d(512), nn.ELU(),
+            nn.ConvTranspose1d(512, 256, 4, 2, 0), nn.BatchNorm1d(256), nn.ELU(),
+            nn.ConvTranspose1d(256, 256, 4, 2, 0, output_padding=1), nn.BatchNorm1d(256), nn.ELU(),
+            nn.ConvTranspose1d(256, 128, 4, 2, 0), nn.BatchNorm1d(128), nn.ELU(),
             nn.ConvTranspose1d(128, self.vocab_size, 4, 2, 0)
         )
 

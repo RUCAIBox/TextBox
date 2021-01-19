@@ -97,6 +97,7 @@ class ConditionalGenerator(AbstractModel):
         self.batch_size = config['train_batch_size']
         self.device = config['device']
 
+
 class GenerativeAdversarialNet(AbstractModel):
     """This is a abstract general generative adversarial network. All the general model should implement this class.
     The base general generative adversarial network class provide the basic parameters information.

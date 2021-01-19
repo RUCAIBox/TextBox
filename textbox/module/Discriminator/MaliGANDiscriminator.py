@@ -16,6 +16,7 @@ from textbox.model.abstract_generator import UnconditionalGenerator
 class MaliGANDiscriminator(UnconditionalGenerator):
     r"""MaliGANDiscriminator is LSTMs.
     """
+
     def __init__(self, config, dataset):
         super(MaliGANDiscriminator, self).__init__(config, dataset)
 
@@ -29,7 +30,7 @@ class MaliGANDiscriminator(UnconditionalGenerator):
         self.vocab_size = dataset.vocab_size
 
         self.LSTM = nn.LSTM(self.embedding_size, self.hidden_size, self.num_dis_layers, batch_first=True)
-        self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx = self.pad_idx)
+        self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.pad_idx)
         self.vocab_projection = nn.Linear(self.hidden_size, self.vocab_size)
 
         self.hidden_linear = nn.Linear(self.num_dis_layers * self.hidden_size, self.hidden_size)
@@ -46,8 +47,10 @@ class MaliGANDiscriminator(UnconditionalGenerator):
             torch.Tensor: The probability that each sentence is realistic, shape: [batch_size].
         """
         data_embedding = self.word_embedding(data)  # b * l * e
-        _, (hidden, _) = self.LSTM(data_embedding)   # hidden: b * num_layers * h
-        out = self.hidden_linear(hidden.view(-1, self.num_dis_layers * self.hidden_size))  # b * (num_layers * h) -> b * h
+        _, (hidden, _) = self.LSTM(data_embedding)  # hidden: b * num_layers * h
+        out = self.hidden_linear(
+            hidden.view(-1, self.num_dis_layers * self.hidden_size)
+        )  # b * (num_layers * h) -> b * h
         pred = self.label_linear(self.dropout(torch.tanh(out))).squeeze(1)  # b * h -> b
         pred = torch.sigmoid(pred)
         return pred

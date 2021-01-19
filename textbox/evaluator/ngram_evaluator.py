@@ -17,7 +17,6 @@ import torch
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 from textbox.evaluator.metrics import metrics_dict
 
-
 ngram_metrics = {metric.lower(): metric for metric in ['bleu', 'self_bleu']}
 
 
@@ -75,7 +74,8 @@ class NgramEvaluator(AbstractEvaluator):
             for n_gram in self.n_grams:
                 if n_gram <= 0:
                     raise ValueError(
-                        'n_gram must be a positive integer or a list of positive integers, but get `{}`'.format(n_gram))
+                        'n_gram must be a positive integer or a list of positive integers, but get `{}`'.format(n_gram)
+                    )
         else:
             raise TypeError('The n_gram must be a integer, list')
 

@@ -46,8 +46,9 @@ class MaskGAN(GenerativeAdversarialNet):
         device = target_inputs.device
         lengths = lengths.cuda(device)
         target_present = target_present.cuda(device)
-        return self.generator.calculate_train_loss(real_inputs, lengths, target_inputs, target_present,
-                                                   validate=validate)
+        return self.generator.calculate_train_loss(
+            real_inputs, lengths, target_inputs, target_present, validate=validate
+        )
 
     def calculate_d_train_loss(self, data, epoch_idx):
         r"""Specified for maskgan calculate discriminator masked token predicted
@@ -64,17 +65,17 @@ class MaskGAN(GenerativeAdversarialNet):
 
         fake_sequence, _, _ = self.generator.forward(inputs, lengths, targets, targets_present)
         self.generator.train()
-        return self.discriminator.calculate_loss(inputs, lengths, fake_sequence, targets_present,
-                                                 self.generator.embedder)
+        return self.discriminator.calculate_loss(
+            inputs, lengths, fake_sequence, targets_present, self.generator.embedder
+        )
 
     def generate_mask(self, batch_size, seq_len, mask_strategy):
         r"""Generate the mask to be fed into the model.
         """
         if mask_strategy == 'random':
-            p = np.random.choice(
-                [True, False],
-                size=[batch_size, seq_len],
-                p=[self.is_present_rate, 1. - self.is_present_rate])
+            p = np.random.choice([True, False],
+                                 size=[batch_size, seq_len],
+                                 p=[self.is_present_rate, 1. - self.is_present_rate])
         elif mask_strategy == 'continuous':
             masked_length = int((1 - self.is_present_rate) * seq_len) - 1
             # Determine location to start masking.

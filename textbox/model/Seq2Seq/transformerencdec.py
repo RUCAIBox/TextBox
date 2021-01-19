@@ -7,7 +7,6 @@
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
-
 r"""
 TransformerEncDec
 ################################################
@@ -57,14 +56,16 @@ class TransformerEncDec(ConditionalGenerator):
         self.eos_token_idx = dataset.eos_token_idx
 
         # define layers and loss
-        self.source_token_embedder = nn.Embedding(self.source_vocab_size, self.embedding_size,
-                                                  padding_idx=self.padding_token_idx)
+        self.source_token_embedder = nn.Embedding(
+            self.source_vocab_size, self.embedding_size, padding_idx=self.padding_token_idx
+        )
 
         if config['share_vocab']:
             self.target_token_embedder = self.source_token_embedder
         else:
-            self.target_token_embedder = nn.Embedding(self.target_vocab_size, self.embedding_size,
-                                                      padding_idx=self.padding_token_idx)
+            self.target_token_embedder = nn.Embedding(
+                self.target_vocab_size, self.embedding_size, padding_idx=self.padding_token_idx
+            )
 
         if config['learned_position_embedder']:
             self.position_embedder = LearnedPositionalEmbedding(self.embedding_size)
@@ -73,13 +74,21 @@ class TransformerEncDec(ConditionalGenerator):
 
         self.self_attn_mask = SelfAttentionMask()
 
-        self.encoder = TransformerEncoder(self.embedding_size, self.ffn_size, self.num_enc_layers, self.num_heads,
-                                          self.attn_dropout_ratio, self.attn_weight_dropout_ratio,
-                                          self.ffn_dropout_ratio)
+        self.encoder = TransformerEncoder(
+            self.embedding_size, self.ffn_size, self.num_enc_layers, self.num_heads, self.attn_dropout_ratio,
+            self.attn_weight_dropout_ratio, self.ffn_dropout_ratio
+        )
 
-        self.decoder = TransformerDecoder(self.embedding_size, self.ffn_size, self.num_dec_layers, self.num_heads,
-                                          self.attn_dropout_ratio, self.attn_weight_dropout_ratio,
-                                          self.ffn_dropout_ratio, with_external=True)
+        self.decoder = TransformerDecoder(
+            self.embedding_size,
+            self.ffn_size,
+            self.num_dec_layers,
+            self.num_heads,
+            self.attn_dropout_ratio,
+            self.attn_weight_dropout_ratio,
+            self.ffn_dropout_ratio,
+            with_external=True
+        )
 
         self.vocab_linear = nn.Linear(self.embedding_size, self.target_vocab_size)
 
@@ -102,9 +111,9 @@ class TransformerEncDec(ConditionalGenerator):
             source_embeddings = self.source_token_embedder(source_text) + \
                                 self.position_embedder(source_text).to(self.device)
             source_padding_mask = torch.eq(source_text, self.padding_token_idx).to(self.device)
-            encoder_outputs = self.encoder(source_embeddings,
-                                            self_padding_mask=source_padding_mask,
-                                            output_all_encoded_layers=False)
+            encoder_outputs = self.encoder(
+                source_embeddings, self_padding_mask=source_padding_mask, output_all_encoded_layers=False
+            )
 
             for bid in range(source_text.size(0)):
                 encoder_output = encoder_outputs[bid, :, :].unsqueeze(0)
@@ -114,14 +123,20 @@ class TransformerEncDec(ConditionalGenerator):
                 input_seq = torch.LongTensor([prev_token_ids]).to(self.device)
 
                 if (self.decoding_strategy == 'beam_search'):
-                    hypothesis = Beam_Search_Hypothesis(self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token)
-                
+                    hypothesis = Beam_Search_Hypothesis(
+                        self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token
+                    )
+
                 for gen_idx in range(self.max_target_length):
                     self_attn_mask = self.self_attn_mask(input_seq.size(-1)).bool().to(self.device)
                     decoder_input = self.target_token_embedder(input_seq) + \
                                     self.position_embedder(input_seq).to(self.device)
-                    decoder_outputs = self.decoder(decoder_input, self_attn_mask=self_attn_mask,
-                                                   external_states=encoder_output, external_padding_mask=encoder_mask)
+                    decoder_outputs = self.decoder(
+                        decoder_input,
+                        self_attn_mask=self_attn_mask,
+                        external_states=encoder_output,
+                        external_padding_mask=encoder_mask
+                    )
 
                     token_logits = self.vocab_linear(decoder_outputs[:, -1, :].unsqueeze(1))
 
@@ -132,7 +147,7 @@ class TransformerEncDec(ConditionalGenerator):
                     elif (self.decoding_strategy == 'beam_search'):
                         input_seq, encoder_output, encoder_mask = \
                             hypothesis.step(gen_idx, token_logits, encoder_output=encoder_output, encoder_mask=encoder_mask, input_type='whole')
-                    
+
                     if (self.decoding_strategy in ['topk_sampling', 'greedy_search']):
                         if token_idx == self.eos_token_idx:
                             break
@@ -148,7 +163,7 @@ class TransformerEncDec(ConditionalGenerator):
                     generate_tokens = hypothesis.generate()
 
                 generate_corpus.append(generate_tokens)
-        
+
         return generate_corpus
 
     def calculate_loss(self, corpus, epoch_idx=0):
@@ -158,19 +173,21 @@ class TransformerEncDec(ConditionalGenerator):
         target_text = corpus['target_idx'][:, 1:]
 
         source_embeddings = self.source_token_embedder(source_text) + self.position_embedder(source_text).to(
-            self.device)
+            self.device
+        )
         source_padding_mask = torch.eq(source_text, self.padding_token_idx).to(self.device)
-        encoder_outputs = self.encoder(source_embeddings,
-                                       self_padding_mask=source_padding_mask)
+        encoder_outputs = self.encoder(source_embeddings, self_padding_mask=source_padding_mask)
 
         input_embeddings = self.target_token_embedder(input_text) + self.position_embedder(input_text).to(self.device)
         self_padding_mask = torch.eq(input_text, self.padding_token_idx).to(self.device)
         self_attn_mask = self.self_attn_mask(input_text.size(-1)).bool().to(self.device)
-        decoder_outputs = self.decoder(input_embeddings,
-                                       self_padding_mask=self_padding_mask,
-                                       self_attn_mask=self_attn_mask,
-                                       external_states=encoder_outputs,
-                                       external_padding_mask=source_padding_mask)
+        decoder_outputs = self.decoder(
+            input_embeddings,
+            self_padding_mask=self_padding_mask,
+            self_attn_mask=self_attn_mask,
+            external_states=encoder_outputs,
+            external_padding_mask=source_padding_mask
+        )
 
         token_logits = self.vocab_linear(decoder_outputs)
         loss = self.loss(token_logits.view(-1, token_logits.size(-1)), target_text.contiguous().view(-1))

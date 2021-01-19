@@ -32,8 +32,7 @@ class AbstractDataLoader(object):
     """
     dl_type = None
 
-    def __init__(self, config, dataset,
-                 batch_size=1, shuffle=False):
+    def __init__(self, config, dataset, batch_size=1, shuffle=False):
         self.config = config
         self.device = config['device']
         self.logger = getLogger()

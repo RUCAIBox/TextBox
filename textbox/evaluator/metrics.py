@@ -51,6 +51,7 @@ def bleu_(generate_corpus, reference_corpus, n_grams, get_avg=False):
         return results, avg_bleu
     return results
 
+
 def self_bleu_(generate_corpus, n_grams, reference_corpus=None):
     r""" Calculate the Self-BLEU metrics of the generated corpus.
 
@@ -83,7 +84,4 @@ def self_bleu_(generate_corpus, n_grams, reference_corpus=None):
 Useful when we have to serialize evaluation metric names
 and call the functions based on deserialized names
 """
-metrics_dict = {
-    'bleu': bleu_,
-    'self_bleu': self_bleu_
-}
+metrics_dict = {'bleu': bleu_, 'self_bleu': self_bleu_}

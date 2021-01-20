@@ -6,3 +6,4 @@ stopping_step: 5
 epochs: 10
 train_batch_size: 10
 eval_batch_size: 10
+pretrained_model_path: "pretrained_model/bert-base-uncased"

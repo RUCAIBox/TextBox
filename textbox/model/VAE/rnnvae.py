@@ -9,7 +9,6 @@ Reference:
     Bowman et al. "Generating Sentences from a Continuous Space" in CoNLL 2016.
 """
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -52,10 +51,13 @@ class RNNVAE(UnconditionalGenerator):
         # define layers and loss
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
 
-        self.encoder = BasicRNNEncoder(self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type,
-                                       self.dropout_ratio, self.bidirectional)
-        self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.num_dec_layers, self.rnn_type,
-                                       self.dropout_ratio)
+        self.encoder = BasicRNNEncoder(
+            self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type, self.dropout_ratio,
+            self.bidirectional
+        )
+        self.decoder = BasicRNNDecoder(
+            self.embedding_size, self.hidden_size, self.num_dec_layers, self.rnn_type, self.dropout_ratio
+        )
 
         self.dropout = nn.Dropout(self.dropout_ratio)
         self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)

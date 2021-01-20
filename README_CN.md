@@ -69,16 +69,15 @@ pip install -e . --verbose
 下载TextBox源码后，你可以使用下述提供的脚本快速上手使用该库：
 
 ```bash
-python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional
+python run_textbox.py
 ```
 
-上述脚本会在COCO数据集上运行RNN模型。一般而言，这个运行示例会执行几分钟。我们可以获得如 [example.log](asset/example.log) 这样的输出日志。
+上述脚本会在COCO数据集上运行RNN模型进行无条件生成。一般而言，这个运行示例会执行几分钟。我们可以获得如 [example.log](asset/example.log) 这样的输出日志。
 
 如果你想要改变运行的参数，如`rnn_type`，`max_vocab_size`，只需要按照你的需要设定额外的命令参数：
 
 ```bash
-python run_textbox.py --model=RNN --dataset=COCO --task_type=unconditional \
-                      --rnn_type=lstm --max_vocab_size=4000
+python run_textbox.py --rnn_type=lstm --max_vocab_size=4000
 ```
 
 我们也支持修改相应数据集和模型 [properties](https://github.com/RUCAIBox/TextBox/tree/main/textbox/properties) 文件夹中的YAML配置文件，并将其包含在命令行中。
@@ -400,63 +399,74 @@ python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
 <thead>
 <tr>
 <th align="center">模型</th>
-<th align="center">Metric</th>
-<th align="center">Top-k sampling</th>
-<th align="center">Greedy search</th>
-<th align="center">Beam search</th>
+<th align="center">解码策略</th>
+<th align="center">BLEU-2</th>
+<th align="center">BLEU-3</th>
+<th align="center">BLEU-4</th>
+<th align="center">BLEU</th>
 </tr>
 </thead>
 <tbody><tr>
-<td align="center" rowspan="4"><b>RNN with Attention</b></td>
-<td align="center">BLEU-2</td>
+<td align="center" rowspan="3"><b>RNN with Attention</b></td>
+<td align="center">Top-k sampling</td>
 <td align="center">26.68</td>
-<td align="center">33.74</td>
-<td align="center">35.68</td>
-</tr>
-<tr>
-<td align="center">BLEU-3</td>
 <td align="center">16.95</td>
-<td align="center">23.03</td>
-<td align="center">24.94</td>
-</tr>
-<tr>
-<td align="center">BLEU-4</td>
 <td align="center">10.85</td>
-<td align="center">15.79</td>
-<td align="center">17.42</td>
+<td align="center">19.66</td>
 </tr>
 <tr>
-<td align="center">BLEU</td>
-<td align="center">19.66</td>
+<td align="center">Greedy search</td>
+<td align="center">33.74</td>
+<td align="center">23.03</td>
+<td align="center">15.79</td>
 <td align="center">26.23</td>
+</tr>
+<tr>
+<td align="center">Beam search</td>
+<td align="center">35.68</td>
+<td align="center">24.94</td>
+<td align="center">17.42</td>
 <td align="center">28.23</td>
 </tr>
 <tr>
-<td align="center" rowspan="4"><b>Transformer</b></td>
-<td align="center">BLEU-2</td>
+<td align="center" rowspan="3"><b>Transformer</b></td>
+<td align="center">Top-k sampling</td>
 <td align="center">30.96</td>
-<td align="center">35.48</td>
-<td align="center">36.88</td>
-</tr>
-<tr>
-<td align="center">BLEU-3</td>
 <td align="center">20.83</td>
-<td align="center">24.76</td>
-<td align="center">26.10</td>
-</tr>
-<tr>
-<td align="center">BLEU-4</td>
 <td align="center">14.16</td>
-<td align="center">17.41</td>
-<td align="center">18.54</td>
+<td align="center">23.91</td>
 </tr>
 <tr>
-<td align="center">BLEU</td>
-<td align="center">23.91</td>
+<td align="center">Greedy search</td>
+<td align="center">35.48</td>
+<td align="center">24.76</td>
+<td align="center">17.41</td>
 <td align="center">28.10</td>
+</tr>
+<tr>
+<td align="center">Beam search</td>
+<td align="center">36.88</td>
+<td align="center">26.10</td>
+<td align="center">18.54</td>
 <td align="center">29.49</td>
 </tr>
+<tr>
+<td align="center"><b>BART</b></td>
+<td align="center">Beam search</td>
+<td align="center">29.02</td>
+<td align="center">19.58</td>
+<td align="center">13.48</td>
+<td align="center">22.42</td>
+</tr>
+<td align="center"><b>BERT2BERT</b></td>
+<td align="center">Beam search</td>
+<td align="center">27.61</td>
+<td align="center">18.41</td>
+<td align="center">12.46</td>
+<td align="center">21.07</td>
+</tr>
 </tbody></table>
+
 
 部分生成实例展示：
 

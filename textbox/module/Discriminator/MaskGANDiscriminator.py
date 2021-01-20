@@ -41,16 +41,20 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
         self.eos_token_idx = dataset.eos_token_idx
         self.mask_token_idx = dataset.user_token_idx[0]
 
-        self.encoder = BasicRNNEncoder(self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type,
-                                       self.dropout_ratio, self.bidirectional)
+        self.encoder = BasicRNNEncoder(
+            self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type, self.dropout_ratio,
+            self.bidirectional
+        )
 
         if self.attention_type is not None:
-            self.decoder = AttentionalRNNDecoder(self.embedding_size, self.hidden_size, self.context_size,
-                                                 self.num_dec_layers, self.rnn_type, self.dropout_ratio,
-                                                 self.attention_type, self.alignment_method)
+            self.decoder = AttentionalRNNDecoder(
+                self.embedding_size, self.hidden_size, self.context_size, self.num_dec_layers, self.rnn_type,
+                self.dropout_ratio, self.attention_type, self.alignment_method
+            )
         else:
-            self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.num_dec_layers,
-                                           self.rnn_type, self.dropout_ratio)
+            self.decoder = BasicRNNDecoder(
+                self.embedding_size, self.hidden_size, self.num_dec_layers, self.rnn_type, self.dropout_ratio
+            )
 
         self.dropout = nn.Dropout(self.dropout_ratio)
         self.fc_linear = nn.Linear(self.hidden_size, 1)

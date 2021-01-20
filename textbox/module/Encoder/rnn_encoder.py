@@ -7,7 +7,6 @@ RNN Encoder
 ############
 """
 
-
 import torch
 from torch import nn
 import numpy as np
@@ -18,13 +17,8 @@ class BasicRNNEncoder(torch.nn.Module):
     r"""
     Basic Recurrent Neural Network (RNN) encoder.
     """
-    def __init__(self,
-                 embedding_size,
-                 hidden_size,
-                 num_enc_layers,
-                 rnn_type,
-                 dropout_ratio,
-                 bidirectional=True):
+
+    def __init__(self, embedding_size, hidden_size, num_enc_layers, rnn_type, dropout_ratio, bidirectional=True):
         super(BasicRNNEncoder, self).__init__()
         self.rnn_type = rnn_type
         self.num_enc_layers = num_enc_layers
@@ -34,14 +28,32 @@ class BasicRNNEncoder(torch.nn.Module):
         self.num_directions = 2 if self.bidirectional else 1
 
         if rnn_type == 'lstm':
-            self.encoder = nn.LSTM(embedding_size, hidden_size, num_enc_layers,
-                                   batch_first=True, dropout=dropout_ratio, bidirectional=bidirectional)
+            self.encoder = nn.LSTM(
+                embedding_size,
+                hidden_size,
+                num_enc_layers,
+                batch_first=True,
+                dropout=dropout_ratio,
+                bidirectional=bidirectional
+            )
         elif rnn_type == 'gru':
-            self.encoder = nn.GRU(embedding_size, hidden_size, num_enc_layers,
-                                  batch_first=True, dropout=dropout_ratio, bidirectional=bidirectional)
+            self.encoder = nn.GRU(
+                embedding_size,
+                hidden_size,
+                num_enc_layers,
+                batch_first=True,
+                dropout=dropout_ratio,
+                bidirectional=bidirectional
+            )
         elif rnn_type == 'rnn':
-            self.encoder = nn.RNN(embedding_size, hidden_size, num_enc_layers,
-                                  batch_first=True, dropout=dropout_ratio, bidirectional=bidirectional)
+            self.encoder = nn.RNN(
+                embedding_size,
+                hidden_size,
+                num_enc_layers,
+                batch_first=True,
+                dropout=dropout_ratio,
+                bidirectional=bidirectional
+            )
         else:
             raise ValueError("The RNN type of encoder must be in ['lstm', 'gru', 'rnn'].")
 
@@ -83,8 +95,9 @@ class BasicRNNEncoder(torch.nn.Module):
         if hidden_states is None:
             hidden_states = self.init_hidden(input_embeddings)
 
-        packed_input_embeddings = torch.nn.utils.rnn.pack_padded_sequence(input_embeddings, input_length,
-                                                                          batch_first=True, enforce_sorted=False)
+        packed_input_embeddings = torch.nn.utils.rnn.pack_padded_sequence(
+            input_embeddings, input_length, batch_first=True, enforce_sorted=False
+        )
 
         outputs, hidden_states = self.encoder(packed_input_embeddings, hidden_states)
 

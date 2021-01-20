@@ -7,13 +7,13 @@
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
-
 """
 textbox.utils.enum_type
 #######################
 """
 
 from enum import Enum
+
 
 class ModelType(Enum):
     """Type of models.

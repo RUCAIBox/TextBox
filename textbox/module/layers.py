@@ -26,6 +26,7 @@ class Highway(nn.Module):
         - input_size(int): size of highway input.
 
     """
+
     def __init__(self, num_highway_layers, input_size):
         super(Highway, self).__init__()
         self.num_highway_layers = num_highway_layers
@@ -41,7 +42,7 @@ class Highway(nn.Module):
             # Compute non linear information
             linear = self.linear[layer](x)
             # Compute linear information
-            x = gate*non_linear + (1-gate)*linear
+            x = gate * non_linear + (1 - gate) * linear
             # Combine non linear and linear information according to gate
         return x
 
@@ -61,8 +62,17 @@ class TransformerLayer(torch.nn.Module):
     Returns:
         feedforward_output (torch.Tensor): the output of the point-wise feed-forward sublayer, is the output of the transformer layer
     """
-    def __init__(self, embedding_size, ffn_size, num_heads, attn_dropout_ratio=0.0, attn_weight_dropout_ratio=0.0,
-                 ffn_dropout_ratio=0.0, with_external=False):
+
+    def __init__(
+        self,
+        embedding_size,
+        ffn_size,
+        num_heads,
+        attn_dropout_ratio=0.0,
+        attn_weight_dropout_ratio=0.0,
+        ffn_dropout_ratio=0.0,
+        with_external=False
+    ):
         super(TransformerLayer, self).__init__()
         self.multi_head_attention = MultiHeadAttention(embedding_size, num_heads, attn_weight_dropout_ratio)
         self.feed_forward_1 = nn.Linear(embedding_size, ffn_size)
@@ -77,7 +87,9 @@ class TransformerLayer(torch.nn.Module):
         self.with_external = with_external
 
         if self.with_external:
-            self.external_multi_head_attention = MultiHeadAttention(embedding_size, num_heads, attn_weight_dropout_ratio)
+            self.external_multi_head_attention = MultiHeadAttention(
+                embedding_size, num_heads, attn_weight_dropout_ratio
+            )
             self.external_layer_norm = nn.LayerNorm(embedding_size)
 
         self.reset_parameters()
@@ -91,27 +103,32 @@ class TransformerLayer(torch.nn.Module):
     def gelu(self, x):
         return x * 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
 
-    def forward(self, x, kv=None,
-                self_padding_mask=None, self_attn_mask=None,
-                external_states=None, external_padding_mask=None):
+    def forward(
+        self,
+        x,
+        kv=None,
+        self_padding_mask=None,
+        self_attn_mask=None,
+        external_states=None,
+        external_padding_mask=None
+    ):
         residual = x
         if kv is None:
-            x, self_attn_weights = self.multi_head_attention(query=x, key=x, value=x,
-                                                             key_padding_mask=self_padding_mask,
-                                                             attn_mask=self_attn_mask)
+            x, self_attn_weights = self.multi_head_attention(
+                query=x, key=x, value=x, key_padding_mask=self_padding_mask, attn_mask=self_attn_mask
+            )
         else:
-            x, self_attn_weights = self.multi_head_attention(query=x, key=kv, value=kv,
-                                                             key_padding_mask=self_padding_mask,
-                                                             attn_mask=self_attn_mask)
+            x, self_attn_weights = self.multi_head_attention(
+                query=x, key=kv, value=kv, key_padding_mask=self_padding_mask, attn_mask=self_attn_mask
+            )
         x = self.attn_dropout(x)
         x = self.attn_layer_norm(residual + x)
 
         if self.with_external:
             residual = x
-            x, external_attn_weights = self.external_multi_head_attention(query=x,
-                                                                          key=external_states,
-                                                                          value=external_states,
-                                                                          key_padding_mask=external_padding_mask)
+            x, external_attn_weights = self.external_multi_head_attention(
+                query=x, key=external_states, value=external_states, key_padding_mask=external_padding_mask
+            )
             x = self.attn_dropout(x)
             x = self.external_layer_norm(residual + x)
         else:

@@ -15,7 +15,7 @@ import torch
 from logging import getLogger
 
 from textbox.utils import get_model, Enum, general_arguments, training_arguments, \
-    evaluation_arguments, dataset_arguments, get_local_time
+    evaluation_arguments, dataset_arguments, get_local_time, ModelType
 
 
 class Config(object):
@@ -41,7 +41,7 @@ class Config(object):
     Configuration module allows the above three kind of external input format to be used together,
     the priority order is as following:
 
-    command line > parameter dictionaries > config file
+    command line > parameter dictionaries > config file (model > dataset > overall)
 
     e.g. If we set learning_rate=0.01 in config file, learning_rate=0.02 in command line,
     learning_rate=0.03 in parameter dictionaries.
@@ -61,36 +61,40 @@ class Config(object):
         """
         self._init_parameters_category()
         self.yaml_loader = self._build_yaml_loader()
+        self._load_overall_config()
         self.file_config_dict = self._load_config_files(config_file_list)
         self.variable_config_dict = self._load_variable_config_dict(config_dict)
         self.cmd_config_dict = self._load_cmd_line()
         self._merge_external_config_dict()
 
+        self._init_device()
         self.model, self.model_class, self.dataset = self._get_model_and_dataset(model, dataset)
         self._load_internal_config_dict(self.model, self.model_class, self.dataset)
         self.final_config_dict = self._get_final_config_dict()
         self._set_default_parameters()
-        self._init_device()
 
     def _init_parameters_category(self):
         self.parameters = dict()
         self.parameters['General'] = general_arguments
         self.parameters['Training'] = training_arguments
         self.parameters['Evaluation'] = evaluation_arguments
+        self.parameters['Model'] = dataset_arguments
         self.parameters['Dataset'] = dataset_arguments
 
     def _build_yaml_loader(self):
         loader = yaml.FullLoader
         loader.add_implicit_resolver(
             u'tag:yaml.org,2002:float',
-            re.compile(u'''^(?:
+            re.compile(
+                u'''^(?:
              [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
             |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
             |\\.[0-9_]+(?:[eE][-+][0-9]+)?
             |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
             |[-+]?\\.(?:inf|Inf|INF)
-            |\\.(?:nan|NaN|NAN))$''', re.X),
-            list(u'-+0123456789.'))
+            |\\.(?:nan|NaN|NAN))$''', re.X
+            ), list(u'-+0123456789.')
+        )
         return loader
 
     def _convert_config_dict(self, config_dict):
@@ -117,6 +121,14 @@ class Config(object):
                     value = param
             config_dict[key] = value
         return config_dict
+
+    def _load_overall_config(self):
+        current_path = os.path.dirname(os.path.realpath(__file__))
+        overall_init_file = os.path.join(current_path, '../properties/overall.yaml')
+
+        if os.path.isfile(overall_init_file):
+            with open(overall_init_file, 'r', encoding='utf-8') as f:
+                self.overall_config_dict = yaml.load(f.read(), Loader=self.yaml_loader)
 
     def _load_config_files(self, file_list):
         file_config_dict = dict()
@@ -153,7 +165,9 @@ class Config(object):
             logger.warning('command line args [{}] will not be used in TextBox'.format(' '.join(unrecognized_args)))
         cmd_config_dict = self._convert_config_dict(cmd_config_dict)
 
-        if cmd_config_dict['task_type'] not in ['unconditional', 'translation', 'summarization']:
+        if 'task_type' in cmd_config_dict and cmd_config_dict['task_type'] not in [
+            'unconditional', 'translation', 'summarization'
+        ]:
             raise NotImplementedError("task_type {} can't be found".format(cmd_config_dict['task_type']))
         return cmd_config_dict
 
@@ -171,20 +185,20 @@ class Config(object):
             except KeyError:
                 raise KeyError(
                     'model need to be specified in at least one of the these ways: '
-                    '[model variable, config file, config dict, command line] ')
-        if not isinstance(model, str):
-            final_model_class = model
-            final_model = model.__name__
-        else:
-            final_model = model
-            final_model_class = get_model(final_model)
+                    '[model variable, config file, config dict, command line] '
+                )
+
+        final_model = model
+        final_model_class = get_model(final_model)
 
         if dataset is None:
             try:
                 final_dataset = self.external_config_dict['dataset']
             except KeyError:
-                raise KeyError('dataset need to be specified in at least one of the these ways: '
-                               '[dataset variable, config file, config dict, command line] ')
+                raise KeyError(
+                    'dataset need to be specified in at least one of the these ways: '
+                    '[dataset variable, config file, config dict, command line] '
+                )
         else:
             final_dataset = dataset
 
@@ -199,17 +213,27 @@ class Config(object):
 
     def _load_internal_config_dict(self, model, model_class, dataset):
         current_path = os.path.dirname(os.path.realpath(__file__))
-        overall_init_file = os.path.join(current_path, '../properties/overall.yaml')
         model_init_file = os.path.join(current_path, '../properties/model/' + model + '.yaml')
+        model_class_init_file = ""
         dataset_init_file = os.path.join(current_path, '../properties/dataset/' + dataset + '.yaml')
+        if model_class.type == ModelType.GAN:
+            model_class_init_file = os.path.join(current_path, '../properties/model_class/GAN.yaml')
 
-        self.internal_config_dict = dict()
-        for file in [overall_init_file, model_init_file, dataset_init_file]:
+        self.internal_config_dict = self.overall_config_dict
+
+        for file in [dataset_init_file, model_class_init_file, model_init_file]:
             if os.path.isfile(file):
                 config_dict = self._update_internal_config_dict(file)
-                if file == dataset_init_file:
-                    self.parameters['Dataset'] += [key for key in config_dict.keys() if
-                                                   key not in self.parameters['Dataset']]
+                if file == model_init_file:
+                    self.parameters['Model'] = [
+                        key for key in config_dict.keys()
+                        if key not in self.parameters['General'] and key not in self.parameters['Training']
+                        and key not in self.parameters['Evaluation'] and key not in self.parameters['Dataset']
+                    ]
+                elif file == dataset_init_file:
+                    self.parameters['Dataset'] += [
+                        key for key in config_dict.keys() if key not in self.parameters['Dataset']
+                    ]
 
         self.internal_config_dict['MODEL_TYPE'] = model_class.type
 
@@ -220,25 +244,27 @@ class Config(object):
         return final_config_dict
 
     def _set_default_parameters(self):
-
         self.final_config_dict['dataset'] = self.dataset
         self.final_config_dict['model'] = self.model
         self.final_config_dict['data_path'] = os.path.join(self.final_config_dict['data_path'], self.dataset)
-        self.final_config_dict['filename'] = '{}-{}-{}'.format(self.final_config_dict['model'], self.final_config_dict['dataset'], get_local_time())
-
-        eval_type = None
-        self.final_config_dict['eval_type'] = eval_type
-
-        if 'additional_feat_suffix' in self.final_config_dict:
-            ad_suf = self.final_config_dict['additional_feat_suffix']
-            if isinstance(ad_suf, str):
-                self.final_config_dict['additional_feat_suffix'] = [ad_suf]
+        self.final_config_dict['filename'] = '{}-{}-{}'.format(
+            self.final_config_dict['model'], self.final_config_dict['dataset'], get_local_time()
+        )
 
     def _init_device(self):
-        use_gpu = self.final_config_dict['use_gpu']
+        if 'use_gpu' not in self.external_config_dict:
+            use_gpu = self.overall_config_dict['use_gpu']
+        else:
+            use_gpu = self.external_config_dict['use_gpu']
+
         if use_gpu:
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(self.final_config_dict['gpu_id'])
-        self.final_config_dict['device'] = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
+            if 'gpu_id' not in self.external_config_dict:
+                gpu_id = self.overall_config_dict['gpu_id']
+            else:
+                gpu_id = self.external_config_dict['gpu_id']
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+
+        self.external_config_dict['device'] = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
 
     def __setitem__(self, key, value):
         if not isinstance(key, str):
@@ -257,13 +283,13 @@ class Config(object):
         return key in self.final_config_dict
 
     def __str__(self):
-        args_info = ''
+        args_info = '\n'
         for category in self.parameters:
             args_info += category + ' Hyper Parameters: \n'
-            args_info += '\n'.join(
-                ["{}={}".format(arg, value)
-                 for arg, value in self.final_config_dict.items()
-                 if arg in self.parameters[category]])
+            args_info += '\n'.join([
+                "{}={}".format(arg, value) for arg, value in self.final_config_dict.items()
+                if arg in self.parameters[category]
+            ])
             args_info += '\n\n'
         return args_info
 

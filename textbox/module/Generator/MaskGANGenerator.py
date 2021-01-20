@@ -51,16 +51,20 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         self.embedder = nn.Embedding(self.vocab_size, self.embedding_size)
 
         # note!!! batch_first is true
-        self.encoder = BasicRNNEncoder(self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type,
-                                       self.dropout_ratio, self.bidirectional)
+        self.encoder = BasicRNNEncoder(
+            self.embedding_size, self.hidden_size, self.num_enc_layers, self.rnn_type, self.dropout_ratio,
+            self.bidirectional
+        )
 
         if self.attention_type is not None:
-            self.decoder = AttentionalRNNDecoder(self.embedding_size, self.hidden_size, self.context_size,
-                                                 self.num_dec_layers, self.rnn_type, self.dropout_ratio,
-                                                 self.attention_type, self.alignment_method)
+            self.decoder = AttentionalRNNDecoder(
+                self.embedding_size, self.hidden_size, self.context_size, self.num_dec_layers, self.rnn_type,
+                self.dropout_ratio, self.attention_type, self.alignment_method
+            )
         else:
-            self.decoder = BasicRNNDecoder(self.embedding_size, self.hidden_size, self.num_dec_layers,
-                                           self.rnn_type, self.dropout_ratio)
+            self.decoder = BasicRNNDecoder(
+                self.embedding_size, self.hidden_size, self.num_dec_layers, self.rnn_type, self.dropout_ratio
+            )
 
         self.dropout = nn.Dropout(self.dropout_ratio)
         self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
@@ -154,8 +158,9 @@ class MaskGANGenerator(GenerativeAdversarialNet):
             else:
                 real_input_t = self.embedder(inputs[:, t].unsqueeze(dim=-1))  # bs*1*emb_dim
                 mask_input_t = self.embedder(sample_t)  # bs*1*emb_dim
-                input_t = torch.where(targets_present[:, t - 1].unsqueeze(dim=1).unsqueeze(dim=2), real_input_t,
-                                      mask_input_t)
+                input_t = torch.where(
+                    targets_present[:, t - 1].unsqueeze(dim=1).unsqueeze(dim=2), real_input_t, mask_input_t
+                )
 
             if self.attention_type is not None:
                 encoder_mask = torch.ones_like(inputs)
@@ -204,8 +209,9 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         fake_predictions, _ = discriminator(inputs, lengths, outputs, targets_present, self.embedder)
         fake_predictions = fake_predictions.detach()
         est_state_values = discriminator.critic(outputs, self.embedder)
-        rl_loss, critic_loss = self.calculate_reinforce_objective(log_probs, fake_predictions, targets_present,
-                                                                  est_state_values)
+        rl_loss, critic_loss = self.calculate_reinforce_objective(
+            log_probs, fake_predictions, targets_present, est_state_values
+        )
         return (rl_loss, critic_loss)
 
     def create_critic_loss(self, cumulative_rewards, estimated_values, target_present):
@@ -301,8 +307,9 @@ class MaskGANGenerator(GenerativeAdversarialNet):
             # Clip advantages.
             cum_advantage = torch.clamp(cum_advantage, -self.advantage_clipping, self.advantage_clipping)
             cum_advantage_ = cum_advantage.detach()
-            final_gen_objective = final_gen_objective + torch.mul(log_probability,
-                                                                  missing[:, t].unsqueeze(dim=1) * cum_advantage_)
+            final_gen_objective = final_gen_objective + torch.mul(
+                log_probability, missing[:, t].unsqueeze(dim=1) * cum_advantage_
+            )
         final_gen_objective = -torch.sum(final_gen_objective) / (torch.sum(missing))  # max the reward
 
         return final_gen_objective, critic_loss
@@ -336,8 +343,8 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         for b in range(num_batch):
             while b >= corpus_batches:
                 b = b - corpus_batches
-            inputs = real_data[b * self.batch_size: (b + 1) * self.batch_size, :-1]
-            targets = real_data[b * self.batch_size: (b + 1) * self.batch_size, 1:]
+            inputs = real_data[b * self.batch_size:(b + 1) * self.batch_size, :-1]
+            targets = real_data[b * self.batch_size:(b + 1) * self.batch_size, 1:]
             inputs_length = torch.Tensor([self.max_length - 1] * self.batch_size).float()
             targets_present = torch.zeros((self.batch_size, self.max_length - 1)).byte()
             device = inputs.device
@@ -348,7 +355,7 @@ class MaskGANGenerator(GenerativeAdversarialNet):
 
             assert sample.shape == (self.batch_size, self.max_length - 1)
             sample = torch.cat([inputs[:, 0].unsqueeze(dim=-1), sample], dim=-1)
-            samples[b * self.batch_size: (b + 1) * self.batch_size, :] = sample
+            samples[b * self.batch_size:(b + 1) * self.batch_size, :] = sample
 
         samples = samples[:number_to_gen, :-1]
         samples = samples.tolist()

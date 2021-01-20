@@ -60,18 +60,11 @@ def data_preparation(config, save=False):
         save_datasets(config['checkpoint_dir'], name=phases, dataset=builded_datasets)
 
     train_data = dataloader_construct(
-        name='train',
-        config=config,
-        dataset=train_dataset,
-        batch_size=config['train_batch_size'],
-        shuffle=True
+        name='train', config=config, dataset=train_dataset, batch_size=config['train_batch_size'], shuffle=True
     )
 
     valid_data, test_data = dataloader_construct(
-        name='evaluation',
-        config=config,
-        dataset=[valid_dataset, test_dataset],
-        batch_size=config['eval_batch_size']
+        name='evaluation', config=config, dataset=[valid_dataset, test_dataset], batch_size=config['eval_batch_size']
     )
 
     return train_data, valid_data, test_data
@@ -106,14 +99,7 @@ def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False):
 
     DataLoader = get_data_loader(config)
 
-    ret = [
-        DataLoader(
-            config=config,
-            dataset=ds,
-            batch_size=bs,
-            shuffle=shuffle
-        ) for ds, bs in zip(dataset, batch_size)
-    ]
+    ret = [DataLoader(config=config, dataset=ds, batch_size=bs, shuffle=shuffle) for ds, bs in zip(dataset, batch_size)]
 
     if len(ret) == 1:
         return ret[0]

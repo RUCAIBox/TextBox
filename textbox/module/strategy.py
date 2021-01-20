@@ -13,7 +13,6 @@ textbox.module.strategy
 Common Strategys in text generation
 """
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -65,6 +64,7 @@ def topk_sampling(logits, temperature=1.0, top_k=0, top_p=0.9):
 
     return token_idx
 
+
 def greedy_search(logits):
     r"""Find the index of max logits
 
@@ -80,6 +80,7 @@ def greedy_search(logits):
 class Beam_Search_Hypothesis(object):
     r""" Class designed for beam search.
     """
+
     def __init__(self, beam_size, sos_token_idx, eos_token_idx, device, idx2token):
         self.beam_size = beam_size
         self.sos_token_idx = sos_token_idx
@@ -90,17 +91,19 @@ class Beam_Search_Hypothesis(object):
         self.hypthetic_token_idx = [[sos_token_idx]]
         self.completed_hypotheses = []
         self.hyp_scores = torch.zeros(1).to(device)
-    
+
     def generate(self):
         r""" Pick the hypothesis with max prob among beam_size hypothesises.
 
         Return:
             List[str]: the generated tokens
         """
-        generate_idx = self.hypthetic_token_idx[0][1:] if (len(self.completed_hypotheses) == 0) else max(self.completed_hypotheses, key = lambda hyp: hyp[1])[0]
+        generate_idx = self.hypthetic_token_idx[0][1:] if (len(
+            self.completed_hypotheses
+        ) == 0) else max(self.completed_hypotheses, key=lambda hyp: hyp[1])[0]
         generate_tokens = [self.idx2token[idx.item()] for idx in generate_idx]
         return generate_tokens
-    
+
     def stop(self):
         r""" Determine if the beam search is over.
 
@@ -108,8 +111,10 @@ class Beam_Search_Hypothesis(object):
             Bool: ``True`` represents the search over, `Flase` represents the search working.
         """
         return len(self.completed_hypotheses) == self.beam_size
-    
-    def step(self, gen_idx, token_logits, decoder_states=None, encoder_output=None, encoder_mask=None, input_type='token'):
+
+    def step(
+        self, gen_idx, token_logits, decoder_states=None, encoder_output=None, encoder_mask=None, input_type='token'
+    ):
         r""" A step for beam search.
 
         Args:
@@ -174,5 +179,5 @@ class Beam_Search_Hypothesis(object):
             encoder_output = encoder_output[0:1].repeat(hyp_num, 1, 1)
             encoder_mask = encoder_mask[0:1].repeat(hyp_num, 1)
             returns += [encoder_output, encoder_mask]
-            
+
         return returns

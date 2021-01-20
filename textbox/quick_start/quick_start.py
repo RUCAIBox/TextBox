@@ -69,4 +69,3 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
         logger.info('best valid loss: {}, best valid ppl: {}'.format(best_valid_score, best_valid_result))
 
     logger.info('test result: {}'.format(test_result))
-

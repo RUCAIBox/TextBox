@@ -7,13 +7,13 @@ Optimizer
 #####################
 """
 
-
 import numpy as np
 
 
 class ScheduledOptim():
     r"""A simple wrapper class for learning rate scheduling
     """
+
     def __init__(self, optimizer, init_lr, d_model, n_warmup_steps):
         self._optimizer = optimizer
         self.init_lr = init_lr

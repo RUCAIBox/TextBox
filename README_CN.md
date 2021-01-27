@@ -56,7 +56,16 @@ TextBox 需要的安装条件:
 pip install textbox
 ```
 
+如果你安装`fast_bleu`时遇到了问题，对于Linux请保证`GCC >= 5.1.0`；对于Windows，请使用[fast_bleu_wheel4windows](https://github.com/RUCAIBox/TextBox/tree/main/fast_bleu_wheel4windows)目录下的wheel文件进行安装；对于MacOS，请使用如下命令安装：
+
+```bash
+pip install fast-bleu --install-option="--CC=<path-to-gcc>" --install-option="--CXX=<path-to-g++>"
+```
+
+成功安装后`fast_bleu`，重新安装`textbox`即可。
+
 ### 通过源文件安装
+
 ```bash
 git clone https://github.com/RUCAIBox/TextBox.git && cd TextBox
 pip install -e . --verbose

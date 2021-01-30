@@ -18,15 +18,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from textbox.model.abstract_generator import ConditionalGenerator
+from textbox.model.abstract_generator import Seq2SeqGenerator
 from textbox.module.Encoder.rnn_encoder import BasicRNNEncoder
 from textbox.module.Decoder.rnn_decoder import BasicRNNDecoder, AttentionalRNNDecoder
 from textbox.model.init import xavier_normal_initialization
 from textbox.module.strategy import topk_sampling, greedy_search, Beam_Search_Hypothesis
 
 
-class RNNEncDec(ConditionalGenerator):
-    r"""RNN-based Encoder-Decoder architecture is a basic framework for conditional text generation.
+class RNNEncDec(Seq2SeqGenerator):
+    r"""RNN-based Encoder-Decoder architecture is a basic framework for Seq2Seq text generation.
     """
 
     def __init__(self, config, dataset):

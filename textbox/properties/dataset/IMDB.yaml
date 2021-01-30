@@ -1,6 +1,6 @@
-# special tokens
 max_vocab_size: 30000
 max_seq_length: 100
 split_strategy: "by_ratio"
 split_ratio: [0.8,0.1,0.1]
-source_language: "English"
+overlength_strategy: "truncate"
+language: "English"

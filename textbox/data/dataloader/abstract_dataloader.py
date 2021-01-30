@@ -2,6 +2,11 @@
 # @Author : Gaole He
 # @email  : hegaole@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2021/1/29
+# @Author : Tianyi Tang
+# @Email  : steven_tang@ruc.edu.cn
+
 """
 textbox.data.dataloader.abstract_dataloader
 ################################################
@@ -30,7 +35,6 @@ class AbstractDataLoader(object):
         step (int): The increment of :attr:`pr` for each batch.
         batch_size (int): The max interaction number for all batch.
     """
-    dl_type = None
 
     def __init__(self, config, dataset, batch_size=1, shuffle=False):
         self.config = config
@@ -42,8 +46,6 @@ class AbstractDataLoader(object):
         self.shuffle = shuffle
         self.pr = 0
 
-        self.get_vocab(dataset)
-
         self.padding_token = SpecialTokens.PAD
         self.unknown_token = SpecialTokens.UNK
         self.sos_token = SpecialTokens.SOS
@@ -51,16 +53,6 @@ class AbstractDataLoader(object):
         if ('user_token_list' in config):
             self.user_token_list = config['user_token_list']
             self.user_token_idx = [4 + i for i, _ in enumerate(self.user_token_list)]
-
-    def get_vocab(self, dataset):
-        if 'idx2token' in dataset:
-            self.idx2token = dataset['idx2token']
-            self.token2idx = dataset['token2idx']
-        elif 'source_idx2token' in dataset:
-            self.idx2token = dataset['source_idx2token']
-            self.token2idx = dataset['source_token2idx']
-        else:
-            raise NotImplementedError
 
     def _build_data(self, text_data, token2idx, need_text_start_end=True):
         r"""transform text to id and add sos and eos token index.
@@ -74,13 +66,10 @@ class AbstractDataLoader(object):
         """
         text_idx_data = []
         idx_length_data = []
-        sos_token_idx = token2idx[self.sos_token]
-        eos_token_idx = token2idx[self.eos_token]
         for text in text_data:
+            text_idx = self._token2idx(text, token2idx)
             if need_text_start_end:
-                text_idx = [sos_token_idx] + self._token2idx(text, token2idx) + [eos_token_idx]
-            else:
-                text_idx = self._token2idx(text, token2idx)
+                text_idx = [self.sos_token_idx] + text_idx + [self.eos_token_idx]
             text_idx_data.append(text_idx)
             idx_length_data.append(len(text_idx))
         return text_idx_data, idx_length_data
@@ -94,16 +83,10 @@ class AbstractDataLoader(object):
             new_data: torch.LongTensor (batch_size, max_length_in_batch)
             length: torch.LongTensor (batch_size)
         """
-        # tp_batch_size = len(text_idx_data)
-        # print(tp_batch_size)
         max_len = max(idx_length_data)
         new_data = []
         for seq, len_seq in zip(text_idx_data, idx_length_data):
-            # print(seq, len_seq)
-            if len_seq < max_len:
-                new_data.append(seq + [self.padding_token_idx] * (max_len - len_seq))
-            else:
-                new_data.append(seq)
+            new_data.append(seq + [self.padding_token_idx] * (max_len - len_seq))
         new_data = torch.LongTensor(new_data)
         length = torch.LongTensor(idx_length_data)
         return new_data, length
@@ -132,22 +115,16 @@ class AbstractDataLoader(object):
             return [self._token2idx(x, token2idx) for x in inputs]
         return token2idx.get(inputs, self.unknown_token_idx)
 
+    def _data_preprocess(self, dataset):
+        r"""obtain necessary elements from dataset(dict) and conduct preprocess
+        """
+        raise NotImplementedError('Method [data_preprocess] should be implemented')
+
     def get_reference(self):
         r"""Get reference documents for current data loader
         return is supposed to be reference_corpus as list -> list -> word
         """
         raise NotImplementedError('Method [get_reference] should be implemented')
-
-    def data_preprocess(self, dataset):
-        r"""obtain necessary elements from dataset(dict) and conduct preprocess
-        """
-        raise NotImplementedError('Method [data_preprocess] should be implemented')
-
-    @property
-    def vocab_size(self):
-        r"""The vocabulary size.
-        """
-        raise NotImplementedError('Method [vocab_size] should be implemented')
 
     @property
     def padding_token_idx(self):
@@ -185,19 +162,8 @@ class AbstractDataLoader(object):
 
     def _next_batch_data(self):
         r"""Assemble next batch of data in form of Interaction, and return these data.
+        
         Returns:
             Interaction: The next batch of data.
         """
         raise NotImplementedError('Method [next_batch_data] should be implemented.')
-
-    def set_batch_size(self, batch_size):
-        r"""Reset the batch_size of the dataloader, but it can't be called when dataloader is being iterated.
-
-        Args:
-            batch_size (int): the new batch_size of dataloader.
-        """
-        if self.pr != 0:
-            raise PermissionError('Cannot change dataloader\'s batch_size while iteration')
-        if self.batch_size != batch_size:
-            self.batch_size = batch_size
-            self.logger.warning('Batch size is changed to {}'.format(batch_size))

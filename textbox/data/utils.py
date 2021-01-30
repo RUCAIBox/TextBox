@@ -2,14 +2,20 @@
 # @Author : Junyi Li, Gaole He
 # @Email  : lijunyi@ruc.edu.cn
 
-# @Time   : 2020/12/4
-# @Author : Gaole He
-# @Email  : hegaole@ruc.edu.cn
+# UPDATE:
+# @Time   : 2021/1/29, 2020/12/04
+# @Author : Tianyi Tang, Gaole He
+# @Email  : steven_tang@ruc.edu.cn, hegaole@ruc.edu.cn
 
 """
 textbox.data.utils
 ########################
 """
+
+import os
+import nltk
+import collections
+import pickle
 
 from textbox.data.dataloader import *
 
@@ -27,12 +33,14 @@ def create_dataset(config):
     if task_type == "unconditional":
         from .dataset import SingleSentenceDataset
         return SingleSentenceDataset(config)
+    elif task_type == "attribute":
+        from .dataset import AttributedSentenceDataset
+        return AttributedSentenceDataset(config)
     elif task_type == "translation" or task_type == "summarization":
         from .dataset import PairedSentenceDataset
         return PairedSentenceDataset(config)
     else:
-        from .dataset import Dataset
-        return Dataset(config)
+        raise NotImplementedError("No such dataset for TASK_TYPE: {}".format(task_type))
 
 
 def data_preparation(config, save=False):
@@ -55,9 +63,6 @@ def data_preparation(config, save=False):
     builded_datasets = dataset.build()
     train_dataset, valid_dataset, test_dataset = builded_datasets
     phases = ['train', 'valid', 'test']
-
-    if save:
-        save_datasets(config['checkpoint_dir'], name=phases, dataset=builded_datasets)
 
     train_data = dataloader_construct(
         name='train', config=config, dataset=train_dataset, batch_size=config['train_batch_size'], shuffle=True
@@ -89,9 +94,6 @@ def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False):
     if not isinstance(batch_size, list):
         batch_size = [batch_size] * len(dataset)
 
-    if len(dataset) != len(batch_size):
-        raise ValueError('dataset {} and batch_size {} should have the same length'.format(dataset, batch_size))
-
     task_type = config['task_type'].lower()
     logger = getLogger()
     logger.info('Build [{}] DataLoader for [{}]'.format(task_type, name))
@@ -107,22 +109,6 @@ def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False):
         return ret
 
 
-def save_datasets(save_path, name, dataset):
-    """Save split datasets.
-
-    Args:
-        save_path (str): The path of directory for saving.
-        name (str or list of str): The stage of dataloader. It can only take two values: 'train' or 'evaluation'.
-        dataset (Dataset or list of Dataset): The split datasets.
-    """
-    if (not isinstance(name, list)) and (not isinstance(dataset, list)):
-        name = [name]
-        dataset = [dataset]
-    if len(name) != len(dataset):
-        raise ValueError('len of name {} should equal to len of dataset'.format(name, dataset))
-    print("To be designed, nothing to save")
-
-
 def get_data_loader(config):
     """Return a dataloader class according to :attr:`config` and :attr:`split_strategy`.
 
@@ -135,7 +121,186 @@ def get_data_loader(config):
     task_type = config['task_type'].lower()
     if task_type == "unconditional":
         return SingleSentenceDataLoader
+    elif task_type == "attribute":
+        return AttributedSentenceDataLoader
     elif task_type == "translation" or task_type == "summarization":
         return PairedSentenceDataLoader
     else:
         raise NotImplementedError("No such data loader for TASK_TYPE: {}".format(task_type))
+
+
+def load_data(dataset_path, tokenize_strategy, overlength_strategy, max_seq_length, language):
+    """Load dataset from split (train, dev, test).
+    This is designed for single sentence format, unconditional task.
+
+    Args:
+        dataset_path (str): path of dataset dir.
+        tokenize_strategy (str): strategy of tokenizer.
+        overlength_strategy (str): strategy of overlengthed text.
+        max_seq_length (int): max length of sequence.
+        language (str): language of text.
+    
+    Returns:
+        List[List[str]]: the text list loaded from dataset path.
+    """
+    if not os.path.isfile(dataset_path):
+        raise ValueError('File {} not exist'.format(dataset_path))
+    
+    fin = open(dataset_path, "r")
+    text = []
+    for line in fin:
+        if tokenize_strategy == 'by_space':
+            words = line.strip().lower().split()
+        else:
+            words = nltk.word_tokenize(line.strip().lower(), language=language)
+        
+        if overlength_strategy == 'truncate':
+            text.append(words[:max_seq_length])
+        elif overlength_strategy == 'drop':
+            if len(words) <= max_seq_length:
+                text.append(words)
+        elif overlength_strategy == 'none':
+            text.append(words)
+    fin.close()
+    return text
+
+
+def calcu_split_ids(tot, ratios):
+    r"""Given split ratios, and total number, calculate the number of each part after splitting.
+
+    Other than the first one, each part is rounded down.
+
+    Args:
+        tot (int): Total number.
+        ratios (list): List of split ratios. No need to be normalized.
+
+    Returns:
+        list: Number of each part after splitting.
+    """
+    cnt = [int(ratios[i] * tot) for i in range(len(ratios))]
+    cnt[0] = tot - sum(cnt[1:])
+    split_ids = np.cumsum(cnt)[:-1]
+    return list(split_ids)
+
+
+def split_data(data_list, ratios):
+    """Split all the data in data list by ratios.
+
+    Args:
+        data_list (List): the data to be splitted.
+        ratios (List[float, float, float]): spiltted ratios of train, dev, test dataset.
+
+    Returns:
+        List: the list of split data.
+    """
+    tot_ratio = sum(ratios)
+    ratios = [_ / tot_ratio for _ in ratios]
+    split_list = []
+
+    for data in data_list:
+        tot_cnt = len(data)
+        split_ids = calcu_split_ids(tot_cnt, ratios)
+        corpus_list = []
+        for start, end in zip([0] + split_ids, split_ids + [tot_cnt]):
+            corpus_list.append(data[start:end])
+        split_list.append(corpus_list)
+
+    return split_list
+
+def build_vocab(text_data_list, max_vocab_size, special_token_list):
+    """Build vocabulary of list of text data.
+
+    Args:
+        text_data_list (List[List[str]]): list of text data.
+        max_vocab_size (int): max size of vocabulary.
+        special_token_list (List[str]): list of special tokens.
+    
+    Returns:
+        tuple:
+            - idx2token (dict): map index to token.
+            - token2idx (dict): map token to index.
+            - max_vocab_size (int): updated max size of vocabulary.
+    """
+
+    word_list = list()
+    for text_data in text_data_list:
+        for text in text_data:
+            word_list.extend(text)
+    
+    token_count = [(count, token) for token, count in collections.Counter(word_list).items()]
+    token_count.sort(reverse=True)
+    tokens = [word for count, word in token_count]
+    tokens = special_token_list + tokens
+    tokens = tokens[:max_vocab_size]
+
+    max_vocab_size = len(tokens)
+    idx2token = dict(zip(range(max_vocab_size), tokens))
+    token2idx = dict(zip(tokens, range(max_vocab_size)))
+    return idx2token, token2idx, max_vocab_size
+
+def detect_restored(dataset_path, suffix=""):
+    """Detect whether binary files is already restored.
+
+    Args:
+        dataset_path (str): path of dataset dir.
+        suffix (str, optional): suffix of files, default: "".
+    
+    Returns:
+        bool: whether files are already restored.
+    """
+    required_files = []
+    for prefix in ['train', 'dev', 'test']:
+        filename = os.path.join(dataset_path, '{}.{}bin'.format(prefix, suffix))
+        required_files.append(filename)
+    vocab_file = os.path.join(dataset_path, '{}vocab'.format(suffix))
+    required_files.append(vocab_file)
+    absent_file_flag = False
+    for filename in required_files:
+        if not os.path.isfile(filename):
+            absent_file_flag = True
+            break
+    return not absent_file_flag
+
+def dump_data(dataset_path, idx2token, token2idx, text_data, suffix=""):
+    """Dump data into binary files.
+
+    Args:
+        dataset_path (str): path of dataset dir.
+        idx2token (dict): map index to token.
+        token2idx (dict): map token to index.
+        text_data (List[List[str]]): list of text data.
+        suffix (str, optional): suffix of files, default: "".
+    """
+    vocab_file = os.path.join(dataset_path, '{}vocab'.format(suffix))
+    with open(vocab_file, "wb") as f_vocab:
+        pickle.dump([idx2token, token2idx], f_vocab)
+
+    for i, prefix in enumerate(['train', 'dev', 'test']):
+        text = text_data[i]
+        idx_filename = os.path.join(dataset_path, '{}.{}bin'.format(prefix, suffix))
+        with open(idx_filename, "wb") as f_text:
+            pickle.dump(text, f_text)
+
+def load_restored(dataset_path, suffix=""):
+    """Load dataset from restored binary files (train, dev, test).
+
+    Args:
+        dataset_path (str): path of dataset dir.
+        suffix (str, optional): suffix of files, default: "".
+    
+    Returns:
+        tuple:
+            - idx2token (dict): map index to token.
+            - token2idx (dict): map token to index.
+            - text_data (List[List[str]]): list of text data.
+    """
+    vocab_file = os.path.join(dataset_path, '{}vocab'.format(suffix))
+    with open(vocab_file, "rb") as f_vocab:
+        idx2token, token2idx = pickle.load(f_vocab)
+    text_data = []
+    for prefix in ['train', 'dev', 'test']:
+        idx_filename = os.path.join(dataset_path, '{}.{}bin'.format(prefix, suffix))
+        with open(idx_filename, "rb") as f_text:
+            text = pickle.load(f_text)
+        text_data.append(text)
+    return idx2token, token2idx, text_data

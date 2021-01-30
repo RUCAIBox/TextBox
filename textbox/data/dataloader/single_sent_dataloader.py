@@ -2,6 +2,11 @@
 # @Author : Gaole He
 # @email  : hegaole@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2021/1/29
+# @Author : Tianyi Tang
+# @Email  : steven_tang@ruc.edu.cn
+
 """
 textbox.data.dataloader.single_sent_dataloader
 ################################################
@@ -26,12 +31,11 @@ class SingleSentenceDataLoader(AbstractDataLoader):
     """
 
     def __init__(self, config, dataset, batch_size=1, shuffle=False):
-
         super().__init__(config, dataset, batch_size, shuffle)
-        self.data_preprocess(dataset)
+        self._data_preprocess(dataset)
 
-    def data_preprocess(self, dataset):
-        required_key_list = ['text_data']
+    def _data_preprocess(self, dataset):
+        required_key_list = ['text_data', 'idx2token', 'token2idx']
         for dataset_attr in required_key_list:
             assert dataset_attr in dataset
             setattr(self, dataset_attr, dataset[dataset_attr])
@@ -43,10 +47,6 @@ class SingleSentenceDataLoader(AbstractDataLoader):
     @property
     def pr_end(self):
         return len(self.text_idx_data)
-
-    @property
-    def vocab_size(self):
-        return len(self.idx2token)
 
     def __len__(self):
         return math.ceil(len(self.text_idx_data) / self.batch_size)
@@ -60,8 +60,10 @@ class SingleSentenceDataLoader(AbstractDataLoader):
         tp_text_data = self.text_data[self.pr:self.pr + self.step]
         tp_text_idx_data = self.text_idx_data[self.pr:self.pr + self.step]
         tp_idx_length_data = self.idx_length_data[self.pr:self.pr + self.step]
-        self.pr += self.step
         padded_idx, length = self._pad_batch_sequence(tp_text_idx_data, tp_idx_length_data)
+        
+        self.pr += self.step
+        
         batch_data = {
             'target_text': tp_text_data,
             'target_idx': padded_idx.to(self.device),

@@ -13,8 +13,8 @@ epochs: 50
 train_batch_size: 64
 learner: adam
 learning_rate: 0.001
-eval_step: 2
-stopping_step: 5
+eval_step: 1
+stopping_step: 3
 grad_clip: 5.0
 
 # evaluation settings

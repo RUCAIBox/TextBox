@@ -18,7 +18,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from textbox.model.abstract_generator import ConditionalGenerator
+from textbox.model.abstract_generator import Seq2SeqGenerator
 from textbox.module.Encoder.transformer_encoder import TransformerEncoder
 from textbox.module.Decoder.transformer_decoder import TransformerDecoder
 from textbox.module.Embedder.position_embedder import LearnedPositionalEmbedding, SinusoidalPositionalEmbedding
@@ -27,8 +27,8 @@ from textbox.model.init import xavier_normal_initialization
 from textbox.module.strategy import topk_sampling, greedy_search, Beam_Search_Hypothesis
 
 
-class TransformerEncDec(ConditionalGenerator):
-    r"""Transformer-based Encoder-Decoder architecture is a powerful framework for conditional text generation.
+class TransformerEncDec(Seq2SeqGenerator):
+    r"""Transformer-based Encoder-Decoder architecture is a powerful framework for Seq2Seq text generation.
     """
 
     def __init__(self, config, dataset):

@@ -1,6 +1,6 @@
-max_vocab_size: 30000
+max_vocab_size: 20000
 max_seq_length: 100
 split_strategy: "by_ratio"
 split_ratio: [0.8,0.1,0.1]
-overlength_strategy: "truncate"
+overlength_strategy: "drop"
 language: "English"

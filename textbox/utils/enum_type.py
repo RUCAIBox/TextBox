@@ -20,12 +20,14 @@ class ModelType(Enum):
 
     - ``UNCONDITIONAL``: Unconditional Generator
     - ``GAN``: Generative Adversarial Net
-    - ``CONDITIONAL``: Conditional Generator
+    - ``SEQ2SEQ``: Seq2Seq Generator
+    - ``ATTRIBUTE``: Attribute Generator
     """
 
     UNCONDITIONAL = 1
     GAN = 2
-    CONDITIONAL = 3
+    SEQ2SEQ = 3
+    ATTRIBUTE = 4
 
 
 class SpecialTokens:

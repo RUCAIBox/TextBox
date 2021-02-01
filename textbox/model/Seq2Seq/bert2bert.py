@@ -11,12 +11,12 @@ Reference:
 
 import torch
 import torch.nn as nn
-from textbox.model.abstract_generator import ConditionalGenerator
+from textbox.model.abstract_generator import Seq2SeqGenerator
 from transformers import BertTokenizer, EncoderDecoderConfig, BertConfig, BertGenerationEncoder, BertGenerationDecoder, \
     EncoderDecoderModel
 
 
-class BERT2BERT(ConditionalGenerator):
+class BERT2BERT(Seq2SeqGenerator):
     r"""The BertGeneration model is a BERT model that can be leveraged for sequence-to-sequence tasks using EncoderDecoderModel.
     """
 

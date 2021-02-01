@@ -56,7 +56,16 @@ TextBox requires:
 pip install textbox
 ```
 
+If you face a problem when installing `fast_bleu`, for Linux, please ensure `GCC >= 5.1.0`. For Windows, you can use the wheels in [fast_bleu_wheel4windows](https://github.com/RUCAIBox/TextBox/tree/main/fast_bleu_wheel4windows) for installation. For MacOS, you can install with the following command:
+
+```bash
+pip install fast-bleu --install-option="--CC=<path-to-gcc>" --install-option="--CXX=<path-to-g++>"
+```
+
+After installing `fast_bleu` successfully, just reinstall `textbox`.
+
 ### Install from source
+
 ```bash
 git clone https://github.com/RUCAIBox/TextBox.git && cd TextBox
 pip install -e . --verbose
@@ -257,7 +266,7 @@ We also support you to run our model using your own dataset. Just follow the thr
 
    If you want to split the dataset by ratio automaticly, please set `split_strategy: "by_ratio"` and your desired `split_ratio` in the yaml, just as the [IMDB yaml](/textbox/properties/dataset/IMDB.yaml).
 
-3. For unconditional generation, name the corpus file `corpus_large.txt` if you set`"by_ratio"`, name the corpus files `train.txt, valid.txt, dev.txt` if you set `"load_split"`.
+3. For unconditional generation, name the corpus file `corpus.txt` if you set`"by_ratio"`, name the corpus files `train.txt, valid.txt, dev.txt` if you set `"load_split"`.
 
    For sequence-to-sequence generation, we only support to load the splitted data. Please name the corpus files `train.[xx/yy], valid.[xx/yy], dev.[xx/yy]`, and the `xx` or `yy` is the suffix of the source or target file which should be consistent with `source_suffix` and `target_suffix` in the YAML.
 
@@ -466,8 +475,6 @@ BLEU metric on test dataset with three decoding strategies: top-k sampling, gree
 <td align="center">21.07</td>
 </tr>
 </tbody></table>
-
-
 Part of generated examples:
 
 <table align="center">
@@ -517,8 +524,21 @@ ROUGE metric on test dataset using beam search (with `beam_size` 5):
 <td align="center">38.10</td>
 <td align="center">24.89</td>
 </tr>
+<tr>
+<td align="center"><strong>BART</strong></td>
+<td align="center">39.34</td>
+<td align="center">20.07</td>
+<td align="center">41.25</td>
+<td align="center">27.13</td>
+</tr>
+<tr>
+<td align="center"><strong>BERT2BERT</strong></td>
+<td align="center">38.16</td>
+<td align="center">18.89</td>
+<td align="center">40.06</td>
+<td align="center">26.21</td>
+</tr>
 </tbody></table>
-
 Part of generated examples:
 
 <table align="center">

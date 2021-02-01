@@ -3,9 +3,9 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2020/12/04
-# @Author : Gaole He
-# @Email  : hegaole@ruc.edu.cn
+# @Time   : 2021/1/29, 2020/12/04
+# @Author : Tianyi Tang, Gaole He
+# @Email  : steven_tang@ruc.edu.cn, hegaole@ruc.edu.cn
 
 """
 textbox.data.dataset.paired_sent_dataset
@@ -13,14 +13,11 @@ textbox.data.dataset.paired_sent_dataset
 """
 
 import os
-import pickle
-import nltk
-import collections
-import random
-from textbox.data.dataset import Dataset
+from textbox.data.dataset import AbstractDataset
+from textbox.data.utils import load_data, split_data, build_vocab, detect_restored, dump_data, load_restored
 
 
-class PairedSentenceDataset(Dataset):
+class PairedSentenceDataset(AbstractDataset):
 
     def __init__(self, config):
         self.source_language = config['source_language'].lower()
@@ -28,7 +25,7 @@ class PairedSentenceDataset(Dataset):
         self.source_suffix = config['source_suffix'].lower()
         self.target_suffix = config['target_suffix'].lower()
         self.share_vocab = config['share_vocab']
-        self.tokenize_strategy = config['tokenize_strategy']
+
         if config['target_max_vocab_size'] is None or config['source_max_vocab_size'] is None:
             self.source_max_vocab_size = config['max_vocab_size']
             self.target_max_vocab_size = config['max_vocab_size']
@@ -44,6 +41,9 @@ class PairedSentenceDataset(Dataset):
             self.target_max_seq_length = config['target_max_seq_length']
         super().__init__(config)
 
+    def __len__(self):
+        return sum([len(data) for data in self.source_text_data])
+
     def _get_preset(self):
         self.source_token2idx = {}
         self.source_idx2token = {}
@@ -52,163 +52,107 @@ class PairedSentenceDataset(Dataset):
         self.source_text_data = []
         self.target_text_data = []
 
-    def __len__(self):
-        return sum([len(data) for data in self.source_text_data])
+    def _load_paired_data(self, source_file, target_file):
+        if self.overlength_strategy == 'drop':
+            loaded_source_text = load_data(source_file, self.tokenize_strategy, 'none',
+                                    self.source_max_seq_length, self.source_language)
+            loaded_target_text = load_data(target_file, self.tokenize_strategy, 'none',
+                                    self.target_max_seq_length, self.target_language)
+            assert len(loaded_source_text) == len(loaded_target_text)
+            source_text = []
+            target_text = []
+            for src, tgt in zip(loaded_source_text, loaded_target_text):
+                if (len(src) <= self.source_max_seq_length and len(tgt) <= self.target_max_seq_length):
+                    source_text.append(src)
+                    target_text.append(tgt)
+        else:
+            source_text = load_data(source_file, self.tokenize_strategy, self.overlength_strategy,
+                                    self.source_max_seq_length, self.source_language)
+            target_text = load_data(target_file, self.tokenize_strategy, self.overlength_strategy,
+                                    self.target_max_seq_length, self.target_language)
+        
+        return source_text, target_text
 
-    def _load_data(self, dataset_path):
+    def _load_split_data(self, dataset_path):
         """Load dataset from split (train, dev, test).
         This is designed for paired sentence format, such as translation task and summarization task.
+        
         Args:
             dataset_path (str): path of dataset dir.
         """
-        train_src_file = os.path.join(dataset_path, 'train.' + self.source_suffix)
-        if not os.path.isfile(train_src_file):
-            raise ValueError('File {} not exist'.format(train_src_file))
         for prefix in ['train', 'dev', 'test']:
             source_file = os.path.join(dataset_path, '{}.{}'.format(prefix, self.source_suffix))
             target_file = os.path.join(dataset_path, '{}.{}'.format(prefix, self.target_suffix))
-            source_text = []
-            target_text = []
-            source_fin = open(source_file, "r")
-            target_fin = open(target_file, "r")
+            
+            source_text, target_text = self._load_paired_data(source_file, target_file)
 
-            for source_line, target_line in zip(source_fin, target_fin):
-                if self.tokenize_strategy == 'by_space':
-                    source_words = source_line.strip().lower().split()
-                    target_words = target_line.strip().lower().split()
-                else:
-                    source_words = nltk.word_tokenize(source_line.strip().lower(), language=self.source_language)
-                    target_words = nltk.word_tokenize(target_line.strip().lower(), language=self.target_language)
-                if (
-                    len(source_words) <= self.source_max_seq_length and len(target_words) <= self.target_max_seq_length
-                ):
-                    source_text.append(source_words)
-                    target_text.append(target_words)
-
-            source_fin.close()
-            target_fin.close()
             self.source_text_data.append(source_text)
             self.target_text_data.append(target_text)
 
-    def _data_processing(self):
-        self._build_vocab()
+    def _load_single_data(self, dataset_path):
+        """Load full corpus.
+        This is designed for single sentence format, unconditional task.
+        Args:
+            dataset_path (str): path of dataset dir.
+        """
+        source_file = os.path.join(dataset_path, 'source.txt')
+        target_file = os.path.join(dataset_path, 'target.txt')
 
-    def _build_vocab_text(self, text_data_list, max_vocab_size):
-        word_list = list()
-        for text_data in text_data_list:
-            for text in text_data:
-                word_list.extend(text)
-        token_count = [(count, token) for token, count in collections.Counter(word_list).items()]
-        token_count.sort(reverse=True)
-        tokens = [word for count, word in token_count]
-        tokens = self.special_token_list + tokens
-        tokens = tokens[:max_vocab_size]
-        max_vocab_size = len(tokens)
-        idx2token = dict(zip(range(max_vocab_size), tokens))
-        token2idx = dict(zip(tokens, range(max_vocab_size)))
-        return idx2token, token2idx, max_vocab_size
+        source_text, target_text = self._load_paired_data(source_file, target_file)
+
+        self.source_text_data, self.target_text_data = split_data([source_text, target_text], self.split_ratio)
+
+    def _load_data(self, dataset_path):
+        if self.split_strategy == "load_split":
+            self._load_split_data(dataset_path)
+        elif self.split_strategy == "by_ratio":
+            self._load_single_data(dataset_path)
+        else:
+            raise NotImplementedError("{} split strategy not implemented".format(self.split_strategy))
 
     def _build_vocab(self):
         if self.share_vocab:
             assert self.source_language == self.target_language
             text_data = self.source_text_data + self.target_text_data
-            self.source_idx2token, self.source_token2idx, self.source_max_vocab_size = self._build_vocab_text(
-                text_data, self.source_max_vocab_size
+            self.source_idx2token, self.source_token2idx, self.source_max_vocab_size = build_vocab(
+                text_data, self.source_max_vocab_size, self.special_token_list
             )
             self.target_idx2token, self.target_token2idx = self.source_idx2token, self.source_token2idx
-            print("Share Vocabulary between source and target, vocab size: {}".format(len(self.target_idx2token)))
         else:
-            self.source_idx2token, self.source_token2idx, self.source_max_vocab_size = self._build_vocab_text(
-                self.source_text_data, max_vocab_size=self.source_max_vocab_size
+            self.source_idx2token, self.source_token2idx, self.source_max_vocab_size = build_vocab(
+                self.source_text_data, self.source_max_vocab_size, self.special_token_list
             )
-            self.target_idx2token, self.target_token2idx, self.target_max_vocab_size = self._build_vocab_text(
-                self.target_text_data, max_vocab_size=self.target_max_vocab_size
-            )
-            print(
-                "Source vocab size: {}, Target vocab size: {}".format(
-                    len(self.source_idx2token), len(self.target_idx2token)
-                )
+            self.target_idx2token, self.target_token2idx, self.target_max_vocab_size = build_vocab(
+                self.target_text_data, self.target_max_vocab_size, self.special_token_list
             )
 
-    def shuffle(self):
-        pass
-
-    def detect_restored(self, dataset_path):
-        required_files = []
-        for prefix in ['train', 'dev', 'test']:
-            for suffix in [self.source_suffix, self.target_suffix]:
-                filename = os.path.join(dataset_path, '{}.{}.bin'.format(prefix, suffix))
-                required_files.append(filename)
-        src_vocab_file = os.path.join(dataset_path, '{}.vocab'.format(self.source_suffix))
-        tar_vocab_file = os.path.join(dataset_path, '{}.vocab'.format(self.target_suffix))
-        required_files.append(src_vocab_file)
-        required_files.append(tar_vocab_file)
-        absent_file_flag = False
-        for filename in required_files:
-            if not self.check_file_exist(filename):
-                self.logger.info('File {} not exist'.format(filename))
-                absent_file_flag = True
-        if absent_file_flag:
-            return False
-        return True
+    def _detect_restored(self, dataset_path):
+        return detect_restored(dataset_path, self.source_suffix + '.') and detect_restored(dataset_path, self.target_suffix + '.')
 
     def _dump_data(self, dataset_path):
-        info_str = ''
-        src_vocab_file = os.path.join(dataset_path, '{}.vocab'.format(self.source_suffix))
-        tar_vocab_file = os.path.join(dataset_path, '{}.vocab'.format(self.target_suffix))
-        with open(src_vocab_file, "wb") as f_src_vocab:
-            pickle.dump([self.source_token2idx, self.source_idx2token], f_src_vocab)
-        with open(tar_vocab_file, "wb") as f_tar_vocab:
-            pickle.dump([self.target_token2idx, self.target_idx2token], f_tar_vocab)
-        self.logger.info(
-            "Vocab size: source {}, target {}".format(len(self.source_token2idx), len(self.target_token2idx))
-        )
-        for i, prefix in enumerate(['train', 'dev', 'test']):
-            source_text_data = self.source_text_data[i]
-            target_text_data = self.target_text_data[i]
-            source_text_data = self._text2id(source_text_data, self.source_token2idx)
-            target_text_data = self._text2id(target_text_data, self.target_token2idx)
-            src_idx_filename = os.path.join(dataset_path, '{}.{}.bin'.format(prefix, self.source_suffix))
-            tar_idx_filename = os.path.join(dataset_path, '{}.{}.bin'.format(prefix, self.target_suffix))
-            with open(src_idx_filename, "wb") as f_src:
-                pickle.dump(source_text_data, f_src)
-            with open(tar_idx_filename, "wb") as f_tar:
-                pickle.dump(target_text_data, f_tar)
-            if prefix == 'test':
-                info_str += '{}: {} cases'.format(prefix, len(source_text_data))
-            else:
-                info_str += '{}: {} cases, '.format(prefix, len(source_text_data))
-        self.logger.info(info_str)
+        dump_data(dataset_path, self.source_idx2token, self.source_token2idx, self.source_text_data, self.source_suffix + '.')
+        dump_data(dataset_path, self.target_idx2token, self.target_token2idx, self.target_text_data, self.target_suffix + '.')
         self.logger.info("Dump finished!")
 
-    def load_restored(self, dataset_path):
+    def _load_restored(self, dataset_path):
         """Load dataset from restored binary files (train, dev, test).
+
         Args:
             dataset_path (str): path of dataset dir.
         """
-        src_vocab_file = os.path.join(dataset_path, '{}.vocab'.format(self.source_suffix))
-        tar_vocab_file = os.path.join(dataset_path, '{}.vocab'.format(self.target_suffix))
-        with open(src_vocab_file, "rb") as f_src:
-            self.source_token2idx, self.source_idx2token = pickle.load(f_src)
-        with open(tar_vocab_file, "rb") as f_tar:
-            self.target_token2idx, self.target_idx2token = pickle.load(f_tar)
-        self.logger.info("Restore Vocab!")
-        for prefix in ['train', 'dev', 'test']:
-            src_idx_filename = os.path.join(dataset_path, '{}.{}.bin'.format(prefix, self.source_suffix))
-            tar_idx_filename = os.path.join(dataset_path, '{}.{}.bin'.format(prefix, self.target_suffix))
-            with open(src_idx_filename, "rb") as f_src:
-                source_text_data = pickle.load(f_src)
-                source_text_data = self._id2text(source_text_data, self.source_idx2token)
-            with open(tar_idx_filename, "rb") as f_tar:
-                target_text_data = pickle.load(f_tar)
-                target_text_data = self._id2text(target_text_data, self.target_idx2token)
-            self.source_text_data.append(source_text_data)
-            self.target_text_data.append(target_text_data)
+        self.source_idx2token, self.source_token2idx, self.source_text_data = load_restored(dataset_path, self.source_suffix + '.')
+        self.target_idx2token, self.target_token2idx, self.target_text_data = load_restored(dataset_path, self.target_suffix + '.')
+        self.source_max_vocab_size = len(self.source_idx2token)
+        self.target_max_vocab_size = len(self.target_idx2token)
         self.logger.info("Restore finished!")
 
-    def build(self, eval_setting=None):
+    def build(self):
         info_str = ''
         corpus_list = []
+        self.logger.info(
+            "Vocab size: source {}, target {}".format(self.source_max_vocab_size, self.target_max_vocab_size)
+        )
+
         for i, prefix in enumerate(['train', 'dev', 'test']):
             source_text_data = self.source_text_data[i]
             target_text_data = self.target_text_data[i]
@@ -221,9 +165,7 @@ class PairedSentenceDataset(Dataset):
                 'target_text_data': target_text_data
             }
             corpus_list.append(tp_data)
-            if prefix == 'test':
-                info_str += '{}: {} cases'.format(prefix, len(source_text_data))
-            else:
-                info_str += '{}: {} cases, '.format(prefix, len(source_text_data))
-        self.logger.info(info_str)
+            info_str += '{}: {} cases, '.format(prefix, len(source_text_data))
+        
+        self.logger.info(info_str[:-2] + '\n')
         return corpus_list

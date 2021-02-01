@@ -2,6 +2,11 @@
 # @Author : Junyi Li, Gaole He
 # @Email  : lijunyi@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2021/1/19
+# @Author : Tianyi Tang
+# @Email  : steventang@ruc.edu.cn
+
 """
 textbox.config.configurator
 ################################
@@ -166,7 +171,7 @@ class Config(object):
         cmd_config_dict = self._convert_config_dict(cmd_config_dict)
 
         if 'task_type' in cmd_config_dict and cmd_config_dict['task_type'] not in [
-            'unconditional', 'translation', 'summarization'
+            'unconditional', 'translation', 'summarization', 'attribute'
         ]:
             raise NotImplementedError("task_type {} can't be found".format(cmd_config_dict['task_type']))
         return cmd_config_dict

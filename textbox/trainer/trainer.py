@@ -96,7 +96,7 @@ class Trainer(AbstractTrainer):
         self.train_loss_dict = dict()
         self.optimizer = self._build_optimizer()
         self.task_type = config['task_type'].lower()
-        if self.task_type == "translation":
+        if self.task_type in ["translation", "attribute"]:
             self.evaluator = TranslationEvaluator(config)
         elif self.task_type == "summarization":
             self.evaluator = SummarizationEvaluator(config)
@@ -388,14 +388,6 @@ class Trainer(AbstractTrainer):
             plt.show()
         if save_path:
             plt.savefig(save_path)
-
-
-class UnconditionalTrainer(Trainer):
-    r"""UnconditionalTrainer is designed for RNN, which is a typical unconditional generator.
-    """
-
-    def __init__(self, config, model):
-        super(UnconditionalTrainer, self).__init__(config, model)
 
 
 class GANTrainer(Trainer):
@@ -747,12 +739,12 @@ class RankGANTrainer(GANTrainer):
         return total_loss
 
 
-class ConditionalTrainer(Trainer):
-    r"""ConditionalTrainer is designed for seq2seq testing, which is a typically used setting.
+class Seq2SeqTrainer(Trainer):
+    r"""Seq2SeqTrainer is designed for seq2seq testing, which is a typically used setting.
     """
 
     def __init__(self, config, model):
-        super(ConditionalTrainer, self).__init__(config, model)
+        super(Seq2SeqTrainer, self).__init__(config, model)
 
     @torch.no_grad()
     def evaluate(self, eval_data, load_best_model=True, model_file=None):

@@ -2,4 +2,5 @@
 max_vocab_size: 5000
 max_seq_length: 40
 split_strategy: "load_split"
-source_language: "English"
+overlength_strategy: "drop"
+language: "English"

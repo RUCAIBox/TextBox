@@ -2,6 +2,11 @@
 # @Author : Junyi Li
 # @email  : lijunyie@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2021/1/29
+# @Author : Tianyi Tang
+# @Email  : steven_tang@ruc.edu.cn
+
 """
 textbox.data.dataloader.paired_sent_dataloader
 ################################################
@@ -46,6 +51,22 @@ class PairedSentenceDataLoader(AbstractDataLoader):
 
     def get_reference(self):
         return self.target_text_data
+
+    @property
+    def padding_token_idx(self):
+        return self.source_token2idx[self.padding_token]
+
+    @property
+    def unknown_token_idx(self):
+        return self.source_token2idx[self.unknown_token]
+
+    @property
+    def sos_token_idx(self):
+        return self.source_token2idx[self.sos_token]
+
+    @property
+    def eos_token_idx(self):
+        return self.source_token2idx[self.eos_token]
 
     @property
     def pr_end(self):

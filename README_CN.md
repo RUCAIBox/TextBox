@@ -56,7 +56,16 @@ TextBox 需要的安装条件:
 pip install textbox
 ```
 
+如果你安装`fast_bleu`时遇到了问题，对于Linux请保证`GCC >= 5.1.0`；对于Windows，请使用[fast_bleu_wheel4windows](https://github.com/RUCAIBox/TextBox/tree/main/fast_bleu_wheel4windows)目录下的wheel文件进行安装；对于MacOS，请使用如下命令安装：
+
+```bash
+pip install fast-bleu --install-option="--CC=<path-to-gcc>" --install-option="--CXX=<path-to-g++>"
+```
+
+成功安装后`fast_bleu`，重新安装`textbox`即可。
+
 ### 通过源文件安装
+
 ```bash
 git clone https://github.com/RUCAIBox/TextBox.git && cd TextBox
 pip install -e . --verbose
@@ -257,7 +266,7 @@ python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
 
    如果你想按照比例自动对数据集进行划分，请在YAML文件中设置 `split_strategy: "by_ratio"` 和 `split_ratio` 这两个参数，具体可以参考 [IMDB yaml](/textbox/properties/dataset/IMDB.yaml).
 
-3. 对于无条件文本生成，如果你设置了 `"by_ratio"` ，请将数据集命名为 `corpus_large.txt` ，如果你设置了  `"load_split"` ，请将数据集命名为 `train.txt, valid.txt, dev.txt` 。
+3. 对于无条件文本生成，如果你设置了 `"by_ratio"` ，请将数据集命名为 `corpus.txt` ，如果你设置了  `"load_split"` ，请将数据集命名为 `train.txt, valid.txt, dev.txt` 。
 
    对于sequence-to-sequence文本生成，我们只支持划分好的数据集。请将数据集命名为 `train.[xx/yy], valid.[xx/yy], dev.[xx/yy]` ， `xx` 或者 `yy` 是源文件或目标文件的后缀，应与YAML文件中的 `source_suffix` 和 `target_suffix` 保持一致。
 
@@ -517,7 +526,22 @@ python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
 <td align="center">38.10</td>
 <td align="center">24.89</td>
 </tr>
+<tr>
+<td align="center"><strong>BART</strong></td>
+<td align="center">39.34</td>
+<td align="center">20.07</td>
+<td align="center">41.25</td>
+<td align="center">27.13</td>
+</tr>
+<tr>
+<td align="center"><strong>BERT2BERT</strong></td>
+<td align="center">38.16</td>
+<td align="center">18.89</td>
+<td align="center">40.06</td>
+<td align="center">26.21</td>
+</tr>
 </tbody></table>
+
 
 部分生成实例展示：
 

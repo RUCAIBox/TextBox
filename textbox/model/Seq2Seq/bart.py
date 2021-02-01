@@ -14,11 +14,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from textbox.model.abstract_generator import ConditionalGenerator
+from textbox.model.abstract_generator import Seq2SeqGenerator
 from transformers import BartTokenizer, BartConfig, BartForConditionalGeneration
 
 
-class BART(ConditionalGenerator):
+class BART(Seq2SeqGenerator):
     r"""BART is a powerful sequence-to-sequence model based on Transformer.
     """
 

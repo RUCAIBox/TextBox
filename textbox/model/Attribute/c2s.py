@@ -112,7 +112,7 @@ class C2S(AttributeGenerator):
 
         h_c = torch.tanh(self.attr_linear(attr_embeddings))
 
-        h_c = h_c.repeat(self.num_dec_layers, 1, 1)
+        # h_c = h_c.repeat(self.num_dec_layers, 1, 1)
 
         generated_corpus = []
         idx2token = eval_data.idx2token
@@ -120,6 +120,7 @@ class C2S(AttributeGenerator):
         # Decoder
         for i in range(self.eval_generate_num):
             hidden_states = h_c[i]
+            hidden_states = hidden_states.repeat(self.num_dec_layers, 1)
             generated_tokens = []
             input_last = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
             for _ in range(self.max_length):

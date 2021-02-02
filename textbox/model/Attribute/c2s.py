@@ -40,12 +40,7 @@ class C2S(AttributeGenerator):
         # Layers
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
 
-        self.attr_embedder = []
-
-        for i in range(self.attribute_num):
-            self.attr_embedder.append(
-                nn.Embedding(self.attribute_size[i], self.embedding_size, padding_idx=self.padding_token_idx)
-            )
+        self.attr_embedder = nn.ModuleList([nn.Embedding(self.attribute_size[i], self.embedding_size, padding_idx=self.padding_token_idx) for i in range(self.attribute_num)])
 
 
         self.decoder = BasicRNNDecoder(
@@ -70,22 +65,26 @@ class C2S(AttributeGenerator):
         attr_embeddings = []
 
         for attr_idx in range(self.attribute_num):
-            kth_dim_attr = torch.LongTensor(input_attr[:,attr_idx]).to(self.device)
-            kth_dim_emb = self.dropout(self.attr_embedder[attr_idx](kth_dim_attr))
-            attr_embeddings.append(kth_dim_emb)
+            kth_dim_attr = input_attr[:,attr_idx]
+            kth_dim_embeddings = self.attr_embedder[attr_idx](kth_dim_attr)
+            kth_dim_embeddings = self.dropout(kth_dim_embeddings)
+            attr_embeddings.append(kth_dim_embeddings)
 
+        attr_embeddings = torch.stack(attr_embeddings)
         attr_embeddings.permute(1, 0, 2)
-        attr_embeddings = attr_embeddings.view(-1, self.attribute_num * self.embedding_size)
+        attr_embeddings = attr_embeddings.reshape(-1, self.attribute_num * self.embedding_size)
 
         h_c = torch.tanh(self.attr_linear(attr_embeddings))
+
+        h_c = h_c.repeat(self.num_dec_layers, 1, 1)
 
         input_embeddings = self.dropout(self.token_embedder(input_text))
         outputs, hidden_states = self.decoder(input_embeddings, h_c)
 
         token_logits = self.vocab_linear(outputs)  # B * L * V
-        token_logits = token_logits.view(-1, token_logits.size(-1))  #  (B * L) * V
+        token_logits = token_logits.reshape(-1, token_logits.size(-1))  #  (B * L) * V
 
-        loss = self.loss(token_logits, target_text.view(-1)).reshape_as(target_text)  # B * L
+        loss = self.loss(token_logits, target_text.reshape(-1)).reshape_as(target_text)  # B * L
 
         if (nll_test):
             loss = loss.sum(dim=1)
@@ -102,16 +101,18 @@ class C2S(AttributeGenerator):
         attr_embeddings = []
 
         for attr_idx in range(self.attribute_num):
-            kth_dim_attr = torch.LongTensor(input_attr[:,attr_idx]).to(self.device)
-            kth_dim_emb = self.dropout(self.attr_embedder[attr_idx](kth_dim_attr))
-            attr_embeddings.append(kth_dim_emb)
+            kth_dim_attr = eval_data[:,attr_idx]
+            kth_dim_embeddings = self.attr_embedder[attr_idx](kth_dim_attr)
+            kth_dim_embeddings = self.dropout(kth_dim_embeddings)
+            attr_embeddings.append(kth_dim_embeddings)
 
+        attr_embeddings = torch.stack(attr_embeddings)
         attr_embeddings.permute(1, 0, 2)
         attr_embeddings = attr_embeddings.view(-1, self.attribute_num * self.embedding_size)
 
-
-        attr_embeddings = self.attr_embedder(attr_data)
         h_c = torch.tanh(self.attr_linear(attr_embeddings))
+
+        h_c = h_c.repeat(self.num_dec_layers, 1, 1)
 
         generated_corpus = []
         idx2token = eval_data.idx2token

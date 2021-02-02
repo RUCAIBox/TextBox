@@ -40,14 +40,20 @@ class C2S(AttributeGenerator):
         # Layers
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
 
-        self.attr_embedder = nn.Embedding(self.attribute_size, self.embedding_size, padding_idx=self.padding_token_idx)
+        self.attr_embedder = []
+
+        for i in range(self.attribute_num):
+            self.attr_embedder.append(
+                nn.Embedding(self.attribute_size[i], self.embedding_size, padding_idx=self.padding_token_idx)
+            )
+
 
         self.decoder = BasicRNNDecoder(
             self.embedding_size, self.hidden_size, self.num_dec_layers, self.rnn_type, self.dropout_ratio
         )
 
         self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
-        self.attr_linear = nn.Linear(self.embedding_size, self.hidden_size)
+        self.attr_linear = nn.Linear(self.embedding_size * self.attribute_num, self.hidden_size)
         self.dropout = nn.Dropout(self.dropout_ratio)
 
         # Loss
@@ -61,7 +67,16 @@ class C2S(AttributeGenerator):
         input_attr = corpus['attribute_idx']
         target_text = corpus['target_idx'][:, 1:]
 
-        attr_embeddings = self.dropout(self.attr_embedder(input_attr))
+        attr_embeddings = []
+
+        for attr_idx in range(self.attribute_num):
+            kth_dim_attr = torch.LongTensor(input_attr[:,attr_idx]).to(self.device)
+            kth_dim_emb = self.dropout(self.attr_embedder[attr_idx](kth_dim_attr))
+            attr_embeddings.append(kth_dim_emb)
+
+        attr_embeddings.permute(1, 0, 2)
+        attr_embeddings = attr_embeddings.view(-1, self.attribute_num * self.embedding_size)
+
         h_c = torch.tanh(self.attr_linear(attr_embeddings))
 
         input_embeddings = self.dropout(self.token_embedder(input_text))
@@ -83,6 +98,18 @@ class C2S(AttributeGenerator):
     def generate(self, eval_data):
         # Encoder
         attr_data = eval_data['attribute_idx'][:, :]
+
+        attr_embeddings = []
+
+        for attr_idx in range(self.attribute_num):
+            kth_dim_attr = torch.LongTensor(input_attr[:,attr_idx]).to(self.device)
+            kth_dim_emb = self.dropout(self.attr_embedder[attr_idx](kth_dim_attr))
+            attr_embeddings.append(kth_dim_emb)
+
+        attr_embeddings.permute(1, 0, 2)
+        attr_embeddings = attr_embeddings.view(-1, self.attribute_num * self.embedding_size)
+
+
         attr_embeddings = self.attr_embedder(attr_data)
         h_c = torch.tanh(self.attr_linear(attr_embeddings))
 

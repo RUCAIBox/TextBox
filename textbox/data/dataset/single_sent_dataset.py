@@ -69,7 +69,7 @@ class SingleSentenceDataset(AbstractDataset):
         return detect_restored(dataset_path)
 
     def _dump_data(self, dataset_path):
-        dump_data(dataset_path, self.idx2token, self.token2idx, self.text_data)
+        dump_data(dataset_path, self.text_data, self.idx2token, self.token2idx)
         self.logger.info("Dump finished!")
 
     def _load_restored(self, dataset_path):
@@ -77,7 +77,7 @@ class SingleSentenceDataset(AbstractDataset):
         Args:
             dataset_path (str): path of dataset dir.
         """
-        self.idx2token, self.token2idx, self.text_data = load_restored(dataset_path)
+        self.text_data, self.idx2token, self.token2idx = load_restored(dataset_path)
         self.max_vocab_size = len(self.idx2token)
         self.logger.info("Restore finished!")
 

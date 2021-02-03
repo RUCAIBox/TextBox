@@ -34,8 +34,8 @@ class PairedSentenceDataset(AbstractDataset):
             self.target_max_vocab_size = config['target_max_vocab_size']
 
         if config['target_max_seq_length'] is None or config['source_max_seq_length'] is None:
-            self.source_max_vocab_size = config['max_seq_length']
-            self.target_max_vocab_size = config['max_seq_length']
+            self.source_max_seq_length = config['max_seq_length']
+            self.target_max_seq_length = config['max_seq_length']
         else:
             self.source_max_seq_length = config['source_max_seq_length']
             self.target_max_seq_length = config['target_max_seq_length']
@@ -130,8 +130,8 @@ class PairedSentenceDataset(AbstractDataset):
         return detect_restored(dataset_path, self.source_suffix + '.') and detect_restored(dataset_path, self.target_suffix + '.')
 
     def _dump_data(self, dataset_path):
-        dump_data(dataset_path, self.source_idx2token, self.source_token2idx, self.source_text_data, self.source_suffix + '.')
-        dump_data(dataset_path, self.target_idx2token, self.target_token2idx, self.target_text_data, self.target_suffix + '.')
+        dump_data(dataset_path, self.source_text_data, self.source_idx2token, self.source_token2idx, self.source_suffix + '.')
+        dump_data(dataset_path, self.target_text_data, self.target_idx2token, self.target_token2idx, self.target_suffix + '.')
         self.logger.info("Dump finished!")
 
     def _load_restored(self, dataset_path):
@@ -140,8 +140,8 @@ class PairedSentenceDataset(AbstractDataset):
         Args:
             dataset_path (str): path of dataset dir.
         """
-        self.source_idx2token, self.source_token2idx, self.source_text_data = load_restored(dataset_path, self.source_suffix + '.')
-        self.target_idx2token, self.target_token2idx, self.target_text_data = load_restored(dataset_path, self.target_suffix + '.')
+        self.source_text_data, self.source_idx2token, self.source_token2idx = load_restored(dataset_path, self.source_suffix + '.')
+        self.target_text_data, self.target_idx2token, self.target_token2idx = load_restored(dataset_path, self.target_suffix + '.')
         self.source_max_vocab_size = len(self.source_idx2token)
         self.target_max_vocab_size = len(self.target_idx2token)
         self.logger.info("Restore finished!")

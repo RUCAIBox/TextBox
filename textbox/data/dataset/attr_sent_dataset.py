@@ -102,8 +102,8 @@ class AttributedSentenceDataset(AbstractDataset):
         return detect_restored(dataset_path, 'corpus.') and detect_restored(dataset_path, 'attribute.')
 
     def _dump_data(self, dataset_path):
-        dump_data(dataset_path, self.idx2token, self.token2idx, self.text_data, 'corpus.')
-        dump_data(dataset_path, self.idx2attribute, self.attribute2idx, self.attribute_data, 'attribute.')
+        dump_data(dataset_path, self.text_data, self.idx2token, self.token2idx, 'corpus.')
+        dump_data(dataset_path, self.attribute_data, self.idx2attribute, self.attribute2idx, 'attribute.')
         self.logger.info("Dump finished!")
 
     def _load_restored(self, dataset_path):
@@ -111,8 +111,8 @@ class AttributedSentenceDataset(AbstractDataset):
         Args:
             dataset_path (str): path of dataset dir.
         """
-        self.idx2token, self.token2idx, self.text_data = load_restored(dataset_path, 'corpus.')
-        self.idx2attribute, self.attribute2idx, self.attribute_data = load_restored(dataset_path, 'attribute.')
+        self.text_data, self.idx2token, self.token2idx = load_restored(dataset_path, 'corpus.')
+        self.attribute_data, self.idx2attribute, self.attribute2idx = load_restored(dataset_path, 'attribute.')
         self.max_vocab_size = len(self.idx2token)
         self.logger.info("Restore finished!")
 

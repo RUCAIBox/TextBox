@@ -70,7 +70,7 @@ class BasicRNNDecoder(torch.nn.Module):
         Returns:
             tuple:
                 - Torch.Tensor: output features, shape: [batch_size, sequence_length, num_directions * hidden_size].
-                - Torch.Tensor: hidden states, shape: [batch_size, num_layers * num_directions, hidden_size].
+                - Torch.Tensor: hidden states, shape: [num_layers * num_directions, batch_size, hidden_size].
         """
         if hidden_states is None:
             hidden_states = self.init_hidden(input_embeddings)

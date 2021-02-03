@@ -1,0 +1,9 @@
+max_vocab_size: 30000
+max_utt_length: 50
+max_ctx_turn: 16
+max_knowledge_num: 16
+max_knowledge_len: 16
+split_strategy: "load_split"
+overlength_strategy: "truncate"
+tokenize_strategy: "by_space"
+language: "English"

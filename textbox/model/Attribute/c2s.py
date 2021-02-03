@@ -41,16 +41,20 @@ class C2S(AttributeGenerator):
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
 
         self.attr_embedder = nn.ModuleList([
-            nn.Embedding(self.attribute_size[i], self.embedding_size, padding_idx=self.padding_token_idx)
+            nn.Embedding(self.attribute_size[i], min(self.embedding_size, self.attribute_size[i]), padding_idx=self.padding_token_idx)
             for i in range(self.attribute_num)
         ])
+
+        total_emb_size = 0
+        for i in range(self.attribute_num):
+            total_emb_size += min(self.embedding_size, self.attribute_size[i])
 
         self.decoder = BasicRNNDecoder(
             self.embedding_size, self.hidden_size, self.num_dec_layers, self.rnn_type, self.dropout_ratio
         )
 
         self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
-        self.attr_linear = nn.Linear(self.embedding_size * self.attribute_num, self.hidden_size * self.num_dec_layers)
+        self.attr_linear = nn.Linear(total_emb_size, self.hidden_size * self.num_dec_layers)
         self.dropout = nn.Dropout(self.dropout_ratio)
 
         # Loss
@@ -69,12 +73,13 @@ class C2S(AttributeGenerator):
         for attr_idx in range(self.attribute_num):
             kth_dim_attr = input_attr[:, attr_idx]
             kth_dim_embeddings = self.attr_embedder[attr_idx](kth_dim_attr)
-            kth_dim_embeddings = self.dropout(kth_dim_embeddings)
+            # kth_dim_embeddings = self.dropout(kth_dim_embeddings)
             attr_embeddings.append(kth_dim_embeddings)
 
-        attr_embeddings = torch.stack(attr_embeddings)
-        attr_embeddings.permute(1, 0, 2)
-        attr_embeddings = attr_embeddings.reshape(-1, self.attribute_num * self.embedding_size)
+        attr_embeddings = torch.cat(attr_embeddings, dim=1)
+
+        # attr_embeddings.permute(1, 0, 2)
+        # attr_embeddings = attr_embeddings.reshape(-1, self.attribute_num * self.embedding_size)
 
         h_c = torch.relu(self.attr_linear(attr_embeddings))
 
@@ -82,8 +87,9 @@ class C2S(AttributeGenerator):
         h_c = h_c.reshape(-1, self.num_dec_layers, self.hidden_size)
         h_c = h_c.permute(1, 0, 2).contiguous()
 
-        input_embeddings = self.dropout(self.token_embedder(input_text))
+        input_embeddings = self.token_embedder(input_text)
         outputs, hidden_states = self.decoder(input_embeddings, h_c)
+        outputs = self.dropout(outputs)
 
         token_logits = self.vocab_linear(outputs)
         token_logits = token_logits.view(-1, token_logits.size(-1))
@@ -105,11 +111,13 @@ class C2S(AttributeGenerator):
         for attr_idx in range(self.attribute_num):
             kth_dim_attr = attr_data[:, attr_idx]
             kth_dim_embeddings = self.attr_embedder[attr_idx](kth_dim_attr)
+            # kth_dim_embeddings = self.dropout(kth_dim_embeddings)
             attr_embeddings.append(kth_dim_embeddings)
 
-        attr_embeddings = torch.stack(attr_embeddings)
-        attr_embeddings.permute(1, 0, 2)
-        attr_embeddings = attr_embeddings.view(-1, self.attribute_num * self.embedding_size)
+        attr_embeddings = torch.cat(attr_embeddings, dim=1)
+
+        # attr_embeddings.permute(1, 0, 2)
+        # attr_embeddings = attr_embeddings.reshape(-1, self.attribute_num * self.embedding_size)
 
         h_c = torch.relu(self.attr_linear(attr_embeddings)).contiguous()
 
@@ -137,7 +145,8 @@ class C2S(AttributeGenerator):
                 outputs, hidden_states = self.decoder(decoder_input, hidden_states)
                 token_logits = self.vocab_linear(outputs)
                 token_probs = F.softmax(token_logits, dim=-1).squeeze()
-                token_idx = torch.multinomial(token_probs, 1)[0].item()
+                # token_idx = torch.multinomial(token_probs, 1)[0].item()
+                token_idx = torch.argmax(token_probs).item()
 
                 if token_idx == self.eos_token_idx:
                     break

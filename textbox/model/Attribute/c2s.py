@@ -40,15 +40,17 @@ class C2S(AttributeGenerator):
         # Layers
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
 
-        self.attr_embedder = nn.ModuleList([nn.Embedding(self.attribute_size[i], self.embedding_size, padding_idx=self.padding_token_idx) for i in range(self.attribute_num)])
-
+        self.attr_embedder = nn.ModuleList([
+            nn.Embedding(self.attribute_size[i], self.embedding_size, padding_idx=self.padding_token_idx)
+            for i in range(self.attribute_num)
+        ])
 
         self.decoder = BasicRNNDecoder(
             self.embedding_size, self.hidden_size, self.num_dec_layers, self.rnn_type, self.dropout_ratio
         )
 
         self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
-        self.attr_linear = nn.Linear(self.embedding_size * self.attribute_num, self.hidden_size)
+        self.attr_linear = nn.Linear(self.embedding_size * self.attribute_num, self.hidden_size * self.num_dec_layers)
         self.dropout = nn.Dropout(self.dropout_ratio)
 
         # Loss
@@ -65,7 +67,7 @@ class C2S(AttributeGenerator):
         attr_embeddings = []
 
         for attr_idx in range(self.attribute_num):
-            kth_dim_attr = input_attr[:,attr_idx]
+            kth_dim_attr = input_attr[:, attr_idx]
             kth_dim_embeddings = self.attr_embedder[attr_idx](kth_dim_attr)
             kth_dim_embeddings = self.dropout(kth_dim_embeddings)
             attr_embeddings.append(kth_dim_embeddings)
@@ -74,43 +76,44 @@ class C2S(AttributeGenerator):
         attr_embeddings.permute(1, 0, 2)
         attr_embeddings = attr_embeddings.reshape(-1, self.attribute_num * self.embedding_size)
 
-        h_c = torch.tanh(self.attr_linear(attr_embeddings))
+        h_c = torch.relu(self.attr_linear(attr_embeddings))
 
-        h_c = h_c.repeat(self.num_dec_layers, 1, 1)
+        # h_c = h_c.repeat(self.num_dec_layers, 1, 1)
+        h_c = h_c.reshape(-1, self.num_dec_layers, self.hidden_size)
+        h_c = h_c.permute(1, 0, 2).contiguous()
 
         input_embeddings = self.dropout(self.token_embedder(input_text))
         outputs, hidden_states = self.decoder(input_embeddings, h_c)
 
-        token_logits = self.vocab_linear(outputs)  # B * L * V
-        token_logits = token_logits.reshape(-1, token_logits.size(-1))  #  (B * L) * V
+        token_logits = self.vocab_linear(outputs)
+        token_logits = token_logits.view(-1, token_logits.size(-1))
 
-        loss = self.loss(token_logits, target_text.reshape(-1)).reshape_as(target_text)  # B * L
-
+        loss = self.loss(token_logits, target_text.contiguous().view(-1)).reshape_as(target_text)
         if (nll_test):
             loss = loss.sum(dim=1)
         else:
-            corpus_length = corpus['target_length'] - 1
-            loss = loss.sum(dim=1) / corpus_length.float()
-
+            length = corpus['target_length'] - 1
+            loss = loss.sum(dim=1) / length.float()
         return loss.mean()
 
-    def generate(self, eval_data):
-        # Encoder
-        attr_data = eval_data['attribute_idx'][:, :]
+    def generate_for_corpus(self, eval_data, corpus):
+
+        attr_data = corpus['attribute_idx']
 
         attr_embeddings = []
 
         for attr_idx in range(self.attribute_num):
-            kth_dim_attr = eval_data[:,attr_idx]
+            kth_dim_attr = attr_data[:, attr_idx]
             kth_dim_embeddings = self.attr_embedder[attr_idx](kth_dim_attr)
-            kth_dim_embeddings = self.dropout(kth_dim_embeddings)
             attr_embeddings.append(kth_dim_embeddings)
 
         attr_embeddings = torch.stack(attr_embeddings)
         attr_embeddings.permute(1, 0, 2)
         attr_embeddings = attr_embeddings.view(-1, self.attribute_num * self.embedding_size)
 
-        h_c = torch.tanh(self.attr_linear(attr_embeddings))
+        h_c = torch.relu(self.attr_linear(attr_embeddings)).contiguous()
+
+        print(h_c.shape)
 
         # h_c = h_c.repeat(self.num_dec_layers, 1, 1)
 
@@ -118,11 +121,17 @@ class C2S(AttributeGenerator):
         idx2token = eval_data.idx2token
 
         # Decoder
-        for i in range(self.eval_generate_num):
-            hidden_states = h_c[i]
-            hidden_states = hidden_states.repeat(self.num_dec_layers, 1)
+        # hidden_states = h_c
+        # hidden_states = hidden_states.repeat(self.num_dec_layers, 1, 1)
+
+        cur_batch_size = len(h_c)
+
+        for data_idx in range(cur_batch_size):
             generated_tokens = []
             input_last = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
+            hidden_states = h_c[data_idx].to(self.device)
+            # hidden_states = hidden_states.repeat(self.num_dec_layers, 1).to(self.device)
+            hidden_states = hidden_states.reshape(self.num_dec_layers, 1, self.hidden_size).contiguous()
             for _ in range(self.max_length):
                 decoder_input = self.token_embedder(input_last)
                 outputs, hidden_states = self.decoder(decoder_input, hidden_states)
@@ -135,8 +144,22 @@ class C2S(AttributeGenerator):
                 else:
                     generated_tokens.append(idx2token[token_idx])
                     input_last = torch.LongTensor([[token_idx]]).to(self.device)
-
             generated_corpus.append(generated_tokens)
+
+        print(generated_corpus)
+
+        return generated_corpus
+
+    def generate(self, eval_data):
+        # Encoder
+        generated_corpus = []
+        indx = 0
+        for corpus in eval_data:
+            indx = indx + 1
+            print("Corpus #", indx)
+            generated_corpus += self.generate_for_corpus(eval_data, corpus)
+            print("-" * 100)
+
         return generated_corpus
 
     def calculate_nll_test(self, corpus, epoch_idx):

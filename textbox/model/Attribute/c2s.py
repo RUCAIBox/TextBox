@@ -32,6 +32,7 @@ class C2S(AttributeGenerator):
 
         self.eval_generate_num = config['eval_generate_num']
         self.max_length = config['max_seq_length']
+        self.is_gated = config['gated']
 
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
@@ -55,6 +56,11 @@ class C2S(AttributeGenerator):
 
         self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
         self.attr_linear = nn.Linear(total_emb_size, self.hidden_size * self.num_dec_layers)
+        
+        if self.is_gated:
+            self.gate_hc_linear = nn.Linear(total_emb_size, self.hidden_size)
+            self.gate_linear = nn.Linear(self.hidden_size, self.hidden_size)
+
         self.dropout = nn.Dropout(self.dropout_ratio)
 
         # Loss
@@ -73,22 +79,25 @@ class C2S(AttributeGenerator):
         for attr_idx in range(self.attribute_num):
             kth_dim_attr = input_attr[:, attr_idx]
             kth_dim_embeddings = self.attr_embedder[attr_idx](kth_dim_attr)
-            # kth_dim_embeddings = self.dropout(kth_dim_embeddings)
             attr_embeddings.append(kth_dim_embeddings)
 
         attr_embeddings = torch.cat(attr_embeddings, dim=1)
 
-        # attr_embeddings.permute(1, 0, 2)
-        # attr_embeddings = attr_embeddings.reshape(-1, self.attribute_num * self.embedding_size)
-
         h_c = torch.relu(self.attr_linear(attr_embeddings))
-
-        # h_c = h_c.repeat(self.num_dec_layers, 1, 1)
+        
         h_c = h_c.reshape(-1, self.num_dec_layers, self.hidden_size)
         h_c = h_c.permute(1, 0, 2).contiguous()
 
         input_embeddings = self.token_embedder(input_text)
         outputs, hidden_states = self.decoder(input_embeddings, h_c)
+        
+        # print("outputs", outputs.shape)
+        if self.is_gated:
+            h_c_1D = torch.relu(self.gate_hc_linear(attr_embeddings))
+            m_t = torch.relu(self.gate_linear(outputs)).permute(1, 0, 2)
+            m_t = (m_t * h_c_1D).permute(1, 0, 2)
+            outputs = torch.add(outputs, m_t)
+
         outputs = self.dropout(outputs)
 
         token_logits = self.vocab_linear(outputs)
@@ -111,19 +120,14 @@ class C2S(AttributeGenerator):
         for attr_idx in range(self.attribute_num):
             kth_dim_attr = attr_data[:, attr_idx]
             kth_dim_embeddings = self.attr_embedder[attr_idx](kth_dim_attr)
-            # kth_dim_embeddings = self.dropout(kth_dim_embeddings)
             attr_embeddings.append(kth_dim_embeddings)
 
         attr_embeddings = torch.cat(attr_embeddings, dim=1)
 
-        # attr_embeddings.permute(1, 0, 2)
-        # attr_embeddings = attr_embeddings.reshape(-1, self.attribute_num * self.embedding_size)
-
         h_c = torch.relu(self.attr_linear(attr_embeddings)).contiguous()
 
-        print(h_c.shape)
-
-        # h_c = h_c.repeat(self.num_dec_layers, 1, 1)
+        if self.is_gated:
+            h_c_1D = torch.relu(self.gate_linear(attr_embeddings))
 
         generated_corpus = []
         idx2token = eval_data.idx2token
@@ -143,6 +147,11 @@ class C2S(AttributeGenerator):
             for _ in range(self.max_length):
                 decoder_input = self.token_embedder(input_last)
                 outputs, hidden_states = self.decoder(decoder_input, hidden_states)
+                
+                if self.is_gated:
+                    m_t = torch.relu(self.gate_linear(outputs)) * h_c_1D
+                    outputs = torch.add(outputs, m_t)
+
                 token_logits = self.vocab_linear(outputs)
                 token_probs = F.softmax(token_logits, dim=-1).squeeze()
                 # token_idx = torch.multinomial(token_probs, 1)[0].item()

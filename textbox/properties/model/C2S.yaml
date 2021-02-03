@@ -3,4 +3,4 @@ hidden_size: 512
 num_dec_layers: 2
 dropout_ratio: 0.2
 rnn_type: "gru"
-gated: false
+gated: true

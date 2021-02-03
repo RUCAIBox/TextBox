@@ -145,8 +145,8 @@ class C2S(AttributeGenerator):
                 outputs, hidden_states = self.decoder(decoder_input, hidden_states)
                 token_logits = self.vocab_linear(outputs)
                 token_probs = F.softmax(token_logits, dim=-1).squeeze()
-                token_idx = torch.multinomial(token_probs, 1)[0].item()
-                # token_idx = torch.argmax(token_probs).item()
+                # token_idx = torch.multinomial(token_probs, 1)[0].item()
+                token_idx = torch.argmax(token_probs).item()
 
                 if token_idx == self.eos_token_idx:
                     break

@@ -33,10 +33,12 @@ class C2S(AttributeGenerator):
         self.eval_generate_num = config['eval_generate_num']
         self.max_length = config['max_seq_length']
         self.is_gated = config['gated']
+        self.generate_method = config['generate_method']
 
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
         self.eos_token_idx = dataset.eos_token_idx
+        
 
         # Layers
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
@@ -154,9 +156,12 @@ class C2S(AttributeGenerator):
 
                 token_logits = self.vocab_linear(outputs)
                 token_probs = F.softmax(token_logits, dim=-1).squeeze()
-                # token_idx = torch.multinomial(token_probs, 1)[0].item()
-                token_idx = torch.argmax(token_probs).item()
-
+                if self.generate_method == 'random_sampling':
+                    token_idx = torch.multinomial(token_probs, 1)[0].item()
+                elif self.generate_method == 'argmax':
+                    token_idx = torch.argmax(token_probs).item()
+                else:
+                    raise NotImplementedError("No such generate method: {}, only ['random_sampling', 'argmax'] are available.".format(self.generate_method))
                 if token_idx == self.eos_token_idx:
                     break
                 else:

@@ -127,7 +127,7 @@ class C2S(AttributeGenerator):
         h_c = torch.relu(self.attr_linear(attr_embeddings)).contiguous()
 
         if self.is_gated:
-            h_c_1D = torch.sigmoid(self.gate_hc_linear(attr_embeddings))
+            h_c_1D = torch.relu(self.gate_hc_linear(attr_embeddings))
 
         generated_corpus = []
         idx2token = eval_data.idx2token
@@ -149,7 +149,7 @@ class C2S(AttributeGenerator):
                 outputs, hidden_states = self.decoder(decoder_input, hidden_states)
                 
                 if self.is_gated:
-                    m_t = torch.relu(self.gate_linear(outputs)) * h_c_1D[data_idx]
+                    m_t = torch.sigmoid(self.gate_linear(outputs)) * h_c_1D[data_idx]
                     outputs = torch.add(outputs, m_t)
 
                 token_logits = self.vocab_linear(outputs)

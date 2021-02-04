@@ -42,7 +42,7 @@ class C2S(AttributeGenerator):
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
 
         self.attr_embedder = nn.ModuleList([
-            nn.Embedding(self.attribute_size[i], min(self.embedding_size, self.attribute_size[i]), padding_idx=self.padding_token_idx)
+            nn.Embedding(self.attribute_size[i], min(self.embedding_size, self.attribute_size[i]))
             for i in range(self.attribute_num)
         ])
 
@@ -94,7 +94,7 @@ class C2S(AttributeGenerator):
         # print("outputs", outputs.shape)
         if self.is_gated:
             h_c_1D = torch.relu(self.gate_hc_linear(attr_embeddings))
-            m_t = torch.relu(self.gate_linear(outputs)).permute(1, 0, 2)
+            m_t = torch.sigmoid(self.gate_linear(outputs)).permute(1, 0, 2)
             m_t = (m_t * h_c_1D).permute(1, 0, 2)
             outputs = torch.add(outputs, m_t)
 
@@ -127,7 +127,7 @@ class C2S(AttributeGenerator):
         h_c = torch.relu(self.attr_linear(attr_embeddings)).contiguous()
 
         if self.is_gated:
-            h_c_1D = torch.relu(self.gate_hc_linear(attr_embeddings))
+            h_c_1D = torch.sigmoid(self.gate_hc_linear(attr_embeddings))
 
         generated_corpus = []
         idx2token = eval_data.idx2token

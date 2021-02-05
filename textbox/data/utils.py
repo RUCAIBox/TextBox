@@ -36,10 +36,10 @@ def create_dataset(config):
     elif task_type == "attribute":
         from .dataset import AttributedSentenceDataset
         return AttributedSentenceDataset(config)
-    elif task_type == "translation" or task_type == "summarization":
+    elif task_type in ["translation", "summarization"]:
         from .dataset import PairedSentenceDataset
         return PairedSentenceDataset(config)
-    elif task_type == "multi_dialog":
+    elif task_type in ["multi_dialog", "poem"]:
         from .dataset import MultipleSentenceDataset
         return MultipleSentenceDataset(config)
     else:
@@ -126,9 +126,9 @@ def get_data_loader(config):
         return SingleSentenceDataLoader
     elif task_type == "attribute":
         return AttributedSentenceDataLoader
-    elif task_type == "translation" or task_type == "summarization":
+    elif task_type in ["translation", "summarization"]:
         return PairedSentenceDataLoader
-    elif task_type == "multi_dialog":
+    elif task_type in ["multi_dialog", "poem"]:
         return MultipleSentenceDataLoader
     else:
         raise NotImplementedError("No such data loader for TASK_TYPE: {}".format(task_type))
@@ -168,13 +168,13 @@ def load_data(dataset_path, tokenize_strategy, overlength_strategy, max_seq_leng
     """
     if not os.path.isfile(dataset_path):
         raise ValueError('File {} not exist'.format(dataset_path))
-    
+
     fin = open(dataset_path, "r")
     text = []
     for line in fin:
         line = line.strip().lower()
         words = tokenize(line, tokenize_strategy, language)
-        
+
         if overlength_strategy == 'truncate':
             text.append(words[:max_seq_length])
         elif overlength_strategy == 'drop':
@@ -228,6 +228,7 @@ def split_data(data_list, ratios):
 
     return split_list
 
+
 def build_vocab(text_data_list, max_vocab_size, special_token_list):
     """Build vocabulary of list of text data.
 
@@ -251,7 +252,7 @@ def build_vocab(text_data_list, max_vocab_size, special_token_list):
             else:
                 for words in text:
                     word_list.extend(words)
-    
+
     token_count = [(count, token) for token, count in collections.Counter(word_list).items()]
     token_count.sort(reverse=True)
     tokens = [word for count, word in token_count]
@@ -263,21 +264,24 @@ def build_vocab(text_data_list, max_vocab_size, special_token_list):
     token2idx = dict(zip(tokens, range(max_vocab_size)))
     return idx2token, token2idx, max_vocab_size
 
-def detect_restored(dataset_path, suffix="", ignore_vocab=False):
+
+def detect_restored(dataset_path, suffix="", ignore_file=""):
     """Detect whether binary files is already restored.
 
     Args:
         dataset_path (str): path of dataset dir.
         suffix (str, optional): suffix of files, default: "".
+        ignore_file (str, optional): ignored file (data or vocab), default: "".
     
     Returns:
         bool: whether files are already restored.
     """
     required_files = []
-    for prefix in ['train', 'dev', 'test']:
-        filename = os.path.join(dataset_path, '{}.{}bin'.format(prefix, suffix))
-        required_files.append(filename)
-    if not ignore_vocab:
+    if ignore_file != "data":
+        for prefix in ['train', 'dev', 'test']:
+            filename = os.path.join(dataset_path, '{}.{}bin'.format(prefix, suffix))
+            required_files.append(filename)
+    if ignore_file != "vocab":
         vocab_file = os.path.join(dataset_path, '{}vocab'.format(suffix))
         required_files.append(vocab_file)
     absent_file_flag = False
@@ -287,7 +291,8 @@ def detect_restored(dataset_path, suffix="", ignore_vocab=False):
             break
     return not absent_file_flag
 
-def dump_data(dataset_path, text_data, idx2token=None, token2idx=None, suffix=""):
+
+def dump_data(dataset_path, text_data=None, idx2token=None, token2idx=None, suffix=""):
     """Dump data into binary files.
 
     Args:
@@ -302,18 +307,21 @@ def dump_data(dataset_path, text_data, idx2token=None, token2idx=None, suffix=""
         with open(vocab_file, "wb") as f_vocab:
             pickle.dump([idx2token, token2idx], f_vocab)
 
-    for i, prefix in enumerate(['train', 'dev', 'test']):
-        text = text_data[i]
-        idx_filename = os.path.join(dataset_path, '{}.{}bin'.format(prefix, suffix))
-        with open(idx_filename, "wb") as f_text:
-            pickle.dump(text, f_text)
+    if text_data is not None:
+        for i, prefix in enumerate(['train', 'dev', 'test']):
+            text = text_data[i]
+            idx_filename = os.path.join(dataset_path, '{}.{}bin'.format(prefix, suffix))
+            with open(idx_filename, "wb") as f_text:
+                pickle.dump(text, f_text)
 
-def load_restored(dataset_path, suffix="", ignore_vocab=False):
+
+def load_restored(dataset_path, suffix="", ignore_file=""):
     """Load dataset from restored binary files (train, dev, test).
 
     Args:
         dataset_path (str): path of dataset dir.
         suffix (str, optional): suffix of files, default: "".
+        ignore_file (str, optional): ignored file (data or vocab), default: "".
     
     Returns:
         tuple:
@@ -321,17 +329,20 @@ def load_restored(dataset_path, suffix="", ignore_vocab=False):
             - idx2token (dict, optional): map index to token.
             - token2idx (dict, optional): map token to index.
     """
-    if not ignore_vocab:
+    return_list = []
+    if ignore_file != 'data':
+        text_data = []
+        for prefix in ['train', 'dev', 'test']:
+            idx_filename = os.path.join(dataset_path, '{}.{}bin'.format(prefix, suffix))
+            with open(idx_filename, "rb") as f_text:
+                text = pickle.load(f_text)
+            text_data.append(text)
+        return_list.append(text_data)
+
+    if ignore_file != 'vocab':
         vocab_file = os.path.join(dataset_path, '{}vocab'.format(suffix))
         with open(vocab_file, "rb") as f_vocab:
             idx2token, token2idx = pickle.load(f_vocab)
-    text_data = []
-    for prefix in ['train', 'dev', 'test']:
-        idx_filename = os.path.join(dataset_path, '{}.{}bin'.format(prefix, suffix))
-        with open(idx_filename, "rb") as f_text:
-            text = pickle.load(f_text)
-        text_data.append(text)
-    if not ignore_vocab:
-        return text_data, idx2token, token2idx
-    else:
-        return text_data
+        return_list.extend([idx2token, token2idx])
+
+    return return_list

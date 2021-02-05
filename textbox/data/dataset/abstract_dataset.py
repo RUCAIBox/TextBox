@@ -88,7 +88,7 @@ class AbstractDataset(object):
             dataset_path (str): path of dataset dir.
         """
         raise NotImplementedError('Method [_dump_data] should be implemented.')
-    
+
     def _build_vocab(self):
         r"""Build the vocabulary of text data.
         """

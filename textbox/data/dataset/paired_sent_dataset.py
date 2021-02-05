@@ -54,10 +54,12 @@ class PairedSentenceDataset(AbstractDataset):
 
     def _load_paired_data(self, source_file, target_file):
         if self.overlength_strategy == 'drop':
-            loaded_source_text = load_data(source_file, self.tokenize_strategy, 'none',
-                                    self.source_max_seq_length, self.source_language)
-            loaded_target_text = load_data(target_file, self.tokenize_strategy, 'none',
-                                    self.target_max_seq_length, self.target_language)
+            loaded_source_text = load_data(
+                source_file, self.tokenize_strategy, 'none', self.source_max_seq_length, self.source_language
+            )
+            loaded_target_text = load_data(
+                target_file, self.tokenize_strategy, 'none', self.target_max_seq_length, self.target_language
+            )
             assert len(loaded_source_text) == len(loaded_target_text)
             source_text = []
             target_text = []
@@ -66,11 +68,15 @@ class PairedSentenceDataset(AbstractDataset):
                     source_text.append(src)
                     target_text.append(tgt)
         else:
-            source_text = load_data(source_file, self.tokenize_strategy, self.overlength_strategy,
-                                    self.source_max_seq_length, self.source_language)
-            target_text = load_data(target_file, self.tokenize_strategy, self.overlength_strategy,
-                                    self.target_max_seq_length, self.target_language)
-        
+            source_text = load_data(
+                source_file, self.tokenize_strategy, self.overlength_strategy, self.source_max_seq_length,
+                self.source_language
+            )
+            target_text = load_data(
+                target_file, self.tokenize_strategy, self.overlength_strategy, self.target_max_seq_length,
+                self.target_language
+            )
+
         return source_text, target_text
 
     def _load_split_data(self, dataset_path):
@@ -83,7 +89,7 @@ class PairedSentenceDataset(AbstractDataset):
         for prefix in ['train', 'dev', 'test']:
             source_file = os.path.join(dataset_path, '{}.{}'.format(prefix, self.source_suffix))
             target_file = os.path.join(dataset_path, '{}.{}'.format(prefix, self.target_suffix))
-            
+
             source_text, target_text = self._load_paired_data(source_file, target_file)
 
             self.source_text_data.append(source_text)
@@ -127,11 +133,16 @@ class PairedSentenceDataset(AbstractDataset):
             )
 
     def _detect_restored(self, dataset_path):
-        return detect_restored(dataset_path, self.source_suffix + '.') and detect_restored(dataset_path, self.target_suffix + '.')
+        return detect_restored(dataset_path,
+                               self.source_suffix + '.') and detect_restored(dataset_path, self.target_suffix + '.')
 
     def _dump_data(self, dataset_path):
-        dump_data(dataset_path, self.source_text_data, self.source_idx2token, self.source_token2idx, self.source_suffix + '.')
-        dump_data(dataset_path, self.target_text_data, self.target_idx2token, self.target_token2idx, self.target_suffix + '.')
+        dump_data(
+            dataset_path, self.source_text_data, self.source_idx2token, self.source_token2idx, self.source_suffix + '.'
+        )
+        dump_data(
+            dataset_path, self.target_text_data, self.target_idx2token, self.target_token2idx, self.target_suffix + '.'
+        )
         self.logger.info("Dump finished!")
 
     def _load_restored(self, dataset_path):
@@ -140,8 +151,12 @@ class PairedSentenceDataset(AbstractDataset):
         Args:
             dataset_path (str): path of dataset dir.
         """
-        self.source_text_data, self.source_idx2token, self.source_token2idx = load_restored(dataset_path, self.source_suffix + '.')
-        self.target_text_data, self.target_idx2token, self.target_token2idx = load_restored(dataset_path, self.target_suffix + '.')
+        self.source_text_data, self.source_idx2token, self.source_token2idx = load_restored(
+            dataset_path, self.source_suffix + '.'
+        )
+        self.target_text_data, self.target_idx2token, self.target_token2idx = load_restored(
+            dataset_path, self.target_suffix + '.'
+        )
         self.source_max_vocab_size = len(self.source_idx2token)
         self.target_max_vocab_size = len(self.target_idx2token)
         self.logger.info("Restore finished!")
@@ -166,6 +181,6 @@ class PairedSentenceDataset(AbstractDataset):
             }
             corpus_list.append(tp_data)
             info_str += '{}: {} cases, '.format(prefix, len(source_text_data))
-        
+
         self.logger.info(info_str[:-2] + '\n')
         return corpus_list

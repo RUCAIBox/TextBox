@@ -41,7 +41,9 @@ class SingleSentenceDataset(AbstractDataset):
         """
         for prefix in ['train', 'dev', 'test']:
             filename = os.path.join(dataset_path, '{}.txt'.format(prefix))
-            text_data = load_data(filename, self.tokenize_strategy, self.overlength_strategy, self.max_seq_length, self.language)
+            text_data = load_data(
+                filename, self.tokenize_strategy, self.overlength_strategy, self.max_seq_length, self.language
+            )
             self.text_data.append(text_data)
 
     def _load_single_data(self, dataset_path):
@@ -51,7 +53,9 @@ class SingleSentenceDataset(AbstractDataset):
             dataset_path (str): path of dataset dir.
         """
         dataset_file = os.path.join(dataset_path, 'corpus.txt')
-        self.text_data = load_data(dataset_file, self.tokenize_strategy, self.overlength_strategy, self.max_seq_length, self.language)
+        self.text_data = load_data(
+            dataset_file, self.tokenize_strategy, self.overlength_strategy, self.max_seq_length, self.language
+        )
         self.text_data = split_data([self.text_data], self.split_ratio)[0]
 
     def _load_data(self, dataset_path):
@@ -63,7 +67,9 @@ class SingleSentenceDataset(AbstractDataset):
             raise NotImplementedError("{} split strategy not implemented".format(self.split_strategy))
 
     def _build_vocab(self):
-        self.idx2token, self.token2idx, self.max_vocab_size = build_vocab(self.text_data, self.max_vocab_size, self.special_token_list)
+        self.idx2token, self.token2idx, self.max_vocab_size = build_vocab(
+            self.text_data, self.max_vocab_size, self.special_token_list
+        )
 
     def _detect_restored(self, dataset_path):
         return detect_restored(dataset_path)
@@ -84,9 +90,7 @@ class SingleSentenceDataset(AbstractDataset):
     def build(self):
         info_str = ''
         corpus_list = []
-        self.logger.info(
-            "Vocab size: {}".format(self.max_vocab_size)
-        )
+        self.logger.info("Vocab size: {}".format(self.max_vocab_size))
 
         for i, prefix in enumerate(['train', 'dev', 'test']):
             text_data = self.text_data[i]
@@ -97,6 +101,6 @@ class SingleSentenceDataset(AbstractDataset):
             }
             corpus_list.append(tp_data)
             info_str += '{}: {} cases, '.format(prefix, len(text_data))
-        
+
         self.logger.info(info_str[:-2] + '\n')
         return corpus_list

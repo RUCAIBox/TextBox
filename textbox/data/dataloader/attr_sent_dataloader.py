@@ -58,22 +58,30 @@ class AttributedSentenceDataLoader(AbstractDataLoader):
         return math.ceil(len(self.text_idx_data) / self.batch_size)
 
     def _shuffle(self):
-        temp = list(zip(self.text_data, self.text_idx_data, self.idx_length_data, self.attribute_data, self.attribute_idx_data))
+        temp = list(
+            zip(self.text_data, self.text_idx_data, self.idx_length_data, self.attribute_data, self.attribute_idx_data)
+        )
         random.shuffle(temp)
-        self.text_data[:], self.text_idx_data[:], self.idx_length_data[:], self.attribute_data[:], self.attribute_idx_data[:] = zip(*temp)
+        self.text_data[:
+                       ], self.text_idx_data[:
+                                             ], self.idx_length_data[:
+                                                                     ], self.attribute_data[:
+                                                                                            ], self.attribute_idx_data[:] = zip(
+                                                                                                *temp
+                                                                                            )
 
     def _next_batch_data(self):
         tp_text_data = self.text_data[self.pr:self.pr + self.step]
         tp_text_idx_data = self.text_idx_data[self.pr:self.pr + self.step]
         tp_idx_length_data = self.idx_length_data[self.pr:self.pr + self.step]
         padded_idx, length = self._pad_batch_sequence(tp_text_idx_data, tp_idx_length_data)
-        
+
         tp_attribute_data = self.attribute_data[self.pr:self.pr + self.step]
         tp_attribute_idx_data = self.attribute_idx_data[self.pr:self.pr + self.step]
         attribute_idx = torch.LongTensor(tp_attribute_idx_data)
 
         self.pr += self.step
-        
+
         batch_data = {
             'target_text': tp_text_data,
             'target_idx': padded_idx.to(self.device),

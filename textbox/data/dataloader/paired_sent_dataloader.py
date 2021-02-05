@@ -25,7 +25,7 @@ class PairedSentenceDataLoader(AbstractDataLoader):
 
     Args:
         config (Config): The config of dataloader.
-        dataset (SingleSentenceDataset): The dataset of dataloader. Corpus, see textbox.data.corpus for more details
+        dataset (PairedSentenceDataset): The dataset of dataloader. Corpus, see textbox.data.corpus for more details
         batch_size (int, optional): The batch_size of dataloader. Defaults to ``1``.
         shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
     """

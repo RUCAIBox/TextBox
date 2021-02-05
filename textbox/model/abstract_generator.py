@@ -152,6 +152,7 @@ class GenerativeAdversarialNet(UnconditionalGenerator):
         """
         raise NotImplementedError
 
+
 class AttributeGenerator(AbstractModel):
     """This is a abstract general attribute generator. All the attribute model should implement this class.
     The base general attribute generator class provide the basic parameters information.

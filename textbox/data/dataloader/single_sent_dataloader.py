@@ -61,9 +61,9 @@ class SingleSentenceDataLoader(AbstractDataLoader):
         tp_text_idx_data = self.text_idx_data[self.pr:self.pr + self.step]
         tp_idx_length_data = self.idx_length_data[self.pr:self.pr + self.step]
         padded_idx, length = self._pad_batch_sequence(tp_text_idx_data, tp_idx_length_data)
-        
+
         self.pr += self.step
-        
+
         batch_data = {
             'target_text': tp_text_data,
             'target_idx': padded_idx.to(self.device),

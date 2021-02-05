@@ -32,7 +32,7 @@ class AttributedSentenceDataset(AbstractDataset):
     def _load_attribute(self, dataset_path):
         if not os.path.isfile(dataset_path):
             raise ValueError('File {} not exist'.format(dataset_path))
-    
+
         fin = open(dataset_path, "r")
         attribute_data = []
         for line in fin:
@@ -48,13 +48,15 @@ class AttributedSentenceDataset(AbstractDataset):
         """
         for prefix in ['train', 'dev', 'test']:
             filename = os.path.join(dataset_path, '{}.corpus'.format(prefix))
-            text_data = load_data(filename, self.tokenize_strategy, self.overlength_strategy, self.max_seq_length, self.language)
+            text_data = load_data(
+                filename, self.tokenize_strategy, self.overlength_strategy, self.max_seq_length, self.language
+            )
             self.text_data.append(text_data)
             filename = os.path.join(dataset_path, '{}.attribute'.format(prefix))
             attribute_data = self._load_attribute(filename)
             self.attribute_data.append(attribute_data)
             assert len(text_data) == len(attribute_data)
-            
+
     def _load_single_data(self, dataset_path):
         """Load full corpus.
         This is designed for single sentence format, unconditional task.
@@ -62,7 +64,9 @@ class AttributedSentenceDataset(AbstractDataset):
             dataset_path (str): path of dataset dir.
         """
         dataset_file = os.path.join(dataset_path, 'corpus.txt')
-        self.text_data = load_data(dataset_file, self.tokenize_strategy, self.overlength_strategy, self.max_seq_length, self.language)
+        self.text_data = load_data(
+            dataset_file, self.tokenize_strategy, self.overlength_strategy, self.max_seq_length, self.language
+        )
         attribute_file = os.path.join(dataset_path, 'attribute.txt')
         self.attribute_data = self._load_attribute(attribute_file)
         assert len(self.text_data) == len(self.attribute_data)
@@ -95,7 +99,9 @@ class AttributedSentenceDataset(AbstractDataset):
             self.attribute2idx.append(dict(zip(attribute, range(attribute_size))))
 
     def _build_vocab(self):
-        self.idx2token, self.token2idx, self.max_vocab_size = build_vocab(self.text_data, self.max_vocab_size, self.special_token_list)
+        self.idx2token, self.token2idx, self.max_vocab_size = build_vocab(
+            self.text_data, self.max_vocab_size, self.special_token_list
+        )
         self._build_attribute()
 
     def _detect_restored(self, dataset_path):
@@ -119,9 +125,7 @@ class AttributedSentenceDataset(AbstractDataset):
     def build(self):
         info_str = ''
         corpus_list = []
-        self.logger.info(
-            "Vocab size: {}".format(self.max_vocab_size)
-        )
+        self.logger.info("Vocab size: {}".format(self.max_vocab_size))
 
         for i, prefix in enumerate(['train', 'dev', 'test']):
             text_data = self.text_data[i]
@@ -136,6 +140,6 @@ class AttributedSentenceDataset(AbstractDataset):
             }
             corpus_list.append(tp_data)
             info_str += '{}: {} cases, '.format(prefix, len(text_data))
-        
+
         self.logger.info(info_str[:-2] + '\n')
         return corpus_list

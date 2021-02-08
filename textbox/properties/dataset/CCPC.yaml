@@ -1,0 +1,14 @@
+max_vocab_size: 30000
+knowledge_format: 'single'
+source_format: 'single'
+target_format: 'multiple'
+max_source_length: 20
+max_knowledge_length: 4
+max_target_length: 7
+max_target_num: 4
+group_split_token: "\t"
+sentence_split_token: " __eol__ "
+split_strategy: "load_split"
+overlength_strategy: "truncate"
+tokenize_strategy: "by_space"
+language: "English"

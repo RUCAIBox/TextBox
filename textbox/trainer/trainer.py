@@ -96,7 +96,7 @@ class Trainer(AbstractTrainer):
         self.train_loss_dict = dict()
         self.optimizer = self._build_optimizer()
         self.task_type = config['task_type'].lower()
-        if self.task_type in ["translation", "attribute"]:
+        if self.task_type in ["translation", "attribute", "multi_dialog", "poem"]:
             self.evaluator = TranslationEvaluator(config)
         elif self.task_type == "summarization":
             self.evaluator = SummarizationEvaluator(config)

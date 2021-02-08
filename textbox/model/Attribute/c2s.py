@@ -14,6 +14,7 @@ import torch.nn.functional as F
 from textbox.model.abstract_generator import AttributeGenerator
 from textbox.module.Decoder.rnn_decoder import BasicRNNDecoder
 from textbox.model.init import xavier_normal_initialization
+from textbox.module.strategy import Beam_Search_Hypothesis
 
 
 class C2S(AttributeGenerator):
@@ -33,7 +34,10 @@ class C2S(AttributeGenerator):
         self.eval_generate_num = config['eval_generate_num']
         self.max_length = config['max_seq_length']
         self.is_gated = config['gated']
-        self.generate_method = config['generate_method']
+        self.decoding_strategy = config['decoding_strategy']
+
+        if self.decoding_strategy == 'beam_search':
+            self.beam_size = config['beam_size']
 
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
@@ -146,6 +150,10 @@ class C2S(AttributeGenerator):
             hidden_states = h_c[data_idx].to(self.device)
             # hidden_states = hidden_states.repeat(self.num_dec_layers, 1).to(self.device)
             hidden_states = hidden_states.reshape(self.num_dec_layers, 1, self.hidden_size).contiguous()
+            if (self.decoding_strategy == 'beam_search'):
+                hypothesis = Beam_Search_Hypothesis(
+                    self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token
+                )
             for _ in range(self.max_length):
                 decoder_input = self.token_embedder(input_last)
                 outputs, hidden_states = self.decoder(decoder_input, hidden_states)
@@ -156,17 +164,28 @@ class C2S(AttributeGenerator):
 
                 token_logits = self.vocab_linear(outputs)
                 token_probs = F.softmax(token_logits, dim=-1).squeeze()
-                if self.generate_method == 'random_sampling':
+                if self.decoding_strategy == 'random_sampling':
                     token_idx = torch.multinomial(token_probs, 1)[0].item()
-                elif self.generate_method == 'argmax':
+                elif self.decoding_strategy == 'argmax':
                     token_idx = torch.argmax(token_probs).item()
+                elif self.decoding_strategy == 'beam_search':
+                    input_last, hidden_states = hypothesis.step(_, token_logits, hidden_states)
                 else:
-                    raise NotImplementedError("No such generate method: {}, only ['random_sampling', 'argmax'] are available.".format(self.generate_method))
-                if token_idx == self.eos_token_idx:
-                    break
+                    raise NotImplementedError("No such generate method: {}, only ['random_sampling', 'argmax'] are available.".format(self.decoding_strategy))
+                
+                if self.decoding_strategy == 'beam_search':
+                    if (hypothesis.stop()):
+                        break
                 else:
-                    generated_tokens.append(idx2token[token_idx])
-                    input_last = torch.LongTensor([[token_idx]]).to(self.device)
+                    if token_idx == self.eos_token_idx:
+                        break
+                    else:
+                        generated_tokens.append(idx2token[token_idx])
+                        input_last = torch.LongTensor([[token_idx]]).to(self.device)
+            
+            if self.decoding_strategy == 'beam_search':
+                generated_tokens = hypothesis.generate()
+            
             generated_corpus.append(generated_tokens)
 
         print(generated_corpus)

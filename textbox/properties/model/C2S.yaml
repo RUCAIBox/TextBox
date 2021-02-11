@@ -3,7 +3,6 @@ hidden_size: 512
 num_dec_layers: 2
 dropout_ratio: 0.2
 rnn_type: "gru"
-gated: true
-learning_rate: 0.0001
+gated: false
 decoding_strategy: "beam_search"
 beam_size: 5

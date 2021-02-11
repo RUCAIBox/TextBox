@@ -1,6 +1,6 @@
 # @Time   : 2021/1/27
 # @Author : Zhuohao Yu
-# @Email  : zhuohaoyu1228@outlook.com
+# @Email  : zhuohao@ruc.edu.cn
 
 r"""
 C2S
@@ -128,6 +128,7 @@ class C2S(AttributeGenerator):
 
         attr_embeddings = torch.cat(attr_embeddings, dim=1)
 
+        # Encoder
         h_c = torch.relu(self.attr_linear(attr_embeddings)).contiguous()
 
         if self.is_gated:
@@ -137,9 +138,7 @@ class C2S(AttributeGenerator):
         idx2token = eval_data.idx2token
 
         # Decoder
-
         cur_batch_size = len(h_c)
-
         for data_idx in range(cur_batch_size):
             generated_tokens = []
             input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
@@ -192,7 +191,6 @@ class C2S(AttributeGenerator):
         return generated_corpus
 
     def generate(self, eval_data):
-        # Encoder
         generated_corpus = []
         indx = 0
         for corpus in eval_data:

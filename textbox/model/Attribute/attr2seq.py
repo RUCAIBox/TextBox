@@ -79,7 +79,9 @@ class Attr2Seq(AttributeGenerator):
         for i in range (self.attribute_num):
             self.attribute_size[i] = self.attribute_size[i] + 1
             
-        self.w = [nn.Parameter(torch.rand((self.embedding_size, self.attribute_size[i]), requires_grad=True)).to(self.device) for i in range (self.attribute_num)]
+        self.w = nn.ModuleList(
+            [nn.Linear(self.attribute_size[i], self.embedding_size) for i in range (self.attribute_num)]
+        )
 
         self.H = nn.Parameter(torch.rand((self.num_dec_layers * self.hidden_size, self.attribute_num * self.embedding_size), requires_grad=True)).to(self.device)
         self.b = nn.Parameter(torch.rand((self.num_dec_layers * self.hidden_size, 1), requires_grad=True)).to(self.device)
@@ -99,14 +101,15 @@ class Attr2Seq(AttributeGenerator):
         """
     
         # source_idx[i]: shape[source_length, attribute_size[i]].
-        # w[i]: shape[embedding_size, attribute_size[i]].
+        # w[i]: shape[attribute_size[i], embedding_size].
         # g[i]: shape[embedding_size, source_length].
         self.g = [torch.zeros((self.embedding_size, source_length), requires_grad=True).to(self.device) for i in range (self.attribute_num)]
         for i in range (self.attribute_num):
             # print("size of w[i]: ", self.w[i].size())
             # print("size of source_idx[i]: ", source_idx[i].size())
             # print("size of source_idx[i] after transpose: ", (source_idx[i].transpose(0, 1)).size())
-            self.g[i] = torch.mm(self.w[i], source_idx[i].transpose(0, 1))
+            # self.g[i] = torch.mm(self.w[i], source_idx[i].transpose(0, 1))
+            self.g[i] = self.w[i](source_idx[i]).transpose(0, 1)
 
         # change the shape of g[], save in g1. New shape; [source_length, attribute_num * embedding_size, 1].
         g1 = torch.zeros(source_length, self.attribute_num * self.embedding_size, 1).to(self.device)
@@ -179,7 +182,7 @@ class Attr2Seq(AttributeGenerator):
                         self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token
                     )
 
-                self.max_target_length = 100
+                self.max_target_length = 200
                 for gen_idx in range(self.max_target_length):
                     decoder_input = self.target_token_embedder(input_seq)
                     decoder_outputs, decoder_states, _ = self.decoder(

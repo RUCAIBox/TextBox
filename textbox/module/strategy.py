@@ -172,12 +172,19 @@ class Beam_Search_Hypothesis(object):
 
         if (decoder_states is not None):
             new_ids = torch.tensor(new_ids).to(self.device)
-            decoder_states = decoder_states[:, new_ids, :]
+            if (isinstance(decoder_states, tuple)):
+                (x, y) = decoder_states
+                decoder_states = (x[:, new_ids, :], y[:, new_ids, :])
+            else:
+                decoder_states = decoder_states[:, new_ids, :]
             returns += [decoder_states]
 
         if (encoder_output is not None):
             encoder_output = encoder_output[0:1].repeat(hyp_num, 1, 1)
+            returns += [encoder_output]
+        
+        if (encoder_mask is not None):
             encoder_mask = encoder_mask[0:1].repeat(hyp_num, 1)
-            returns += [encoder_output, encoder_mask]
+            returns += [encoder_mask]
 
         return returns

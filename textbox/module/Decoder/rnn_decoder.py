@@ -168,6 +168,8 @@ class AttentionalRNNDecoder(torch.nn.Module):
         """
         if hidden_states is None:
             hidden_states = self.init_hidden(input_embeddings)
+        if encoder_outputs is not None and encoder_masks is None:
+            encoder_masks = torch.ones(encoder_outputs.size(0), encoder_outputs.size(1)).to(encoder_outputs.device)
 
         decode_length = input_embeddings.size(1)
 

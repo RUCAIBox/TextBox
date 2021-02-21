@@ -24,14 +24,10 @@ class Attr2Seq(AttributeGenerator):
     def __init__(self, config, dataset):
         super(Attr2Seq, self).__init__(config, dataset)
 
-        self.sum = 0
-
-        # load constant of decoder
-        self.rnn_type = 'lstm'
-        self.attention_type = 'LuongAttention'
-        self.alignment_method = 'concat'
-
         # load parameters info
+        self.rnn_type = config['rnn_type']
+        self.attention_type = config['attention_type']
+        self.alignment_method = config['alignment_method']
         self.embedding_size = config['embedding_size']
         self.hidden_size = config['hidden_size']
         self.num_dec_layers = config['num_dec_layers']
@@ -46,19 +42,14 @@ class Attr2Seq(AttributeGenerator):
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
         self.eos_token_idx = dataset.eos_token_idx
-
-        # define layers and loss
-        self.source_token_embedder = nn.Embedding(
-            self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx
-        )
-
-        if config['share_vocab']:
-            self.target_token_embedder = self.source_token_embedder
-        else:
-            self.target_token_embedder = nn.Embedding(
+        
+        self.source_token_embedder = nn.ModuleList(
+                [nn.Embedding(self.attribute_size[i], self.embedding_size) for i in range (self.attribute_num)]
+            )
+        self.target_token_embedder = nn.Embedding(
                 self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx
             )
-        
+
         self.decoder = AttentionalRNNDecoder(
             self.embedding_size, self.hidden_size, self.embedding_size, self.num_dec_layers, self.rnn_type,
             self.dropout_ratio, self.attention_type, self.alignment_method
@@ -70,11 +61,7 @@ class Attr2Seq(AttributeGenerator):
 
         self.max_target_length = config['max_seq_length']
 
-        self.w = nn.ModuleList([nn.Embedding(self.attribute_size[i], self.embedding_size) for i in range (self.attribute_num)])
-
-        self.H = nn.Parameter(torch.rand((self.num_dec_layers * self.hidden_size, self.attribute_num * self.embedding_size), requires_grad=True)).to(self.device)
-        self.b = nn.Parameter(torch.rand((self.num_dec_layers * self.hidden_size, 1), requires_grad=True)).to(self.device)
-        self.c = nn.Parameter(torch.zeros((self.num_dec_layers, 1, self.hidden_size), requires_grad=True)).to(self.device)
+        self.H = nn.Linear(self.attribute_num * self.embedding_size, self.num_dec_layers * self.hidden_size)
 
         # parameters initialization
         self.apply(xavier_normal_initialization)
@@ -82,46 +69,31 @@ class Attr2Seq(AttributeGenerator):
     def encoder(self, source_idx, source_length):
         r""" 
             Args:
-                source_idx (Torch.Tensor): source attribute index, shape: [source_length, attribute_num].
+                source_idx (Torch.Tensor): source attribute index, shape: [batch_size, attribute_num].
                 source_length (integer): size of source.
             
             Returns:
                 tuple:
-                    - Torch.Tensor: output features, shape: [source_length, attribute_num, embeding_size].
-                    - Torch.Tensor: hidden states, shape: [source_length, num_dec_layers, hidden_size].
+                    - Torch.Tensor: output features, shape: [batch_size, attribute_num, embeding_size].
+                    - Torch.Tensor: hidden states, shape: [batch_size, num_dec_layers, hidden_size].
         """
-        # g1 (torch.Tensor): [source_length, attribute_num * embedding_size, 1].
-        g1 = self.w[0](source_idx[:, 0])
-        for i in range (1, self.attribute_num):
-            g1 = torch.cat((g1, self.w[i](source_idx[:, i])), 1)
-        g1 = g1.unsqueeze(2)
+        # g (torch.Tensor): [batch_size, attribute_num * embedding_size].
+        g = [self.source_token_embedder[i](source_idx[:, i]) for i in range (self.attribute_num)]
+        g = torch.cat(g, 1)
         
-        #outputs (Torch.Tensor): shape: [source_length, attribute_num, embedding_size].
-        outputs = g1.contiguous().view(source_length, self.attribute_num, self.embedding_size)
+        #outputs (Torch.Tensor): shape: [batch_size, attribute_num, embedding_size].
+        outputs = g.contiguous().view(source_length, self.attribute_num, self.embedding_size)
         
-        # H  (Torch.Tensor): shape: [num_dec_layers * hidden_size, embedding_size * attribute_num].
-        # H1 (Torch.Tensor): shape: [source_length, num_dec_layers * hidden_size, embedding_size * attribute_num].
-        H1 = self.H.unsqueeze(0).repeat(source_length, 1, 1)
+        # a (Torch.Tensor): shape: [batch_size, num_dec_layers * hidden_size].
+        a = torch.tanh(self.H(g))
 
-        # b  (Torch.Tensor): shape: [num_dec_layers * hidden_size, 1].
-        # b1 (Torch.Tensor): shape: [source_length, num_dec_layers * hidden_size, 1].
-        b1 = self.b.unsqueeze(0).repeat(source_length, 1, 1)
-
-        # b1 (Torch.Tensor): shape: [source_length, num_dec_layers * hidden_size, 1].
-        # g1 (Torch.Tensor): shape: [source_length, attribute_num * embedding_size, 1].
-        # H1 (Torch.Tensor): shape: [source_length, num_dec_layers * hidden_size, embedding_size * attribute_num].
-        # a  (Torch.Tensor): shape: [source_length, num_dec_layers * hidden_size, 1].
-        a = torch.tanh(torch.bmm(H1, g1) + b1)
-
-        # hidden_states (Torch.Tensor): shape: [num_dec_layers, source_length, hidden_size].
+        # hidden_states (Torch.Tensor): shape: [num_dec_layers, batch_size, hidden_size].
         hidden_states = a.contiguous().view(source_length, self.num_dec_layers, self.hidden_size)
         hidden_states = hidden_states.transpose(0, 1)
 
         return outputs, hidden_states
 
     def generate(self, eval_dataloader):
-        print('in generator.')
-
         generate_corpus = []
         idx2token = eval_dataloader.idx2token
 
@@ -138,7 +110,8 @@ class Attr2Seq(AttributeGenerator):
             encoder_masks = torch.ne(source_idx, self.padding_token_idx)
             
             for bid in range(source_size):
-                decoder_states = (encoder_states[:, bid, :].unsqueeze(1), self.c)
+                c = torch.zeros(self.num_dec_layers, 1, self.hidden_size).to(self.device)
+                decoder_states = (encoder_states[:, bid, :].unsqueeze(1), c)
                 encoder_output = encoder_outputs[bid, :, :].unsqueeze(0)
                 encoder_mask = encoder_masks[bid, :].unsqueeze(0)
                 generate_tokens = []
@@ -182,9 +155,6 @@ class Attr2Seq(AttributeGenerator):
         return generate_corpus
 
     def calculate_loss(self, corpus, epoch_idx=0):
-        self.sum = self.sum + 1
-        print('in calculate_loss: ', self.sum, '.')
-
         # target_length (Torch.Tensor): shape: [batch_size]
         target_length = corpus['target_length']
         # attribute_idx (Torch.Tensor): shape: [batch_size, attribute_num].
@@ -193,18 +163,16 @@ class Attr2Seq(AttributeGenerator):
         target_idx = corpus['target_idx']
         source_length = attribute_idx.size(0)
 
-        print ('batch_size: ', self.batch_size, '; ', 'source_length: ', source_length, '; ', 'attribute_num: ', self.attribute_num, '; ', 'attribute_size: ', self.attribute_size[0], ', ', self.attribute_size[1], ', ',self.attribute_size[2])
-
         encoder_outputs, encoder_states = self.encoder(attribute_idx, source_length)
 
         input_text = target_idx[:, :-1]
         target_text = target_idx[:, 1:]
         input_embeddings = self.dropout(self.target_token_embedder(input_text))
         
-        c1 = self.c.repeat(1, source_length, 1)
+        c = torch.zeros(self.num_dec_layers, source_length, self.hidden_size).to(self.device)
         encoder_masks = torch.ne(attribute_idx, self.padding_token_idx)
         decoder_outputs, decoder_states, _ = \
-            self.decoder(input_embeddings, (encoder_states.contiguous(), c1), encoder_outputs, encoder_masks)
+            self.decoder(input_embeddings, (encoder_states.contiguous(), c), encoder_outputs, encoder_masks)
 
         # token_logits (Torch.Tensor): shape: [batch_size, target_length, vocabulary_size].
         token_logits = self.vocab_linear(decoder_outputs)

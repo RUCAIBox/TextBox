@@ -17,10 +17,11 @@ from textbox.module.Decoder.rnn_decoder import AttentionalRNNDecoder
 from textbox.model.init import xavier_normal_initialization
 from textbox.module.strategy import topk_sampling, greedy_search, Beam_Search_Hypothesis
 
+
 class Attr2Seq(AttributeGenerator):
     r"""Attribute Encoder and RNN-based Decoder architecture is a basic frame work for Attr2Seq text generation.
     """
-    
+
     def __init__(self, config, dataset):
         super(Attr2Seq, self).__init__(config, dataset)
 
@@ -42,13 +43,13 @@ class Attr2Seq(AttributeGenerator):
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
         self.eos_token_idx = dataset.eos_token_idx
-        
-        self.source_token_embedder = nn.ModuleList(
-                [nn.Embedding(self.attribute_size[i], self.embedding_size) for i in range (self.attribute_num)]
-            )
+
+        self.source_token_embedder = nn.ModuleList([
+            nn.Embedding(self.attribute_size[i], self.embedding_size) for i in range(self.attribute_num)
+        ])
         self.target_token_embedder = nn.Embedding(
-                self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx
-            )
+            self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx
+        )
 
         self.decoder = AttentionalRNNDecoder(
             self.embedding_size, self.hidden_size, self.embedding_size, self.num_dec_layers, self.rnn_type,
@@ -77,12 +78,12 @@ class Attr2Seq(AttributeGenerator):
                     - Torch.Tensor: hidden states, shape: [num_dec_layers, batch_size, hidden_size].
         """
         # g (torch.Tensor): [batch_size, attribute_num * embedding_size].
-        g = [self.source_token_embedder[i](source_idx[:, i]) for i in range (self.attribute_num)]
+        g = [self.source_token_embedder[i](source_idx[:, i]) for i in range(self.attribute_num)]
         g = torch.cat(g, 1)
-        
+
         #outputs (Torch.Tensor): shape: [batch_size, attribute_num, embedding_size].
         outputs = g.reshape(self.batch_size, self.attribute_num, self.embedding_size)
-        
+
         # a (Torch.Tensor): shape: [batch_size, num_dec_layers * hidden_size].
         a = torch.tanh(self.H(g))
 
@@ -101,7 +102,7 @@ class Attr2Seq(AttributeGenerator):
             self.batch_size = source_idx.size(0)
 
             encoder_outputs, encoder_states = self.encoder(source_idx)
-            
+
             for bid in range(self.batch_size):
                 c = torch.zeros(self.num_dec_layers, 1, self.hidden_size).to(self.device)
                 decoder_states = (encoder_states[:, bid, :].unsqueeze(1), c)
@@ -158,7 +159,7 @@ class Attr2Seq(AttributeGenerator):
         input_text = target_idx[:, :-1]
         target_text = target_idx[:, 1:]
         input_embeddings = self.dropout(self.target_token_embedder(input_text))
-        
+
         c = torch.zeros(self.num_dec_layers, self.batch_size, self.hidden_size).to(self.device)
         decoder_outputs, decoder_states, _ = \
             self.decoder(input_embeddings, (encoder_states.contiguous(), c), encoder_outputs)
@@ -171,6 +172,6 @@ class Attr2Seq(AttributeGenerator):
         loss = self.loss(token_logits.view(-1, token_logits.size(-1)), target_text.reshape(-1))
         loss = loss.reshape_as(target_text)
 
-        loss = loss.sum(dim = 1) / (target_length - 1).float()
+        loss = loss.sum(dim=1) / (target_length - 1).float()
         loss = loss.mean()
         return loss

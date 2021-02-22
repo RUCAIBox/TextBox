@@ -66,29 +66,28 @@ class Attr2Seq(AttributeGenerator):
         # parameters initialization
         self.apply(xavier_normal_initialization)
 
-    def encoder(self, source_idx, source_length):
+    def encoder(self, source_idx):
         r""" 
             Args:
                 source_idx (Torch.Tensor): source attribute index, shape: [batch_size, attribute_num].
-                source_length (integer): size of source.
             
             Returns:
                 tuple:
-                    - Torch.Tensor: output features, shape: [batch_size, attribute_num, embeding_size].
-                    - Torch.Tensor: hidden states, shape: [batch_size, num_dec_layers, hidden_size].
+                    - Torch.Tensor: output features, shape: [batch_size, attribute_num, embedding_size].
+                    - Torch.Tensor: hidden states, shape: [num_dec_layers, batch_size, hidden_size].
         """
         # g (torch.Tensor): [batch_size, attribute_num * embedding_size].
         g = [self.source_token_embedder[i](source_idx[:, i]) for i in range (self.attribute_num)]
         g = torch.cat(g, 1)
         
         #outputs (Torch.Tensor): shape: [batch_size, attribute_num, embedding_size].
-        outputs = g.contiguous().view(source_length, self.attribute_num, self.embedding_size)
+        outputs = g.reshape(self.batch_size, self.attribute_num, self.embedding_size)
         
         # a (Torch.Tensor): shape: [batch_size, num_dec_layers * hidden_size].
         a = torch.tanh(self.H(g))
 
         # hidden_states (Torch.Tensor): shape: [num_dec_layers, batch_size, hidden_size].
-        hidden_states = a.contiguous().view(source_length, self.num_dec_layers, self.hidden_size)
+        hidden_states = a.reshape(self.batch_size, self.num_dec_layers, self.hidden_size)
         hidden_states = hidden_states.transpose(0, 1)
 
         return outputs, hidden_states
@@ -97,23 +96,16 @@ class Attr2Seq(AttributeGenerator):
         generate_corpus = []
         idx2token = eval_dataloader.idx2token
 
-        num = 0
-
         for batch_data in eval_dataloader:
             source_idx = batch_data['attribute_idx']
-            source_size = source_idx.size(0)
+            self.batch_size = source_idx.size(0)
 
-            num += 1
-            print('source_size: ', source_size, ';', 'num: ', num)
-
-            encoder_outputs, encoder_states = self.encoder(source_idx, source_size)
-            encoder_masks = torch.ne(source_idx, self.padding_token_idx)
+            encoder_outputs, encoder_states = self.encoder(source_idx)
             
-            for bid in range(source_size):
+            for bid in range(self.batch_size):
                 c = torch.zeros(self.num_dec_layers, 1, self.hidden_size).to(self.device)
                 decoder_states = (encoder_states[:, bid, :].unsqueeze(1), c)
                 encoder_output = encoder_outputs[bid, :, :].unsqueeze(0)
-                encoder_mask = encoder_masks[bid, :].unsqueeze(0)
                 generate_tokens = []
                 input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
 
@@ -124,9 +116,7 @@ class Attr2Seq(AttributeGenerator):
 
                 for gen_idx in range(self.max_target_length):
                     decoder_input = self.target_token_embedder(input_seq)
-                    decoder_outputs, decoder_states, _ = self.decoder(
-                        decoder_input, decoder_states, encoder_output, encoder_mask
-                    )
+                    decoder_outputs, decoder_states, _ = self.decoder(decoder_input, decoder_states, encoder_output)
 
                     token_logits = self.vocab_linear(decoder_outputs)
                     if (self.strategy == 'topk_sampling'):
@@ -134,8 +124,8 @@ class Attr2Seq(AttributeGenerator):
                     elif (self.strategy == 'greedy_search'):
                         token_idx = greedy_search(token_logits).item()
                     elif (self.strategy == 'beam_search'):
-                        input_seq, decoder_states, encoder_output, encoder_mask = \
-                            hypothesis.step(gen_idx, token_logits, decoder_states, encoder_output, encoder_mask)
+                        input_seq, decoder_states, encoder_output = \
+                            hypothesis.step(gen_idx, token_logits, decoder_states, encoder_output)
 
                     if (self.strategy in ['topk_sampling', 'greedy_search']):
                         if token_idx == self.eos_token_idx:
@@ -161,25 +151,24 @@ class Attr2Seq(AttributeGenerator):
         attribute_idx = corpus['attribute_idx']
         # target_idx (torch.Tensor): shape: [batch_size, length].
         target_idx = corpus['target_idx']
-        source_length = attribute_idx.size(0)
+        self.batch_size = attribute_idx.size(0)
 
-        encoder_outputs, encoder_states = self.encoder(attribute_idx, source_length)
+        encoder_outputs, encoder_states = self.encoder(attribute_idx)
 
         input_text = target_idx[:, :-1]
         target_text = target_idx[:, 1:]
         input_embeddings = self.dropout(self.target_token_embedder(input_text))
         
-        c = torch.zeros(self.num_dec_layers, source_length, self.hidden_size).to(self.device)
-        encoder_masks = torch.ne(attribute_idx, self.padding_token_idx)
+        c = torch.zeros(self.num_dec_layers, self.batch_size, self.hidden_size).to(self.device)
         decoder_outputs, decoder_states, _ = \
-            self.decoder(input_embeddings, (encoder_states.contiguous(), c), encoder_outputs, encoder_masks)
+            self.decoder(input_embeddings, (encoder_states.contiguous(), c), encoder_outputs)
 
         # token_logits (Torch.Tensor): shape: [batch_size, target_length, vocabulary_size].
         token_logits = self.vocab_linear(decoder_outputs)
 
         # token_logits.view(-1, token_logits.size(-1)) (Torch.Tensor): shape: [batch_size * target_length, vocabulary_size].
-        # target_text.contiguous().view(-1) (Torch.Tensor): shape: [batch_size * target_length].
-        loss = self.loss(token_logits.view(-1, token_logits.size(-1)), target_text.contiguous().view(-1))
+        # target_text.reshape(-1) (Torch.Tensor): shape: [batch_size * target_length].
+        loss = self.loss(token_logits.view(-1, token_logits.size(-1)), target_text.reshape(-1))
         loss = loss.reshape_as(target_text)
 
         loss = loss.sum(dim = 1) / (target_length - 1).float()

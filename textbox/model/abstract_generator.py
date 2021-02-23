@@ -108,7 +108,7 @@ class GenerativeAdversarialNet(UnconditionalGenerator):
     type = ModelType.GAN
 
     def __init__(self, config, dataset):
-        super(UnconditionalGenerator, self).__init__()
+        super(GenerativeAdversarialNet, self).__init__(config, dataset)
 
     def calculate_g_train_loss(self, corpus):
         r"""Calculate the generator training loss for a batch data.

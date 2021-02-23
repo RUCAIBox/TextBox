@@ -31,7 +31,6 @@ class TextGANDiscriminator(UnconditionalGenerator):
         self.max_length = config['max_seq_length'] + 2
         self.gaussian_sigmas = torch.tensor(config['gaussian_sigmas'], device=self.device)
         self.pad_idx = dataset.padding_token_idx
-        self.vocab_size = dataset.vocab_size
         self.filter_sum = sum(self.filter_nums)
 
         self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.pad_idx)

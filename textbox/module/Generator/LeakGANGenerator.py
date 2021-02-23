@@ -35,8 +35,6 @@ class LeakGANGenerator(UnconditionalGenerator):
         self.start_idx = dataset.sos_token_idx
         self.end_idx = dataset.eos_token_idx
         self.pad_idx = dataset.padding_token_idx
-        self.vocab_size = dataset.vocab_size
-        self.batch_size = dataset.batch_size
         self.use_gpu = config['use_gpu']
         self.gpu_id = config['gpu_id']
         self.eval_generate_num = config['eval_generate_num']

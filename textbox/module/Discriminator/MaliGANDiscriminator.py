@@ -27,7 +27,6 @@ class MaliGANDiscriminator(UnconditionalGenerator):
         self.dropout_rate = config['dropout_rate']
 
         self.pad_idx = dataset.padding_token_idx
-        self.vocab_size = dataset.vocab_size
 
         self.LSTM = nn.LSTM(self.embedding_size, self.hidden_size, self.num_dis_layers, batch_first=True)
         self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.pad_idx)

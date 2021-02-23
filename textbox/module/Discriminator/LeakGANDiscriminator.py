@@ -29,7 +29,6 @@ class LeakGANDiscriminator(UnconditionalGenerator):
         self.filter_nums = config['filter_nums']
         self.max_length = config['max_seq_length'] + 1
         self.pad_idx = dataset.padding_token_idx
-        self.vocab_size = dataset.vocab_size
         self.filter_sum = sum(self.filter_nums)
 
         self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size)

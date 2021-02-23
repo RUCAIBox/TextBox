@@ -25,6 +25,7 @@ class LeakGAN(GenerativeAdversarialNet):
 
     def __init__(self, config, dataset):
         super(LeakGAN, self).__init__(config, dataset)
+        print(self.batch_size)
         self.generator = LeakGANGenerator(config, dataset)
         self.discriminator = LeakGANDiscriminator(config, dataset)
         self.dis_sample_num = config['d_sample_num']

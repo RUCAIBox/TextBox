@@ -204,15 +204,23 @@ class Trainer(AbstractTrainer):
         }
         torch.save(state, self.saved_model_file)
 
-    def _save_generated_text(self, generated_corpus):
+    def _save_generated_text(self, generated_corpus, task_type=None):
         r"""Store the generated text by our model.
 
         Args:
             corpus (list of string list):
         """
-        with open(self.saved_text_file, 'w') as fin:
-            for tokens in generated_corpus:
-                fin.write(' '.join(tokens) + '\n')
+        if task_type == "poem":
+            with open(self.saved_text_file, 'w') as fin:
+                for poem in generated_corpus:
+                    for sentence in poem:
+                        fin.write(' '.join(sentence))
+                        fin.write(" __eol__ ")
+                    fin.write("\n")
+        else:
+            with open(self.saved_text_file, 'w') as fin:
+                for tokens in generated_corpus:
+                    fin.write(' '.join(tokens) + '\n')
 
     def resume_checkpoint(self, resume_file):
         r"""Load the model parameters information and training information.
@@ -362,7 +370,7 @@ class Trainer(AbstractTrainer):
         self.model.eval()
         with torch.no_grad():
             generate_corpus = self.model.generate(eval_data)
-        self._save_generated_text(generate_corpus)
+        self._save_generated_text(generate_corpus, task_type=self.task_type)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
         result['nll_test'] = self._evaluate_nll_test(eval_data)
@@ -1273,7 +1281,7 @@ class LeakGANTrainer(GANTrainer):
                 o.zero_grad()
                 loss.backward(retain_graph=True if i < len(opt) - 1 else False)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
-            
+
             for o in opt:
                 o.step()
         else:

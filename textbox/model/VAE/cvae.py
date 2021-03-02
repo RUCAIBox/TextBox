@@ -297,7 +297,7 @@ class CVAE(UnconditionalGenerator):
             loss = loss.mean() + kld_coef * kld.mean()
             total_loss += loss
 
-        return total_loss, total_rec, total_kld
+        return total_loss
 
     def calculate_nll_test(self, corpus, epoch_idx=0):
         title_text = corpus['source_text_idx_data']

@@ -1273,6 +1273,8 @@ class LeakGANTrainer(GANTrainer):
                 o.zero_grad()
                 loss.backward(retain_graph=True if i < len(opt) - 1 else False)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
+            
+            for o in opt:
                 o.step()
         else:
             opt.zero_grad()

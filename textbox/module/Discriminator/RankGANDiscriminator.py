@@ -28,7 +28,6 @@ class RankGANDiscriminator(UnconditionalGenerator):
         self.filter_nums = config['filter_nums']
         self.max_length = config['max_seq_length'] + 2
         self.pad_idx = dataset.padding_token_idx
-        self.vocab_size = dataset.vocab_size
         self.filter_sum = sum(self.filter_nums)
         self.gamma = config['gamma']  # temprature control parameters
 

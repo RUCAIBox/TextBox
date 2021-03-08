@@ -29,7 +29,6 @@ class RankGANGenerator(UnconditionalGenerator):
         self.start_idx = dataset.sos_token_idx
         self.end_idx = dataset.eos_token_idx
         self.pad_idx = dataset.padding_token_idx
-        self.vocab_size = dataset.vocab_size
 
         self.LSTM = nn.LSTM(self.embedding_size, self.hidden_size)
         self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.pad_idx)

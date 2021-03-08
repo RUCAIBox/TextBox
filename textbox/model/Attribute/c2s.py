@@ -5,6 +5,8 @@
 r"""
 C2S
 ################################################
+Reference:
+    Jian Tang et al. "Context-aware Natural Language Generation with Recurrent Neural Networks" in 2016.
 """
 
 import torch
@@ -74,21 +76,24 @@ class C2S(AttributeGenerator):
         # Initialize parameters
         self.apply(xavier_normal_initialization)
 
+    def encode(self, attr_data):
+        attr_embeddings = []
+
+        for attr_idx in range(self.attribute_num):
+            kth_dim_attr = attr_data[:, attr_idx]
+            kth_dim_embeddings = self.attr_embedder[attr_idx](kth_dim_attr)
+            attr_embeddings.append(kth_dim_embeddings)
+
+        attr_embeddings = torch.cat(attr_embeddings, dim=1)
+        h_c = torch.relu(self.attr_linear(attr_embeddings)).contiguous()
+        return attr_embeddings, h_c
+
     def calculate_loss(self, corpus, epoch_idx=-1, nll_test=False):
         input_text = corpus['target_idx'][:, :-1]
         input_attr = corpus['attribute_idx']
         target_text = corpus['target_idx'][:, 1:]
 
-        attr_embeddings = []
-
-        for attr_idx in range(self.attribute_num):
-            kth_dim_attr = input_attr[:, attr_idx]
-            kth_dim_embeddings = self.attr_embedder[attr_idx](kth_dim_attr)
-            attr_embeddings.append(kth_dim_embeddings)
-
-        attr_embeddings = torch.cat(attr_embeddings, dim=1)
-
-        h_c = torch.relu(self.attr_linear(attr_embeddings))
+        attr_embeddings, h_c = self.encode(input_attr)
 
         h_c = h_c.reshape(-1, self.num_dec_layers, self.hidden_size)
         h_c = h_c.permute(1, 0, 2).contiguous()
@@ -117,19 +122,7 @@ class C2S(AttributeGenerator):
 
     def generate_for_corpus(self, eval_data, corpus):
 
-        attr_data = corpus['attribute_idx']
-
-        attr_embeddings = []
-
-        for attr_idx in range(self.attribute_num):
-            kth_dim_attr = attr_data[:, attr_idx]
-            kth_dim_embeddings = self.attr_embedder[attr_idx](kth_dim_attr)
-            attr_embeddings.append(kth_dim_embeddings)
-
-        attr_embeddings = torch.cat(attr_embeddings, dim=1)
-
-        # Encoder
-        h_c = torch.relu(self.attr_linear(attr_embeddings)).contiguous()
+        attr_embeddings, h_c = self.encode(corpus['attribute_idx'])
 
         if self.is_gated:
             h_c_1D = torch.relu(self.gate_hc_linear(attr_embeddings))
@@ -186,18 +179,68 @@ class C2S(AttributeGenerator):
 
             generated_corpus.append(generated_tokens)
 
-        print(generated_corpus)
-
         return generated_corpus
 
     def generate(self, eval_data):
         generated_corpus = []
-        indx = 0
         for corpus in eval_data:
-            indx = indx + 1
-            print("Corpus #", indx)
-            generated_corpus += self.generate_for_corpus(eval_data, corpus)
-            print("-" * 100)
+            attr_embeddings, h_c = self.encode(corpus['attribute_idx'])
+
+            if self.is_gated:
+                h_c_1D = torch.relu(self.gate_hc_linear(attr_embeddings))
+
+            cur_generated_corpus = []
+            idx2token = eval_data.idx2token
+
+            # Decoder
+            cur_batch_size = len(h_c)
+            for data_idx in range(cur_batch_size):
+                generated_tokens = []
+                input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
+                hidden_states = h_c[data_idx].to(self.device)
+                hidden_states = hidden_states.reshape(self.num_dec_layers, 1, self.hidden_size).contiguous()
+                if (self.decoding_strategy == 'beam_search'):
+                    hypothesis = Beam_Search_Hypothesis(
+                        self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token
+                    )
+                for gen_idx in range(self.max_length):
+                    decoder_input = self.token_embedder(input_seq)
+                    outputs, hidden_states = self.decoder(decoder_input, hidden_states)
+
+                    if self.is_gated:
+                        m_t = torch.sigmoid(self.gate_linear(outputs)) * h_c_1D[data_idx]
+                        outputs = torch.add(outputs, m_t)
+
+                    token_logits = self.vocab_linear(outputs)
+                    if self.decoding_strategy == 'random_sampling':
+                        token_probs = F.softmax(token_logits, dim=-1).squeeze()
+                        token_idx = torch.multinomial(token_probs, 1)[0].item()
+                    elif self.decoding_strategy == 'argmax':
+                        token_probs = F.softmax(token_logits, dim=-1).squeeze()
+                        token_idx = torch.argmax(token_probs).item()
+                    elif self.decoding_strategy == 'beam_search':
+                        input_seq, hidden_states = hypothesis.step(gen_idx, token_logits, hidden_states)
+                    else:
+                        raise NotImplementedError(
+                            "No such decoding strategy: {}, only ['random_sampling', 'argmax', 'beam_search'] are available."
+                            .format(self.decoding_strategy)
+                        )
+
+                    if self.decoding_strategy == 'beam_search':
+                        if (hypothesis.stop()):
+                            break
+                    else:
+                        if token_idx == self.eos_token_idx:
+                            break
+                        else:
+                            generated_tokens.append(idx2token[token_idx])
+                            input_seq = torch.LongTensor([[token_idx]]).to(self.device)
+                if self.decoding_strategy == 'beam_search':
+                    generated_tokens = hypothesis.generate()
+
+                cur_generated_corpus.append(generated_tokens)
+
+            generated_corpus += cur_generated_corpus
 
         return generated_corpus
 

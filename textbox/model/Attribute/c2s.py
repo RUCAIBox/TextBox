@@ -49,23 +49,18 @@ class C2S(AttributeGenerator):
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
 
         self.attr_embedder = nn.ModuleList([
-            nn.Embedding(self.attribute_size[i], min(self.embedding_size, self.attribute_size[i]))
+            nn.Embedding(self.attribute_size[i], self.embedding_size)
             for i in range(self.attribute_num)
         ])
-
-        total_emb_size = 0
-        for i in range(self.attribute_num):
-            total_emb_size += min(self.embedding_size, self.attribute_size[i])
 
         self.decoder = BasicRNNDecoder(
             self.embedding_size, self.hidden_size, self.num_dec_layers, self.rnn_type, self.dropout_ratio
         )
 
         self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
-        self.attr_linear = nn.Linear(total_emb_size, self.hidden_size * self.num_dec_layers)
+        self.attr_linear = nn.Linear(self.attribute_num * self.embedding_size, self.hidden_size)
 
         if self.is_gated:
-            self.gate_hc_linear = nn.Linear(total_emb_size, self.hidden_size)
             self.gate_linear = nn.Linear(self.hidden_size, self.hidden_size)
 
         self.dropout = nn.Dropout(self.dropout_ratio)
@@ -76,7 +71,7 @@ class C2S(AttributeGenerator):
         # Initialize parameters
         self.apply(xavier_normal_initialization)
 
-    def encode(self, attr_data):
+    def encoder(self, attr_data):
         attr_embeddings = []
 
         for attr_idx in range(self.attribute_num):
@@ -93,156 +88,75 @@ class C2S(AttributeGenerator):
         input_attr = corpus['attribute_idx']
         target_text = corpus['target_idx'][:, 1:]
 
-        attr_embeddings, h_c = self.encode(input_attr)
+        attr_embeddings, h_c_1D = self.encoder(input_attr)
 
-        h_c = h_c.reshape(-1, self.num_dec_layers, self.hidden_size)
-        h_c = h_c.permute(1, 0, 2).contiguous()
-
+        h_c = h_c_1D.repeat(self.num_dec_layers, 1, 1)
         input_embeddings = self.token_embedder(input_text)
-        outputs, hidden_states = self.decoder(input_embeddings, h_c)
+        outputs, _ = self.decoder(input_embeddings, h_c)
 
         if self.is_gated:
-            h_c_1D = torch.relu(self.gate_hc_linear(attr_embeddings))
             m_t = torch.sigmoid(self.gate_linear(outputs)).permute(1, 0, 2)
-            m_t = (m_t * h_c_1D).permute(1, 0, 2)
-            outputs = torch.add(outputs, m_t)
+            outputs = outputs + (m_t * h_c_1D).permute(1, 0, 2)
 
         outputs = self.dropout(outputs)
 
         token_logits = self.vocab_linear(outputs)
-        token_logits = token_logits.view(-1, token_logits.size(-1))
+        loss = self.loss(token_logits.view(-1, token_logits.size(-1)), target_text.contiguous().view(-1))
+        loss = loss.reshape_as(target_text)
 
-        loss = self.loss(token_logits, target_text.contiguous().view(-1)).reshape_as(target_text)
-        if (nll_test):
-            loss = loss.sum(dim=1)
-        else:
-            length = corpus['target_length'] - 1
-            loss = loss.sum(dim=1) / length.float()
-        return loss.mean()
-
-    def generate_for_corpus(self, eval_data, corpus):
-
-        attr_embeddings, h_c = self.encode(corpus['attribute_idx'])
-
-        if self.is_gated:
-            h_c_1D = torch.relu(self.gate_hc_linear(attr_embeddings))
-
-        generated_corpus = []
-        idx2token = eval_data.idx2token
-
-        # Decoder
-        cur_batch_size = len(h_c)
-        for data_idx in range(cur_batch_size):
-            generated_tokens = []
-            input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
-            hidden_states = h_c[data_idx].to(self.device)
-            hidden_states = hidden_states.reshape(self.num_dec_layers, 1, self.hidden_size).contiguous()
-            if (self.decoding_strategy == 'beam_search'):
-                hypothesis = Beam_Search_Hypothesis(
-                    self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token
-                )
-            for gen_idx in range(self.max_length):
-                decoder_input = self.token_embedder(input_seq)
-                outputs, hidden_states = self.decoder(decoder_input, hidden_states)
-
-                if self.is_gated:
-                    m_t = torch.sigmoid(self.gate_linear(outputs)) * h_c_1D[data_idx]
-                    outputs = torch.add(outputs, m_t)
-
-                token_logits = self.vocab_linear(outputs)
-                if self.decoding_strategy == 'random_sampling':
-                    token_probs = F.softmax(token_logits, dim=-1).squeeze()
-                    token_idx = torch.multinomial(token_probs, 1)[0].item()
-                elif self.decoding_strategy == 'argmax':
-                    token_probs = F.softmax(token_logits, dim=-1).squeeze()
-                    token_idx = torch.argmax(token_probs).item()
-                elif self.decoding_strategy == 'beam_search':
-                    input_seq, hidden_states = hypothesis.step(gen_idx, token_logits, hidden_states)
-                else:
-                    raise NotImplementedError(
-                        "No such decoding strategy: {}, only ['random_sampling', 'argmax', 'beam_search'] are available."
-                        .format(self.decoding_strategy)
-                    )
-
-                if self.decoding_strategy == 'beam_search':
-                    if (hypothesis.stop()):
-                        break
-                else:
-                    if token_idx == self.eos_token_idx:
-                        break
-                    else:
-                        generated_tokens.append(idx2token[token_idx])
-                        input_seq = torch.LongTensor([[token_idx]]).to(self.device)
-
-            if self.decoding_strategy == 'beam_search':
-                generated_tokens = hypothesis.generate()
-
-            generated_corpus.append(generated_tokens)
-
-        return generated_corpus
+        length = corpus['target_length'] - 1
+        loss = loss.sum(dim=1) / length.float()
+        loss = loss.mean()
+        return loss
 
     def generate(self, eval_data):
-        generated_corpus = []
+        generate_corpus = []
+        idx2token = eval_data.idx2token
+
         for corpus in eval_data:
-            attr_embeddings, h_c = self.encode(corpus['attribute_idx'])
+            batch_size = corpus['attribute_idx'].size(0)
+            attr_embeddings, h_c_1D = self.encoder(corpus['attribute_idx'])
+            h_c = h_c_1D.repeat(self.num_dec_layers, 1, 1)
 
-            if self.is_gated:
-                h_c_1D = torch.relu(self.gate_hc_linear(attr_embeddings))
-
-            cur_generated_corpus = []
-            idx2token = eval_data.idx2token
-
-            # Decoder
-            cur_batch_size = len(h_c)
-            for data_idx in range(cur_batch_size):
-                generated_tokens = []
+            for bid in range(batch_size):
+                hidden_states = h_c[:, bid, :].unsqueeze(1).contiguous()
+                generate_tokens = []
                 input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
-                hidden_states = h_c[data_idx].to(self.device)
-                hidden_states = hidden_states.reshape(self.num_dec_layers, 1, self.hidden_size).contiguous()
+
                 if (self.decoding_strategy == 'beam_search'):
                     hypothesis = Beam_Search_Hypothesis(
                         self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token
                     )
+
                 for gen_idx in range(self.max_length):
                     decoder_input = self.token_embedder(input_seq)
                     outputs, hidden_states = self.decoder(decoder_input, hidden_states)
-
                     if self.is_gated:
-                        m_t = torch.sigmoid(self.gate_linear(outputs)) * h_c_1D[data_idx]
-                        outputs = torch.add(outputs, m_t)
-
+                        m_t = torch.sigmoid(self.gate_linear(outputs))
+                        outputs = outputs + m_t * h_c_1D[bid]
                     token_logits = self.vocab_linear(outputs)
-                    if self.decoding_strategy == 'random_sampling':
-                        token_probs = F.softmax(token_logits, dim=-1).squeeze()
-                        token_idx = torch.multinomial(token_probs, 1)[0].item()
-                    elif self.decoding_strategy == 'argmax':
-                        token_probs = F.softmax(token_logits, dim=-1).squeeze()
-                        token_idx = torch.argmax(token_probs).item()
-                    elif self.decoding_strategy == 'beam_search':
-                        input_seq, hidden_states = hypothesis.step(gen_idx, token_logits, hidden_states)
-                    else:
-                        raise NotImplementedError(
-                            "No such decoding strategy: {}, only ['random_sampling', 'argmax', 'beam_search'] are available."
-                            .format(self.decoding_strategy)
-                        )
 
-                    if self.decoding_strategy == 'beam_search':
-                        if (hypothesis.stop()):
-                            break
-                    else:
+                    if (self.decoding_strategy == 'topk_sampling'):
+                        token_idx = topk_sampling(token_logits).item()
+                    elif (self.decoding_strategy == 'greedy_search'):
+                        token_idx = greedy_search(token_logits).item()
+                    elif (self.decoding_strategy == 'beam_search'):
+                        input_seq, hidden_states = \
+                            hypothesis.step(gen_idx, token_logits, hidden_states)
+
+                    if (self.decoding_strategy in ['topk_sampling', 'greedy_search']):
                         if token_idx == self.eos_token_idx:
                             break
                         else:
-                            generated_tokens.append(idx2token[token_idx])
+                            generate_tokens.append(idx2token[token_idx])
                             input_seq = torch.LongTensor([[token_idx]]).to(self.device)
-                if self.decoding_strategy == 'beam_search':
-                    generated_tokens = hypothesis.generate()
+                    elif (self.decoding_strategy == 'beam_search'):
+                        if (hypothesis.stop()):
+                            break
 
-                cur_generated_corpus.append(generated_tokens)
+                if (self.decoding_strategy == 'beam_search'):
+                    generate_tokens = hypothesis.generate()
 
-            generated_corpus += cur_generated_corpus
+                generate_corpus.append(generate_tokens)
 
-        return generated_corpus
-
-    def calculate_nll_test(self, corpus, epoch_idx):
-        return self.calculate_loss(corpus, epoch_idx, nll_test=True)
+        return generate_corpus

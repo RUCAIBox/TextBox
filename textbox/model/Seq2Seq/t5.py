@@ -13,6 +13,7 @@ import torch
 import torch.nn as nn
 import torch.functional as F
 
+
 from textbox.model.abstract_generator import Seq2SeqGenerator
 from transformers import T5Tokenizer, T5ForConditionalGeneration, T5Config
 
@@ -41,7 +42,7 @@ class T5(Seq2SeqGenerator):
         for batch_data in eval_dataloader:
             source_text = batch_data["source_text"]
             for text in source_text:
-                sequence = ' '.join(text)
+                sequence = "translate German to English: " + ' '.join(text)
                 inputs = self.tokenizer(sequence, return_tensors="pt")
                 encoded_sequence = inputs['input_ids']
                 sample_outputs = self.decoder.generate(
@@ -56,30 +57,32 @@ class T5(Seq2SeqGenerator):
         input_ids = []
         attention_masks = []
         for text in source_text:
-            sequence = ' '.join(text)
+            sequence = "translate German to English: " + ' '.join(text)
             inputs = self.tokenizer(sequence, return_tensors="pt", max_length=self.max_source_length, padding="max_length")
             input_ids.append(inputs['input_ids'])
             attention_masks.append(inputs['attention_mask'])
-        input_ids = torch.cat(input_ids)
-        attention_masks = torch.cat(attention_masks)
+        input_ids = torch.cat(input_ids).contiguous().to(self.device)
+        attention_masks = torch.cat(attention_masks).contiguous().to(self.device)
         return input_ids, attention_masks
 
     def calculate_loss(self, corpus, epoch_idx=-1):
         source_text = corpus['source_text']
         target_text = corpus['target_text']
-
+        print(epoch_idx, self.device)
         input_ids, attention_masks = self.calculate_ids(source_text)
         target_ids, decoder_attention_masks = self.calculate_ids(target_text)
 
-        decoder_input_ids = target_ids[:, :-1].contiguous()
-        decoder_attention_masks = decoder_attention_masks[:, :-1].contiguous()
-        decoder_target_ids = target_ids[:, 1:].contiguous()
+        decoder_input_ids = target_ids[:, :-1].contiguous().to(self.device)
+        decoder_attention_masks = decoder_attention_masks[:, :-1].contiguous().to(self.device)
+        decoder_target_ids = target_ids[:, 1:].contiguous().to(self.device)
+
         outputs = self.decoder(
             input_ids=input_ids,
             attention_mask=attention_masks,
             decoder_input_ids=decoder_input_ids,
             use_cache=False
         )
+
 
         token_logits = outputs.logits
         loss = self.loss(token_logits.view(-1, token_logits.size(-1)), decoder_target_ids.view(-1))

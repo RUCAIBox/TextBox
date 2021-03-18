@@ -1,7 +1,0 @@
-# training settings
-learning_rate: 0.00001
-eval_step: -1
-epochs: 10
-train_batch_size: 5
-eval_batch_size: 5
-pretrained_model_path: "pretrained_model/gpt2"

@@ -96,7 +96,7 @@ class BasicRNNEncoder(torch.nn.Module):
             hidden_states = self.init_hidden(input_embeddings)
 
         packed_input_embeddings = torch.nn.utils.rnn.pack_padded_sequence(
-            input_embeddings, input_length, batch_first=True, enforce_sorted=False
+            input_embeddings, input_length.cpu(), batch_first=True, enforce_sorted=False
         )
 
         outputs, hidden_states = self.encoder(packed_input_embeddings, hidden_states)

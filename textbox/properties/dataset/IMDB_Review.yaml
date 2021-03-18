@@ -1,0 +1,7 @@
+max_vocab_size: 25000
+max_seq_length: 250
+split_strategy: "by_ratio"
+split_ratio: [0.8,0.1,0.1]
+overlength_strategy: "truncate"
+tokenize_strategy: "nltk"
+language: "English"

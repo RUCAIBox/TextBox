@@ -43,14 +43,14 @@ class T5(Seq2SeqGenerator):
             source_text = batch_data["source_text"]
             for text in source_text:
                 sequence = "translate German to English: " + ' '.join(text)
-                inputs = self.tokenizer(sequence, return_tensors="pt")
-                encoded_sequence = inputs['input_ids']
+                inputs = self.tokenizer(sequence, return_tensors="pt").to(self.device)
+                encoded_sequence = inputs['input_ids'].to(self.device)
                 sample_outputs = self.decoder.generate(
                     encoded_sequence, max_length=self.max_target_length,early_stopping=True
                 )
                 decoded_sequence = self.tokenizer.decode(sample_outputs[0], skip_special_tokens=True)
                 generate_corpus.append(decoded_sequence)
-                
+        print(generate_corpus)
         return generate_corpus
 
     def calculate_ids(self, source_text):
@@ -58,7 +58,7 @@ class T5(Seq2SeqGenerator):
         attention_masks = []
         for text in source_text:
             sequence = "translate German to English: " + ' '.join(text)
-            inputs = self.tokenizer(sequence, return_tensors="pt", max_length=self.max_source_length, padding="max_length")
+            inputs = self.tokenizer(sequence, return_tensors="pt", max_length=self.max_source_length, padding="max_length", truncation=True)
             input_ids.append(inputs['input_ids'])
             attention_masks.append(inputs['attention_mask'])
         input_ids = torch.cat(input_ids).contiguous().to(self.device)
@@ -68,7 +68,6 @@ class T5(Seq2SeqGenerator):
     def calculate_loss(self, corpus, epoch_idx=-1):
         source_text = corpus['source_text']
         target_text = corpus['target_text']
-        print(epoch_idx, self.device)
         input_ids, attention_masks = self.calculate_ids(source_text)
         target_ids, decoder_attention_masks = self.calculate_ids(target_text)
 

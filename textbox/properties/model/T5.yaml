@@ -5,4 +5,5 @@ stopping_step: 5
 epochs: 10
 train_batch_size: 10
 eval_batch_size: 10
-pretrained_model_path: "t5-base"
+pretrained_model_path: "pretrained_model/t5-base"
+t5_task_text: "translate German to English: "

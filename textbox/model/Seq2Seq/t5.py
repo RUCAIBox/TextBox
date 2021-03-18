@@ -33,6 +33,7 @@ class T5(Seq2SeqGenerator):
 
         self.padding_token_idx = self.tokenizer.pad_token_id
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
+        self.t5_task_text = config['t5_task_text']
 
     @torch.no_grad()
     def generate(self, eval_dataloader):
@@ -40,7 +41,7 @@ class T5(Seq2SeqGenerator):
 
         for batch_data in eval_dataloader:
             source_text = batch_data["source_text"]
-            batch_sequences = [("translate German to English: " + ' '.join(text)) for text in source_text]
+            batch_sequences = [(self.t5_task_text + ' '.join(text)) for text in source_text]
             batch_inputs = self.tokenizer(batch_sequences, return_tensors="pt", padding="max_length",
                                           truncation=True).to(self.device)
             batch_encoded_sequence = batch_inputs['input_ids'].to(self.device)
@@ -57,7 +58,7 @@ class T5(Seq2SeqGenerator):
         input_ids = []
         attention_masks = []
         for text in source_text:
-            sequence = "translate German to English: " + ' '.join(text)
+            sequence = self.t5_task_text + ' '.join(text)
             inputs = self.tokenizer(
                 sequence, return_tensors="pt", max_length=self.max_source_length, padding="max_length", truncation=True
             )

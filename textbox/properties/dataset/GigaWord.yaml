@@ -5,6 +5,7 @@ source_max_seq_length: 200
 target_max_seq_length: 50
 split_strategy: "load_split"
 overlength_strategy: "drop"
+tokenize_strategy: "by_space"
 source_language: english
 target_language: english
 source_suffix: article

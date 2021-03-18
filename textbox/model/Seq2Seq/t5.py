@@ -13,11 +13,12 @@ import torch
 import torch.nn as nn
 import torch.functional as F
 
-
 from textbox.model.abstract_generator import Seq2SeqGenerator
 from transformers import T5Tokenizer, T5ForConditionalGeneration, T5Config
 
+
 class T5(Seq2SeqGenerator):
+
     def __init__(self, config, dataset):
         super(T5, self).__init__(config, dataset)
 
@@ -28,9 +29,7 @@ class T5(Seq2SeqGenerator):
         self.tokenizer = T5Tokenizer.from_pretrained(self.pretrained_model_path, add_prefix_space=True)
         self.configuration = T5Config.from_pretrained(self.pretrained_model_path)
 
-        self.decoder = T5ForConditionalGeneration.from_pretrained(
-            self.pretrained_model_path, config=self.configuration
-        )
+        self.decoder = T5ForConditionalGeneration.from_pretrained(self.pretrained_model_path, config=self.configuration)
 
         self.padding_token_idx = self.tokenizer.pad_token_id
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
@@ -38,19 +37,20 @@ class T5(Seq2SeqGenerator):
     @torch.no_grad()
     def generate(self, eval_dataloader):
         generate_corpus = []
-        
+
         for batch_data in eval_dataloader:
             source_text = batch_data["source_text"]
-            for text in source_text:
-                sequence = "translate German to English: " + ' '.join(text)
-                inputs = self.tokenizer(sequence, return_tensors="pt").to(self.device)
-                encoded_sequence = inputs['input_ids'].to(self.device)
-                sample_outputs = self.decoder.generate(
-                    encoded_sequence, max_length=self.max_target_length,early_stopping=True
-                )
-                decoded_sequence = self.tokenizer.decode(sample_outputs[0], skip_special_tokens=True)
-                generate_corpus.append(decoded_sequence)
-        print(generate_corpus)
+            batch_sequences = [("translate German to English: " + ' '.join(text)) for text in source_text]
+            batch_inputs = self.tokenizer(batch_sequences, return_tensors="pt", padding="max_length",
+                                          truncation=True).to(self.device)
+            batch_encoded_sequence = batch_inputs['input_ids'].to(self.device)
+            batch_outputs = self.decoder.generate(
+                batch_encoded_sequence, max_length=self.max_target_length, early_stopping=True
+            )
+            batch_decoded_sequence = self.tokenizer.batch_decode(batch_outputs, skip_special_tokens=True)
+            batch_decoded_text = [text.lower().split() for text in batch_decoded_sequence]
+            generate_corpus.extend(batch_decoded_text)
+            # print(batch_decoded_text)
         return generate_corpus
 
     def calculate_ids(self, source_text):
@@ -58,7 +58,9 @@ class T5(Seq2SeqGenerator):
         attention_masks = []
         for text in source_text:
             sequence = "translate German to English: " + ' '.join(text)
-            inputs = self.tokenizer(sequence, return_tensors="pt", max_length=self.max_source_length, padding="max_length", truncation=True)
+            inputs = self.tokenizer(
+                sequence, return_tensors="pt", max_length=self.max_source_length, padding="max_length", truncation=True
+            )
             input_ids.append(inputs['input_ids'])
             attention_masks.append(inputs['attention_mask'])
         input_ids = torch.cat(input_ids).contiguous().to(self.device)
@@ -76,12 +78,8 @@ class T5(Seq2SeqGenerator):
         decoder_target_ids = target_ids[:, 1:].contiguous().to(self.device)
 
         outputs = self.decoder(
-            input_ids=input_ids,
-            attention_mask=attention_masks,
-            decoder_input_ids=decoder_input_ids,
-            use_cache=False
+            input_ids=input_ids, attention_mask=attention_masks, decoder_input_ids=decoder_input_ids, use_cache=False
         )
-
 
         token_logits = outputs.logits
         loss = self.loss(token_logits.view(-1, token_logits.size(-1)), decoder_target_ids.view(-1))

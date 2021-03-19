@@ -20,6 +20,8 @@ import matplotlib.pyplot as plt
 import copy
 import math
 
+from tqdm import tqdm
+
 from torch.utils.data import DataLoader
 from time import time
 from logging import getLogger
@@ -145,6 +147,7 @@ class Trainer(AbstractTrainer):
         """
         self.model.train()
         total_loss = None
+        pbar = tqdm(total=len(train_data))
         for batch_idx, data in enumerate(train_data):
             self.optimizer.zero_grad()
             losses = self.model.calculate_loss(data, epoch_idx=epoch_idx)
@@ -158,6 +161,7 @@ class Trainer(AbstractTrainer):
             self._check_nan(loss)
             loss.backward()
             self.optimizer.step()
+            pbar.update(1)
         train_loss = total_loss / len(train_data)
         return train_loss
 

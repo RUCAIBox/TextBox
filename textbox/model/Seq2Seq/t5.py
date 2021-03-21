@@ -33,7 +33,12 @@ class T5(Seq2SeqGenerator):
 
         self.padding_token_idx = self.tokenizer.pad_token_id
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
-        self.t5_task_text = config['t5_task_text']
+        if config['task_type'] == "summarization":
+            self.t5_task_text = "summarize: "
+        elif config['task_type'] == "translation":
+            self.t5_task_text = "translate German to English: "
+        else:
+            raise NotImplementedError("Only summarization and translation are supported.")
 
     @torch.no_grad()
     def generate(self, eval_dataloader):
@@ -42,8 +47,13 @@ class T5(Seq2SeqGenerator):
         for batch_data in eval_dataloader:
             source_text = batch_data["source_text"]
             batch_sequences = [(self.t5_task_text + ' '.join(text)) for text in source_text]
-            batch_inputs = self.tokenizer(batch_sequences, return_tensors="pt", padding="max_length",
-                                          truncation=True).to(self.device)
+            batch_inputs = self.tokenizer(
+                batch_sequences,
+                return_tensors="pt",
+                max_length=self.max_source_length,
+                padding="max_length",
+                truncation=True
+            ).to(self.device)
             batch_encoded_sequence = batch_inputs['input_ids'].to(self.device)
             batch_outputs = self.decoder.generate(
                 batch_encoded_sequence, max_length=self.max_target_length, early_stopping=True
@@ -51,7 +61,7 @@ class T5(Seq2SeqGenerator):
             batch_decoded_sequence = self.tokenizer.batch_decode(batch_outputs, skip_special_tokens=True)
             batch_decoded_text = [text.lower().split() for text in batch_decoded_sequence]
             generate_corpus.extend(batch_decoded_text)
-            # print(batch_decoded_text)
+
         return generate_corpus
 
     def calculate_ids(self, source_text):

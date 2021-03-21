@@ -1,4 +1,3 @@
-# training settings
 learner: adam
 learning_rate: 0.00001
 eval_step: 1

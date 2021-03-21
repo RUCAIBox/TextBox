@@ -85,7 +85,7 @@ class RNNEncDec(Seq2SeqGenerator):
         self.vocab_linear = nn.Linear(self.hidden_size, self.target_vocab_size)
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
 
-        self.max_target_length = config['target_max_seq_length']
+        self.max_target_length = config['max_target_length']
 
         # parameters initialization
         self.apply(xavier_normal_initialization)

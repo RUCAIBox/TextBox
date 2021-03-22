@@ -579,7 +579,7 @@ We expect all contributions discussed in the issue tracker and going through PRs
 If you find TextBox useful for your research or development, please cite the following [paper](https://arxiv.org/abs/2101.02046):
 
 ```
-@article{recbole,
+@article{textbox,
     title={TextBox: A Unified, Modularized, and Extensible Framework for Text Generation},
     author={Junyi Li, Tianyi Tang, Gaole He, Jinhao Jiang, Xiaoxuan Hu, Puzhao Xie, Wayne Xin Zhao, Ji-Rong Wen},
     year={2021},

@@ -36,6 +36,18 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
         config_dict (dict): parameters dictionary used to modify experiment parameters
         saved (bool): whether to save the model
     """
+    
+    # Check if model / dataset exists.
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    model_property_path = os.path.join(current_path, '../properties/model/' + model + ".yaml")
+    dataset_property_path = os.path.join(current_path, '../properties/dataset/' + dataset + ".yaml")
+    if not os.path.exists(model_property_path):
+        print("Model '{}' does not exist.".format(model))
+        return
+    if not os.path.exists(dataset_property_path):
+        print("Dataset '{}' does not exist.".format(dataset))
+        return
+
     # configurations initialization
     config = Config(model=model, dataset=dataset, config_file_list=config_file_list, config_dict=config_dict)
 

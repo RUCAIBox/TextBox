@@ -294,8 +294,6 @@ class Trainer(AbstractTrainer):
         Returns:
              (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
         """
-        # sampler = torch.utils.data.distributed.DistributedSampler(train_data, rank=torch.distributed.get_rank())
-        # loader = torch.utils.data.DataLoader(train_data, shuffle=False, sampler=sampler)
 
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
@@ -1072,13 +1070,12 @@ class MaskGANTrainer(GANTrainer):
             'd_opt': self.d_optimizer.state_dict(),
             'c_opt': self.c_optimizer.state_dict()
         }
-        if (torch.distributed.get_rank() == 0):
-            if postfix is not None:
-                path = self.saved_model_file + "_" + str(epoch) + "_" + postfix
-                torch.save(state, path)
-                return path
-            else:
-                torch.save(state, self.saved_model_file)
+        if postfix is not None:
+            path = self.saved_model_file + "_" + str(epoch) + "_" + postfix
+            torch.save(state, path)
+            return path
+        else:
+            torch.save(state, self.saved_model_file)
 
     def _load_generated_text(self):
         r""" Load the generated text by our model to log.

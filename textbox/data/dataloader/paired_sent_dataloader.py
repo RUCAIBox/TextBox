@@ -97,7 +97,7 @@ class PairedSentenceDataLoader(AbstractDataLoader):
         tp_target_idx_length_data = self.target_idx_length_data[self.pr:self.pr + self.step]
         target_idx, target_length = self._pad_batch_sequence(tp_target_text_idx_data, tp_target_idx_length_data)
 
-        self.pr += self.step
+        self.pr += self.batch_size
 
         batch_data = {
             'source_text': source_text,

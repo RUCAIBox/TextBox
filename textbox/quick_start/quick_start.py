@@ -78,7 +78,6 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
         # model training
         best_valid_score, best_valid_result = trainer.fit(train_data, valid_data, saved=saved)
         if (config['DDP'] == True):
-            print ("test gpu: ", torch.distributed.get_rank())
             torch.distributed.destroy_process_group()
             return
         test_result = trainer.evaluate(test_data, load_best_model=saved)

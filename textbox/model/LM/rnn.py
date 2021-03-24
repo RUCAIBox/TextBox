@@ -56,26 +56,25 @@ class RNN(UnconditionalGenerator):
         # parameters initialization
         self.apply(xavier_normal_initialization)
 
-    def generate(self, eval_data):
+    def generate(self, batch_data, eval_data):
         generate_corpus = []
         idx2token = eval_data.idx2token
-        for _ in range(self.eval_generate_num):
-            hidden_states = torch.zeros(self.num_dec_layers, 1, self.hidden_size).to(self.device)
-            generate_tokens = []
-            input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
-            for gen_idx in range(self.max_length):
-                decoder_input = self.token_embedder(input_seq)
-                outputs, hidden_states = self.decoder(decoder_input, hidden_states)
-                token_logits = self.vocab_linear(outputs)
-                token_probs = F.softmax(token_logits, dim=-1).squeeze()
-                token_idx = torch.multinomial(token_probs, 1)[0].item()
+        hidden_states = torch.zeros(self.num_dec_layers, 1, self.hidden_size).to(self.device)
+        generate_tokens = []
+        input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
+        for gen_idx in range(self.max_length):
+            decoder_input = self.token_embedder(input_seq)
+            outputs, hidden_states = self.decoder(decoder_input, hidden_states)
+            token_logits = self.vocab_linear(outputs)
+            token_probs = F.softmax(token_logits, dim=-1).squeeze()
+            token_idx = torch.multinomial(token_probs, 1)[0].item()
 
-                if token_idx == self.eos_token_idx:
-                    break
-                else:
-                    generate_tokens.append(idx2token[token_idx])
-                    input_seq = torch.LongTensor([[token_idx]]).to(self.device)
-            generate_corpus.append(generate_tokens)
+            if token_idx == self.eos_token_idx:
+                break
+            else:
+                generate_tokens.append(idx2token[token_idx])
+                input_seq = torch.LongTensor([[token_idx]]).to(self.device)
+        generate_corpus.append(generate_tokens)
         return generate_corpus
 
     def calculate_loss(self, corpus, epoch_idx=-1, nll_test=False):

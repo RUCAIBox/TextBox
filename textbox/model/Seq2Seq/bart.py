@@ -39,20 +39,18 @@ class BART(Seq2SeqGenerator):
         self.padding_token_idx = self.tokenizer.pad_token_id
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
 
-    def generate(self, eval_dataloader):
+    def generate(self, batch_data, eval_dataloader):
         generate_corpus = []
-        with torch.no_grad():
-            for batch_data in eval_dataloader:
-                source_text = batch_data["source_text"]
-                for text in source_text:
-                    sentence = ' '.join(text)
-                    encoding_dict = self.tokenizer(sentence, return_tensors="pt")
-                    input_ids = encoding_dict['input_ids'].to(self.device)
-                    sample_outputs = self.decoder.generate(
-                        input_ids, num_beams=5, max_length=self.max_target_length, early_stopping=True
-                    )
-                    generated_text = self.tokenizer.decode(sample_outputs[0], skip_special_tokens=True)
-                    generate_corpus.append(generated_text.lower().split())
+        source_text = batch_data["source_text"]
+        for text in source_text:
+            sentence = ' '.join(text)
+            encoding_dict = self.tokenizer(sentence, return_tensors="pt")
+            input_ids = encoding_dict['input_ids'].to(self.device)
+            sample_outputs = self.decoder.generate(
+                input_ids, num_beams=5, max_length=self.max_target_length, early_stopping=True
+            )
+            generated_text = self.tokenizer.decode(sample_outputs[0], skip_special_tokens=True)
+            generate_corpus.append(generated_text.lower().split())
         return generate_corpus
 
     def calculate_loss(self, corpus, epoch_idx=-1):

@@ -90,71 +90,70 @@ class RNNEncDec(Seq2SeqGenerator):
         # parameters initialization
         self.apply(xavier_normal_initialization)
 
-    def generate(self, eval_dataloader):
+    def generate(self, batch_data, eval_data):
         generate_corpus = []
-        idx2token = eval_dataloader.target_idx2token
+        idx2token = eval_data.target_idx2token
 
-        for batch_data in eval_dataloader:
-            source_text = batch_data['source_idx']
-            source_length = batch_data['source_length']
-            source_embeddings = self.source_token_embedder(source_text)
-            encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
+        source_text = batch_data['source_idx']
+        source_length = batch_data['source_length']
+        source_embeddings = self.source_token_embedder(source_text)
+        encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
 
-            if self.bidirectional:
-                encoder_outputs = encoder_outputs[:, :, self.hidden_size:] + encoder_outputs[:, :, :self.hidden_size]
-                if (self.rnn_type == 'lstm'):
-                    encoder_states = (encoder_states[0][::2], encoder_states[1][::2])
-                else:
-                    encoder_states = encoder_states[::2]
+        if self.bidirectional:
+            encoder_outputs = encoder_outputs[:, :, self.hidden_size:] + encoder_outputs[:, :, :self.hidden_size]
+            if (self.rnn_type == 'lstm'):
+                encoder_states = (encoder_states[0][::2], encoder_states[1][::2])
+            else:
+                encoder_states = encoder_states[::2]
 
-            encoder_masks = torch.ne(source_text, self.padding_token_idx)
-            for bid in range(source_text.size(0)):
-                decoder_states = encoder_states[:, bid, :].unsqueeze(1)
-                encoder_output = encoder_outputs[bid, :, :].unsqueeze(0)
-                encoder_mask = encoder_masks[bid, :].unsqueeze(0)
-                generate_tokens = []
-                input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
+        encoder_masks = torch.ne(source_text, self.padding_token_idx)
+        for bid in range(source_text.size(0)):
+            decoder_states = encoder_states[:, bid, :].unsqueeze(1)
+            encoder_output = encoder_outputs[bid, :, :].unsqueeze(0)
+            encoder_mask = encoder_masks[bid, :].unsqueeze(0)
+            generate_tokens = []
+            input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
 
-                if (self.strategy == 'beam_search'):
-                    hypothesis = Beam_Search_Hypothesis(
-                        self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token
+            if (self.strategy == 'beam_search'):
+                hypothesis = Beam_Search_Hypothesis(
+                    self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token
+                )
+
+            for gen_idx in range(self.max_target_length):
+                decoder_input = self.target_token_embedder(input_seq)
+                if self.attention_type is not None:
+                    decoder_outputs, decoder_states, _ = self.decoder(
+                        decoder_input, decoder_states, encoder_output, encoder_mask
                     )
+                else:
+                    decoder_outputs, decoder_states = self.decoder(decoder_input, decoder_states)
 
-                for gen_idx in range(self.max_target_length):
-                    decoder_input = self.target_token_embedder(input_seq)
+                token_logits = self.vocab_linear(decoder_outputs)
+                if (self.strategy == 'topk_sampling'):
+                    token_idx = topk_sampling(token_logits).item()
+                elif (self.strategy == 'greedy_search'):
+                    token_idx = greedy_search(token_logits).item()
+                elif (self.strategy == 'beam_search'):
                     if self.attention_type is not None:
-                        decoder_outputs, decoder_states, _ = self.decoder(
-                            decoder_input, decoder_states, encoder_output, encoder_mask
-                        )
+                        input_seq, decoder_states, encoder_output, encoder_mask = \
+                            hypothesis.step(gen_idx, token_logits, decoder_states, encoder_output, encoder_mask)
                     else:
-                        decoder_outputs, decoder_states = self.decoder(decoder_input, decoder_states)
+                        input_seq, decoder_states = hypothesis.step(gen_idx, token_logits, decoder_states)
 
-                    token_logits = self.vocab_linear(decoder_outputs)
-                    if (self.strategy == 'topk_sampling'):
-                        token_idx = topk_sampling(token_logits).item()
-                    elif (self.strategy == 'greedy_search'):
-                        token_idx = greedy_search(token_logits).item()
-                    elif (self.strategy == 'beam_search'):
-                        if self.attention_type is not None:
-                            input_seq, decoder_states, encoder_output, encoder_mask = \
-                                hypothesis.step(gen_idx, token_logits, decoder_states, encoder_output, encoder_mask)
-                        else:
-                            input_seq, decoder_states = hypothesis.step(gen_idx, token_logits, decoder_states)
+                if (self.strategy in ['topk_sampling', 'greedy_search']):
+                    if token_idx == self.eos_token_idx:
+                        break
+                    else:
+                        generate_tokens.append(idx2token[token_idx])
+                        input_seq = torch.LongTensor([[token_idx]]).to(self.device)
+                elif (self.strategy == 'beam_search'):
+                    if (hypothesis.stop()):
+                        break
 
-                    if (self.strategy in ['topk_sampling', 'greedy_search']):
-                        if token_idx == self.eos_token_idx:
-                            break
-                        else:
-                            generate_tokens.append(idx2token[token_idx])
-                            input_seq = torch.LongTensor([[token_idx]]).to(self.device)
-                    elif (self.strategy == 'beam_search'):
-                        if (hypothesis.stop()):
-                            break
+            if (self.strategy == 'beam_search'):
+                generate_tokens = hypothesis.generate()
 
-                if (self.strategy == 'beam_search'):
-                    generate_tokens = hypothesis.generate()
-
-                generate_corpus.append(generate_tokens)
+            generate_corpus.append(generate_tokens)
 
         return generate_corpus
 

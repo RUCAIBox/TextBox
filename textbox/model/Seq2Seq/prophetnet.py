@@ -34,21 +34,18 @@ class ProphetNet(Seq2SeqGenerator):
         self.padding_token_idx = self.tokenizer.pad_token_id
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
 
-    def generate(self, eval_dataloader):
+    def generate(self, batch_data, eval_data):
         generate_corpus = []
-        with torch.no_grad():
-            sum = 0
-            for batch_text in eval_dataloader:
-                source_text = batch_text['source_text']
-                for text in source_text:
-                    text = ' '.join(text)
-                    encoding_dict = self.tokenizer(text, return_tensors='pt')
-                    input_ids = encoding_dict['input_ids'].to(self.device)
+        source_text = batch_data['source_text']
+        for text in source_text:
+            text = ' '.join(text)
+            encoding_dict = self.tokenizer(text, return_tensors='pt')
+            input_ids = encoding_dict['input_ids'].to(self.device)
 
-                    output_ids = self.model.generate(input_ids, max_length=self.max_target_length, early_stopping=True)
+            output_ids = self.model.generate(input_ids, max_length=self.max_target_length, early_stopping=True)
 
-                    generate_text = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
-                    generate_corpus.append(generate_text.lower().split())
+            generate_text = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
+            generate_corpus.append(generate_text.lower().split())
 
         return generate_corpus
 

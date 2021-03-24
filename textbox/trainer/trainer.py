@@ -364,8 +364,10 @@ class Trainer(AbstractTrainer):
             self.logger.info(message_output)
 
         self.model.eval()
+        generate_corpus = []
         with torch.no_grad():
-            generate_corpus = self.model.generate(eval_data)
+            for batch_data in eval_data:
+                generate_corpus.extend(self.model.generate(batch_data, eval_data))
         self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
@@ -775,7 +777,10 @@ class Seq2SeqTrainer(Trainer):
             self.logger.info(message_output)
 
         self.model.eval()
-        generate_corpus = self.model.generate(eval_data)
+        generate_corpus = []
+        with torch.no_grad():
+            for batch_data in eval_data:
+                generate_corpus.extend(self.model.generate(batch_data, eval_data))
         self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)

@@ -55,18 +55,17 @@ class GPT2(UnconditionalGenerator):
 
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
 
-    def generate(self, eval_data):
+    def generate(self, batch_data, eval_data):
         generate_corpus = []
         batch_num = ceil(self.eval_generate_num / eval_data.batch_size)
-        for _ in range(batch_num):
-            sample_outputs = self.decoder.generate(
-                bos_token_id=self.sos_token_idx,
-                do_sample=True,
-                max_length=self.max_seq_length,
-                num_return_sequences=eval_data.batch_size
-            )
-            generated_text = self.tokenizer.batch_decode(sample_outputs, skip_special_tokens=True)
-            generate_corpus.extend([text.lower().split() for text in generated_text])
+        sample_outputs = self.decoder.generate(
+            bos_token_id=self.sos_token_idx,
+            do_sample=True,
+            max_length=self.max_seq_length,
+            num_return_sequences=eval_data.batch_size
+        )
+        generated_text = self.tokenizer.batch_decode(sample_outputs, skip_special_tokens=True)
+        generate_corpus.extend([text.lower().split() for text in generated_text])
         return generate_corpus
 
     def calculate_loss(self, corpus, epoch_idx=-1, nll_test=False):

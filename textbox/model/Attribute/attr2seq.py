@@ -145,7 +145,7 @@ class Attr2Seq(AttributeGenerator):
 
         return generate_corpus
 
-    def calculate_loss(self, corpus, epoch_idx=0):
+    def forward(self, corpus, epoch_idx=0):
         # target_length (Torch.Tensor): shape: [batch_size]
         target_length = corpus['target_length']
         # attribute_idx (Torch.Tensor): shape: [batch_size, attribute_num].

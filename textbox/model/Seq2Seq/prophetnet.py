@@ -44,15 +44,13 @@ class ProphetNet(Seq2SeqGenerator):
                     text = ' '.join(text)
                     encoding_dict = self.tokenizer(text, return_tensors='pt')
                     input_ids = encoding_dict['input_ids'].to(self.device)
-
                     output_ids = self.model.generate(input_ids, max_length=self.max_target_length, early_stopping=True)
-
                     generate_text = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
                     generate_corpus.append(generate_text.lower().split())
 
         return generate_corpus
 
-    def calculate_loss(self, corpus, epoch_idx=-1):
+    def forward(self, corpus, epoch_idx=-1):
         source_text = corpus['source_text']
         target_text = corpus['target_text']
         self.batch_size = len(source_text)
@@ -80,7 +78,6 @@ class ProphetNet(Seq2SeqGenerator):
             decoder_input_att.append(encoding_dict['attention_mask'])
         target_ids = torch.cat(target_ids, dim=0).to(self.device)
         decoder_input_att = torch.cat(decoder_input_att, dim=0).to(self.device)
-
         decoder_target_ids = target_ids[:, 1:].contiguous()
         decoder_input_ids = target_ids[:, :-1].contiguous()
         decoder_input_att = decoder_input_att[:, :-1].contiguous()

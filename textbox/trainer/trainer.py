@@ -225,7 +225,7 @@ class Trainer(AbstractTrainer):
                             else:
                                 changed_key = state_dict_key
                             saved_dict[changed_key] = state_dict_val
-                    state[key] = saved_dict
+                        state[key] = saved_dict
                 torch.save(state, self.saved_model_file)
         else:
             torch.save(state, self.saved_model_file)
@@ -260,6 +260,12 @@ class Trainer(AbstractTrainer):
                 'Architecture configuration given in config file is different from that of checkpoint. '
                 'This may yield an exception while state_dict is being loaded.'
             )
+        if (self.DDP == True):
+            saved_dict = collections.OrderedDict()
+            for state_dict_key, state_dict_val in checkpoint['state_dict'].items():
+                changed_key = 'module.' + state_dict_key
+                saved_dict[changed_key] = state_dict_val
+            checkpoint['state_dict'] = saved_dict
         self.model.load_state_dict(checkpoint['state_dict'])
 
         # load optimizer state from checkpoint only when optimizer type is not changed
@@ -298,7 +304,6 @@ class Trainer(AbstractTrainer):
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
             training_start_time = time()
-            # sampler.set_epoch(epoch_idx)
             train_loss = self._train_epoch(train_data, epoch_idx)
             self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             training_end_time = time()

@@ -101,4 +101,4 @@ class GPT2(UnconditionalGenerator):
         return loss.mean()
 
     def calculate_nll_test(self, corpus, epoch_idx=-1):
-        return self.calculate_loss(corpus, epoch_idx, True)
+        return self.forward(corpus, epoch_idx, True)

@@ -57,7 +57,10 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     # model loading and initialization
     sig_model = get_model(config['model'])(config, train_data).to(config['device'])
     if (config['DDP'] == True):
-        model = torch.nn.parallel.DistributedDataParallel(sig_model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=False)
+        if (config['find_unused_parameters'] == True):
+            model = torch.nn.parallel.DistributedDataParallel(sig_model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=True)
+        else:
+            model = torch.nn.parallel.DistributedDataParallel(sig_model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=False)
     else:
         model = sig_model
     
@@ -74,8 +77,10 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
             trainer.resume_checkpoint(resume_file=config['load_experiment'])
         # model training
         best_valid_score, best_valid_result = trainer.fit(train_data, valid_data, saved=saved)
-
-        # model evaluation
+        if (config['DDP'] == True):
+            print ("test gpu: ", torch.distributed.get_rank())
+            torch.distributed.destroy_process_group()
+            return
         test_result = trainer.evaluate(test_data, load_best_model=saved)
         logger.info('best valid loss: {}, best valid ppl: {}'.format(best_valid_score, best_valid_result))
     logger.info('test result: {}'.format(test_result))

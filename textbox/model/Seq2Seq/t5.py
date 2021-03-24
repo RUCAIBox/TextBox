@@ -78,7 +78,7 @@ class T5(Seq2SeqGenerator):
         attention_masks = torch.cat(attention_masks).contiguous().to(self.device)
         return input_ids, attention_masks
 
-    def calculate_loss(self, corpus, epoch_idx=-1):
+    def forward(self, corpus, epoch_idx=-1):
         source_text = corpus['source_text']
         target_text = corpus['target_text']
         input_ids, attention_masks = self.calculate_ids(source_text)

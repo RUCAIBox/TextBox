@@ -16,6 +16,8 @@
 textbox.quick_start
 ########################
 """
+import os
+import torch
 import logging
 from logging import getLogger
 from textbox.utils import init_logger, get_model, get_trainer, init_seed
@@ -37,18 +39,28 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     # configurations initialization
     config = Config(model=model, dataset=dataset, config_file_list=config_file_list, config_dict=config_dict)
 
+    if (config['DDP'] == True):
+        local_rank = torch.distributed.get_rank()
+        torch.cuda.set_device(local_rank)
+        config['device'] = torch.device("cuda", local_rank)
+
     init_seed(config['seed'], config['reproducibility'])
     # logger initialization
     init_logger(config)
     logger = getLogger()
 
     logger.info(config)
-
+    
     # dataset splitting
     train_data, valid_data, test_data = data_preparation(config)
 
     # model loading and initialization
-    model = get_model(config['model'])(config, train_data).to(config['device'])
+    sig_model = get_model(config['model'])(config, train_data).to(config['device'])
+    if (config['DDP'] == True):
+        model = torch.nn.parallel.DistributedDataParallel(sig_model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=False)
+    else:
+        model = sig_model
+    
     logger.info(model)
 
     # trainer loading and initialization
@@ -65,7 +77,5 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
 
         # model evaluation
         test_result = trainer.evaluate(test_data, load_best_model=saved)
-
         logger.info('best valid loss: {}, best valid ppl: {}'.format(best_valid_score, best_valid_result))
-
     logger.info('test result: {}'.format(test_result))

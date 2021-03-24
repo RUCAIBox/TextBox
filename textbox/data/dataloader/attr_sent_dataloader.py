@@ -80,7 +80,7 @@ class AttributedSentenceDataLoader(AbstractDataLoader):
         tp_attribute_idx_data = self.attribute_idx_data[self.pr:self.pr + self.step]
         attribute_idx = torch.LongTensor(tp_attribute_idx_data)
 
-        self.pr += self.step
+        self.pr += self.batch_size
 
         batch_data = {
             'target_text': tp_text_data,

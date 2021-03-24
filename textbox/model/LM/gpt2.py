@@ -68,7 +68,7 @@ class GPT2(UnconditionalGenerator):
         generate_corpus.extend([text.lower().split() for text in generated_text])
         return generate_corpus
 
-    def calculate_loss(self, corpus, epoch_idx=-1, nll_test=False):
+    def forward(self, corpus, epoch_idx=-1, nll_test=False):
         text_sequence = corpus['target_text']
         input_ids = []
         attn_masks = []

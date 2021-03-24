@@ -83,7 +83,7 @@ class C2S(AttributeGenerator):
         h_c = torch.relu(self.attr_linear(attr_embeddings)).contiguous()
         return attr_embeddings, h_c
 
-    def calculate_loss(self, corpus, epoch_idx=-1, nll_test=False):
+    def forward(self, corpus, epoch_idx=-1, nll_test=False):
         input_text = corpus['target_idx'][:, :-1]
         input_attr = corpus['attribute_idx']
         target_text = corpus['target_idx'][:, 1:]

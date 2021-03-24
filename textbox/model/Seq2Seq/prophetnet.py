@@ -49,7 +49,7 @@ class ProphetNet(Seq2SeqGenerator):
 
         return generate_corpus
 
-    def calculate_loss(self, corpus, epoch_idx=-1):
+    def forward(self, corpus, epoch_idx=-1):
         source_text = corpus['source_text']
         target_text = corpus['target_text']
         self.batch_size = len(source_text)
@@ -77,7 +77,6 @@ class ProphetNet(Seq2SeqGenerator):
             decoder_input_att.append(encoding_dict['attention_mask'])
         target_ids = torch.cat(target_ids, dim=0).to(self.device)
         decoder_input_att = torch.cat(decoder_input_att, dim=0).to(self.device)
-
         decoder_target_ids = target_ids[:, 1:].contiguous()
         decoder_input_ids = target_ids[:, :-1].contiguous()
         decoder_input_att = decoder_input_att[:, :-1].contiguous()

@@ -53,7 +53,7 @@ class BART(Seq2SeqGenerator):
             generate_corpus.append(generated_text.lower().split())
         return generate_corpus
 
-    def calculate_loss(self, corpus, epoch_idx=-1):
+    def forward(self, corpus, epoch_idx=-1):
         source_text = corpus['source_text']
         target_text = corpus['target_text']
 

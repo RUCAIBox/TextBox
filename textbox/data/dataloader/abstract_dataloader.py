@@ -37,14 +37,22 @@ class AbstractDataLoader(object):
     """
 
     def __init__(self, config, dataset, batch_size=1, shuffle=False):
+        self.DDP = config['DDP']
         self.config = config
         self.device = config['device']
         self.logger = getLogger()
         self.dataset = dataset
         self.batch_size = batch_size
-        self.step = batch_size
+        if (self.DDP == True):
+            self.step = int(batch_size / torch.cuda.device_count())
+        else:
+            self.step = batch_size
         self.shuffle = shuffle
-        self.pr = 0
+        if (self.DDP == True):
+            self.pr = int(batch_size / torch.cuda.device_count() * torch.distributed.get_rank())
+        else:
+            self.pr = 0
+        
 
         self.padding_token = SpecialTokens.PAD
         self.unknown_token = SpecialTokens.UNK
@@ -101,7 +109,10 @@ class AbstractDataLoader(object):
 
     def __next__(self):
         if self.pr >= self.pr_end:
-            self.pr = 0
+            if (self.DDP == True):
+                self.pr = int(self.batch_size / torch.cuda.device_count() * torch.distributed.get_rank())
+            else:
+                self.pr = 0
             raise StopIteration()
         return self._next_batch_data()
 

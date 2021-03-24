@@ -17,5 +17,5 @@ evaluation_arguments = ['beam_size', 'decoding_strategy', 'metrics', 'n_grams', 
 dataset_arguments = [
     'max_vocab_size', 'source_max_vocab_size', 'target_max_vocab_size', 'source_max_seq_length',
     'target_max_seq_length', 'source_language', 'target_language', 'source_suffix', 'target_suffix', 'split_strategy',
-    'split_ratio', 'share_vocab'
+    'split_ratio', 'share_vocab', 'task_type'
 ]

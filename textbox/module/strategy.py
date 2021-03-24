@@ -182,7 +182,7 @@ class Beam_Search_Hypothesis(object):
         if (encoder_output is not None):
             encoder_output = encoder_output[0:1].repeat(hyp_num, 1, 1)
             returns += [encoder_output]
-        
+
         if (encoder_mask is not None):
             encoder_mask = encoder_mask[0:1].repeat(hyp_num, 1)
             returns += [encoder_mask]

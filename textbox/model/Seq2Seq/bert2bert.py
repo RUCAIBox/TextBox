@@ -69,9 +69,7 @@ class BERT2BERT(Seq2SeqGenerator):
                 bos_token_id=self.sos_token_idx,
                 eos_token_id=self.eos_token_idx
             )
-            generated_text = [
-                self.tokenizer.decode(sample, skip_special_tokens=True) for sample in sample_outputs
-            ]
+            generated_text = [self.tokenizer.decode(sample, skip_special_tokens=True) for sample in sample_outputs]
             generated_text = [text.lower().split() for text in generated_text]
             generate_corpus.extend(generated_text)
         return generate_corpus

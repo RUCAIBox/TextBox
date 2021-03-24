@@ -49,8 +49,7 @@ class C2S(AttributeGenerator):
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
 
         self.attr_embedder = nn.ModuleList([
-            nn.Embedding(self.attribute_size[i], self.embedding_size)
-            for i in range(self.attribute_num)
+            nn.Embedding(self.attribute_size[i], self.embedding_size) for i in range(self.attribute_num)
         ])
 
         self.decoder = BasicRNNDecoder(
@@ -115,7 +114,7 @@ class C2S(AttributeGenerator):
         batch_size = batch_data['attribute_idx'].size(0)
         attr_embeddings, h_c_1D = self.encoder(batch_data['attribute_idx'])
         h_c = h_c_1D.repeat(self.num_dec_layers, 1, 1)
-        
+
         for bid in range(batch_size):
             hidden_states = h_c[:, bid, :].unsqueeze(1).contiguous()
             generate_tokens = []

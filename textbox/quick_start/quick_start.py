@@ -36,7 +36,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
         config_dict (dict): parameters dictionary used to modify experiment parameters
         saved (bool): whether to save the model
     """
-    
+
     # Check if model / dataset exists.
     current_path = os.path.dirname(os.path.realpath(__file__))
     model_property_path = os.path.join(current_path, '../properties/model/' + model + ".yaml")
@@ -62,17 +62,19 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     logger = getLogger()
 
     logger.info(config)
-    
+
     # dataset splitting
     train_data, valid_data, test_data = data_preparation(config)
 
     # model loading and initialization
     sig_model = get_model(config['model'])(config, train_data).to(config['device'])
     if (config['DDP'] == True):
-        model = torch.nn.parallel.DistributedDataParallel(sig_model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=False)
+        model = torch.nn.parallel.DistributedDataParallel(
+            sig_model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=False
+        )
     else:
         model = sig_model
-    
+
     logger.info(model)
 
     # trainer loading and initialization

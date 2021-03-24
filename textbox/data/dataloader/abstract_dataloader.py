@@ -52,7 +52,6 @@ class AbstractDataLoader(object):
             self.pr = int(batch_size / torch.cuda.device_count() * torch.distributed.get_rank())
         else:
             self.pr = 0
-        
 
         self.padding_token = SpecialTokens.PAD
         self.unknown_token = SpecialTokens.UNK

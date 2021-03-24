@@ -40,7 +40,6 @@ class T5(Seq2SeqGenerator):
         else:
             raise NotImplementedError("Only summarization and translation are supported.")
 
-
     def generate(self, batch_data, eval_data):
         generate_corpus = []
 

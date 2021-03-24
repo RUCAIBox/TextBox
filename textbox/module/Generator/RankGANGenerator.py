@@ -130,9 +130,7 @@ class RankGANGenerator(UnconditionalGenerator):
             h_prev = torch.zeros(1, 1, self.hidden_size, device=self.device)  # 1 * 1 * h
             o_prev = torch.zeros(1, 1, self.hidden_size, device=self.device)  # 1 * 1 * h
             prev_state = (h_prev, o_prev)
-            X = self.word_embedding(
-                torch.tensor([[self.start_idx]], dtype=torch.long, device=self.device)
-            )  # 1 * 1 * e
+            X = self.word_embedding(torch.tensor([[self.start_idx]], dtype=torch.long, device=self.device))  # 1 * 1 * e
             generate_tokens = []
 
             for _ in range(self.max_length):

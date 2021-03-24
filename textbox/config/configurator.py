@@ -273,7 +273,7 @@ class Config(object):
                 gpu_id = self.overall_config_dict['gpu_id']
             else:
                 gpu_id = self.external_config_dict['gpu_id']
-            
+
             if type(gpu_id) == tuple:
                 os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(i) for i in gpu_id)
             else:

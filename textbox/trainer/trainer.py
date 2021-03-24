@@ -229,7 +229,6 @@ class Trainer(AbstractTrainer):
                 torch.save(state, self.saved_model_file)
         else:
             torch.save(state, self.saved_model_file)
-            
 
     def _save_generated_text(self, generated_corpus):
         r"""Store the generated text by our model.
@@ -1307,7 +1306,7 @@ class LeakGANTrainer(GANTrainer):
                 o.zero_grad()
                 loss.backward(retain_graph=True if i < len(opt) - 1 else False)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
-            
+
             for o in opt:
                 o.step()
         else:

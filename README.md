@@ -28,7 +28,7 @@ TextBox is developed based on Python and PyTorch for reproducing and developing 
 We provide the support for 9 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team. 
 
 <p align="center">
-  <img src="asset/framework.png" alt="TextBox v0.1 architecture">
+  <img src="asset/framework.pdf" alt="TextBox v0.1 architecture">
   <br>
   <b>Figure</b>: The Overall Architecture of TextBox
 </p>

@@ -25,7 +25,7 @@ from time import time
 from logging import getLogger
 
 from textbox.module.Optimizer.optim import ScheduledOptim
-from textbox.evaluator import NgramEvaluator, TranslationEvaluator, SummarizationEvaluator
+from textbox.evaluator import NgramEvaluator, TranslationEvaluator, SummarizationEvaluator, DialogEvaluator
 from textbox.utils import ensure_dir, early_stopping
 
 
@@ -96,10 +96,12 @@ class Trainer(AbstractTrainer):
         self.train_loss_dict = dict()
         self.optimizer = self._build_optimizer()
         self.task_type = config['task_type'].lower()
-        if self.task_type in ["translation", "attribute", "multi_dialog", "poem"]:
+        if self.task_type in ["translation", "poem"]:
             self.evaluator = TranslationEvaluator(config)
         elif self.task_type == "summarization":
             self.evaluator = SummarizationEvaluator(config)
+        elif self.task_type in ["multi_dialog", "attribute"]:
+            self.evaluator = DialogEvaluator(config)
         else:
             self.evaluator = NgramEvaluator(config)
 

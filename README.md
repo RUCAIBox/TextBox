@@ -20,12 +20,12 @@
 [中文版]: README_CN.md
 
 
-TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 16 text generation algorithms, covering two major tasks:
+TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 21 text generation algorithms, covering two major tasks:
 
 + Unconditional (input-free) Generation
 + Sequence-to-Sequence (Seq2Seq) Generation, including Machine Translation and Summarization
 
-We provide the support for 6 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team. 
+We provide the support for 9 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team. 
 
 <p align="center">
   <img src="asset/framework.png" alt="TextBox v0.1 architecture">

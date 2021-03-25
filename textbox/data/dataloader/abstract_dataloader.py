@@ -52,6 +52,7 @@ class AbstractDataLoader(object):
             self.pr = int(batch_size / torch.distributed.get_world_size() * torch.distributed.get_rank())
         else:
             self.pr = 0
+
         self.std_pr = 0
 
         self.padding_token = SpecialTokens.PAD

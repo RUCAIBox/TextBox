@@ -241,7 +241,6 @@ class Trainer(AbstractTrainer):
                 torch.save(state, self.saved_model_file)
         else:
             torch.save(state, self.saved_model_file)
-            
 
     def _save_generated_text(self, generated_corpus):
         r"""Store the generated text by our model.
@@ -442,8 +441,12 @@ class Trainer(AbstractTrainer):
                 self.logger.info(message_output)
 
         self.model.eval()
+        generate_corpus = []
         with torch.no_grad():
-            generate_corpus = self.model.generate(eval_data)
+            pbar = tqdm(total=len(eval_data))
+            for batch_data in eval_data:
+                generate_corpus.extend(self.model.generate(batch_data, eval_data))
+                pbar.update(1)
         self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
@@ -853,7 +856,12 @@ class Seq2SeqTrainer(Trainer):
             self.logger.info(message_output)
 
         self.model.eval()
-        generate_corpus = self.model.generate(eval_data)
+        generate_corpus = []
+        with torch.no_grad():
+            pbar = tqdm(total=len(eval_data))
+            for batch_data in eval_data:
+                generate_corpus.extend(self.model.generate(batch_data, eval_data))
+                pbar.update(1)
         self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
@@ -1355,7 +1363,7 @@ class LeakGANTrainer(GANTrainer):
                 o.zero_grad()
                 loss.backward(retain_graph=True if i < len(opt) - 1 else False)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
-            
+
             for o in opt:
                 o.step()
         else:

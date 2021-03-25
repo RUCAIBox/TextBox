@@ -36,6 +36,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
         config_dict (dict): parameters dictionary used to modify experiment parameters
         saved (bool): whether to save the model
     """
+
     # configurations initialization
     config = Config(model=model, dataset=dataset, config_file_list=config_file_list, config_dict=config_dict)
 
@@ -46,6 +47,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
 
     init_seed(config['seed'], config['reproducibility'])
     # logger initialization
+
     if (config['DDP'] == True):
         if (torch.distributed.get_rank() == 0):
             init_logger(config)
@@ -55,7 +57,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
         init_logger(config)
         logger = getLogger()
         logger.info(config)
-    
+
     # dataset splitting
     train_data, valid_data, test_data = data_preparation(config)
 

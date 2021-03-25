@@ -28,6 +28,8 @@ class RNN(UnconditionalGenerator):
     def __init__(self, config, dataset):
         super(RNN, self).__init__(config, dataset)
 
+        self.sum = 0
+
         # load parameters info
         self.embedding_size = config['embedding_size']
         self.hidden_size = config['hidden_size']
@@ -78,9 +80,12 @@ class RNN(UnconditionalGenerator):
             generate_corpus.append(generate_tokens)
         return generate_corpus
 
-    def calculate_loss(self, corpus, epoch_idx=-1, nll_test=False):
+    def forward(self, corpus, epoch_idx=-1, nll_test=False):
         input_text = corpus['target_idx'][:, :-1]
         target_text = corpus['target_idx'][:, 1:]
+
+        self.sum += 1
+        # print ("in rnn: ", torch.distributed.get_rank(), self.sum, input_text.shape, target_text.shape)
 
         input_embeddings = self.dropout(self.token_embedder(input_text))
         outputs, hidden_states = self.decoder(input_embeddings)

@@ -257,6 +257,12 @@ class Config(object):
         )
 
     def _init_device(self):
+        use_DDP = False
+        if ('DDP' in self.external_config_dict):
+            use_DDP = self.external_config_dict['DDP']
+        if (use_DDP == True):
+            torch.distributed.init_process_group(backend="nccl")
+
         if 'use_gpu' not in self.external_config_dict:
             use_gpu = self.overall_config_dict['use_gpu']
         else:
@@ -267,7 +273,11 @@ class Config(object):
                 gpu_id = self.overall_config_dict['gpu_id']
             else:
                 gpu_id = self.external_config_dict['gpu_id']
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+            
+            if type(gpu_id) == tuple:
+                os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(i) for i in gpu_id)
+            else:
+                os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
         self.external_config_dict['device'] = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
 

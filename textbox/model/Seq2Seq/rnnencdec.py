@@ -158,7 +158,7 @@ class RNNEncDec(Seq2SeqGenerator):
 
         return generate_corpus
 
-    def calculate_loss(self, corpus, epoch_idx=0):
+    def forward(self, corpus, epoch_idx=0):
         source_text = corpus['source_idx']
         source_length = corpus['source_length']
 

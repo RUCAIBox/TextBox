@@ -78,7 +78,7 @@ class BERT2BERT(Seq2SeqGenerator):
                     generate_corpus.extend(generated_text)
         return generate_corpus
 
-    def calculate_loss(self, corpus, epoch_idx=-1):
+    def forward(self, corpus, epoch_idx=-1):
         source_text = corpus['source_text']
         target_text = corpus['target_text']
 

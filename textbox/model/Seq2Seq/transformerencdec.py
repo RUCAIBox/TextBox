@@ -166,7 +166,7 @@ class TransformerEncDec(Seq2SeqGenerator):
 
         return generate_corpus
 
-    def calculate_loss(self, corpus, epoch_idx=0):
+    def forward(self, corpus, epoch_idx=0):
         source_text = corpus['source_idx']
 
         input_text = corpus['target_idx'][:, :-1]

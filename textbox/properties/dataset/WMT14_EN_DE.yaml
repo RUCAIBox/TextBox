@@ -9,3 +9,4 @@ source_language: english
 target_language: german
 source_suffix: en
 target_suffix: de
+task_type: "translation"

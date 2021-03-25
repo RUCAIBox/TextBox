@@ -19,6 +19,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import copy
 import math
+import collections
+
+from tqdm import tqdm
 
 from torch.utils.data import DataLoader
 from time import time
@@ -69,6 +72,7 @@ class Trainer(AbstractTrainer):
     def __init__(self, config, model):
         super(Trainer, self).__init__(config, model)
 
+        self.DDP = config['DDP']
         self.logger = getLogger()
         self.learner = config['learner']
         self.learning_rate = config['learning_rate']
@@ -147,9 +151,13 @@ class Trainer(AbstractTrainer):
         """
         self.model.train()
         total_loss = None
+        pbar = tqdm(total=len(train_data))
         for batch_idx, data in enumerate(train_data):
             self.optimizer.zero_grad()
-            losses = self.model.calculate_loss(data, epoch_idx=epoch_idx)
+            if (self.DDP == True):
+                losses = self.model(data, epoch_idx=epoch_idx)
+            else:
+                losses = self.model.forward(data, epoch_idx=epoch_idx)
             if isinstance(losses, tuple):
                 loss = sum(losses)
                 loss_tuple = tuple(per_loss.item() for per_loss in losses)
@@ -160,6 +168,7 @@ class Trainer(AbstractTrainer):
             self._check_nan(loss)
             loss.backward()
             self.optimizer.step()
+            pbar.update(1)
         train_loss = total_loss / len(train_data)
         return train_loss
 
@@ -176,7 +185,10 @@ class Trainer(AbstractTrainer):
         self.model.eval()
         total_loss = None
         for batch_idx, data in enumerate(valid_data):
-            losses = self.model.calculate_loss(data)
+            if (self.DDP == True):
+                losses = self.model(data)
+            else:
+                losses = self.model.forward(data)
             if isinstance(losses, tuple):
                 loss = sum(losses)
                 loss_tuple = tuple(per_loss.item() for per_loss in losses)
@@ -204,7 +216,22 @@ class Trainer(AbstractTrainer):
             'state_dict': self.model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
         }
-        torch.save(state, self.saved_model_file)
+        if (self.DDP == True):
+            if (torch.distributed.get_rank() == 0):
+                saved_dict = collections.OrderedDict()
+                for key, val in state.items():
+                    if (key == 'state_dict'):
+                        for state_dict_key, state_dict_val in val.items():
+                            if (state_dict_key[0:7] == 'module.'):
+                                changed_key = state_dict_key[7:]
+                            else:
+                                changed_key = state_dict_key
+                            saved_dict[changed_key] = state_dict_val
+                    state[key] = saved_dict
+                torch.save(state, self.saved_model_file)
+        else:
+            torch.save(state, self.saved_model_file)
+            
 
     def _save_generated_text(self, generated_corpus):
         r"""Store the generated text by our model.
@@ -269,9 +296,11 @@ class Trainer(AbstractTrainer):
         Returns:
              (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
         """
+
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
             training_start_time = time()
+            # sampler.set_epoch(epoch_idx)
             train_loss = self._train_epoch(train_data, epoch_idx)
             self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             training_end_time = time()

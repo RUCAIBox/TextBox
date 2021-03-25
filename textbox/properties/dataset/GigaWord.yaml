@@ -10,3 +10,4 @@ target_language: english
 source_suffix: article
 target_suffix: summary
 share_vocab: true
+task_type: "summarization"

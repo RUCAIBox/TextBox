@@ -144,5 +144,5 @@ class MultipleSentenceDataLoader(AbstractDataLoader):
                 batch_data[group + '_idx'] = text_idx.to(self.device)
                 batch_data[group + '_length'] = idx_length.to(self.device)
 
-        self.pr += self.step
+        self.pr += self.batch_size
         return batch_data

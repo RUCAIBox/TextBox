@@ -257,10 +257,12 @@ class Config(object):
         )
 
     def _init_device(self):
-        use_DDP = False
-        if ('DDP' in self.external_config_dict):
+        if 'DDP' not in self.external_config_dict:
+            use_DDP = self.overall_config_dict['DDP']
+        else:
             use_DDP = self.external_config_dict['DDP']
-        if (use_DDP == True):
+
+        if use_DDP:
             torch.distributed.init_process_group(backend="nccl")
 
         if 'use_gpu' not in self.external_config_dict:

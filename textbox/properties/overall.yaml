@@ -1,6 +1,7 @@
 # general
 gpu_id: 0
 use_gpu: True
+DDP: False
 seed: 2020
 state: INFO
 reproducibility: True

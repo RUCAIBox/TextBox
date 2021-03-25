@@ -43,17 +43,14 @@ class AbstractDataLoader(object):
         self.logger = getLogger()
         self.dataset = dataset
         self.batch_size = batch_size
-        if (self.DDP == True):
-            self.step = int(batch_size / torch.cuda.device_count())
-        else:
-            self.step = batch_size
         self.shuffle = shuffle
-        if (self.DDP == True):
+        if self.DDP:
+            self.step = int(batch_size / torch.cuda.device_count())
             self.pr = int(batch_size / torch.cuda.device_count() * torch.distributed.get_rank())
         else:
+            self.step = batch_size
             self.pr = 0
         
-
         self.padding_token = SpecialTokens.PAD
         self.unknown_token = SpecialTokens.UNK
         self.sos_token = SpecialTokens.SOS

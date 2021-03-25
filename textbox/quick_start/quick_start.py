@@ -1,11 +1,6 @@
-# @Time   : 2020/11/5
-# @Author : Gaole He
-# @Email  : hegaole@ruc.edu.cn
-
-# UPDATE:
-# @Time   : 2020/12/3
-# @Author : Tianyi Tang
-# @Email  : steventang@ruc.edu.cn
+# @Time   : 2020/11/5, 2020/12/3
+# @Author : Gaole He, Tianyi Tang
+# @Email  : hegaole@ruc.edu.cn, steventang@ruc.edu.cn
 
 # UPDATE:
 # @Time   : 2020/12/8
@@ -39,7 +34,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     # configurations initialization
     config = Config(model=model, dataset=dataset, config_file_list=config_file_list, config_dict=config_dict)
 
-    if (config['DDP'] == True):
+    if config['DDP']:
         local_rank = torch.distributed.get_rank()
         torch.cuda.set_device(local_rank)
         config['device'] = torch.device("cuda", local_rank)
@@ -55,11 +50,11 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     train_data, valid_data, test_data = data_preparation(config)
 
     # model loading and initialization
-    sig_model = get_model(config['model'])(config, train_data).to(config['device'])
-    if (config['DDP'] == True):
-        model = torch.nn.parallel.DistributedDataParallel(sig_model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=False)
+    single_model = get_model(config['model'])(config, train_data).to(config['device'])
+    if config['DDP']:
+        model = torch.nn.parallel.DistributedDataParallel(single_model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=False)
     else:
-        model = sig_model
+        model = single_model
     
     logger.info(model)
 

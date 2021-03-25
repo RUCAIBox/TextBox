@@ -390,8 +390,10 @@ class Trainer(AbstractTrainer):
         self.model.eval()
         generate_corpus = []
         with torch.no_grad():
+            pbar = tqdm(total=len(eval_data))
             for batch_data in eval_data:
                 generate_corpus.extend(self.model.generate(batch_data, eval_data))
+                pbar.update(1)
         self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
@@ -803,8 +805,10 @@ class Seq2SeqTrainer(Trainer):
         self.model.eval()
         generate_corpus = []
         with torch.no_grad():
+            pbar = tqdm(total=len(eval_data))
             for batch_data in eval_data:
                 generate_corpus.extend(self.model.generate(batch_data, eval_data))
+                pbar.update(1)
         self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)

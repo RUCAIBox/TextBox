@@ -46,7 +46,7 @@ def create_dataset(config):
         raise NotImplementedError("No such dataset for TASK_TYPE: {}".format(task_type))
 
 
-def data_preparation(config, save=False):
+def data_preparation(config, save=False, is_print_log=True):
     """Split the dataset by :attr:`config['split_strategy']` and call :func:`dataloader_construct` to create
     corresponding dataloader.
 
@@ -63,22 +63,22 @@ def data_preparation(config, save=False):
     """
     dataset = create_dataset(config)
 
-    builded_datasets = dataset.build()
+    builded_datasets = dataset.build(is_print_log)
     train_dataset, valid_dataset, test_dataset = builded_datasets
     phases = ['train', 'valid', 'test']
 
     train_data = dataloader_construct(
-        name='train', config=config, dataset=train_dataset, batch_size=config['train_batch_size'], shuffle=True
+        name='train', config=config, dataset=train_dataset, batch_size=config['train_batch_size'], shuffle=True, is_print_log=is_print_log
     )
 
     valid_data, test_data = dataloader_construct(
-        name='evaluation', config=config, dataset=[valid_dataset, test_dataset], batch_size=config['eval_batch_size']
+        name='evaluation', config=config, dataset=[valid_dataset, test_dataset], batch_size=config['eval_batch_size'], is_print_log=is_print_log
     )
 
     return train_data, valid_data, test_data
 
 
-def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False):
+def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False, is_print_log=True):
     """Get a correct dataloader class by calling :func:`get_data_loader` to construct dataloader.
 
     Args:
@@ -98,9 +98,10 @@ def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False):
         batch_size = [batch_size] * len(dataset)
 
     task_type = config['task_type'].lower()
-    logger = getLogger()
-    logger.info('Build [{}] DataLoader for [{}]'.format(task_type, name))
-    logger.info('batch_size = [{}], shuffle = [{}]\n'.format(batch_size, shuffle))
+    if (is_print_log):
+        logger = getLogger()
+        logger.info('Build [{}] DataLoader for [{}]'.format(task_type, name))
+        logger.info('batch_size = [{}], shuffle = [{}]\n'.format(batch_size, shuffle))
 
     DataLoader = get_data_loader(config)
 

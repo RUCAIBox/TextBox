@@ -87,10 +87,11 @@ class SingleSentenceDataset(AbstractDataset):
         self.max_vocab_size = len(self.idx2token)
         self.logger.info("Restore finished!")
 
-    def build(self):
+    def build(self, is_print_log=True):
         info_str = ''
         corpus_list = []
-        self.logger.info("Vocab size: {}".format(self.max_vocab_size))
+        if (is_print_log):
+            self.logger.info("Vocab size: {}".format(self.max_vocab_size))
 
         for i, prefix in enumerate(['train', 'dev', 'test']):
             text_data = self.text_data[i]
@@ -101,6 +102,6 @@ class SingleSentenceDataset(AbstractDataset):
             }
             corpus_list.append(tp_data)
             info_str += '{}: {} cases, '.format(prefix, len(text_data))
-
-        self.logger.info(info_str[:-2] + '\n')
+        if (is_print_log):
+            self.logger.info(info_str[:-2] + '\n')
         return corpus_list

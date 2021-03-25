@@ -87,11 +87,16 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
         # model training
         best_valid_score, best_valid_result = trainer.fit(train_data, valid_data, saved=saved)
         if (config['DDP'] == True):
-            print ("test gpu: ", torch.distributed.get_rank())
             if (torch.distributed.get_rank() == 0):
                 logger.info('best valid loss: {}, best valid ppl: {}'.format(best_valid_score, best_valid_result))
-            torch.distributed.destroy_process_group()
-            return
+            if (torch.distributed.get_rank() != 0):
+                return
+            else:
+                config['DDP'] = False
+                train_data, valid_data, test_data = data_preparation(config, is_print_log=False)
+                model = get_model(config['model'])(config, train_data).to(config['device'])
+                trainer = get_trainer(config['MODEL_TYPE'], config['model'])(config, model)
+
         test_result = trainer.evaluate(test_data, load_best_model=saved)
         logger.info('best valid loss: {}, best valid ppl: {}'.format(best_valid_score, best_valid_result))
     logger.info('test result: {}'.format(test_result))

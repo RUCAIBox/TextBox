@@ -57,7 +57,6 @@ class SingleSentenceDataLoader(AbstractDataLoader):
         self.text_data[:], self.text_idx_data[:], self.idx_length_data[:] = zip(*temp)
 
     def _next_batch_data(self):
-        # print ("self.pr = ", self.pr)
         tp_text_data = self.text_data[self.pr:self.pr + self.step]
         tp_text_idx_data = self.text_idx_data[self.pr:self.pr + self.step]
         tp_idx_length_data = self.idx_length_data[self.pr:self.pr + self.step]

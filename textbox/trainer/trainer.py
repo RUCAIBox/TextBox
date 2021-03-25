@@ -131,7 +131,11 @@ class Trainer(AbstractTrainer):
                 self.embedding_size, self.warmup_steps
             )
         else:
-            self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
+            if (self.DDP == True):
+                if (torch.distributed.get_rank() == 0):
+                    self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
+            else:
+                self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
             optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         return optimizer
 
@@ -149,7 +153,11 @@ class Trainer(AbstractTrainer):
         """
         self.model.train()
         total_loss = None
-        pbar = tqdm(total=len(train_data))
+        if (self.DDP == True):
+            if (torch.distributed.get_rank() == 0):
+                pbar = tqdm(total=len(train_data))
+        else:
+            pbar = tqdm(total=len(train_data))
         for batch_idx, data in enumerate(train_data):
             self.optimizer.zero_grad()
             if (self.DDP == True):
@@ -166,7 +174,11 @@ class Trainer(AbstractTrainer):
             self._check_nan(loss)
             loss.backward()
             self.optimizer.step()
-            pbar.update(1)
+            if (self.DDP == True):
+                if (torch.distributed.get_rank() == 0):
+                    pbar.update(1)
+            else:
+                pbar.update(1)
         train_loss = total_loss / len(train_data)
         return train_loss
 
@@ -225,7 +237,7 @@ class Trainer(AbstractTrainer):
                             else:
                                 changed_key = state_dict_key
                             saved_dict[changed_key] = state_dict_val
-                    state[key] = saved_dict
+                        state[key] = saved_dict
                 torch.save(state, self.saved_model_file)
         else:
             torch.save(state, self.saved_model_file)
@@ -256,16 +268,33 @@ class Trainer(AbstractTrainer):
 
         # load architecture params from checkpoint
         if checkpoint['config']['model'].lower() != self.config['model'].lower():
-            self.logger.warning(
-                'Architecture configuration given in config file is different from that of checkpoint. '
-                'This may yield an exception while state_dict is being loaded.'
-            )
+            if (self.DDP == True):
+                if (torch.distributed.get_rank() == 0):
+                    self.logger.warning(
+                        'Architecture configuration given in config file is different from that of checkpoint. '
+                        'This may yield an exception while state_dict is being loaded.'
+                    )
+            else:
+                self.logger.warning(
+                    'Architecture configuration given in config file is different from that of checkpoint. '
+                    'This may yield an exception while state_dict is being loaded.'
+                )
+        if (self.DDP == True):
+            saved_dict = collections.OrderedDict()
+            for state_dict_key, state_dict_val in checkpoint['state_dict'].items():
+                changed_key = 'module.' + state_dict_key
+                saved_dict[changed_key] = state_dict_val
+            checkpoint['state_dict'] = saved_dict
         self.model.load_state_dict(checkpoint['state_dict'])
 
         # load optimizer state from checkpoint only when optimizer type is not changed
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         message_output = 'Checkpoint loaded. Resume training from epoch {}'.format(self.start_epoch)
-        self.logger.info(message_output)
+        if (self.DDP == True):
+            if (torch.distributed.get_rank() == 0):
+                self.logger.info(message_output)
+        else:
+            self.logger.info(message_output)
 
     def _check_nan(self, loss):
         if torch.isnan(loss):
@@ -298,7 +327,6 @@ class Trainer(AbstractTrainer):
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
             training_start_time = time()
-            # sampler.set_epoch(epoch_idx)
             train_loss = self._train_epoch(train_data, epoch_idx)
             self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             training_end_time = time()
@@ -306,7 +334,11 @@ class Trainer(AbstractTrainer):
             train_loss_output = \
                 self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss)
             if verbose:
-                self.logger.info(train_loss_output)
+                if (self.DDP == True):
+                    if (torch.distributed.get_rank() == 0):
+                        self.logger.info(train_loss_output)
+                else:
+                    self.logger.info(train_loss_output)
 
             # eval
             if self.eval_step <= 0 or not valid_data:
@@ -314,7 +346,11 @@ class Trainer(AbstractTrainer):
                     self._save_checkpoint(epoch_idx)
                     update_output = 'Saving current: %s' % self.saved_model_file
                     if verbose:
-                        self.logger.info(update_output)
+                        if (self.DDP == True):
+                            if (torch.distributed.get_rank() == 0):
+                                self.logger.info(update_output)
+                        else:
+                            self.logger.info(update_output)
                 continue
             if (epoch_idx + 1) % self.eval_step == 0:
                 valid_start_time = time()
@@ -330,21 +366,34 @@ class Trainer(AbstractTrainer):
                                      (epoch_idx, valid_end_time - valid_start_time, valid_score)
                 valid_result_output = 'valid ppl: {}'.format(valid_result)
                 if verbose:
-                    self.logger.info(valid_score_output)
-                    self.logger.info(valid_result_output)
+                    if (self.DDP == True):
+                        if (torch.distributed.get_rank() == 0):
+                            self.logger.info(valid_score_output)
+                            self.logger.info(valid_result_output)
+                    else:
+                        self.logger.info(valid_score_output)
+                        self.logger.info(valid_result_output)
                 if update_flag:
                     if saved:
                         self._save_checkpoint(epoch_idx)
                         update_output = 'Saving current best: %s' % self.saved_model_file
                         if verbose:
-                            self.logger.info(update_output)
+                            if (self.DDP == True):
+                                if (torch.distributed.get_rank() == 0):
+                                    self.logger.info(update_output)
+                            else:
+                                self.logger.info(update_output)
                     self.best_valid_result = valid_result
 
                 if stop_flag:
                     stop_output = 'Finished training, best eval result in epoch %d' % \
                                   (epoch_idx - self.cur_step * self.eval_step)
                     if verbose:
-                        self.logger.info(stop_output)
+                        if (self.DDP == True):
+                            if (torch.distributed.get_rank() == 0):
+                                self.logger.info(stop_output)
+                        else:
+                            self.logger.info(stop_output)
                     break
         return self.best_valid_score, self.best_valid_result
 
@@ -386,7 +435,11 @@ class Trainer(AbstractTrainer):
             checkpoint = torch.load(checkpoint_file)
             self.model.load_state_dict(checkpoint['state_dict'])
             message_output = 'Loading model structure and parameters from {}'.format(checkpoint_file)
-            self.logger.info(message_output)
+            if (self.DDP == True):
+                if (torch.distributed.get_rank() == 0):
+                    self.logger.info(message_output)
+            else:
+                self.logger.info(message_output)
 
         self.model.eval()
         with torch.no_grad():

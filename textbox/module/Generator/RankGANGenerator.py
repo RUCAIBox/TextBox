@@ -113,40 +113,37 @@ class RankGANGenerator(UnconditionalGenerator):
         samples = torch.cat(samples, dim=0)
         return samples[:sample_num, :]
 
-    def generate(self, eval_data):
+    def generate(self, batch_data, eval_data):
         r"""Generate tokens of sentences using eval_data.
 
         Args:
-            eval_data (Corpus): The corpus information of evaluation data.
+            batch_data (Corpus): Single batch corpus information of evaluation data.
+            eval_data : Common information of all evaluation data.
 
         Returns:
             List[List[str]]: The generated tokens of each sentence.
         """
-        self.eval()
         generate_corpus = []
         idx2token = eval_data.idx2token
 
-        with torch.no_grad():
-            for _ in range(self.eval_generate_num):
-                h_prev = torch.zeros(1, 1, self.hidden_size, device=self.device)  # 1 * 1 * h
-                o_prev = torch.zeros(1, 1, self.hidden_size, device=self.device)  # 1 * 1 * h
-                prev_state = (h_prev, o_prev)
-                X = self.word_embedding(
-                    torch.tensor([[self.start_idx]], dtype=torch.long, device=self.device)
-                )  # 1 * 1 * e
-                generate_tokens = []
+        for _ in range(len(batch_data)):
+            h_prev = torch.zeros(1, 1, self.hidden_size, device=self.device)  # 1 * 1 * h
+            o_prev = torch.zeros(1, 1, self.hidden_size, device=self.device)  # 1 * 1 * h
+            prev_state = (h_prev, o_prev)
+            X = self.word_embedding(torch.tensor([[self.start_idx]], dtype=torch.long, device=self.device))  # 1 * 1 * e
+            generate_tokens = []
 
-                for _ in range(self.max_length):
-                    output, prev_state = self.LSTM(X, prev_state)
-                    P = F.softmax(self.vocab_projection(output), dim=-1).squeeze()  # v
-                    token = torch.multinomial(P, 1)[0]
-                    X = self.word_embedding(torch.tensor([[token]], dtype=torch.long, device=self.device))  # 1 * 1 * e
-                    if (token.item() == self.end_idx):
-                        break
-                    else:
-                        generate_tokens.append(idx2token[token.item()])
+            for _ in range(self.max_length):
+                output, prev_state = self.LSTM(X, prev_state)
+                P = F.softmax(self.vocab_projection(output), dim=-1).squeeze()  # v
+                token = torch.multinomial(P, 1)[0]
+                X = self.word_embedding(torch.tensor([[token]], dtype=torch.long, device=self.device))  # 1 * 1 * e
+                if (token.item() == self.end_idx):
+                    break
+                else:
+                    generate_tokens.append(idx2token[token.item()])
 
-                generate_corpus.append(generate_tokens)
+            generate_corpus.append(generate_tokens)
 
         self.train()
         return generate_corpus

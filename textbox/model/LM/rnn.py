@@ -28,8 +28,6 @@ class RNN(UnconditionalGenerator):
     def __init__(self, config, dataset):
         super(RNN, self).__init__(config, dataset)
 
-        self.sum = 0
-
         # load parameters info
         self.embedding_size = config['embedding_size']
         self.hidden_size = config['hidden_size']
@@ -58,34 +56,30 @@ class RNN(UnconditionalGenerator):
         # parameters initialization
         self.apply(xavier_normal_initialization)
 
-    def generate(self, eval_data):
+    def generate(self, batch_data, eval_data):
         generate_corpus = []
         idx2token = eval_data.idx2token
-        for _ in range(self.eval_generate_num):
-            hidden_states = torch.zeros(self.num_dec_layers, 1, self.hidden_size).to(self.device)
-            generate_tokens = []
-            input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
-            for gen_idx in range(self.max_length):
-                decoder_input = self.token_embedder(input_seq)
-                outputs, hidden_states = self.decoder(decoder_input, hidden_states)
-                token_logits = self.vocab_linear(outputs)
-                token_probs = F.softmax(token_logits, dim=-1).squeeze()
-                token_idx = torch.multinomial(token_probs, 1)[0].item()
+        hidden_states = torch.zeros(self.num_dec_layers, 1, self.hidden_size).to(self.device)
+        generate_tokens = []
+        input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
+        for gen_idx in range(self.max_length):
+            decoder_input = self.token_embedder(input_seq)
+            outputs, hidden_states = self.decoder(decoder_input, hidden_states)
+            token_logits = self.vocab_linear(outputs)
+            token_probs = F.softmax(token_logits, dim=-1).squeeze()
+            token_idx = torch.multinomial(token_probs, 1)[0].item()
 
-                if token_idx == self.eos_token_idx:
-                    break
-                else:
-                    generate_tokens.append(idx2token[token_idx])
-                    input_seq = torch.LongTensor([[token_idx]]).to(self.device)
-            generate_corpus.append(generate_tokens)
+            if token_idx == self.eos_token_idx:
+                break
+            else:
+                generate_tokens.append(idx2token[token_idx])
+                input_seq = torch.LongTensor([[token_idx]]).to(self.device)
+        generate_corpus.append(generate_tokens)
         return generate_corpus
 
     def forward(self, corpus, epoch_idx=-1, nll_test=False):
         input_text = corpus['target_idx'][:, :-1]
         target_text = corpus['target_idx'][:, 1:]
-
-        self.sum += 1
-        # print ("in rnn: ", torch.distributed.get_rank(), self.sum, input_text.shape, target_text.shape)
 
         input_embeddings = self.dropout(self.token_embedder(input_text))
         outputs, hidden_states = self.decoder(input_embeddings)
@@ -102,4 +96,4 @@ class RNN(UnconditionalGenerator):
         return loss.mean()
 
     def calculate_nll_test(self, corpus, epoch_idx):
-        return self.calculate_loss(corpus, epoch_idx, nll_test=True)
+        return self.forward(corpus, epoch_idx, nll_test=True)

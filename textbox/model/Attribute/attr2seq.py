@@ -93,55 +93,53 @@ class Attr2Seq(AttributeGenerator):
 
         return outputs, hidden_states
 
-    def generate(self, eval_dataloader):
+    def generate(self, batch_data, eval_data):
         generate_corpus = []
-        idx2token = eval_dataloader.idx2token
+        idx2token = eval_data.idx2token
+        source_idx = batch_data['attribute_idx']
+        self.batch_size = source_idx.size(0)
 
-        for batch_data in eval_dataloader:
-            source_idx = batch_data['attribute_idx']
-            self.batch_size = source_idx.size(0)
+        encoder_outputs, encoder_states = self.encoder(source_idx)
 
-            encoder_outputs, encoder_states = self.encoder(source_idx)
+        for bid in range(self.batch_size):
+            c = torch.zeros(self.num_dec_layers, 1, self.hidden_size).to(self.device)
+            decoder_states = (encoder_states[:, bid, :].unsqueeze(1), c)
+            encoder_output = encoder_outputs[bid, :, :].unsqueeze(0)
+            generate_tokens = []
+            input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
 
-            for bid in range(self.batch_size):
-                c = torch.zeros(self.num_dec_layers, 1, self.hidden_size).to(self.device)
-                decoder_states = (encoder_states[:, bid, :].unsqueeze(1), c)
-                encoder_output = encoder_outputs[bid, :, :].unsqueeze(0)
-                generate_tokens = []
-                input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
+            if (self.strategy == 'beam_search'):
+                hypothesis = Beam_Search_Hypothesis(
+                    self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token
+                )
 
-                if (self.strategy == 'beam_search'):
-                    hypothesis = Beam_Search_Hypothesis(
-                        self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token
-                    )
+            for gen_idx in range(self.max_target_length):
+                decoder_input = self.target_token_embedder(input_seq)
+                decoder_outputs, decoder_states, _ = self.decoder(decoder_input, decoder_states, encoder_output)
 
-                for gen_idx in range(self.max_target_length):
-                    decoder_input = self.target_token_embedder(input_seq)
-                    decoder_outputs, decoder_states, _ = self.decoder(decoder_input, decoder_states, encoder_output)
+                token_logits = self.vocab_linear(decoder_outputs)
+                if (self.strategy == 'topk_sampling'):
+                    token_idx = topk_sampling(token_logits).item()
+                elif (self.strategy == 'greedy_search'):
+                    token_idx = greedy_search(token_logits).item()
+                elif (self.strategy == 'beam_search'):
+                    input_seq, decoder_states, encoder_output = \
+                        hypothesis.step(gen_idx, token_logits, decoder_states, encoder_output)
 
-                    token_logits = self.vocab_linear(decoder_outputs)
-                    if (self.strategy == 'topk_sampling'):
-                        token_idx = topk_sampling(token_logits).item()
-                    elif (self.strategy == 'greedy_search'):
-                        token_idx = greedy_search(token_logits).item()
-                    elif (self.strategy == 'beam_search'):
-                        input_seq, decoder_states, encoder_output = \
-                            hypothesis.step(gen_idx, token_logits, decoder_states, encoder_output)
+                if (self.strategy in ['topk_sampling', 'greedy_search']):
+                    if token_idx == self.eos_token_idx:
+                        break
+                    else:
+                        generate_tokens.append(idx2token[token_idx])
+                        input_seq = torch.LongTensor([[token_idx]]).to(self.device)
+                elif (self.strategy == 'beam_search'):
+                    if (hypothesis.stop()):
+                        break
 
-                    if (self.strategy in ['topk_sampling', 'greedy_search']):
-                        if token_idx == self.eos_token_idx:
-                            break
-                        else:
-                            generate_tokens.append(idx2token[token_idx])
-                            input_seq = torch.LongTensor([[token_idx]]).to(self.device)
-                    elif (self.strategy == 'beam_search'):
-                        if (hypothesis.stop()):
-                            break
+            if (self.strategy == 'beam_search'):
+                generate_tokens = hypothesis.generate()
 
-                if (self.strategy == 'beam_search'):
-                    generate_tokens = hypothesis.generate()
-
-                generate_corpus.append(generate_tokens)
+            generate_corpus.append(generate_tokens)
 
         return generate_corpus
 

@@ -94,7 +94,7 @@ class Seq2SeqGenerator(AbstractModel):
             self.source_vocab_size = len(dataset.source_idx2token)
             self.target_vocab_size = len(dataset.target_idx2token)
         else:
-            self.source_vocab_size = self.target_vocab_size = len(dataset.idx2token)
+            self.vocab_size = self.source_vocab_size = self.target_vocab_size = len(dataset.idx2token)
 
         # load parameters info
         self.batch_size = config['train_batch_size']

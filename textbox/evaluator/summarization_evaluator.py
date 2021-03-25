@@ -34,7 +34,7 @@ class SummarizationEvaluator(AbstractEvaluator):
             metrics=['rouge-n', 'rouge-l', 'rouge-w'],
             max_n=2,
             limit_length=True,
-            length_limit=config['target_max_seq_length'],
+            length_limit=config['max_target_length'],
             length_limit_type='words',
             apply_avg=True,
             apply_best=False,

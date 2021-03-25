@@ -2,6 +2,7 @@ max_vocab_size: 30000
 knowledge_format: 'multiple'
 source_format: 'multiple'
 target_format: 'single'
+combine_knw_src: True
 max_seq_length: 50
 max_source_num: 16
 max_knowledge_num: 16

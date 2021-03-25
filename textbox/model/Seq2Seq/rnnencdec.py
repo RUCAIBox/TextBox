@@ -42,7 +42,6 @@ class RNNEncDec(Seq2SeqGenerator):
         self.dropout_ratio = config['dropout_ratio']
         self.attention_type = config['attention_type']
         self.alignment_method = config['alignment_method']
-        self.context_size = config['context_size']
         self.strategy = config['decoding_strategy']
 
         if (self.strategy not in ['topk_sampling', 'greedy_search', 'beam_search']):
@@ -50,6 +49,7 @@ class RNNEncDec(Seq2SeqGenerator):
         if (self.strategy == 'beam_search'):
             self.beam_size = config['beam_size']
 
+        self.context_size = self.hidden_size
         self.padding_token_idx = dataset.padding_token_idx
         self.sos_token_idx = dataset.sos_token_idx
         self.eos_token_idx = dataset.eos_token_idx
@@ -165,8 +165,8 @@ class RNNEncDec(Seq2SeqGenerator):
         input_text = corpus['target_idx'][:, :-1]
         target_text = corpus['target_idx'][:, 1:]
 
-        source_embeddings = self.dropout(self.source_token_embedder(source_text))
-        input_embeddings = self.dropout(self.target_token_embedder(input_text))
+        source_embeddings = self.source_token_embedder(source_text)
+        input_embeddings = self.target_token_embedder(input_text)
         encoder_outputs, encoder_states = self.encoder(source_embeddings, source_length)
 
         if self.bidirectional:
@@ -185,7 +185,7 @@ class RNNEncDec(Seq2SeqGenerator):
         else:
             decoder_outputs, decoder_states = self.decoder(input_embeddings, encoder_states)
 
-        token_logits = self.vocab_linear(decoder_outputs)
+        token_logits = self.vocab_linear(self.dropout(decoder_outputs))
 
         loss = self.loss(token_logits.view(-1, token_logits.size(-1)), target_text.contiguous().view(-1))
         loss = loss.reshape_as(target_text)

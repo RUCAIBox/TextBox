@@ -25,8 +25,8 @@ class BART(Seq2SeqGenerator):
     def __init__(self, config, dataset):
         super(BART, self).__init__(config, dataset)
 
-        self.max_source_length = config['source_max_seq_length']
-        self.max_target_length = config['target_max_seq_length']
+        self.max_source_length = config['max_source_length']
+        self.max_target_length = config['max_target_length']
 
         self.pretrained_model_path = config['pretrained_model_path']
         self.tokenizer = BartTokenizer.from_pretrained(self.pretrained_model_path, add_prefix_space=True)

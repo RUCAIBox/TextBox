@@ -26,19 +26,11 @@ class PairedSentenceDataset(AbstractDataset):
         self.target_suffix = config['target_suffix'].lower()
         self.share_vocab = config['share_vocab']
 
-        if config['target_max_vocab_size'] is None or config['source_max_vocab_size'] is None:
-            self.source_max_vocab_size = config['max_vocab_size']
-            self.target_max_vocab_size = config['max_vocab_size']
-        else:
-            self.source_max_vocab_size = config['source_max_vocab_size']
-            self.target_max_vocab_size = config['target_max_vocab_size']
+        self.max_source_vocab_size = config['max_vocab_size'] if config['max_source_vocab_size'] is None else config['max_source_vocab_size']
+        self.max_target_vocab_size = config['max_vocab_size'] if config['max_target_vocab_size'] is None else config['max_target_vocab_size']
+        self.max_source_length = config['max_seq_size'] if config['max_source_length'] is None else config['max_source_length']
+        self.max_target_length = config['max_seq_size'] if config['max_target_length'] is None else config['max_target_length']
 
-        if config['target_max_seq_length'] is None or config['source_max_seq_length'] is None:
-            self.source_max_seq_length = config['max_seq_length']
-            self.target_max_seq_length = config['max_seq_length']
-        else:
-            self.source_max_seq_length = config['source_max_seq_length']
-            self.target_max_seq_length = config['target_max_seq_length']
         super().__init__(config)
 
     def __len__(self):
@@ -55,25 +47,25 @@ class PairedSentenceDataset(AbstractDataset):
     def _load_paired_data(self, source_file, target_file):
         if self.overlength_strategy == 'drop':
             loaded_source_text = load_data(
-                source_file, self.tokenize_strategy, 'none', self.source_max_seq_length, self.source_language
+                source_file, self.tokenize_strategy, 'none', self.max_source_length, self.source_language
             )
             loaded_target_text = load_data(
-                target_file, self.tokenize_strategy, 'none', self.target_max_seq_length, self.target_language
+                target_file, self.tokenize_strategy, 'none', self.max_target_length, self.target_language
             )
             assert len(loaded_source_text) == len(loaded_target_text)
             source_text = []
             target_text = []
             for src, tgt in zip(loaded_source_text, loaded_target_text):
-                if (len(src) <= self.source_max_seq_length and len(tgt) <= self.target_max_seq_length):
+                if (len(src) <= self.max_source_length and len(tgt) <= self.max_target_length):
                     source_text.append(src)
                     target_text.append(tgt)
         else:
             source_text = load_data(
-                source_file, self.tokenize_strategy, self.overlength_strategy, self.source_max_seq_length,
+                source_file, self.tokenize_strategy, self.overlength_strategy, self.max_source_length,
                 self.source_language
             )
             target_text = load_data(
-                target_file, self.tokenize_strategy, self.overlength_strategy, self.target_max_seq_length,
+                target_file, self.tokenize_strategy, self.overlength_strategy, self.max_target_length,
                 self.target_language
             )
 
@@ -120,16 +112,16 @@ class PairedSentenceDataset(AbstractDataset):
         if self.share_vocab:
             assert self.source_language == self.target_language
             text_data = self.source_text_data + self.target_text_data
-            self.source_idx2token, self.source_token2idx, self.source_max_vocab_size = build_vocab(
-                text_data, self.source_max_vocab_size, self.special_token_list
+            self.source_idx2token, self.source_token2idx, self.max_source_vocab_size = build_vocab(
+                text_data, self.max_source_vocab_size, self.special_token_list
             )
             self.target_idx2token, self.target_token2idx = self.source_idx2token, self.source_token2idx
         else:
-            self.source_idx2token, self.source_token2idx, self.source_max_vocab_size = build_vocab(
-                self.source_text_data, self.source_max_vocab_size, self.special_token_list
+            self.source_idx2token, self.source_token2idx, self.max_source_vocab_size = build_vocab(
+                self.source_text_data, self.max_source_vocab_size, self.special_token_list
             )
-            self.target_idx2token, self.target_token2idx, self.target_max_vocab_size = build_vocab(
-                self.target_text_data, self.target_max_vocab_size, self.special_token_list
+            self.target_idx2token, self.target_token2idx, self.max_target_vocab_size = build_vocab(
+                self.target_text_data, self.max_target_vocab_size, self.special_token_list
             )
 
     def _detect_restored(self, dataset_path):
@@ -157,15 +149,15 @@ class PairedSentenceDataset(AbstractDataset):
         self.target_text_data, self.target_idx2token, self.target_token2idx = load_restored(
             dataset_path, self.target_suffix + '.'
         )
-        self.source_max_vocab_size = len(self.source_idx2token)
-        self.target_max_vocab_size = len(self.target_idx2token)
+        self.max_source_vocab_size = len(self.source_idx2token)
+        self.max_target_vocab_size = len(self.target_idx2token)
         self.logger.info("Restore finished!")
 
     def build(self):
         info_str = ''
         corpus_list = []
         self.logger.info(
-            "Vocab size: source {}, target {}".format(self.source_max_vocab_size, self.target_max_vocab_size)
+            "Vocab size: source {}, target {}".format(self.max_source_vocab_size, self.max_target_vocab_size)
         )
 
         for i, prefix in enumerate(['train', 'dev', 'test']):

@@ -1,8 +1,7 @@
 # special tokens
-source_max_vocab_size: 30000
-target_max_vocab_size: 30000
-source_max_seq_length: 200
-target_max_seq_length: 50
+max_vocab_size: 30000
+max_source_length: 200
+max_target_length: 50
 split_strategy: "load_split"
 overlength_strategy: "drop"
 tokenize_strategy: "by_space"

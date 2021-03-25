@@ -20,7 +20,7 @@ import torch
 from logging import getLogger
 
 from textbox.utils import get_model, Enum, general_arguments, training_arguments, \
-    evaluation_arguments, dataset_arguments, get_local_time, ModelType
+    evaluation_arguments, get_local_time, ModelType
 
 
 class Config(object):
@@ -83,8 +83,8 @@ class Config(object):
         self.parameters['General'] = general_arguments
         self.parameters['Training'] = training_arguments
         self.parameters['Evaluation'] = evaluation_arguments
-        self.parameters['Model'] = dataset_arguments
-        self.parameters['Dataset'] = dataset_arguments
+        self.parameters['Model'] = []
+        self.parameters['Dataset'] = []
 
     def _build_yaml_loader(self):
         loader = yaml.FullLoader

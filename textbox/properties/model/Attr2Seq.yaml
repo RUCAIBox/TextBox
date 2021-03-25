@@ -6,4 +6,4 @@ beam_size: 5
 decoding_strategy: 'beam_search'
 rnn_type: lstm
 attention_type: LuongAttention
-alignment_method: concat
+alignment_method: general

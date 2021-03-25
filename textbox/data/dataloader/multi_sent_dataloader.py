@@ -62,6 +62,9 @@ class MultipleSentenceDataLoader(AbstractDataLoader):
         for dataset_attr in required_key_list:
             assert dataset_attr in dataset
             setattr(self, dataset_attr, dataset[dataset_attr])
+        self.knowledge_idx2token = self.source_idx2token = self.target_idx2token = self.idx2token
+        self.knowledge_token2idx = self.source_token2idx = self.target_token2idx = self.token2idx
+
         for group in ['knowledge', 'source', 'target']:
             text_name = group + '_text_data'
             if text_name in dataset:
@@ -122,7 +125,7 @@ class MultipleSentenceDataLoader(AbstractDataLoader):
         for group in ['knowledge', 'source', 'target']:
             text_name = group + '_text_data'
             if hasattr(self, text_name):
-                batch_data[text_name] = getattr(self, text_name)[self.pr:self.pr + self.step]
+                batch_data[group + '_text'] = getattr(self, text_name)[self.pr:self.pr + self.step]
 
                 idx_name = group + '_text_idx_data'
                 length_name = group + '_idx_length_data'
@@ -134,12 +137,12 @@ class MultipleSentenceDataLoader(AbstractDataLoader):
                     text_idx, idx_length, idx_num = self._pad_batch_multi_sequence(
                         tp_text_idx, tp_idx_length, tp_idx_num
                     )
-                    batch_data[num_name] = idx_num.to(self.device)
+                    batch_data[group + '_num'] = idx_num.to(self.device)
                 else:
                     text_idx, idx_length = self._pad_batch_sequence(tp_text_idx, tp_idx_length)
 
-                batch_data[idx_name] = text_idx.to(self.device)
-                batch_data[length_name] = idx_length.to(self.device)
+                batch_data[group + '_idx'] = text_idx.to(self.device)
+                batch_data[group + '_length'] = idx_length.to(self.device)
 
         self.pr += self.step
         return batch_data

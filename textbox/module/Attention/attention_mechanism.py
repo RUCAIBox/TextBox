@@ -33,10 +33,9 @@ class LuongAttention(torch.nn.Module):
         self.alignment_method = alignment_method
 
         if self.alignment_method == 'general':
-            self.energy_linear = nn.Linear(target_size, source_size)
+            self.energy_linear = nn.Linear(target_size, source_size, bias=False)
         elif self.alignment_method == 'concat':
             self.energy_linear = nn.Linear(source_size + target_size, target_size)
-            self.v = nn.Parameter(torch.rand(target_size, dtype=torch.float32))
         elif self.alignment_method == 'dot':
             assert self.source_size == target_size
         else:
@@ -53,10 +52,8 @@ class LuongAttention(torch.nn.Module):
             energy = energy.bmm(encoder_outputs)
             return energy
         elif self.alignment_method == 'concat':
-            hidden_states = hidden_states.unsqueeze(2).repeat(1, 1, src_len, 1)  # B * tgt_len * src_len * target_size
-            encoder_outputs = encoder_outputs.unsqueeze(1).repeat(1, tgt_len, 1, 1)
-            energy = torch.tanh(self.energy_linear(torch.cat((hidden_states, encoder_outputs), dim=-1)))
-            energy = self.v.mul(energy).sum(dim=-1)
+            hidden_states = hidden_states.repeat(1, src_len, 1)  # B * src_len * target_size
+            energy = self.energy_linear(torch.cat((hidden_states, encoder_outputs), dim=-1))
             return energy
         elif self.alignment_method == 'dot':
             encoder_outputs = encoder_outputs.permute(0, 2, 1)

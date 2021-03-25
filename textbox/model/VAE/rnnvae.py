@@ -66,7 +66,7 @@ class RNNVAE(UnconditionalGenerator):
         if self.rnn_type == "lstm":
             self.hidden_to_mean = nn.Linear(self.num_directions * self.hidden_size, self.latent_size)
             self.hidden_to_logvar = nn.Linear(self.num_directions * self.hidden_size, self.latent_size)
-            self.latent_to_hidden = nn.Linear(self.latent_size, 2 * self.hidden_size)
+            self.latent_to_hidden = nn.Linear(self.latent_size, self.hidden_size)
         elif self.rnn_type == 'gru' or self.rnn_type == 'rnn':
             self.hidden_to_mean = nn.Linear(self.num_directions * self.hidden_size, self.latent_size)
             self.hidden_to_logvar = nn.Linear(self.num_directions * self.hidden_size, self.latent_size)

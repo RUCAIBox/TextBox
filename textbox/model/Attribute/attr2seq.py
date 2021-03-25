@@ -155,6 +155,7 @@ class Attr2Seq(AttributeGenerator):
         self.batch_size = attribute_idx.size(0)
 
         encoder_outputs, encoder_states = self.encoder(attribute_idx)
+        encoder_states = encoder_states.contiguous()
 
         input_text = target_idx[:, :-1]
         target_text = target_idx[:, 1:]
@@ -162,7 +163,7 @@ class Attr2Seq(AttributeGenerator):
 
         c = torch.zeros(self.num_dec_layers, self.batch_size, self.hidden_size).to(self.device)
         decoder_outputs, decoder_states, _ = \
-            self.decoder(input_embeddings, (encoder_states.contiguous(), c), encoder_outputs)
+            self.decoder(input_embeddings, (encoder_states, c), encoder_outputs)
 
         # token_logits (Torch.Tensor): shape: [batch_size, target_length, vocabulary_size].
         token_logits = self.vocab_linear(decoder_outputs)

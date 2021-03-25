@@ -80,7 +80,7 @@ class C2S(AttributeGenerator):
             attr_embeddings.append(kth_dim_embeddings)
 
         attr_embeddings = torch.cat(attr_embeddings, dim=1)
-        h_c = torch.relu(self.attr_linear(attr_embeddings)).contiguous()
+        h_c = torch.tanh(self.attr_linear(attr_embeddings)).contiguous()
         return attr_embeddings, h_c
 
     def calculate_loss(self, corpus, epoch_idx=-1, nll_test=False):

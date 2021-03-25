@@ -44,14 +44,16 @@ class AbstractDataLoader(object):
         self.dataset = dataset
         self.batch_size = batch_size
         if (self.DDP == True):
-            self.step = int(batch_size / torch.cuda.device_count())
+            self.step = int(batch_size / torch.distributed.get_world_size())
         else:
             self.step = batch_size
         self.shuffle = shuffle
         if (self.DDP == True):
-            self.pr = int(batch_size / torch.cuda.device_count() * torch.distributed.get_rank())
+            self.pr = int(batch_size / torch.distributed.get_world_size() * torch.distributed.get_rank())
         else:
             self.pr = 0
+
+        self.std_pr = 0
 
         self.padding_token = SpecialTokens.PAD
         self.unknown_token = SpecialTokens.UNK
@@ -99,7 +101,7 @@ class AbstractDataLoader(object):
         return new_data, length
 
     def __len__(self):
-        return math.ceil(self.pr_end / self.step)
+        return math.floor(self.pr_end / self.batch_size)
 
     def __iter__(self):
         if self.shuffle:
@@ -107,12 +109,14 @@ class AbstractDataLoader(object):
         return self
 
     def __next__(self):
-        if self.pr >= self.pr_end:
+        if self.std_pr + self.batch_size >= self.pr_end:
             if (self.DDP == True):
-                self.pr = int(self.batch_size / torch.cuda.device_count() * torch.distributed.get_rank())
+                self.pr = int(self.batch_size / torch.distributed.get_world_size() * torch.distributed.get_rank())
             else:
                 self.pr = 0
+            self.std_pr = 0
             raise StopIteration()
+        self.std_pr += self.batch_size
         return self._next_batch_data()
 
     def _idx2token(self, inputs, idx2token):

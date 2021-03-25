@@ -15,7 +15,6 @@ import sys
 import sphinx_rtd_theme
 sys.path.insert(0, os.path.abspath('../'))
 
-
 # -- Project information -----------------------------------------------------
 
 project = 'TextBox'
@@ -25,15 +24,15 @@ author = 'AI Box'
 # The full version, including alpha/beta/rc tags
 release = '0.1.6'
 
-
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.todo', 
-    'sphinx.ext.viewcode', 
-    'sphinx.ext.autodoc', 
+extensions = [
+    'sphinx.ext.todo',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
 ]
 # Add any paths that contain templates here, relative to this directory.

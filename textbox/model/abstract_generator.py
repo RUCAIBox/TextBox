@@ -7,6 +7,11 @@
 # @Author : Tianyi Tang
 # @Email  : steventang@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2021/3/23
+# @Author : Zhuohao Yu
+# @Email  : zhuohao@ruc.edu.cn
+
 """
 textbox.model.abstract_generator
 ##################################
@@ -34,11 +39,12 @@ class AbstractModel(nn.Module):
         """
         raise NotImplementedError
 
-    def generate(self, corpus):
+    def generate(self, batch_data, eval_data):
         r"""Predict the texts conditioned on a noise or sequence.
 
         Args:
-            corpus (Corpus): Corpus class of the batch.
+            batch_data (Corpus): Corpus class of a single batch.
+            eval_data: Common data of all the batches.
 
         Returns:
             torch.Tensor: Generated text, shape: [batch_size, max_len]

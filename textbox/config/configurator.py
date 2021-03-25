@@ -221,6 +221,8 @@ class Config(object):
         model_init_file = os.path.join(current_path, '../properties/model/' + model + '.yaml')
         model_class_init_file = ""
         dataset_init_file = os.path.join(current_path, '../properties/dataset/' + dataset + '.yaml')
+        if not os.path.exists(dataset_init_file):
+            raise NotImplementedError("dataset {} can't be found".format(dataset))
         if model_class.type == ModelType.GAN:
             model_class_init_file = os.path.join(current_path, '../properties/model_class/GAN.yaml')
 
@@ -275,7 +277,7 @@ class Config(object):
                 gpu_id = self.overall_config_dict['gpu_id']
             else:
                 gpu_id = self.external_config_dict['gpu_id']
-            
+
             if type(gpu_id) == tuple:
                 os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(i) for i in gpu_id)
             else:

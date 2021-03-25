@@ -73,30 +73,27 @@ class CNNVAE(UnconditionalGenerator):
         # parameters initialization
         self.apply(xavier_normal_initialization)
 
-    def generate(self, eval_data):
+    def generate(self, batch_data, eval_data):
         generate_corpus = []
         idx2token = eval_data.idx2token
-
-        with torch.no_grad():
-            for _ in range(self.eval_generate_num):
-                z = torch.randn(size=(1, self.latent_size), device=self.device)
-                generate_tokens = []
-                input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
-                for _ in range(self.max_length):
-                    decoder_input = self.token_embedder(input_seq)
-                    outputs = self.decoder(decoder_input=decoder_input, noise=z)
-                    token_logits = self.vocab_linear(outputs)
-                    token_idx = topk_sampling(token_logits)
-                    token_idx = token_idx.item()
-                    if token_idx == self.eos_token_idx:
-                        break
-                    else:
-                        generate_tokens.append(idx2token[token_idx])
-                        input_seq = torch.LongTensor([[token_idx]]).to(self.device)
-                generate_corpus.append(generate_tokens)
+        z = torch.randn(size=(1, self.latent_size), device=self.device)
+        generate_tokens = []
+        input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
+        for _ in range(self.max_length):
+            decoder_input = self.token_embedder(input_seq)
+            outputs = self.decoder(decoder_input=decoder_input, noise=z)
+            token_logits = self.vocab_linear(outputs)
+            token_idx = topk_sampling(token_logits)
+            token_idx = token_idx.item()
+            if token_idx == self.eos_token_idx:
+                break
+            else:
+                generate_tokens.append(idx2token[token_idx])
+                input_seq = torch.LongTensor([[token_idx]]).to(self.device)
+        generate_corpus.append(generate_tokens)
         return generate_corpus
 
-    def calculate_loss(self, corpus, epoch_idx=0):
+    def forward(self, corpus, epoch_idx=0):
         input_text = corpus['target_idx'][:, :-1]
         target_text = corpus['target_idx'][:, 1:]
         input_length = corpus['target_length'] - 1

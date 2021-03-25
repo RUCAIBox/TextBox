@@ -77,38 +77,35 @@ class RNNVAE(UnconditionalGenerator):
         # parameters initialization
         self.apply(xavier_normal_initialization)
 
-    def generate(self, eval_data):
+    def generate(self, batch_data, eval_data):
         generate_corpus = []
         idx2token = eval_data.idx2token
-
-        with torch.no_grad():
-            for _ in range(self.eval_generate_num):
-                if self.rnn_type == "lstm":
-                    hidden_states = torch.randn(size=(1, 2 * self.hidden_size), device=self.device)
-                    hidden_states = torch.chunk(hidden_states, 2, dim=-1)
-                    h_0 = hidden_states[0].unsqueeze(0).expand(self.num_dec_layers, -1, -1).contiguous()
-                    c_0 = hidden_states[1].unsqueeze(0).expand(self.num_dec_layers, -1, -1).contiguous()
-                    hidden_states = (h_0, c_0)
-                else:
-                    hidden_states = torch.randn(size=(self.num_dec_layers, 1, self.hidden_size), device=self.device)
-                # draw noise from standard gussian distribution
-                generate_tokens = []
-                input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
-                for _ in range(self.max_length):
-                    decoder_input = self.token_embedder(input_seq)
-                    outputs, hidden_states = self.decoder(input_embeddings=decoder_input, hidden_states=hidden_states)
-                    token_logits = self.vocab_linear(outputs)
-                    token_idx = topk_sampling(token_logits)
-                    token_idx = token_idx.item()
-                    if token_idx == self.eos_token_idx:
-                        break
-                    else:
-                        generate_tokens.append(idx2token[token_idx])
-                        input_seq = torch.LongTensor([[token_idx]]).to(self.device)
-                generate_corpus.append(generate_tokens)
+        if self.rnn_type == "lstm":
+            hidden_states = torch.randn(size=(1, 2 * self.hidden_size), device=self.device)
+            hidden_states = torch.chunk(hidden_states, 2, dim=-1)
+            h_0 = hidden_states[0].unsqueeze(0).expand(self.num_dec_layers, -1, -1).contiguous()
+            c_0 = hidden_states[1].unsqueeze(0).expand(self.num_dec_layers, -1, -1).contiguous()
+            hidden_states = (h_0, c_0)
+        else:
+            hidden_states = torch.randn(size=(self.num_dec_layers, 1, self.hidden_size), device=self.device)
+        # draw noise from standard gussian distribution
+        generate_tokens = []
+        input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
+        for _ in range(self.max_length):
+            decoder_input = self.token_embedder(input_seq)
+            outputs, hidden_states = self.decoder(input_embeddings=decoder_input, hidden_states=hidden_states)
+            token_logits = self.vocab_linear(outputs)
+            token_idx = topk_sampling(token_logits)
+            token_idx = token_idx.item()
+            if token_idx == self.eos_token_idx:
+                break
+            else:
+                generate_tokens.append(idx2token[token_idx])
+                input_seq = torch.LongTensor([[token_idx]]).to(self.device)
+        generate_corpus.append(generate_tokens)
         return generate_corpus
 
-    def calculate_loss(self, corpus, epoch_idx=0):
+    def forward(self, corpus, epoch_idx=0):
         input_text = corpus['target_idx'][:, :-1]
         target_text = corpus['target_idx'][:, 1:]
         input_length = corpus['target_length'] - 1

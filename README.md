@@ -23,7 +23,7 @@
 TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 21 text generation algorithms, covering two major tasks:
 
 + Unconditional (input-free) Generation
-+ Sequence-to-Sequence (Seq2Seq) Generation, including Machine Translation and Summarization
++ Conditional (Seq2Seq) Generation, including Machine Translation, Text Summarization, Attribute-to-Text, and Dialogue Systems
 
 We provide the support for 9 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team. 
 

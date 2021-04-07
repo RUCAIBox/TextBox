@@ -1,5 +1,3 @@
-train_batch_size: 128
-eval_batch_size: 128
 embedding_size: 128 # 650 for imdb
 gen_share_embedding: True
 dis_share_embedding: True
@@ -26,4 +24,3 @@ pretrain_lm_epochs: 1
 g_mask_pretraining_epochs: 1 # 4 for  imdb
 d_pretraining_epochs: 1
 adversarail_training_epochs: 10
-grad_clip: 10.0

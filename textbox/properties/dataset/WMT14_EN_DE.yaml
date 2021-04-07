@@ -10,3 +10,5 @@ target_language: german
 source_suffix: en
 target_suffix: de
 task_type: "translation"
+train_batch_size: 16
+eval_batch_size: 16

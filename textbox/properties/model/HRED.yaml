@@ -5,7 +5,7 @@ bidirectional: True
 num_dec_layers: 2
 dropout_ratio: 0.2
 rnn_type: "gru"
-alignment_method: "general"
+alignment_method: "concat"
 attention_type: "LuongAttention"
 beam_size: 5
 decoding_strategy: 'beam_search'

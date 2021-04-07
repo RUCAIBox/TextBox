@@ -37,7 +37,6 @@ class LeakGANGenerator(UnconditionalGenerator):
         self.pad_idx = dataset.padding_token_idx
         self.use_gpu = config['use_gpu']
         self.gpu_id = config['gpu_id']
-        self.eval_generate_num = config['eval_generate_num']
 
         self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size)
         self.vocab_projection = nn.Linear(self.hidden_size, self.vocab_size)
@@ -327,22 +326,15 @@ class LeakGANGenerator(UnconditionalGenerator):
             log_probs = log_probs.cuda(self.gpu_id)
         return samples
 
-    def generate(self, eval_data, dis):
+    def generate(self, batch_data, eval_data, dis):
         r"""Generate sentences
         """
-        number_to_gen = self.eval_generate_num
-        num_batch = number_to_gen // self.batch_size + 1 if number_to_gen != self.batch_size else 1
-        samples = torch.zeros(num_batch * self.batch_size, self.max_length).long()  # larger than num_samples
         fake_sentences = torch.zeros((self.batch_size, self.max_length))
         idx2token = eval_data.idx2token
+        batch_size = len(batch_data['target_text'])
 
-        for b in range(num_batch):
-            leak_sample = self.leakgan_generate(fake_sentences, dis)
-
-            assert leak_sample.shape == (self.batch_size, self.max_length)
-            samples[b * self.batch_size:(b + 1) * self.batch_size, :] = leak_sample
-
-        samples = samples[:number_to_gen, :]
+        samples = self.leakgan_generate(fake_sentences, dis)
+        samples = samples[:batch_size]
         samples = samples.tolist()
         texts = []
         for sen in samples:
@@ -353,7 +345,6 @@ class LeakGANGenerator(UnconditionalGenerator):
                 else:
                     break
             texts.append(text)
-        # samples = [[idx2token[w] for w in sen] for sen in samples]
 
         return texts
 

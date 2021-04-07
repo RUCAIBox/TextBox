@@ -25,7 +25,6 @@ class MaliGANGenerator(UnconditionalGenerator):
         self.embedding_size = config['generator_embedding_size']
         self.max_length = config['max_seq_length'] + 2
         self.rollout_num = config['rollout_num']
-        self.eval_generate_num = config['eval_generate_num']
         self.start_idx = dataset.sos_token_idx
         self.end_idx = dataset.eos_token_idx
         self.pad_idx = dataset.padding_token_idx
@@ -125,8 +124,9 @@ class MaliGANGenerator(UnconditionalGenerator):
         """
         generate_corpus = []
         idx2token = eval_data.idx2token
+        batch_size = len(batch_data['target_text'])
 
-        for _ in range(len(batch_data)):
+        for _ in range(batch_size):
             h_prev = torch.zeros(1, 1, self.hidden_size, device=self.device)  # 1 * 1 * h
             o_prev = torch.zeros(1, 1, self.hidden_size, device=self.device)  # 1 * 1 * h
             prev_state = (h_prev, o_prev)
@@ -145,7 +145,6 @@ class MaliGANGenerator(UnconditionalGenerator):
 
             generate_corpus.append(generate_tokens)
 
-        self.train()
         return generate_corpus
 
     def adversarial_loss(self, discriminator_func):

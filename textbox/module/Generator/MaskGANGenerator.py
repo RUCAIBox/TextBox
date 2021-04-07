@@ -39,7 +39,6 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         self.context_size = config['context_size']
         self.gamma = config['rl_discount_rate']
         self.advantage_clipping = config['advantage_clipping']
-        self.eval_generate_num = config['eval_generate_num']
         self.attention_type = config['attention_type']
 
         self.padding_token_idx = dataset.padding_token_idx
@@ -329,35 +328,26 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         nll_losses = torch.mean(nll_losses)
         return nll_losses
 
-    def generate(self, corpus):
+    def generate(self, batch_data, eval_data):
         r"""Sample sentence
         """
-        number_to_gen = self.eval_generate_num
-        real_data = self._get_real_data(corpus)
-        corpus_num, _ = real_data.size()
-        corpus_batches = corpus_num // self.batch_size
-        num_batch = number_to_gen // self.batch_size + 1 if number_to_gen != self.batch_size else 1
-        samples = torch.zeros(num_batch * self.batch_size, self.max_length).long()  # larger than num_samples
-        idx2token = corpus.idx2token
+        real_data = self._get_real_data(batch_data)
+        idx2token = eval_data.idx2token
+        batch_size = real_data.size(0)
 
-        for b in range(num_batch):
-            while b >= corpus_batches:
-                b = b - corpus_batches
-            inputs = real_data[b * self.batch_size:(b + 1) * self.batch_size, :-1]
-            targets = real_data[b * self.batch_size:(b + 1) * self.batch_size, 1:]
-            inputs_length = torch.Tensor([self.max_length - 1] * self.batch_size).float()
-            targets_present = torch.zeros((self.batch_size, self.max_length - 1)).byte()
-            device = inputs.device
-            inputs_length = inputs_length.cuda(device)
-            targets_present = targets_present.cuda(device)
+        inputs = real_data[:, :-1]
+        targets = real_data[:, 1:]
+        inputs_length = torch.Tensor([self.max_length - 1] * batch_size).float()
+        targets_present = torch.zeros((batch_size, self.max_length - 1)).byte()
+        device = inputs.device
+        inputs_length = inputs_length.cuda(device)
+        targets_present = targets_present.cuda(device)
 
-            sample, _, _ = self.forward(inputs, inputs_length, targets, targets_present)
+        sample, _, _ = self.forward(inputs, inputs_length, targets, targets_present)
 
-            assert sample.shape == (self.batch_size, self.max_length - 1)
-            sample = torch.cat([inputs[:, 0].unsqueeze(dim=-1), sample], dim=-1)
-            samples[b * self.batch_size:(b + 1) * self.batch_size, :] = sample
+        assert sample.shape == (batch_size, self.max_length - 1)
 
-        samples = samples[:number_to_gen, :-1]
+        samples = sample[:batch_size, :-1]
         samples = samples.tolist()
         texts = []
         for sen in samples:
@@ -384,13 +374,9 @@ class MaskGANGenerator(GenerativeAdversarialNet):
                 padded_data[i, 0:l - 1] = data[i, 1:l]
         return padded_data
 
-    def _get_real_data(self, train_data):
-        real_datas = []
-        for corpus in train_data:
-            real_data = corpus['target_idx']  # bs*batch_max_seq_len
-            length = corpus['target_length']
-            real_data = self._add_eos(real_data, length)
-            real_datas.append(real_data)
+    def _get_real_data(self, corpus):
+        real_data = corpus['target_idx']  # bs*batch_max_seq_len
+        length = corpus['target_length']
+        real_data = self._add_eos(real_data, length)
 
-        real_datas = torch.cat(real_datas, dim=0)
-        return real_datas
+        return real_data

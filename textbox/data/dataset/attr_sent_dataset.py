@@ -133,6 +133,8 @@ class AttributedSentenceDataset(AbstractDataset):
             tp_data = {
                 'idx2token': self.idx2token,
                 'token2idx': self.token2idx,
+                'vocab_size': self.max_vocab_size,
+                'max_target_length': self.max_seq_length,
                 'text_data': text_data,
                 'idx2attribute': self.idx2attribute,
                 'attribute2idx': self.attribute2idx,

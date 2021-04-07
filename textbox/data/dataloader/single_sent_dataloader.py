@@ -30,8 +30,8 @@ class SingleSentenceDataLoader(AbstractDataLoader):
         shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
     """
 
-    def __init__(self, config, dataset, batch_size=1, shuffle=False):
-        super().__init__(config, dataset, batch_size, shuffle)
+    def __init__(self, config, dataset, batch_size=1, shuffle=False, drop_last=True, DDP=False):
+        super().__init__(config, dataset, batch_size, shuffle, drop_last, DDP)
         self._data_preprocess(dataset)
 
     def _data_preprocess(self, dataset):
@@ -61,8 +61,6 @@ class SingleSentenceDataLoader(AbstractDataLoader):
         tp_text_idx_data = self.text_idx_data[self.pr:self.pr + self.step]
         tp_idx_length_data = self.idx_length_data[self.pr:self.pr + self.step]
         padded_idx, length = self._pad_batch_sequence(tp_text_idx_data, tp_idx_length_data)
-
-        self.pr += self.batch_size
 
         batch_data = {
             'target_text': tp_text_data,

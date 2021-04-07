@@ -68,17 +68,35 @@ def data_preparation(config, save=False):
     phases = ['train', 'valid', 'test']
 
     train_data = dataloader_construct(
-        name='train', config=config, dataset=train_dataset, batch_size=config['train_batch_size'], shuffle=True
+        name='train',
+        config=config,
+        dataset=train_dataset,
+        batch_size=config['train_batch_size'],
+        shuffle=True,
+        DDP=True
     )
 
-    valid_data, test_data = dataloader_construct(
-        name='evaluation', config=config, dataset=[valid_dataset, test_dataset], batch_size=config['eval_batch_size']
+    valid_data = dataloader_construct(
+        name='valid',
+        config=config,
+        dataset=valid_dataset,
+        batch_size=config['train_batch_size'],
+        shuffle=True,
+        DDP=True
+    )
+
+    test_data = dataloader_construct(
+        name='test',
+        config=config,
+        dataset=test_dataset,
+        batch_size=config['eval_batch_size'],
+        drop_last=False,
     )
 
     return train_data, valid_data, test_data
 
 
-def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False):
+def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False, drop_last=True, DDP=False):
     """Get a correct dataloader class by calling :func:`get_data_loader` to construct dataloader.
 
     Args:
@@ -87,29 +105,21 @@ def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False):
         dataset (Dataset or list of Dataset): The split dataset for constructing dataloader.
         batch_size (int, optional): The batch_size of dataloader. Defaults to ``1``.
         shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
+        drop_last (bool, optional): Whether the dataloader will drop the last batch. Defaults to ``True``.
+        DDP (bool, optional): Whether the dataloader will distribute in different GPU. Defaults to ``False``.
 
     Returns:
         AbstractDataLoader or list of AbstractDataLoader: Constructed dataloader in split dataset.
     """
-    if not isinstance(dataset, list):
-        dataset = [dataset]
-
-    if not isinstance(batch_size, list):
-        batch_size = [batch_size] * len(dataset)
 
     task_type = config['task_type'].lower()
     logger = getLogger()
     logger.info('Build [{}] DataLoader for [{}]'.format(task_type, name))
-    logger.info('batch_size = [{}], shuffle = [{}]\n'.format(batch_size, shuffle))
+    logger.info('batch_size = [{}], shuffle = [{}], drop_last = [{}]\n'.format(batch_size, shuffle, drop_last))
 
     DataLoader = get_data_loader(config)
 
-    ret = [DataLoader(config=config, dataset=ds, batch_size=bs, shuffle=shuffle) for ds, bs in zip(dataset, batch_size)]
-
-    if len(ret) == 1:
-        return ret[0]
-    else:
-        return ret
+    return DataLoader(config=config, dataset=dataset, batch_size=batch_size, shuffle=shuffle, drop_last=drop_last)
 
 
 def get_data_loader(config):

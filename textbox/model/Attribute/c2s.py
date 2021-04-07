@@ -33,7 +33,6 @@ class C2S(AttributeGenerator):
         self.dropout_ratio = config['dropout_ratio']
         self.rnn_type = config['rnn_type']
 
-        self.eval_generate_num = config['eval_generate_num']
         self.max_length = config['max_seq_length']
         self.is_gated = config['gated']
         self.decoding_strategy = config['decoding_strategy']
@@ -79,7 +78,7 @@ class C2S(AttributeGenerator):
             attr_embeddings.append(kth_dim_embeddings)
 
         attr_embeddings = torch.cat(attr_embeddings, dim=1)
-        h_c = torch.relu(self.attr_linear(attr_embeddings)).contiguous()
+        h_c = torch.tanh(self.attr_linear(attr_embeddings)).contiguous()
         return attr_embeddings, h_c
 
     def forward(self, corpus, epoch_idx=-1, nll_test=False):

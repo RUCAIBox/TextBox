@@ -48,8 +48,8 @@ class LeakGAN(GenerativeAdversarialNet):
         self.discriminator.train()
         return loss  # (manager_loss, worker_loss)
 
-    def generate(self, eval_data):
-        return self.generator.generate(eval_data, self.discriminator)
+    def generate(self, batch_data, eval_data):
+        return self.generator.generate(batch_data, eval_data, self.discriminator)
 
     def sample(self, sample_num):
         self.discriminator.eval()

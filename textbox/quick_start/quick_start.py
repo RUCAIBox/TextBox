@@ -1,11 +1,6 @@
-# @Time   : 2020/11/5
-# @Author : Gaole He
-# @Email  : hegaole@ruc.edu.cn
-
-# UPDATE:
-# @Time   : 2020/12/3
-# @Author : Tianyi Tang
-# @Email  : steventang@ruc.edu.cn
+# @Time   : 2020/11/5, 2020/12/3
+# @Author : Gaole He, Tianyi Tang
+# @Email  : hegaole@ruc.edu.cn, steventang@ruc.edu.cn
 
 # UPDATE:
 # @Time   : 2020/12/8
@@ -40,7 +35,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     # configurations initialization
     config = Config(model=model, dataset=dataset, config_file_list=config_file_list, config_dict=config_dict)
 
-    if (config['DDP'] == True):
+    if config['DDP']:
         local_rank = torch.distributed.get_rank()
         torch.cuda.set_device(local_rank)
         config['device'] = torch.device("cuda", local_rank)
@@ -48,12 +43,9 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     init_seed(config['seed'], config['reproducibility'])
     # logger initialization
 
-    if (config['DDP'] == True):
-        if (torch.distributed.get_rank() == 0):
-            init_logger(config)
-            logger = getLogger()
-            logger.info(config)
-    else:
+    is_logger = (config['DDP'] and torch.distributed.get_rank() == 0) or not config['DDP']
+
+    if is_logger:
         init_logger(config)
         logger = getLogger()
         logger.info(config)
@@ -62,19 +54,20 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     train_data, valid_data, test_data = data_preparation(config)
 
     # model loading and initialization
-    sig_model = get_model(config['model'])(config, train_data).to(config['device'])
-    if (config['DDP'] == True):
-        if (config['find_unused_parameters'] == True):
-            model = torch.nn.parallel.DistributedDataParallel(sig_model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=True)
+    single_model = get_model(config['model'])(config, train_data).to(config['device'])
+    if config['DDP']:
+        if config['find_unused_parameters']:
+            model = torch.nn.parallel.DistributedDataParallel(
+                single_model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=True
+            )
         else:
-            model = torch.nn.parallel.DistributedDataParallel(sig_model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=False)
+            model = torch.nn.parallel.DistributedDataParallel(
+                single_model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=False
+            )
     else:
-        model = sig_model
-    
-    if (config['DDP'] == True):
-        if (torch.distributed.get_rank() == 0):
-            logger.info(model)
-    else:
+        model = single_model
+
+    if is_logger:
         logger.info(model)
 
     # trainer loading and initialization
@@ -89,11 +82,12 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
         # model training
         best_valid_score, best_valid_result = trainer.fit(train_data, valid_data, saved=saved)
         if (config['DDP'] == True):
-            print ("test gpu: ", torch.distributed.get_rank())
-            if (torch.distributed.get_rank() == 0):
-                logger.info('best valid loss: {}, best valid ppl: {}'.format(best_valid_score, best_valid_result))
-            torch.distributed.destroy_process_group()
-            return
-        test_result = trainer.evaluate(test_data, load_best_model=saved)
+            if (torch.distributed.get_rank() != 0):
+                return
+            config['DDP'] = False
+            model = get_model(config['model'])(config, train_data).to(config['device'])
+            trainer = get_trainer(config['MODEL_TYPE'], config['model'])(config, model)
         logger.info('best valid loss: {}, best valid ppl: {}'.format(best_valid_score, best_valid_result))
+        test_result = trainer.evaluate(test_data, load_best_model=saved)
+
     logger.info('test result: {}'.format(test_result))

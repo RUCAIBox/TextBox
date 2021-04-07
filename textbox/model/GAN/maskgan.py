@@ -119,8 +119,8 @@ class MaskGAN(GenerativeAdversarialNet):
         outputs, log_probs, logits = self.generator.forward(real_inputs, lengths, target_inputs, targets_present)
         return self.generator.calculate_loss(logits, target_inputs)
 
-    def generate(self, eval_data):
-        return self.generator.generate(eval_data)
+    def generate(self, batch_data, eval_data):
+        return self.generator.generate(batch_data, eval_data)
 
     def update_is_present_rate(self):
         self.is_present_rate *= (1. - self.is_present_rate_decay)

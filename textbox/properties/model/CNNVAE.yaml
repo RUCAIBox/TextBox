@@ -10,8 +10,5 @@ rnn_type: 'lstm'
 bidirectional: True
 
 # training settings
-learner: adam
 learning_rate: 0.0005
-eval_step: 2
-stopping_step: 5
-dropout_ratio: 0.5
+dropout_ratio: 0.2

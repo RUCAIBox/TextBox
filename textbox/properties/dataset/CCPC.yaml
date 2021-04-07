@@ -2,6 +2,7 @@ max_vocab_size: 30000
 knowledge_format: 'single'
 source_format: 'single'
 target_format: 'multiple'
+combine_knw_src: False
 max_source_length: 20
 max_knowledge_length: 4
 max_target_length: 7

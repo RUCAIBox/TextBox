@@ -19,6 +19,7 @@ class MultipleSentenceDataset(AbstractDataset):
         self.max_vocab_size = config['max_vocab_size']
         self.group_split_token = config['group_split_token']
         self.sentence_split_token = config['sentence_split_token']
+        self.combine_knw_src = config['combine_knw_src']
 
         self._build_data_format(config)
         super().__init__(config)
@@ -111,6 +112,13 @@ class MultipleSentenceDataset(AbstractDataset):
         else:
             raise NotImplementedError("{} split strategy not implemented".format(self.split_strategy))
 
+        if self.combine_knw_src:
+            self.knowledge_format = 'none'
+            for i in range(3):
+                self.group_text_data[1][i] = [
+                    k + s for k, s in zip(self.group_text_data[0][i], self.group_text_data[1][i])
+                ]
+
         for i, group in enumerate(['knowledge', 'source', 'target']):
             if getattr(self, group + '_format') != 'none':
                 setattr(self, group + '_text_data', self.group_text_data[i])
@@ -159,6 +167,9 @@ class MultipleSentenceDataset(AbstractDataset):
             tp_data = {
                 'idx2token': self.idx2token,
                 'token2idx': self.token2idx,
+                'vocab_size': self.max_vocab_size,
+                'max_source_length': self.max_source_length,
+                'max_target_length': self.max_target_length,
             }
             for group in ['knowledge', 'source', 'target']:
                 if getattr(self, group + '_format') != 'none':

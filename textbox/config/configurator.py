@@ -20,7 +20,7 @@ import torch
 from logging import getLogger
 
 from textbox.utils import get_model, Enum, general_arguments, training_arguments, \
-    evaluation_arguments, dataset_arguments, get_local_time, ModelType
+    evaluation_arguments, get_local_time, ModelType
 
 
 class Config(object):
@@ -83,8 +83,8 @@ class Config(object):
         self.parameters['General'] = general_arguments
         self.parameters['Training'] = training_arguments
         self.parameters['Evaluation'] = evaluation_arguments
-        self.parameters['Model'] = dataset_arguments
-        self.parameters['Dataset'] = dataset_arguments
+        self.parameters['Model'] = []
+        self.parameters['Dataset'] = []
 
     def _build_yaml_loader(self):
         loader = yaml.FullLoader
@@ -259,12 +259,6 @@ class Config(object):
         )
 
     def _init_device(self):
-        use_DDP = False
-        if ('DDP' in self.external_config_dict):
-            use_DDP = self.external_config_dict['DDP']
-        if (use_DDP == True):
-            torch.distributed.init_process_group(backend="nccl")
-
         if 'use_gpu' not in self.external_config_dict:
             use_gpu = self.overall_config_dict['use_gpu']
         else:
@@ -280,6 +274,14 @@ class Config(object):
                 os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(i) for i in gpu_id)
             else:
                 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+
+        if 'DDP' not in self.external_config_dict:
+            use_DDP = self.overall_config_dict['DDP']
+        else:
+            use_DDP = self.external_config_dict['DDP']
+
+        if use_DDP:
+            torch.distributed.init_process_group(backend="nccl")
 
         self.external_config_dict['device'] = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
 

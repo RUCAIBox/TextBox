@@ -1,6 +1,7 @@
 # general
 gpu_id: 0
 use_gpu: True
+DDP: False
 seed: 2020
 state: INFO
 reproducibility: True
@@ -21,4 +22,4 @@ grad_clip: 5.0
 metrics: ["bleu", "self_bleu"]
 n_grams: [1,2,3,4,5]
 eval_batch_size: 64
-eval_generate_num: 10000
+

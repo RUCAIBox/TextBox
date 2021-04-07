@@ -33,7 +33,7 @@ class LuongAttention(torch.nn.Module):
         self.alignment_method = alignment_method
 
         if self.alignment_method == 'general':
-            self.energy_linear = nn.Linear(target_size, source_size)
+            self.energy_linear = nn.Linear(target_size, source_size, bias=False)
         elif self.alignment_method == 'concat':
             self.energy_linear = nn.Linear(source_size + target_size, target_size)
             self.v = nn.Parameter(torch.rand(target_size, dtype=torch.float32))

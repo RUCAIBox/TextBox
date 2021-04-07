@@ -34,8 +34,7 @@ class DialogEvaluator(AbstractEvaluator):
         """
         # get metrics
         metric_dict = {}
-        bleu_dict = self._calc_bleu_info(
-            generate_corpus=generate_corpus, reference_corpus=reference_corpus)
+        bleu_dict = self._calc_bleu_info(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
         for n_gram in bleu_dict:
             key = 'bleu-{}'.format(n_gram)
             tp_list = bleu_dict[n_gram]
@@ -74,7 +73,7 @@ class DialogEvaluator(AbstractEvaluator):
                 bleu_dict[i].append(result[i - 1])
             bleu_dict['avg-bleu'].append(avg_bleu)
         return bleu_dict
-    
+
     def dist_func(self, generate_corpus, ngram):
         ngram_pool = []
         for sent in generate_corpus:

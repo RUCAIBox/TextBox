@@ -115,7 +115,9 @@ class MultipleSentenceDataset(AbstractDataset):
         if self.combine_knw_src:
             self.knowledge_format = 'none'
             for i in range(3):
-                self.group_text_data[1][i] = [k + s for k, s in zip(self.group_text_data[0][i], self.group_text_data[1][i])]
+                self.group_text_data[1][i] = [
+                    k + s for k, s in zip(self.group_text_data[0][i], self.group_text_data[1][i])
+                ]
 
         for i, group in enumerate(['knowledge', 'source', 'target']):
             if getattr(self, group + '_format') != 'none':
@@ -165,6 +167,9 @@ class MultipleSentenceDataset(AbstractDataset):
             tp_data = {
                 'idx2token': self.idx2token,
                 'token2idx': self.token2idx,
+                'vocab_size': self.max_vocab_size,
+                'max_source_length': self.max_source_length,
+                'max_target_length': self.max_target_length,
             }
             for group in ['knowledge', 'source', 'target']:
                 if getattr(self, group + '_format') != 'none':

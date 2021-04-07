@@ -25,8 +25,8 @@ class AttributedSentenceDataLoader(AbstractDataLoader):
         shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
     """
 
-    def __init__(self, config, dataset, batch_size=1, shuffle=False):
-        super().__init__(config, dataset, batch_size, shuffle)
+    def __init__(self, config, dataset, batch_size=1, shuffle=False, drop_last=True, DDP=False):
+        super().__init__(config, dataset, batch_size, shuffle, drop_last, DDP)
         self._data_preprocess(dataset)
 
     def _build_attribute(self, attribute_data, attribute2idx):
@@ -79,8 +79,6 @@ class AttributedSentenceDataLoader(AbstractDataLoader):
         tp_attribute_data = self.attribute_data[self.pr:self.pr + self.step]
         tp_attribute_idx_data = self.attribute_idx_data[self.pr:self.pr + self.step]
         attribute_idx = torch.LongTensor(tp_attribute_idx_data)
-
-        self.pr += self.batch_size
 
         batch_data = {
             'target_text': tp_text_data,

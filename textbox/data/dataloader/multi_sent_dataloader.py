@@ -24,8 +24,8 @@ class MultipleSentenceDataLoader(AbstractDataLoader):
         shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
     """
 
-    def __init__(self, config, dataset, batch_size=1, shuffle=False):
-        super().__init__(config, dataset, batch_size=batch_size, shuffle=shuffle)
+    def __init__(self, config, dataset, batch_size=1, shuffle=False, drop_last=True, DDP=False):
+        super().__init__(config, dataset, batch_size, shuffle, drop_last, DDP)
         self.group_data_key = []
         self.data_preprocess(dataset)
 
@@ -144,5 +144,4 @@ class MultipleSentenceDataLoader(AbstractDataLoader):
                 batch_data[group + '_idx'] = text_idx.to(self.device)
                 batch_data[group + '_length'] = idx_length.to(self.device)
 
-        self.pr += self.batch_size
         return batch_data

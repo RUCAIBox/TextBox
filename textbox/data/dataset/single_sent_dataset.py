@@ -98,6 +98,8 @@ class SingleSentenceDataset(AbstractDataset):
                 'idx2token': self.idx2token,
                 'token2idx': self.token2idx,
                 'text_data': text_data,
+                'vocab_size': self.max_vocab_size,
+                'max_target_length': self.max_seq_length,
             }
             corpus_list.append(tp_data)
             info_str += '{}: {} cases, '.format(prefix, len(text_data))

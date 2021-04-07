@@ -26,10 +26,14 @@ class PairedSentenceDataset(AbstractDataset):
         self.target_suffix = config['target_suffix'].lower()
         self.share_vocab = config['share_vocab']
 
-        self.max_source_vocab_size = config['max_vocab_size'] if config['max_source_vocab_size'] is None else config['max_source_vocab_size']
-        self.max_target_vocab_size = config['max_vocab_size'] if config['max_target_vocab_size'] is None else config['max_target_vocab_size']
-        self.max_source_length = config['max_seq_size'] if config['max_source_length'] is None else config['max_source_length']
-        self.max_target_length = config['max_seq_size'] if config['max_target_length'] is None else config['max_target_length']
+        self.max_source_vocab_size = config['max_vocab_size'] if config['max_source_vocab_size'] is None else config[
+            'max_source_vocab_size']
+        self.max_target_vocab_size = config['max_vocab_size'] if config['max_target_vocab_size'] is None else config[
+            'max_target_vocab_size']
+        self.max_source_length = config['max_seq_length'] if config['max_source_length'] is None else config[
+            'max_source_length']
+        self.max_target_length = config['max_seq_length'] if config['max_target_length'] is None else config[
+            'max_target_length']
 
         super().__init__(config)
 
@@ -167,9 +171,13 @@ class PairedSentenceDataset(AbstractDataset):
                 'source_idx2token': self.source_idx2token,
                 'source_token2idx': self.source_token2idx,
                 'source_text_data': source_text_data,
+                'source_vocab_size': self.max_source_vocab_size,
+                'max_source_length': self.max_source_length,
                 'target_idx2token': self.target_idx2token,
                 'target_token2idx': self.target_token2idx,
-                'target_text_data': target_text_data
+                'target_text_data': target_text_data,
+                'target_vocab_size': self.max_target_vocab_size,
+                'max_target_length': self.max_target_length,
             }
             corpus_list.append(tp_data)
             info_str += '{}: {} cases, '.format(prefix, len(source_text_data))

@@ -36,14 +36,15 @@ class AbstractDataLoader(object):
         batch_size (int): The max interaction number for all batch.
     """
 
-    def __init__(self, config, dataset, batch_size=1, shuffle=False):
-        self.DDP = config['DDP']
+    def __init__(self, config, dataset, batch_size=1, shuffle=False, drop_last=True, DDP=False):
+        self.DDP = config['DDP'] and DDP
         self.config = config
         self.device = config['device']
         self.logger = getLogger()
         self.dataset = dataset
         self.batch_size = batch_size
         self.shuffle = shuffle
+        self.drop_last = drop_last
 
         if self.DDP:
             self.step = int(batch_size / torch.distributed.get_world_size())
@@ -51,7 +52,7 @@ class AbstractDataLoader(object):
         else:
             self.step = batch_size
             self.pr = 0
-        
+
         self.std_pr = 0
 
         self.padding_token = SpecialTokens.PAD
@@ -61,6 +62,15 @@ class AbstractDataLoader(object):
         if ('user_token_list' in config):
             self.user_token_list = config['user_token_list']
             self.user_token_idx = [4 + i for i, _ in enumerate(self.user_token_list)]
+
+        if 'max_source_length' in dataset:
+            self.max_source_length = dataset['max_source_length']
+        self.max_target_length = dataset['max_target_length']
+        if 'source_vocab_size' in dataset:
+            self.source_vocab_size = dataset['source_vocab_size']
+            self.target_vocab_size = dataset['target_vocab_size']
+        else:
+            self.source_vocab_size = self.target_vocab_size = self.vocab_size = dataset['vocab_size']
 
     def _build_data(self, text_data, token2idx, need_text_start_end=True):
         r"""transform text to id and add sos and eos token index.
@@ -108,15 +118,19 @@ class AbstractDataLoader(object):
         return self
 
     def __next__(self):
-        if self.std_pr + self.batch_size >= self.pr_end:
+        if (self.drop_last
+            and self.std_pr + self.batch_size >= self.pr_end) or (not self.drop_last and self.pr >= self.pr_end):
             if (self.DDP == True):
                 self.pr = int(self.batch_size / torch.distributed.get_world_size() * torch.distributed.get_rank())
             else:
                 self.pr = 0
             self.std_pr = 0
             raise StopIteration()
+
+        next_batch = self._next_batch_data()
+        self.pr += self.batch_size
         self.std_pr += self.batch_size
-        return self._next_batch_data()
+        return next_batch
 
     def _idx2token(self, inputs, idx2token):
         if isinstance(inputs, list):

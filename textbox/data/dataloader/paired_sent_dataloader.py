@@ -30,8 +30,8 @@ class PairedSentenceDataLoader(AbstractDataLoader):
         shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
     """
 
-    def __init__(self, config, dataset, batch_size=1, shuffle=False):
-        super().__init__(config, dataset, batch_size=batch_size, shuffle=shuffle)
+    def __init__(self, config, dataset, batch_size=1, shuffle=False, drop_last=True, DDP=False):
+        super().__init__(config, dataset, batch_size, shuffle, drop_last, DDP)
         self.data_preprocess(dataset)
 
     def data_preprocess(self, dataset):
@@ -96,8 +96,6 @@ class PairedSentenceDataLoader(AbstractDataLoader):
         tp_target_text_idx_data = self.target_text_idx_data[self.pr:self.pr + self.step]
         tp_target_idx_length_data = self.target_idx_length_data[self.pr:self.pr + self.step]
         target_idx, target_length = self._pad_batch_sequence(tp_target_text_idx_data, tp_target_idx_length_data)
-
-        self.pr += self.batch_size
 
         batch_data = {
             'source_text': source_text,

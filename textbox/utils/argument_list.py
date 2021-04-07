@@ -12,4 +12,4 @@ training_arguments = [
     'adversarail_training_epochs', 'adversarail_g_epochs', 'adversarail_d_epochs'
 ]
 
-evaluation_arguments = ['beam_size', 'decoding_strategy', 'metrics', 'n_grams', 'eval_batch_size', 'eval_generate_num']
+evaluation_arguments = ['beam_size', 'decoding_strategy', 'metrics', 'n_grams', 'eval_batch_size']

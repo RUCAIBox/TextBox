@@ -109,6 +109,7 @@ class Trainer(AbstractTrainer):
         else:
             self.evaluator = NgramEvaluator(config)
 
+        self.is_logger = (self.DDP and torch.distributed.get_rank() == 0) or not self.DDP
         self.item_tensor = None
         self.tot_item_num = None
         self.iid_field = config['ITEM_ID_FIELD']
@@ -133,10 +134,7 @@ class Trainer(AbstractTrainer):
                 self.embedding_size, self.warmup_steps
             )
         else:
-            if (self.DDP == True):
-                if (torch.distributed.get_rank() == 0):
-                    self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
-            else:
+            if self.is_logger:
                 self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
             optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
         return optimizer
@@ -155,17 +153,14 @@ class Trainer(AbstractTrainer):
         """
         self.model.train()
         total_loss = None
-        if (self.DDP == True):
-            if (torch.distributed.get_rank() == 0):
-                pbar = tqdm(total=len(train_data))
-        else:
-            pbar = tqdm(total=len(train_data))
-        for batch_idx, data in enumerate(train_data):
+
+        pbar = train_data
+        if self.is_logger:
+            pbar = tqdm(pbar)
+
+        for data in pbar:
             self.optimizer.zero_grad()
-            if (self.DDP == True):
-                losses = self.model(data, epoch_idx=epoch_idx)
-            else:
-                losses = self.model.forward(data, epoch_idx=epoch_idx)
+            losses = self.model(data, epoch_idx=epoch_idx)
             if isinstance(losses, tuple):
                 loss = sum(losses)
                 loss_tuple = tuple(per_loss.item() for per_loss in losses)
@@ -173,14 +168,10 @@ class Trainer(AbstractTrainer):
             else:
                 loss = losses
                 total_loss = losses.item() if total_loss is None else total_loss + losses.item()
+
             self._check_nan(loss)
             loss.backward()
             self.optimizer.step()
-            if (self.DDP == True):
-                if (torch.distributed.get_rank() == 0):
-                    pbar.update(1)
-            else:
-                pbar.update(1)
         train_loss = total_loss / len(train_data)
         return train_loss
 
@@ -194,23 +185,21 @@ class Trainer(AbstractTrainer):
             float: valid score
             dict: valid result
         """
-        self.model.eval()
-        total_loss = None
-        for batch_idx, data in enumerate(valid_data):
-            if (self.DDP == True):
+        with torch.no_grad():
+            self.model.eval()
+            total_loss = None
+            for batch_idx, data in enumerate(valid_data):
                 losses = self.model(data)
-            else:
-                losses = self.model.forward(data)
-            if isinstance(losses, tuple):
-                loss = sum(losses)
-                loss_tuple = tuple(per_loss.item() for per_loss in losses)
-                total_loss = loss_tuple if total_loss is None else tuple(map(sum, zip(total_loss, loss_tuple)))
-            else:
-                loss = losses
-                total_loss = losses.item() if total_loss is None else total_loss + losses.item()
-            self._check_nan(loss)
-        valid_loss = total_loss / len(valid_data)
-        ppl = np.exp(valid_loss)
+                if isinstance(losses, tuple):
+                    loss = sum(losses)
+                    loss_tuple = tuple(per_loss.item() for per_loss in losses)
+                    total_loss = loss_tuple if total_loss is None else tuple(map(sum, zip(total_loss, loss_tuple)))
+                else:
+                    loss = losses
+                    total_loss = losses.item() if total_loss is None else total_loss + losses.item()
+                self._check_nan(loss)
+            valid_loss = total_loss / len(valid_data)
+            ppl = np.exp(valid_loss)
         return valid_loss, ppl
 
     def _save_checkpoint(self, epoch):
@@ -228,7 +217,7 @@ class Trainer(AbstractTrainer):
             'state_dict': self.model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
         }
-        if (self.DDP == True):
+        if self.DDP:
             if (torch.distributed.get_rank() == 0):
                 saved_dict = collections.OrderedDict()
                 for key, val in state.items():
@@ -269,18 +258,12 @@ class Trainer(AbstractTrainer):
 
         # load architecture params from checkpoint
         if checkpoint['config']['model'].lower() != self.config['model'].lower():
-            if (self.DDP == True):
-                if (torch.distributed.get_rank() == 0):
-                    self.logger.warning(
-                        'Architecture configuration given in config file is different from that of checkpoint. '
-                        'This may yield an exception while state_dict is being loaded.'
-                    )
-            else:
+            if self.is_logger:
                 self.logger.warning(
                     'Architecture configuration given in config file is different from that of checkpoint. '
                     'This may yield an exception while state_dict is being loaded.'
                 )
-        if (self.DDP == True):
+        if self.DDP:
             saved_dict = collections.OrderedDict()
             for state_dict_key, state_dict_val in checkpoint['state_dict'].items():
                 changed_key = 'module.' + state_dict_key
@@ -291,10 +274,7 @@ class Trainer(AbstractTrainer):
         # load optimizer state from checkpoint only when optimizer type is not changed
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         message_output = 'Checkpoint loaded. Resume training from epoch {}'.format(self.start_epoch)
-        if (self.DDP == True):
-            if (torch.distributed.get_rank() == 0):
-                self.logger.info(message_output)
-        else:
+        if self.is_logger:
             self.logger.info(message_output)
 
     def _check_nan(self, loss):
@@ -335,10 +315,7 @@ class Trainer(AbstractTrainer):
             train_loss_output = \
                 self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss)
             if verbose:
-                if (self.DDP == True):
-                    if (torch.distributed.get_rank() == 0):
-                        self.logger.info(train_loss_output)
-                else:
+                if self.is_logger:
                     self.logger.info(train_loss_output)
 
             # eval
@@ -347,10 +324,7 @@ class Trainer(AbstractTrainer):
                     self._save_checkpoint(epoch_idx)
                     update_output = 'Saving current: %s' % self.saved_model_file
                     if verbose:
-                        if (self.DDP == True):
-                            if (torch.distributed.get_rank() == 0):
-                                self.logger.info(update_output)
-                        else:
+                        if self.is_logger:
                             self.logger.info(update_output)
                 continue
             if (epoch_idx + 1) % self.eval_step == 0:
@@ -367,11 +341,7 @@ class Trainer(AbstractTrainer):
                                      (epoch_idx, valid_end_time - valid_start_time, valid_score)
                 valid_result_output = 'valid ppl: {}'.format(valid_result)
                 if verbose:
-                    if (self.DDP == True):
-                        if (torch.distributed.get_rank() == 0):
-                            self.logger.info(valid_score_output)
-                            self.logger.info(valid_result_output)
-                    else:
+                    if self.is_logger:
                         self.logger.info(valid_score_output)
                         self.logger.info(valid_result_output)
                 if update_flag:
@@ -379,10 +349,7 @@ class Trainer(AbstractTrainer):
                         self._save_checkpoint(epoch_idx)
                         update_output = 'Saving current best: %s' % self.saved_model_file
                         if verbose:
-                            if (self.DDP == True):
-                                if (torch.distributed.get_rank() == 0):
-                                    self.logger.info(update_output)
-                            else:
+                            if self.is_logger:
                                 self.logger.info(update_output)
                     self.best_valid_result = valid_result
 
@@ -390,10 +357,7 @@ class Trainer(AbstractTrainer):
                     stop_output = 'Finished training, best eval result in epoch %d' % \
                                   (epoch_idx - self.cur_step * self.eval_step)
                     if verbose:
-                        if (self.DDP == True):
-                            if (torch.distributed.get_rank() == 0):
-                                self.logger.info(stop_output)
-                        else:
+                        if self.is_logger:
                             self.logger.info(stop_output)
                     break
         return self.best_valid_score, self.best_valid_result
@@ -436,19 +400,16 @@ class Trainer(AbstractTrainer):
             checkpoint = torch.load(checkpoint_file)
             self.model.load_state_dict(checkpoint['state_dict'])
             message_output = 'Loading model structure and parameters from {}'.format(checkpoint_file)
-            if (self.DDP == True):
-                if (torch.distributed.get_rank() == 0):
-                    self.logger.info(message_output)
-            else:
+            if self.is_logger:
                 self.logger.info(message_output)
 
         self.model.eval()
         generate_corpus = []
         with torch.no_grad():
-            pbar = tqdm(total=len(eval_data))
-            for batch_data in eval_data:
-                generate_corpus.extend(self.model.generate(batch_data, eval_data))
-                pbar.update(1)
+            for batch_data in tqdm(eval_data):
+                generated = self.model.generate(batch_data, eval_data)
+                assert len(generated) == len(batch_data['target_text'])
+                generate_corpus.extend(generated)
         self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
@@ -860,10 +821,8 @@ class Seq2SeqTrainer(Trainer):
         self.model.eval()
         generate_corpus = []
         with torch.no_grad():
-            pbar = tqdm(total=len(eval_data))
-            for batch_data in eval_data:
+            for batch_data in tqdm(eval_data):
                 generate_corpus.extend(self.model.generate(batch_data, eval_data))
-                pbar.update(1)
         self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)

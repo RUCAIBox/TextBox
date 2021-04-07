@@ -23,8 +23,8 @@ class ProphetNet(Seq2SeqGenerator):
     def __init__(self, config, dataset):
         super(ProphetNet, self).__init__(config, dataset)
 
-        self.max_source_length = config['max_source_length']
-        self.max_target_length = config['max_target_length']
+        self.max_source_length = dataset.max_source_length
+        self.max_target_length = dataset.max_target_length
 
         self.pretrained_model_path = config['pretrained_model_path']
         self.config = ProphetNetConfig.from_pretrained(self.pretrained_model_path)
@@ -105,6 +105,6 @@ class ProphetNet(Seq2SeqGenerator):
         loss_predict_stream = loss_predict_stream.reshape_as(ngram_decoder_target_ids)
         loss_predict_stream = loss_predict_stream.sum(dim=0)
 
-        loss = loss_main_stream + loss_predict_stream
+        loss = (loss_main_stream + loss_predict_stream) / 2
         loss = loss.sum(dim=1) / self.max_target_length
         return loss.mean()

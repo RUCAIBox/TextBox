@@ -25,8 +25,8 @@ class BERT2BERT(Seq2SeqGenerator):
 
         self.sos_token_idx = 101
         self.eos_token_idx = 102
-        self.max_source_length = config['max_source_length']
-        self.max_target_length = config['max_target_length']
+        self.max_source_length = dataset.max_source_length
+        self.max_target_length = dataset.max_target_length
         self.pretrained_model_path = config['pretrained_model_path']
 
         self.tokenizer = BertTokenizer.from_pretrained(self.pretrained_model_path)

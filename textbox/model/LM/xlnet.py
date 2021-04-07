@@ -26,8 +26,6 @@ class XLNet(UnconditionalGenerator):
     def __init__(self, config, dataset):
         super(XLNet, self).__init__(config, dataset)
 
-        self.eval_generate_num = config['eval_generate_num']
-
         self.pretrained_model_path = config['pretrained_model_path']
         self.tokenizer = XLNetTokenizer.from_pretrained(
             self.pretrained_model_path,
@@ -57,12 +55,12 @@ class XLNet(UnconditionalGenerator):
 
     def generate(self, batch_data, eval_data):
         generate_corpus = []
-        batch_num = ceil(self.eval_generate_num / eval_data.batch_size)
+        batch_size = len(batch_data['target_text'])
         sample_outputs = self.decoder.generate(
             bos_token_id=self.sos_token_idx,
             do_sample=True,
             max_length=self.max_seq_length,
-            num_return_sequences=eval_data.batch_size
+            num_return_sequences=batch_size
         )
         generated_text = self.tokenizer.batch_decode(sample_outputs, skip_special_tokens=True)
         generate_corpus.extend([text.lower().split() for text in generated_text])

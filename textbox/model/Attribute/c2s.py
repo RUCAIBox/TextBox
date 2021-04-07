@@ -33,7 +33,6 @@ class C2S(AttributeGenerator):
         self.dropout_ratio = config['dropout_ratio']
         self.rnn_type = config['rnn_type']
 
-        self.eval_generate_num = config['eval_generate_num']
         self.max_length = config['max_seq_length']
         self.is_gated = config['gated']
         self.decoding_strategy = config['decoding_strategy']

@@ -28,16 +28,11 @@ class AbstractModel(nn.Module):
     r"""Base class for all models
     """
 
-    def calculate_loss(self, corpus):
-        r"""Calculate the training loss for a batch data.
-
-        Args:
-            corpus (Corpus): Corpus class of the batch.
-
-        Returns:
-            torch.Tensor: Training loss, shape: []
-        """
-        raise NotImplementedError
+    def __init__(self, config, dataset):
+        # load parameters info
+        super(AbstractModel, self).__init__()
+        self.batch_size = config['train_batch_size']
+        self.device = config['device']
 
     def generate(self, batch_data, eval_data):
         r"""Predict the texts conditioned on a noise or sequence.
@@ -78,13 +73,9 @@ class UnconditionalGenerator(AbstractModel):
     type = ModelType.UNCONDITIONAL
 
     def __init__(self, config, dataset):
-        super(AbstractModel, self).__init__()
+        super(UnconditionalGenerator, self).__init__(config, dataset)
 
-        self.vocab_size = len(dataset.idx2token)
-
-        # load parameters info
-        self.batch_size = config['train_batch_size']
-        self.device = config['device']
+        self.vocab_size = dataset.vocab_size
 
 
 class Seq2SeqGenerator(AbstractModel):
@@ -94,17 +85,13 @@ class Seq2SeqGenerator(AbstractModel):
     type = ModelType.SEQ2SEQ
 
     def __init__(self, config, dataset):
-        super(AbstractModel, self).__init__()
+        super(Seq2SeqGenerator, self).__init__(config, dataset)
 
-        if hasattr(dataset, "source_idx2token"):
-            self.source_vocab_size = len(dataset.source_idx2token)
-            self.target_vocab_size = len(dataset.target_idx2token)
+        if hasattr(dataset, "source_vocab_size"):
+            self.source_vocab_size = dataset.source_vocab_size
+            self.vocab_size = self.target_vocab_size = dataset.target_vocab_size
         else:
-            self.vocab_size = self.source_vocab_size = self.target_vocab_size = len(dataset.idx2token)
-
-        # load parameters info
-        self.batch_size = config['train_batch_size']
-        self.device = config['device']
+            self.vocab_size = self.source_vocab_size = self.target_vocab_size = dataset.vocab_size
 
 
 class GenerativeAdversarialNet(UnconditionalGenerator):
@@ -166,12 +153,8 @@ class AttributeGenerator(AbstractModel):
     type = ModelType.ATTRIBUTE
 
     def __init__(self, config, dataset):
-        super(AbstractModel, self).__init__()
+        super(AttributeGenerator, self).__init__(config, dataset)
 
-        self.vocab_size = len(dataset.idx2token)
+        self.vocab_size = dataset.vocab_size
         self.attribute_size = [len(a2t) for a2t in dataset.idx2attribute]
         self.attribute_num = len(self.attribute_size)
-
-        # load parameters info
-        self.batch_size = config['train_batch_size']
-        self.device = config['device']

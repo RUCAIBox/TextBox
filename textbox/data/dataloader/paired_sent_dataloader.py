@@ -72,9 +72,6 @@ class PairedSentenceDataLoader(AbstractDataLoader):
     def pr_end(self):
         return len(self.target_text_idx_data)
 
-    def __len__(self):
-        return math.ceil(len(self.target_text_idx_data) / self.batch_size)
-
     def _shuffle(self):
         temp = list(
             zip(

@@ -47,8 +47,8 @@ class AbstractDataLoader(object):
         self.drop_last = drop_last
 
         if self.DDP:
-            self.step = int(batch_size / torch.distributed.get_world_size())
-            self.pr = int(batch_size / torch.distributed.get_world_size() * torch.distributed.get_rank())
+            self.step = batch_size // torch.distributed.get_world_size()
+            self.pr = batch_size // torch.distributed.get_world_size() * torch.distributed.get_rank()
         else:
             self.step = batch_size
             self.pr = 0
@@ -110,7 +110,7 @@ class AbstractDataLoader(object):
         return new_data, length
 
     def __len__(self):
-        return math.floor(self.pr_end / self.batch_size)
+        return math.floor(self.pr_end / self.batch_size) if self.drop_last else math.ceil(self.pr_end / self.batch_size)
 
     def __iter__(self):
         if self.shuffle:
@@ -119,9 +119,9 @@ class AbstractDataLoader(object):
 
     def __next__(self):
         if (self.drop_last
-            and self.std_pr + self.batch_size >= self.pr_end) or (not self.drop_last and self.pr >= self.pr_end):
+            and self.std_pr + self.batch_size > self.pr_end) or (not self.drop_last and self.pr > self.pr_end):
             if (self.DDP == True):
-                self.pr = int(self.batch_size / torch.distributed.get_world_size() * torch.distributed.get_rank())
+                self.pr = self.batch_size // torch.distributed.get_world_size() * torch.distributed.get_rank()
             else:
                 self.pr = 0
             self.std_pr = 0

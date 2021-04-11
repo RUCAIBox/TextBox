@@ -304,6 +304,8 @@ class Trainer(AbstractTrainer):
         Returns:
              (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
         """
+        if self.start_epoch >= self.epochs or self.epochs <= 0:
+            self._save_checkpoint(-1)
 
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
@@ -311,7 +313,6 @@ class Trainer(AbstractTrainer):
             train_loss = self._train_epoch(train_data, epoch_idx)
             self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             training_end_time = time()
-            self._save_checkpoint(epoch_idx)
             train_loss_output = \
                 self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss)
             if verbose:

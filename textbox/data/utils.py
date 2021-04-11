@@ -119,7 +119,7 @@ def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False, dro
 
     DataLoader = get_data_loader(config)
 
-    return DataLoader(config=config, dataset=dataset, batch_size=batch_size, shuffle=shuffle, drop_last=drop_last)
+    return DataLoader(config=config, dataset=dataset, batch_size=batch_size, shuffle=shuffle, drop_last=drop_last, DDP=DDP)
 
 
 def get_data_loader(config):

@@ -54,9 +54,6 @@ class AttributedSentenceDataLoader(AbstractDataLoader):
     def pr_end(self):
         return len(self.text_idx_data)
 
-    def __len__(self):
-        return math.ceil(len(self.text_idx_data) / self.batch_size)
-
     def _shuffle(self):
         temp = list(
             zip(self.text_data, self.text_idx_data, self.idx_length_data, self.attribute_data, self.attribute_idx_data)

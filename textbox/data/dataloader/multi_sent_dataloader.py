@@ -88,9 +88,6 @@ class MultipleSentenceDataLoader(AbstractDataLoader):
     def pr_end(self):
         return len(self.target_text_idx_data)
 
-    def __len__(self):
-        return math.ceil(len(self.target_text_idx_data) / self.batch_size)
-
     def _shuffle(self):
         data_list = []
         for key in self.group_data_key:

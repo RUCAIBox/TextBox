@@ -9,4 +9,5 @@ textbox.evaluator
    textbox.evaluator.ngram_evaluator
    textbox.evaluator.summarization_evaluator
    textbox.evaluator.translation_evaluator
+   textbox.evaluator.dialog_evaluator
 

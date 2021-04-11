@@ -1,6 +1,6 @@
 .. Textbox documentation master file.
 
-Textbox v0.1.6
+Textbox v0.2.1
 ===================================
 
 `HomePage <https://github.com/RUCAIBox/TextBox>`_ | `Paper <https://arxiv.org/abs/2101.02046>`_ | `Docs <https://textbox.readthedocs.io/en/latest/>`_ | `Models <https://github.com/RUCAIBox/TextBox#model>`_ | `Datasets <https://github.com/RUCAIBox/TextBox#dataset>`_

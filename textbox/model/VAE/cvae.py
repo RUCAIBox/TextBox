@@ -113,13 +113,12 @@ class CVAE(Seq2SeqGenerator):
         self.apply(self.xavier_uniform_initialization)
 
     def xavier_uniform_initialization(self, module):
-        r""" using `xavier_uniform_`_ in PyTorch to initialize the parameters in
+        r""" using uniform in PyTorch to initialize the parameters in
         nn.Embedding and nn.Linear layers. For bias in nn.Linear layers,
         using constant 0 to initialize.
         """
         if isinstance(module, nn.Embedding):
             torch.nn.init.uniform_(module.weight.data, a=-0.08, b=0.08)
-            # xavier_uniform_(module.weight.data)
         elif isinstance(module, nn.Linear):
             torch.nn.init.uniform_(module.weight.data, a=-0.08, b=0.08)
             if module.bias is not None:

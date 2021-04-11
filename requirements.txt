@@ -7,3 +7,4 @@ fast_bleu>=0.0.89
 py-rouge>=1.1
 transformers>=4.0.1
 tqdm>=4.42.1
+sentencepiece>=0.1.95

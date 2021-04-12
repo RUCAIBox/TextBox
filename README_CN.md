@@ -27,11 +27,10 @@ TextBox是基于Python和PyTorch开发的，用于在一个统一的、全面的
 我们支持9个文本生成的基准数据集，用户可以使用我们的库重新处理原始数据，或者简单地下载我们团队已经处理好的数据集。
 
 <p align="center">
-  <img src="asset/framework.png" alt="TextBox v0.1 architecture">
+  <img src="asset/framework.png" alt="TextBox v0.2 architecture">
   <br>
   <b>图片</b>: TextBox整体框架
 </p>
-
 
 ## 特点
 
@@ -144,7 +143,7 @@ python -m torch.distributed.launch --nproc_per_node=[gpu_num] \
 
 注意：我们仅支持使用分布式数据并行训练端到端的模型，我们将在未来支持非端到端的模型，例如GAN。
 
-## 结构
+## 架构
 
 上述[图片](#textbox-妙笔)展示了TextBox的整体架构。程序的运行需要从文件、命令行或参数字典中获取实验参数配置，数据集和模型会根据设置的配置进行初始化，之后执行模块负责对模型进行训练和评估。获取更多接口相关的细节可以参考[说明文档](https://textbox.readthedocs.io/en/latest/)。
 
@@ -248,8 +247,6 @@ python -m torch.distributed.launch --nproc_per_node=[gpu_num] \
 <td align="center"><a href="https://arxiv.org/abs/1507.04808">(Serban et al., 2016)</a></td>
 </tr>
 </tbody></table>
-
-
 ### 数据集
 
 我们总共收集了9个在上述提及的6类文本生成任务中常用的数据集，这些数据集可以通过[Google Drive](https://drive.google.com/drive/folders/1iNRErGM3YRDF3hjY8DMpWaQo-prmUtNX?usp=sharing) 和 [百度网盘](https://pan.baidu.com/s/1upHl8SXGNjZ2LCfV-L164Q) (密码: lwy6)来下载，数据集中包含原始数据以及处理过的数据。 

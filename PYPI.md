@@ -85,7 +85,7 @@ This will perform the training and test of the RNN model on the COCO dataset.
 
 If you want to run different models, parameters or datasets, the operations are same with **Start from source**.
 
-### **Using Pretrained Language Model**
+### **Use Pretrained Language Model**
 
 TextBox supports to apply part of pretrained language models (PLM) to conduct text generation. Take the GPT-2 for example, we will show you how to use PLMs to fine-tune.
 

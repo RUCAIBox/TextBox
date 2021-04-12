@@ -28,10 +28,11 @@ TextBox is developed based on Python and PyTorch for reproducing and developing 
 We provide the support for 9 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team. 
 
 <p align="center">
-  <img src="asset/framework.png" alt="TextBox v0.1 architecture">
+  <img src="asset/framework.png" alt="TextBox v0.2 architecture">
   <br>
   <b>Figure</b>: The Overall Architecture of TextBox
 </p>
+
 
 ## Feature
 
@@ -248,13 +249,11 @@ We implement 21 text generation models, covering unconditional generation and se
 <td align="center"><a href="https://arxiv.org/abs/1507.04808">(Serban et al., 2016)</a></td>
 </tr>
 </tbody></table>
-
-
 ### Dataset
 
 We have also collected 9 datasets that are commonly used for six tasks, which can be downloaded from [Google Drive](https://drive.google.com/drive/folders/1iNRErGM3YRDF3hjY8DMpWaQo-prmUtNX?usp=sharing) and [Baidu Wangpan](https://pan.baidu.com/s/1upHl8SXGNjZ2LCfV-L164Q) (Password: lwy6), including raw data and processed data. 
 
-We list the 6 datasets in the following table:
+We list the 9 datasets in the following table:
 
 <table align="center">
 <thead>
@@ -298,8 +297,6 @@ We list the 6 datasets in the following table:
 </tr>
 </tbody>
 </table>
-
-
 The downloaded dataset should be placed in the `dataset` folder, just as our main branch.
 
 We also support you to run our model using your own dataset. Just follow the three steps:
@@ -607,6 +604,7 @@ Part of generated examples:
 <td>you know , one of the great &lt; unk &gt; about travel , and one of the pleasure in the &lt; unk &gt; research is to live with people who remember the old days , and they still remember the wind in the wind , but they &amp; apos ; re touching the &lt; unk &gt; .</td>
 </tr>
 </tbody></table>
+
 ## Releases
 
 | Releases |    Date    |   Features    |

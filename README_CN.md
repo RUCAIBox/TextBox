@@ -247,6 +247,7 @@ python -m torch.distributed.launch --nproc_per_node=[gpu_num] \
 <td align="center"><a href="https://arxiv.org/abs/1507.04808">(Serban et al., 2016)</a></td>
 </tr>
 </tbody></table>
+
 ### 数据集
 
 我们总共收集了9个在上述提及的6类文本生成任务中常用的数据集，这些数据集可以通过[Google Drive](https://drive.google.com/drive/folders/1iNRErGM3YRDF3hjY8DMpWaQo-prmUtNX?usp=sharing) 和 [百度网盘](https://pan.baidu.com/s/1upHl8SXGNjZ2LCfV-L164Q) (密码: lwy6)来下载，数据集中包含原始数据以及处理过的数据。 

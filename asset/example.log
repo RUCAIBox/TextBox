@@ -1,10 +1,12 @@
-Mon 04 Jan 2021 20:05:00 INFO General Hyper Parameters: 
+Sun 11 Apr 2021 13:45:26 INFO 
+General Hyper Parameters: 
 gpu_id=0
 use_gpu=True
+DDP=False
 seed=2020
 state=INFO
 reproducibility=True
-data_path=./dataset/COCO
+data_path=dataset/COCO
 checkpoint_dir=saved/
 generated_text_dir=generated/
 
@@ -13,37 +15,47 @@ epochs=50
 train_batch_size=64
 learner=adam
 learning_rate=0.001
-eval_step=2
-stopping_step=5
+eval_step=1
+stopping_step=3
+grad_clip=5.0
 
 Evaluation Hyper Parameters: 
 metrics=['bleu', 'self_bleu']
 n_grams=[1, 2, 3, 4, 5]
 eval_batch_size=64
-eval_generate_num=10000
+
+Model Hyper Parameters: 
+embedding_size=64
+hidden_size=128
+num_dec_layers=2
+dropout_ratio=0.2
+rnn_type=gru
 
 Dataset Hyper Parameters: 
 max_vocab_size=5000
 max_seq_length=40
 split_strategy=load_split
-source_language=English
+overlength_strategy=drop
+tokenize_strategy=by_space
+language=English
+task_type=unconditional
 
 
-Mon 04 Jan 2021 20:05:01 INFO File ./dataset/COCO/train.bin not exist
-Mon 04 Jan 2021 20:05:01 INFO File ./dataset/COCO/dev.bin not exist
-Mon 04 Jan 2021 20:05:01 INFO File ./dataset/COCO/test.bin not exist
-Mon 04 Jan 2021 20:05:01 INFO File ./dataset/COCO/vocab not exist
-Mon 04 Jan 2021 20:05:01 INFO Loading data from scratch
-Mon 04 Jan 2021 20:05:04 INFO Vocab size: 5000
-Mon 04 Jan 2021 20:05:04 INFO train: 10000 cases, dev: 10000 cases, test: 10000 cases
-Mon 04 Jan 2021 20:05:04 INFO Dump finished!
-Mon 04 Jan 2021 20:05:04 INFO Build [unconditional] DataLoader for [train]
-Mon 04 Jan 2021 20:05:04 INFO batch_size = [[64]], shuffle = [True]
+Sun 11 Apr 2021 13:45:26 INFO Loading data from scratch
+Sun 11 Apr 2021 13:45:27 INFO Dump finished!
+Sun 11 Apr 2021 13:45:27 INFO Vocab size: 5000
+Sun 11 Apr 2021 13:45:27 INFO train: 10000 cases, dev: 10000 cases, test: 10000 cases
 
-Mon 04 Jan 2021 20:05:04 INFO Build [unconditional] DataLoader for [evaluation]
-Mon 04 Jan 2021 20:05:04 INFO batch_size = [[64, 64]], shuffle = [False]
+Sun 11 Apr 2021 13:45:27 INFO Build [unconditional] DataLoader for [train]
+Sun 11 Apr 2021 13:45:27 INFO batch_size = [64], shuffle = [True], drop_last = [True]
 
-Mon 04 Jan 2021 20:05:07 INFO RNN(
+Sun 11 Apr 2021 13:45:27 INFO Build [unconditional] DataLoader for [valid]
+Sun 11 Apr 2021 13:45:27 INFO batch_size = [64], shuffle = [True], drop_last = [True]
+
+Sun 11 Apr 2021 13:45:27 INFO Build [unconditional] DataLoader for [test]
+Sun 11 Apr 2021 13:45:27 INFO batch_size = [64], shuffle = [False], drop_last = [False]
+
+Sun 11 Apr 2021 13:45:30 INFO RNN(
   (token_embedder): Embedding(5000, 64, padding_idx=0)
   (decoder): BasicRNNDecoder(
     (decoder): GRU(64, 128, num_layers=2, batch_first=True, dropout=0.2)
@@ -53,86 +65,186 @@ Mon 04 Jan 2021 20:05:07 INFO RNN(
   (loss): CrossEntropyLoss()
 )
 Trainable parameters: 1138568
-Mon 04 Jan 2021 20:05:07 INFO Generating new fontManager, this may take some time...
-Mon 04 Jan 2021 20:05:10 INFO epoch 0 training [time: 1.60s, train loss: 5.5873]
-Mon 04 Jan 2021 20:05:12 INFO epoch 1 training [time: 1.38s, train loss: 4.8921]
-Mon 04 Jan 2021 20:05:12 INFO epoch 1 evaluating [time: 0.37s, valid_loss: 5.518900]
-Mon 04 Jan 2021 20:05:12 INFO valid ppl: 249.36048576715103
-Mon 04 Jan 2021 20:05:12 INFO Saving current best: saved/RNN-Jan-04-2021_20-05-09.pth
-Mon 04 Jan 2021 20:05:14 INFO epoch 2 training [time: 1.38s, train loss: 4.4963]
-Mon 04 Jan 2021 20:05:15 INFO epoch 3 training [time: 1.45s, train loss: 4.2174]
-Mon 04 Jan 2021 20:05:16 INFO epoch 3 evaluating [time: 0.38s, valid_loss: 5.157553]
-Mon 04 Jan 2021 20:05:16 INFO valid ppl: 173.7388091266056
-Mon 04 Jan 2021 20:05:16 INFO Saving current best: saved/RNN-Jan-04-2021_20-05-09.pth
-Mon 04 Jan 2021 20:05:17 INFO epoch 4 training [time: 1.40s, train loss: 4.0828]
-Mon 04 Jan 2021 20:05:18 INFO epoch 5 training [time: 1.39s, train loss: 3.9825]
-Mon 04 Jan 2021 20:05:19 INFO epoch 5 evaluating [time: 0.36s, valid_loss: 5.103505]
-Mon 04 Jan 2021 20:05:19 INFO valid ppl: 164.5978864127914
-Mon 04 Jan 2021 20:05:19 INFO Saving current best: saved/RNN-Jan-04-2021_20-05-09.pth
-Mon 04 Jan 2021 20:05:20 INFO epoch 6 training [time: 1.39s, train loss: 3.8756]
-Mon 04 Jan 2021 20:05:22 INFO epoch 7 training [time: 1.51s, train loss: 3.7774]
-Mon 04 Jan 2021 20:05:22 INFO epoch 7 evaluating [time: 0.36s, valid_loss: 5.049666]
-Mon 04 Jan 2021 20:05:22 INFO valid ppl: 155.9703442791838
-Mon 04 Jan 2021 20:05:22 INFO Saving current best: saved/RNN-Jan-04-2021_20-05-09.pth
-Mon 04 Jan 2021 20:05:24 INFO epoch 8 training [time: 1.45s, train loss: 3.6905]
-Mon 04 Jan 2021 20:05:25 INFO epoch 9 training [time: 1.39s, train loss: 3.6172]
-Mon 04 Jan 2021 20:05:25 INFO epoch 9 evaluating [time: 0.36s, valid_loss: 5.042882]
-Mon 04 Jan 2021 20:05:25 INFO valid ppl: 154.91579582909344
-Mon 04 Jan 2021 20:05:25 INFO Saving current best: saved/RNN-Jan-04-2021_20-05-09.pth
-Mon 04 Jan 2021 20:05:27 INFO epoch 10 training [time: 1.45s, train loss: 3.5503]
-Mon 04 Jan 2021 20:05:28 INFO epoch 11 training [time: 1.30s, train loss: 3.4788]
-Mon 04 Jan 2021 20:05:29 INFO epoch 11 evaluating [time: 0.34s, valid_loss: 4.987865]
-Mon 04 Jan 2021 20:05:29 INFO valid ppl: 146.62299477360787
-Mon 04 Jan 2021 20:05:29 INFO Saving current best: saved/RNN-Jan-04-2021_20-05-09.pth
-Mon 04 Jan 2021 20:05:30 INFO epoch 12 training [time: 1.30s, train loss: 3.4120]
-Mon 04 Jan 2021 20:05:31 INFO epoch 13 training [time: 1.38s, train loss: 3.3529]
-Mon 04 Jan 2021 20:05:32 INFO epoch 13 evaluating [time: 0.34s, valid_loss: 4.967023]
-Mon 04 Jan 2021 20:05:32 INFO valid ppl: 143.59874893262997
-Mon 04 Jan 2021 20:05:32 INFO Saving current best: saved/RNN-Jan-04-2021_20-05-09.pth
-Mon 04 Jan 2021 20:05:33 INFO epoch 14 training [time: 1.29s, train loss: 3.2938]
-Mon 04 Jan 2021 20:05:34 INFO epoch 15 training [time: 1.29s, train loss: 3.2407]
-Mon 04 Jan 2021 20:05:35 INFO epoch 15 evaluating [time: 0.34s, valid_loss: 4.940482]
-Mon 04 Jan 2021 20:05:35 INFO valid ppl: 139.83765797616147
-Mon 04 Jan 2021 20:05:35 INFO Saving current best: saved/RNN-Jan-04-2021_20-05-09.pth
-Mon 04 Jan 2021 20:05:36 INFO epoch 16 training [time: 1.29s, train loss: 3.1881]
-Mon 04 Jan 2021 20:05:37 INFO epoch 17 training [time: 1.29s, train loss: 3.1365]
-Mon 04 Jan 2021 20:05:38 INFO epoch 17 evaluating [time: 0.34s, valid_loss: 4.934036]
-Mon 04 Jan 2021 20:05:38 INFO valid ppl: 138.9390722273514
-Mon 04 Jan 2021 20:05:38 INFO Saving current best: saved/RNN-Jan-04-2021_20-05-09.pth
-Mon 04 Jan 2021 20:05:39 INFO epoch 18 training [time: 1.29s, train loss: 3.0894]
-Mon 04 Jan 2021 20:05:40 INFO epoch 19 training [time: 1.35s, train loss: 3.0484]
-Mon 04 Jan 2021 20:05:41 INFO epoch 19 evaluating [time: 0.34s, valid_loss: 4.938433]
-Mon 04 Jan 2021 20:05:41 INFO valid ppl: 139.55146258170683
-Mon 04 Jan 2021 20:05:42 INFO epoch 20 training [time: 1.30s, train loss: 3.0063]
-Mon 04 Jan 2021 20:05:43 INFO epoch 21 training [time: 1.28s, train loss: 2.9662]
-Mon 04 Jan 2021 20:05:44 INFO epoch 21 evaluating [time: 0.34s, valid_loss: 4.915320]
-Mon 04 Jan 2021 20:05:44 INFO valid ppl: 136.36293545136667
-Mon 04 Jan 2021 20:05:44 INFO Saving current best: saved/RNN-Jan-04-2021_20-05-09.pth
-Mon 04 Jan 2021 20:05:45 INFO epoch 22 training [time: 1.30s, train loss: 2.9327]
-Mon 04 Jan 2021 20:05:46 INFO epoch 23 training [time: 1.29s, train loss: 2.8974]
-Mon 04 Jan 2021 20:05:47 INFO epoch 23 evaluating [time: 0.34s, valid_loss: 4.920121]
-Mon 04 Jan 2021 20:05:47 INFO valid ppl: 137.01916717051228
-Mon 04 Jan 2021 20:05:48 INFO epoch 24 training [time: 1.38s, train loss: 2.8669]
-Mon 04 Jan 2021 20:05:49 INFO epoch 25 training [time: 1.30s, train loss: 2.8329]
-Mon 04 Jan 2021 20:05:50 INFO epoch 25 evaluating [time: 0.34s, valid_loss: 4.930537]
-Mon 04 Jan 2021 20:05:50 INFO valid ppl: 138.4539088253076
-Mon 04 Jan 2021 20:05:51 INFO epoch 26 training [time: 1.30s, train loss: 2.8020]
-Mon 04 Jan 2021 20:05:52 INFO epoch 27 training [time: 1.30s, train loss: 2.7705]
-Mon 04 Jan 2021 20:05:53 INFO epoch 27 evaluating [time: 0.34s, valid_loss: 4.954717]
-Mon 04 Jan 2021 20:05:53 INFO valid ppl: 141.84240561609658
-Mon 04 Jan 2021 20:05:54 INFO epoch 28 training [time: 1.29s, train loss: 2.7402]
-Mon 04 Jan 2021 20:05:55 INFO epoch 29 training [time: 1.33s, train loss: 2.7130]
-Mon 04 Jan 2021 20:05:56 INFO epoch 29 evaluating [time: 0.34s, valid_loss: 4.952199]
-Mon 04 Jan 2021 20:05:56 INFO valid ppl: 141.48571021142183
-Mon 04 Jan 2021 20:05:57 INFO epoch 30 training [time: 1.30s, train loss: 2.6899]
-Mon 04 Jan 2021 20:05:58 INFO epoch 31 training [time: 1.30s, train loss: 2.6625]
-Mon 04 Jan 2021 20:05:59 INFO epoch 31 evaluating [time: 0.34s, valid_loss: 4.965656]
-Mon 04 Jan 2021 20:05:59 INFO valid ppl: 143.40256075851153
-Mon 04 Jan 2021 20:06:00 INFO epoch 32 training [time: 1.37s, train loss: 2.6387]
-Mon 04 Jan 2021 20:06:02 INFO epoch 33 training [time: 1.42s, train loss: 2.6152]
-Mon 04 Jan 2021 20:06:02 INFO epoch 33 evaluating [time: 0.37s, valid_loss: 5.006523]
-Mon 04 Jan 2021 20:06:02 INFO valid ppl: 149.3843778117307
-Mon 04 Jan 2021 20:06:02 INFO Finished training, best eval result in epoch 21
-Mon 04 Jan 2021 20:06:02 INFO Loading model structure and parameters from saved/RNN-Jan-04-2021_20-05-09.pth
-Mon 04 Jan 2021 20:07:45 INFO best valid loss: 4.91531997425541, best valid ppl: 136.36293545136667
-Mon 04 Jan 2021 20:07:45 INFO test result: {'bleu-1': 0.9976, 'bleu-2': 0.7815, 'bleu-3': 0.4684, 'bleu-4': 0.2377, 'bleu-5': 0.112, 'self_bleu-1': 0.9913, 'self_bleu-2': 0.8044, 'self_bleu-3': 0.5001, 'self_bleu-4': 0.2559, 'self_bleu-5': 0.1174, 'nll_test': 31.47627147747453}
+Sun 11 Apr 2021 13:45:33 INFO epoch 0 training [time: 1.14s, train loss: 5.5448]
+Sun 11 Apr 2021 13:45:33 INFO epoch 0 evaluating [time: 0.29s, valid_loss: 5.669350]
+Sun 11 Apr 2021 13:45:33 INFO valid ppl: 289.84601045101675
+Sun 11 Apr 2021 13:45:33 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:34 INFO epoch 1 training [time: 1.06s, train loss: 4.8657]
+Sun 11 Apr 2021 13:45:35 INFO epoch 1 evaluating [time: 0.30s, valid_loss: 5.419634]
+Sun 11 Apr 2021 13:45:35 INFO valid ppl: 225.79640993157645
+Sun 11 Apr 2021 13:45:35 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:36 INFO epoch 2 training [time: 1.07s, train loss: 4.5211]
+Sun 11 Apr 2021 13:45:36 INFO epoch 2 evaluating [time: 0.35s, valid_loss: 5.092756]
+Sun 11 Apr 2021 13:45:36 INFO valid ppl: 162.83798437634823
+Sun 11 Apr 2021 13:45:36 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:37 INFO epoch 3 training [time: 1.07s, train loss: 4.2757]
+Sun 11 Apr 2021 13:45:38 INFO epoch 3 evaluating [time: 0.29s, valid_loss: 4.975996]
+Sun 11 Apr 2021 13:45:38 INFO valid ppl: 144.89302902498005
+Sun 11 Apr 2021 13:45:38 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:39 INFO epoch 4 training [time: 1.06s, train loss: 4.1359]
+Sun 11 Apr 2021 13:45:39 INFO epoch 4 evaluating [time: 0.29s, valid_loss: 4.883359]
+Sun 11 Apr 2021 13:45:39 INFO valid ppl: 132.07356980437012
+Sun 11 Apr 2021 13:45:39 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:40 INFO epoch 5 training [time: 1.12s, train loss: 4.0365]
+Sun 11 Apr 2021 13:45:40 INFO epoch 5 evaluating [time: 0.29s, valid_loss: 4.839234]
+Sun 11 Apr 2021 13:45:40 INFO valid ppl: 126.37253925653629
+Sun 11 Apr 2021 13:45:40 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:42 INFO epoch 6 training [time: 1.08s, train loss: 3.9653]
+Sun 11 Apr 2021 13:45:42 INFO epoch 6 evaluating [time: 0.29s, valid_loss: 4.784440]
+Sun 11 Apr 2021 13:45:42 INFO valid ppl: 119.63433236683932
+Sun 11 Apr 2021 13:45:42 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:43 INFO epoch 7 training [time: 1.08s, train loss: 3.9023]
+Sun 11 Apr 2021 13:45:43 INFO epoch 7 evaluating [time: 0.37s, valid_loss: 4.770255]
+Sun 11 Apr 2021 13:45:43 INFO valid ppl: 117.94934334212408
+Sun 11 Apr 2021 13:45:43 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:44 INFO epoch 8 training [time: 1.07s, train loss: 3.8395]
+Sun 11 Apr 2021 13:45:45 INFO epoch 8 evaluating [time: 0.29s, valid_loss: 4.707025]
+Sun 11 Apr 2021 13:45:45 INFO valid ppl: 110.72223674592775
+Sun 11 Apr 2021 13:45:45 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:46 INFO epoch 9 training [time: 1.07s, train loss: 3.7789]
+Sun 11 Apr 2021 13:45:46 INFO epoch 9 evaluating [time: 0.29s, valid_loss: 4.664611]
+Sun 11 Apr 2021 13:45:46 INFO valid ppl: 106.1242922755794
+Sun 11 Apr 2021 13:45:46 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:47 INFO epoch 10 training [time: 1.14s, train loss: 3.7269]
+Sun 11 Apr 2021 13:45:48 INFO epoch 10 evaluating [time: 0.29s, valid_loss: 4.651439]
+Sun 11 Apr 2021 13:45:48 INFO valid ppl: 104.7355994315951
+Sun 11 Apr 2021 13:45:48 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:49 INFO epoch 11 training [time: 1.07s, train loss: 3.6813]
+Sun 11 Apr 2021 13:45:49 INFO epoch 11 evaluating [time: 0.29s, valid_loss: 4.630409]
+Sun 11 Apr 2021 13:45:49 INFO valid ppl: 102.55603941878772
+Sun 11 Apr 2021 13:45:49 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:50 INFO epoch 12 training [time: 1.07s, train loss: 3.6375]
+Sun 11 Apr 2021 13:45:50 INFO epoch 12 evaluating [time: 0.29s, valid_loss: 4.591345]
+Sun 11 Apr 2021 13:45:50 INFO valid ppl: 98.6270387626493
+Sun 11 Apr 2021 13:45:50 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:52 INFO epoch 13 training [time: 1.15s, train loss: 3.5950]
+Sun 11 Apr 2021 13:45:52 INFO epoch 13 evaluating [time: 0.29s, valid_loss: 4.556892]
+Sun 11 Apr 2021 13:45:52 INFO valid ppl: 95.2869133444253
+Sun 11 Apr 2021 13:45:52 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:53 INFO epoch 14 training [time: 1.07s, train loss: 3.5507]
+Sun 11 Apr 2021 13:45:53 INFO epoch 14 evaluating [time: 0.29s, valid_loss: 4.533381]
+Sun 11 Apr 2021 13:45:53 INFO valid ppl: 93.07274984586007
+Sun 11 Apr 2021 13:45:53 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:54 INFO epoch 15 training [time: 1.07s, train loss: 3.5108]
+Sun 11 Apr 2021 13:45:55 INFO epoch 15 evaluating [time: 0.36s, valid_loss: 4.517976]
+Sun 11 Apr 2021 13:45:55 INFO valid ppl: 91.6498977981405
+Sun 11 Apr 2021 13:45:55 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:56 INFO epoch 16 training [time: 1.08s, train loss: 3.4760]
+Sun 11 Apr 2021 13:45:56 INFO epoch 16 evaluating [time: 0.35s, valid_loss: 4.485015]
+Sun 11 Apr 2021 13:45:56 INFO valid ppl: 88.67829299709717
+Sun 11 Apr 2021 13:45:56 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:57 INFO epoch 17 training [time: 1.19s, train loss: 3.4445]
+Sun 11 Apr 2021 13:45:58 INFO epoch 17 evaluating [time: 0.29s, valid_loss: 4.465607]
+Sun 11 Apr 2021 13:45:58 INFO valid ppl: 86.97383038850113
+Sun 11 Apr 2021 13:45:58 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:45:59 INFO epoch 18 training [time: 1.13s, train loss: 3.4121]
+Sun 11 Apr 2021 13:45:59 INFO epoch 18 evaluating [time: 0.30s, valid_loss: 4.455512]
+Sun 11 Apr 2021 13:45:59 INFO valid ppl: 86.10018453487336
+Sun 11 Apr 2021 13:45:59 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:00 INFO epoch 19 training [time: 1.08s, train loss: 3.3831]
+Sun 11 Apr 2021 13:46:01 INFO epoch 19 evaluating [time: 0.29s, valid_loss: 4.443372]
+Sun 11 Apr 2021 13:46:01 INFO valid ppl: 85.06125399224123
+Sun 11 Apr 2021 13:46:01 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:02 INFO epoch 20 training [time: 1.06s, train loss: 3.3558]
+Sun 11 Apr 2021 13:46:02 INFO epoch 20 evaluating [time: 0.29s, valid_loss: 4.438803]
+Sun 11 Apr 2021 13:46:02 INFO valid ppl: 84.67355967512198
+Sun 11 Apr 2021 13:46:02 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:03 INFO epoch 21 training [time: 1.14s, train loss: 3.3309]
+Sun 11 Apr 2021 13:46:03 INFO epoch 21 evaluating [time: 0.29s, valid_loss: 4.429376]
+Sun 11 Apr 2021 13:46:03 INFO valid ppl: 83.87904863495683
+Sun 11 Apr 2021 13:46:03 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:04 INFO epoch 22 training [time: 1.06s, train loss: 3.3040]
+Sun 11 Apr 2021 13:46:05 INFO epoch 22 evaluating [time: 0.29s, valid_loss: 4.409546]
+Sun 11 Apr 2021 13:46:05 INFO valid ppl: 82.232127369177
+Sun 11 Apr 2021 13:46:05 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:06 INFO epoch 23 training [time: 1.07s, train loss: 3.2798]
+Sun 11 Apr 2021 13:46:06 INFO epoch 23 evaluating [time: 0.35s, valid_loss: 4.410728]
+Sun 11 Apr 2021 13:46:06 INFO valid ppl: 82.32940509135057
+Sun 11 Apr 2021 13:46:07 INFO epoch 24 training [time: 1.07s, train loss: 3.2550]
+Sun 11 Apr 2021 13:46:08 INFO epoch 24 evaluating [time: 0.29s, valid_loss: 4.367911]
+Sun 11 Apr 2021 13:46:08 INFO valid ppl: 78.87865064197278
+Sun 11 Apr 2021 13:46:08 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:09 INFO epoch 25 training [time: 1.07s, train loss: 3.2317]
+Sun 11 Apr 2021 13:46:09 INFO epoch 25 evaluating [time: 0.29s, valid_loss: 4.364034]
+Sun 11 Apr 2021 13:46:09 INFO valid ppl: 78.57348449132438
+Sun 11 Apr 2021 13:46:09 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:10 INFO epoch 26 training [time: 1.12s, train loss: 3.2078]
+Sun 11 Apr 2021 13:46:10 INFO epoch 26 evaluating [time: 0.29s, valid_loss: 4.373085]
+Sun 11 Apr 2021 13:46:10 INFO valid ppl: 79.28782721622912
+Sun 11 Apr 2021 13:46:11 INFO epoch 27 training [time: 1.06s, train loss: 3.1824]
+Sun 11 Apr 2021 13:46:12 INFO epoch 27 evaluating [time: 0.29s, valid_loss: 4.354047]
+Sun 11 Apr 2021 13:46:12 INFO valid ppl: 77.79264435887436
+Sun 11 Apr 2021 13:46:12 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:13 INFO epoch 28 training [time: 1.07s, train loss: 3.1594]
+Sun 11 Apr 2021 13:46:13 INFO epoch 28 evaluating [time: 0.32s, valid_loss: 4.343450]
+Sun 11 Apr 2021 13:46:13 INFO valid ppl: 76.97261284386869
+Sun 11 Apr 2021 13:46:13 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:15 INFO epoch 29 training [time: 1.30s, train loss: 3.1325]
+Sun 11 Apr 2021 13:46:15 INFO epoch 29 evaluating [time: 0.35s, valid_loss: 4.342149]
+Sun 11 Apr 2021 13:46:15 INFO valid ppl: 76.87255458276947
+Sun 11 Apr 2021 13:46:15 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:16 INFO epoch 30 training [time: 1.09s, train loss: 3.1088]
+Sun 11 Apr 2021 13:46:16 INFO epoch 30 evaluating [time: 0.29s, valid_loss: 4.321829]
+Sun 11 Apr 2021 13:46:16 INFO valid ppl: 75.32629136876486
+Sun 11 Apr 2021 13:46:16 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:17 INFO epoch 31 training [time: 1.07s, train loss: 3.0851]
+Sun 11 Apr 2021 13:46:18 INFO epoch 31 evaluating [time: 0.35s, valid_loss: 4.315658]
+Sun 11 Apr 2021 13:46:18 INFO valid ppl: 74.86286775385295
+Sun 11 Apr 2021 13:46:18 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:19 INFO epoch 32 training [time: 1.08s, train loss: 3.0604]
+Sun 11 Apr 2021 13:46:19 INFO epoch 32 evaluating [time: 0.29s, valid_loss: 4.310413]
+Sun 11 Apr 2021 13:46:19 INFO valid ppl: 74.47126515525555
+Sun 11 Apr 2021 13:46:19 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:20 INFO epoch 33 training [time: 1.07s, train loss: 3.0358]
+Sun 11 Apr 2021 13:46:21 INFO epoch 33 evaluating [time: 0.29s, valid_loss: 4.311233]
+Sun 11 Apr 2021 13:46:21 INFO valid ppl: 74.53229815927983
+Sun 11 Apr 2021 13:46:22 INFO epoch 34 training [time: 1.20s, train loss: 3.0093]
+Sun 11 Apr 2021 13:46:22 INFO epoch 34 evaluating [time: 0.29s, valid_loss: 4.317193]
+Sun 11 Apr 2021 13:46:22 INFO valid ppl: 74.97789306810432
+Sun 11 Apr 2021 13:46:23 INFO epoch 35 training [time: 1.12s, train loss: 2.9857]
+Sun 11 Apr 2021 13:46:23 INFO epoch 35 evaluating [time: 0.29s, valid_loss: 4.293910]
+Sun 11 Apr 2021 13:46:23 INFO valid ppl: 73.25235861049404
+Sun 11 Apr 2021 13:46:23 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:25 INFO epoch 36 training [time: 1.11s, train loss: 2.9597]
+Sun 11 Apr 2021 13:46:25 INFO epoch 36 evaluating [time: 0.30s, valid_loss: 4.296787]
+Sun 11 Apr 2021 13:46:25 INFO valid ppl: 73.46339270820806
+Sun 11 Apr 2021 13:46:26 INFO epoch 37 training [time: 1.28s, train loss: 2.9367]
+Sun 11 Apr 2021 13:46:26 INFO epoch 37 evaluating [time: 0.34s, valid_loss: 4.280163]
+Sun 11 Apr 2021 13:46:26 INFO valid ppl: 72.25219777502323
+Sun 11 Apr 2021 13:46:27 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:28 INFO epoch 38 training [time: 1.14s, train loss: 2.9113]
+Sun 11 Apr 2021 13:46:28 INFO epoch 38 evaluating [time: 0.29s, valid_loss: 4.286918]
+Sun 11 Apr 2021 13:46:28 INFO valid ppl: 72.74192567845913
+Sun 11 Apr 2021 13:46:29 INFO epoch 39 training [time: 1.07s, train loss: 2.8884]
+Sun 11 Apr 2021 13:46:29 INFO epoch 39 evaluating [time: 0.37s, valid_loss: 4.318699]
+Sun 11 Apr 2021 13:46:29 INFO valid ppl: 75.09084124911202
+Sun 11 Apr 2021 13:46:30 INFO epoch 40 training [time: 1.06s, train loss: 2.8639]
+Sun 11 Apr 2021 13:46:31 INFO epoch 40 evaluating [time: 0.29s, valid_loss: 4.280973]
+Sun 11 Apr 2021 13:46:31 INFO valid ppl: 72.31074849880329
+Sun 11 Apr 2021 13:46:32 INFO epoch 41 training [time: 1.07s, train loss: 2.8430]
+Sun 11 Apr 2021 13:46:32 INFO epoch 41 evaluating [time: 0.29s, valid_loss: 4.271697]
+Sun 11 Apr 2021 13:46:32 INFO valid ppl: 71.64312095457417
+Sun 11 Apr 2021 13:46:32 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:33 INFO epoch 42 training [time: 1.12s, train loss: 2.8191]
+Sun 11 Apr 2021 13:46:34 INFO epoch 42 evaluating [time: 0.29s, valid_loss: 4.277106]
+Sun 11 Apr 2021 13:46:34 INFO valid ppl: 72.03168550287613
+Sun 11 Apr 2021 13:46:35 INFO epoch 43 training [time: 1.08s, train loss: 2.7991]
+Sun 11 Apr 2021 13:46:35 INFO epoch 43 evaluating [time: 0.29s, valid_loss: 4.266312]
+Sun 11 Apr 2021 13:46:35 INFO valid ppl: 71.25836052106814
+Sun 11 Apr 2021 13:46:35 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:46:36 INFO epoch 44 training [time: 1.07s, train loss: 2.7775]
+Sun 11 Apr 2021 13:46:36 INFO epoch 44 evaluating [time: 0.29s, valid_loss: 4.281027]
+Sun 11 Apr 2021 13:46:36 INFO valid ppl: 72.3146776088258
+Sun 11 Apr 2021 13:46:37 INFO epoch 45 training [time: 1.12s, train loss: 2.7552]
+Sun 11 Apr 2021 13:46:38 INFO epoch 45 evaluating [time: 0.29s, valid_loss: 4.287505]
+Sun 11 Apr 2021 13:46:38 INFO valid ppl: 72.78464764541333
+Sun 11 Apr 2021 13:46:39 INFO epoch 46 training [time: 1.07s, train loss: 2.7366]
+Sun 11 Apr 2021 13:46:39 INFO epoch 46 evaluating [time: 0.29s, valid_loss: 4.289144]
+Sun 11 Apr 2021 13:46:39 INFO valid ppl: 72.90404936703531
+Sun 11 Apr 2021 13:46:40 INFO epoch 47 training [time: 1.08s, train loss: 2.7188]
+Sun 11 Apr 2021 13:46:41 INFO epoch 47 evaluating [time: 0.36s, valid_loss: 4.302683]
+Sun 11 Apr 2021 13:46:41 INFO valid ppl: 73.89782739837867
+Sun 11 Apr 2021 13:46:41 INFO Finished training, best eval result in epoch 43
+Sun 11 Apr 2021 13:46:41 INFO best valid loss: 4.266312152911455, best valid ppl: 71.25836052106814
+Sun 11 Apr 2021 13:46:41 INFO Loading model structure and parameters from saved/RNN-COCO-Apr-11-2021_13-45-26.pth
+Sun 11 Apr 2021 13:48:07 INFO test result: {'bleu-1': 0.9207, 'bleu-2': 0.5489, 'bleu-3': 0.2362, 'bleu-4': 0.0893, 'bleu-5': 0.0359, 'self_bleu-1': 0.9947, 'self_bleu-2': 0.785, 'self_bleu-3': 0.4549, 'self_bleu-4': 0.2167, 'self_bleu-5': 0.0926, 'nll_test': 53.16388765565909}

@@ -19,12 +19,12 @@
 [论文]: https://arxiv.org/abs/2101.02046
 [English Version]: README.md
 
-TextBox是基于Python和PyTorch开发的，用于在一个统一的、全面的、高效的框架中复现和开发文本生成算法，主要面向研究者使用。我们的库包括16种文本生成算法，涵盖了两个主要任务：
+TextBox是基于Python和PyTorch开发的，用于在一个统一的、全面的、高效的框架中复现和开发文本生成算法，主要面向研究者使用。我们的库包括21种文本生成算法，涵盖了两个主要任务：
 
 + 无条件（无输入）生成
-+ 序列到序列（Seq2Seq）生成，包括机器翻译和摘要生成
++ 条件（Seq2Seq）生成，包括机器翻译、文本摘要、对话系统和属性文本生成
 
-我们支持6个文本生成的基准数据集，用户可以使用我们的库重新处理原始数据，或者简单地下载我们团队已经处理好的数据集。
+我们支持9个文本生成的基准数据集，用户可以使用我们的库重新处理原始数据，或者简单地下载我们团队已经处理好的数据集。
 
 <p align="center">
   <img src="asset/framework.png" alt="TextBox v0.1 architecture">
@@ -94,12 +94,10 @@ python run_textbox.py --rnn_type=lstm --max_vocab_size=4000
 如果你想修改模型、数据集或任务类型，只需通过修改相应的命令参数来运行脚本：
 
 ```bash
-python run_textbox.py --model=[model_name] --dataset=[dataset_name] --task_type=[task_name]
+python run_textbox.py --model=[model_name] --dataset=[dataset_name]
 ```
 
 `model_name` 是将被运行的模型，比如RNN或者BART。 我们实现了的模型可以在 [模型](#模型) 中找到。
-
-TextBox 包含了三种主要类型的文本生成，分别是`unconditional`（无条件）, `translation`（翻译） and `summarization`（摘要）。
 
 如果你想要修改数据集，请参考 [数据集](#数据集)。
 
@@ -112,8 +110,7 @@ from textbox.quick_start import run_textbox
 
 run_textbox(config_dict={'model': 'RNN',
                          'dataset': 'COCO',
-                         'data_path': './dataset',
-                         'task_type': 'unconditional'})
+                         'data_path': './dataset')
 ```
 
 这将在COCO数据集上进行RNN模型的训练和测试。
@@ -129,9 +126,23 @@ TextBox支持部分预训练语言模型进行文本生成任务，下面以GPT-
 2. 下载好模型之后，直接通过脚本运行：
 
 ```bash
-python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
+python run_textbox.py --model=GPT2 --dataset=COCO \
                       --pretrained_model_path=pretrained_model/gpt2
 ```
+
+### 使用分布式数据并行
+
+TextBox支持方便地使用多块GPU训练模型，你不需要修改模型，只需要运行脚本：
+
+```bash
+python -m torch.distributed.launch --nproc_per_node=[gpu_num] \
+       run_textbox.py --model=[model_name] \
+       --dataset=[dataset_name] --gpu_id=[gpu_ids] --DDP=True
+```
+
+`gpu_num`是你想用来训练的GPU数量（例如4）， `gpu_ids`是你使用的GPU ID列表（例如0,1,2,3）.
+
+注意：我们仅支持使用分布式数据并行训练端到端的模型，我们将在未来支持非端到端的模型，例如GAN。
 
 ## 结构
 
@@ -139,20 +150,18 @@ python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
 
 ### 模型
 
-我们总共实现了包括无条件生成和sequence-to-sequence生成在内的16个文本生成模型，其中基础的RNN语言模型用于无条件文本生成，另外的15个模型可以参照下表：
+我们总共实现了包括无条件生成和条件生成在内的21个文本生成模型，可以参照下表：
 
 <table align="center">
 <thead>
 <tr>
 <th align="center">类别</th>
-<th align="center">任务</th>
 <th align="center">模型</th>
 <th align="center">引用</th>
 </tr>
 </thead>
 <tbody><tr>
-<td align="center" rowspan="3"><strong>VAE</strong></td>
-<td align="center" rowspan="9"><strong>Unconditional</strong></td>
+<td align="center" rowspan="4"><strong>VAE</strong></td>
 <td align="center">LSTMVAE</td>
 <td align="center"><a href="https://arxiv.org/abs/1511.06349">(Bowman et al., 2016)</a></td>
 </tr>
@@ -163,6 +172,10 @@ python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
 <tr>
 <td align="center">HybridVAE</td>
 <td align="center"><a href="https://arxiv.org/abs/1702.02390">(Semeniuta et al., 2017)</a></td>
+</tr>
+<tr>
+<td align="center">CVAE</td>
+<td align="center"><a href="https://www.aclweb.org/anthology/D18-1423.pdf">(Li et al., 2018)</a></td>
 </tr>
 <tr>
 <td align="center" rowspan="6"><strong>GAN</strong></td>
@@ -190,18 +203,9 @@ python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
 <td align="center"><a href="https://arxiv.org/abs/1801.07736">(Fedus et al., 2018)</a></td>
 </tr>
 <tr>
-<td align="center" rowspan="6"><strong>Seq2Seq</strong></td>
-<td align="center" rowspan="6"><strong>Translation<br></b><br></b>Summarization</strong></td>
-<td align="center">RNN</td>
-<td align="center"><a href="https://arxiv.org/abs/1409.3215">(Sutskever et al., 2014)</a></td>
-</tr>
-<tr>
-<td align="center">Transformer</td>
-<td align="center"><a href="https://arxiv.org/abs/1706.03762">(Vaswani et al., 2017b)</a></td>
-</tr>
-<tr>
+<td align="center" rowspan="6"><strong>PLM</strong></td>
 <td align="center">GPT-2</td>
-<td align="center"><a href="https://d4mucfpksywv.cloudfront.net/better-language-models/language-models.pdf">(Radford et al.)</a></td>
+<td align="center"><a href="https://d4mucfpksywv.cloudfront.net/better-language-models/language-models.pdf">(Radford et al., 2019)</a></td>
 </tr>
 <tr>
 <td align="center">XLNet</td>
@@ -215,13 +219,42 @@ python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
 <td align="center">BART</td>
 <td align="center"><a href="https://arxiv.org/abs/1910.13461">(Lewis et al., 2020)</a></td>
 </tr>
+<tr>
+<td align="center">T5</td>
+<td align="center"><a href="https://arxiv.org/abs/1910.10683">(Raffel et al., 2020)</a></td>
+</tr>
+<tr>
+<td align="center">ProphetNet</td>
+<td align="center"><a href="https://arxiv.org/abs/2001.04063">(Qi et al., 2020)</a></td>
+</tr>
+<td align="center" rowspan="5"><strong>Seq2Seq</strong></td>
+<td align="center">RNN</td>
+<td align="center"><a href="https://arxiv.org/abs/1409.3215">(Sutskever et al., 2014)</a></td>
+</tr>
+<tr>
+<td align="center">Transformer</td>
+<td align="center"><a href="https://arxiv.org/abs/1706.03762">(Vaswani et al., 2017b)</a></td>
+</tr>
+<tr>
+<td align="center">Context2Seq</td>
+<td align="center"><a href="https://arxiv.org/abs/1611.09900">(Tang et al., 2016)</a></td>
+</tr>
+<tr>
+<td align="center">Attr2Seq</td>
+<td align="center"><a href="https://www.aclweb.org/anthology/E17-1059/">(Dong et al., 2017)</a></td>
+</tr>
+<tr>
+<td align="center">HRED</td>
+<td align="center"><a href="https://arxiv.org/abs/1507.04808">(Serban et al., 2016)</a></td>
+</tr>
 </tbody></table>
+
 
 ### 数据集
 
-我们总共收集了6个在上述提及的3类文本生成任务中常用的数据集，这些数据集可以通过[Google Drive](https://drive.google.com/drive/folders/1iNRErGM3YRDF3hjY8DMpWaQo-prmUtNX?usp=sharing) 和 [百度网盘](https://pan.baidu.com/s/1upHl8SXGNjZ2LCfV-L164Q) (密码: lwy6)来下载，数据集中包含原始数据以及处理过的数据。 
+我们总共收集了9个在上述提及的6类文本生成任务中常用的数据集，这些数据集可以通过[Google Drive](https://drive.google.com/drive/folders/1iNRErGM3YRDF3hjY8DMpWaQo-prmUtNX?usp=sharing) 和 [百度网盘](https://pan.baidu.com/s/1upHl8SXGNjZ2LCfV-L164Q) (密码: lwy6)来下载，数据集中包含原始数据以及处理过的数据。 
 
-在下表我们列出了6个数据集：
+在下表我们列出了9个数据集：
 
 <table align="center">
 <thead>
@@ -251,8 +284,21 @@ python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
 <td align="center"><strong>Summarization</strong></td>
 <td align="center">GigaWord</td>
 </tr>
+<tr>
+<td align="center"><strong>Dialog</strong></td>
+<td align="center">Persona Chat</td>
+</tr>
+<tr>
+<td align="center"><strong>Attribute to Text</strong></td>
+<td align="center">Amazon Electronic</td>
+</tr>
+<tr>
+<td align="center"><strong>Poem Generation</strong></td>
+<td align="center">Chinese Classical Poetry Corpus</td>
+</tr>
 </tbody>
 </table>
+
 
 下载好的数据集需要放到 `dataset` 目录下面，和我们项目中的结构类似。
 
@@ -268,7 +314,7 @@ python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
 
 3. 对于无条件文本生成，如果你设置了 `"by_ratio"` ，请将数据集命名为 `corpus.txt` ，如果你设置了  `"load_split"` ，请将数据集命名为 `train.txt, valid.txt, dev.txt` 。
 
-   对于sequence-to-sequence文本生成，我们只支持划分好的数据集。请将数据集命名为 `train.[xx/yy], valid.[xx/yy], dev.[xx/yy]` ， `xx` 或者 `yy` 是源文件或目标文件的后缀，应与YAML文件中的 `source_suffix` 和 `target_suffix` 保持一致。
+   对于有条件文本生成，请将数据集命名为 `train.[xx/yy], valid.[xx/yy], dev.[xx/yy]` ， `xx` 或者 `yy` 是源文件或目标文件的后缀，应与YAML文件中的 `source_suffix` 和 `target_suffix` 保持一致。
 
 ## 实验结果
 
@@ -400,6 +446,72 @@ python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
 
 ### 序列到序列（seq2seq）文本生成
 
+#### GigaWord （摘要）
+
+使用beam搜索在测试集上的ROUGE度量（beam搜索大小 `beam_size` 设置为5）:
+
+<table align="center">
+<thead>
+<tr>
+<th align="center">Model</th>
+<th align="center">ROUGE-1</th>
+<th align="center">ROUGE-2</th>
+<th align="center">ROUGE-L</th>
+<th align="center">ROUGE-W</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center"><strong>RNN with Attention</strong></td>
+<td align="center">36.32</td>
+<td align="center">17.63</td>
+<td align="center">38.36</td>
+<td align="center">25.08</td>
+</tr>
+<tr>
+<td align="center"><strong>Transformer</strong></td>
+<td align="center">36.21</td>
+<td align="center">17.64</td>
+<td align="center">38.10</td>
+<td align="center">24.89</td>
+</tr>
+<tr>
+<td align="center"><strong>BART</strong></td>
+<td align="center">39.34</td>
+<td align="center">20.07</td>
+<td align="center">41.25</td>
+<td align="center">27.13</td>
+</tr>
+<tr>
+<td align="center"><strong>BERT2BERT</strong></td>
+<td align="center">38.16</td>
+<td align="center">18.89</td>
+<td align="center">40.06</td>
+<td align="center">26.21</td>
+</tr>
+</tbody></table>
+
+部分生成实例展示：
+
+<table align="center">
+<tbody><tr>
+<td align="center"><b>文章</b></td>
+<td>japan 's nec corp. and computer corp. of the united states said wednesday they had agreed to join forces in supercomputer sales .
+</td>
+</tr>
+<tr>
+<td align="center"><b>真实摘要</b></td>
+<td>nec in computer sales tie-up</td>
+</tr>
+<tr>
+<td align="center"><b>RNN with Attention</b></td>
+<td>nec computer corp .</td>
+</tr>
+<tr>
+<td align="center"><b>Transformer</b></td>
+<td>nec computer to join forces in chip sales</td>
+</tr>
+</tbody></table>
+
 #### IWSLT2014 German-English（翻译）
 
 测试集上的BLEU度量有三种解码策略：top-k采样、贪婪搜索和beam搜索（beam搜索大小 `beam_size` 设置为5）:
@@ -475,8 +587,6 @@ python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
 <td align="center">21.07</td>
 </tr>
 </tbody></table>
-
-
 部分生成实例展示：
 
 <table align="center">
@@ -498,77 +608,11 @@ python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
 </tr>
 </tbody></table>
 
-#### GigaWord （摘要）
-
-使用beam搜索在测试集上的ROUGE度量（beam搜索大小 `beam_size` 设置为5）:
-
-<table align="center">
-<thead>
-<tr>
-<th align="center">Model</th>
-<th align="center">ROUGE-1</th>
-<th align="center">ROUGE-2</th>
-<th align="center">ROUGE-L</th>
-<th align="center">ROUGE-W</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center"><strong>RNN with Attention</strong></td>
-<td align="center">36.32</td>
-<td align="center">17.63</td>
-<td align="center">38.36</td>
-<td align="center">25.08</td>
-</tr>
-<tr>
-<td align="center"><strong>Transformer</strong></td>
-<td align="center">36.21</td>
-<td align="center">17.64</td>
-<td align="center">38.10</td>
-<td align="center">24.89</td>
-</tr>
-<tr>
-<td align="center"><strong>BART</strong></td>
-<td align="center">39.34</td>
-<td align="center">20.07</td>
-<td align="center">41.25</td>
-<td align="center">27.13</td>
-</tr>
-<tr>
-<td align="center"><strong>BERT2BERT</strong></td>
-<td align="center">38.16</td>
-<td align="center">18.89</td>
-<td align="center">40.06</td>
-<td align="center">26.21</td>
-</tr>
-</tbody></table>
-
-
-部分生成实例展示：
-
-<table align="center">
-<tbody><tr>
-<td align="center"><b>文章</b></td>
-<td>japan 's nec corp. and computer corp. of the united states said wednesday they had agreed to join forces in supercomputer sales .
-</td>
-</tr>
-<tr>
-<td align="center"><b>真实摘要</b></td>
-<td>nec in computer sales tie-up</td>
-</tr>
-<tr>
-<td align="center"><b>RNN with Attention</b></td>
-<td>nec computer corp .</td>
-</tr>
-<tr>
-<td align="center"><b>Transformer</b></td>
-<td>nec computer to join forces in chip sales</td>
-</tr>
-</tbody></table>
-
 ## TextBox重要发布
 
 | 发行版本 |    日期    |   特点    |
 | :------: | :--------: | :-----------: |
+| v0.2.1 | 15/04/2021 | TextBox |
 |  v0.1.5  | 2021/01/11 | Basic TextBox |
 
 ## 贡献
@@ -584,7 +628,7 @@ python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
 如果你觉得TextBox对你的科研工作有帮助，请引用我们的 [论文](https://arxiv.org/abs/2101.02046):
 
 ```
-@article{recbole,
+@article{textbox,
     title={TextBox: A Unified, Modularized, and Extensible Framework for Text Generation},
     author={Junyi Li, Tianyi Tang, Gaole He, Jinhao Jiang, Xiaoxuan Hu, Puzhao Xie, Wayne Xin Zhao, Ji-Rong Wen},
     year={2021},

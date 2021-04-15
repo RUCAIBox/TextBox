@@ -46,7 +46,7 @@ def create_dataset(config):
         raise NotImplementedError("No such dataset for TASK_TYPE: {}".format(task_type))
 
 
-def data_preparation(config, save=False):
+def data_preparation(config, test_sentence=None, save=False):
     """Split the dataset by :attr:`config['split_strategy']` and call :func:`dataloader_construct` to create
     corresponding dataloader.
 
@@ -65,7 +65,20 @@ def data_preparation(config, save=False):
 
     builded_datasets = dataset.build()
     train_dataset, valid_dataset, test_dataset = builded_datasets
-    phases = ['train', 'valid', 'test']
+
+    if test_sentence is not None:
+        test_dataset = build_from_sentence(test_dataset, test_sentence, config)
+
+    test_data = dataloader_construct(
+        name='test',
+        config=config,
+        dataset=test_dataset,
+        batch_size=config['eval_batch_size'],
+        drop_last=False,
+    )
+
+    if test_sentence is not None:
+        return test_data
 
     train_data = dataloader_construct(
         name='train',
@@ -83,14 +96,6 @@ def data_preparation(config, save=False):
         batch_size=config['train_batch_size'],
         shuffle=True,
         DDP=True
-    )
-
-    test_data = dataloader_construct(
-        name='test',
-        config=config,
-        dataset=test_dataset,
-        batch_size=config['eval_batch_size'],
-        drop_last=False,
     )
 
     return train_data, valid_data, test_data
@@ -144,6 +149,18 @@ def get_data_loader(config):
         return MultipleSentenceDataLoader
     else:
         raise NotImplementedError("No such data loader for TASK_TYPE: {}".format(task_type))
+
+
+def build_from_sentence(test_dataset, test_sentence, config):
+    test_sentence = tokenize(
+        test_sentence, config['tokenize_strategy'],
+        config['source_language'] if 'source_language' in config else config['language']
+    )
+    if 'source_text' in test_dataset:
+        test_dataset['source_text'] = [test_sentence]
+    else:
+        test_dataset['text_data'] = [test_sentence]
+    return test_dataset
 
 
 def tokenize(data, tokenize_strategy, language):

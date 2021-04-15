@@ -417,7 +417,7 @@ python -m torch.distributed.launch --nproc_per_node=[gpu_num] \
 |  **MaskGAN**  | 509.58 | 56.61  | 21.41  |  4.49  |  0.86  |  92.09  |  77.88  |  59.62  |  42.36  |
 |   **GPT-2**   | 348.67 | 72.52  | 41.75  | 15.40  |  4.22  |  86.21  |  58.26  |  30.03  |  12.56  |
 
-部分生成实例展示（最大长度 `max_length` 为100）：
+部分生成实例展示（最大长度 `max_length`设置为100 ）：
 
 <table align="center">
 <thead>

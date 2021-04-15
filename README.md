@@ -130,7 +130,7 @@ python run_textbox.py --model=GPT2 --dataset=COCO \
                       --pretrained_model_path=pretrained_model/gpt2
 ```
 
-### **Train with Distributed Data Parallel**
+### **Train with Distributed Data Parallel (DDP)**
 
 TextBox supports to train models with multiple GPUs conveniently. You don't need to modify the model, just run the following command:
 
@@ -418,7 +418,7 @@ NLL, BLEU and SBLEU on test dataset:
 |  **MaskGAN**  | 509.58 | 56.61  | 21.41  |  4.49  |  0.86  |  92.09  |  77.88  |  59.62  |  42.36  |
 |   **GPT-2**   | 348.67 | 72.52  | 41.75  | 15.40  |  4.22  |  86.21  |  58.26  |  30.03  |  12.56  |
 
-Part of generated examples (with `max_length` 100):
+Part of generated examples (with `max_length=100`):
 
 <table align="center">
 <thead>
@@ -445,7 +445,7 @@ Part of generated examples (with `max_length` 100):
 
 #### GigaWord (Summarization)
 
-ROUGE metric on test dataset using beam search (with `beam_size` 5):
+ROUGE metric on test dataset using beam search (with `beam_size=5`):
 
 <table align="center">
 <thead>
@@ -534,7 +534,7 @@ Part of generated examples:
 
 #### IWSLT2014 German-English (Translation)
 
-BLEU metric on test dataset with three decoding strategies: top-k sampling, greedy search and beam search (with `beam_size` 5):
+BLEU metric on test dataset with three decoding strategies: top-k sampling, greedy search and beam search (with `beam_size=5`):
 
 <table align="center">
 <thead>
@@ -630,7 +630,7 @@ Part of generated examples:
 
 #### Persona Chat (Dialogue)
 
-BLEU and distinct metrics on test dataset using beam search (with `beam_size` 5):
+BLEU and distinct metrics on test dataset using beam search (with `beam_size=5`):
 
 <table align="center">
 <thead>
@@ -675,7 +675,7 @@ BLEU and distinct metrics on test dataset using beam search (with `beam_size` 5)
 
 #### Amazon Electronic (Attribute to text)
 
-BLEU and distinct metrics on test dataset using beam search (with `beam_size` 5):
+BLEU and distinct metrics on test dataset using beam search (with `beam_size=5`):
 
 <table align="center">
 <thead>

@@ -26,15 +26,13 @@ class RougeEvaluator():
     r"""Rouge Evaluator. Now we support rouge-based ngram metrics which conains rouge-n, rouge-l and rouge-w.
     """
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.metrics = config['metrics']
-        self.n_grams = config["n_grams"]
+    def __init__(self, max_tar_length):
+        self.n_grams = [1, 2, 3, 4]
         self.evaluator = rouge.Rouge(
             metrics=["rouge-n", "rouge-l", "rouge-w"],
             max_n=2,
             limit_length=True,
-            length_limit=config["max_target_length"],
+            length_limit=max_tar_length,
             length_limit_type="words",
             apply_avg=True,
             apply_best=False,

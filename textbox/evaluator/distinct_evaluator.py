@@ -17,14 +17,12 @@ textbox.evaluator.distinct_evaluator
 #######################################
 """
 
-import numpy as np
-
 class DistinctEvaluator():
     r"""Distinct Evaluator. Now, we support metrics `'distinct'`.
     """
 
-    def __init__(self, config):
-        self.n_grams = config['n_grams']
+    def __init__(self):
+        self.n_grams = [1, 2, 3, 4]
     
     def evaluate(self, generate_corpus, reference_corpus):
         r"""get metrics result

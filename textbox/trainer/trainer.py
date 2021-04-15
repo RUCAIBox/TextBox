@@ -28,10 +28,8 @@ from time import time
 from logging import getLogger
 
 from textbox.module.Optimizer.optim import ScheduledOptim
-# from textbox.evaluator import NgramEvaluator, TranslationEvaluator, SummarizationEvaluator, DialogEvaluator
-from textbox.evaluator import BleuEvaluator, SelfBleuEvaluator, RougeEvaluator, DistinctEvaluator
+from textbox.evaluator import BaseEvaluator
 from textbox.utils import ensure_dir, early_stopping
-
 
 class AbstractTrainer(object):
     r"""Trainer Class is used to manage the training and evaluation processes of text generation system models.
@@ -101,27 +99,7 @@ class Trainer(AbstractTrainer):
         self.train_loss_dict = dict()
         self.optimizer = self._build_optimizer()
         
-        #self.task_type = config['task_type'].lower()
-
-        self.evaluator = config['evaluator'].lower()
-        if self.evaluator == "bleu":
-            self.evaluator = BleuEvaluator(config)
-        elif self.evaluator == "self-bleu":
-            self.evaluator = SelfBleuEvaluator(config)
-        elif self.evaluator == "rouge":
-            self.evaluator = RougeEvaluator(config)
-        elif self.evaluator == "distinct":
-            self.evaluator = DistinctEvaluator(config)
-        else:
-            raise ValueError("evaluator {} can't be found. (evaluator should be in [\"blue\", \"self-blue\", \"rouge\", \"distinct\"]).".format(config['evaluator'].lower()))
-        # if self.task_type in ["translation", "poem"]:
-        #     self.evaluator = TranslationEvaluator(config)
-        # elif self.task_type == "summarization":
-        #     self.evaluator = SummarizationEvaluator(config)
-        # elif self.task_type in ["multi_dialog", "attribute"]:
-        #     self.evaluator = DialogEvaluator(config)
-        # else:
-        #     self.evaluator = NgramEvaluator(config)
+        self.evaluator = BaseEvaluator(config)
 
         self.is_logger = (self.DDP and torch.distributed.get_rank() == 0) or not self.DDP
         self.item_tensor = None

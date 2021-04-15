@@ -29,7 +29,7 @@ def bleu_(generate_corpus, reference_corpus, n_grams, get_avg=False):
     Returns:
         List or (List, float): the BLEU results and optinal average BLEU score
     """
-
+    
     weight = [0] * max(n_grams)
     weights = {}
     for n_gram in n_grams:

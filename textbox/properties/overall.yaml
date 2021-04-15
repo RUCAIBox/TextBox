@@ -16,7 +16,7 @@ learner: adam
 learning_rate: 0.001
 eval_step: 1
 stopping_step: 3
-grad_clip: 5.0
+grad_clip: 1.0
 
 # evaluation settings
 metrics: ["bleu", "self_bleu"]

@@ -28,7 +28,7 @@ class ProphetNet(Seq2SeqGenerator):
 
         self.pretrained_model_path = config['pretrained_model_path']
         self.config = ProphetNetConfig.from_pretrained(self.pretrained_model_path)
-        self.tokenizer = ProphetNetTokenizer.from_pretrained(self.pretrained_model_path, add_prefix_space=True)
+        self.tokenizer = ProphetNetTokenizer.from_pretrained(self.pretrained_model_path)
         self.model = ProphetNetForConditionalGeneration.from_pretrained(self.pretrained_model_path, config=self.config)
 
         self.padding_token_idx = self.tokenizer.pad_token_id

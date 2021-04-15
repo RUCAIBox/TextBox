@@ -29,7 +29,7 @@ class BART(Seq2SeqGenerator):
         self.max_target_length = dataset.max_target_length
 
         self.pretrained_model_path = config['pretrained_model_path']
-        self.tokenizer = BartTokenizer.from_pretrained(self.pretrained_model_path, add_prefix_space=True)
+        self.tokenizer = BartTokenizer.from_pretrained(self.pretrained_model_path)
         self.configuration = BartConfig.from_pretrained(self.pretrained_model_path)
 
         self.model = BartForConditionalGeneration.from_pretrained(self.pretrained_model_path, config=self.configuration)

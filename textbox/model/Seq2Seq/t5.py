@@ -26,7 +26,7 @@ class T5(Seq2SeqGenerator):
         self.max_target_length = dataset.max_target_length
 
         self.pretrained_model_path = config['pretrained_model_path']
-        self.tokenizer = T5Tokenizer.from_pretrained(self.pretrained_model_path, add_prefix_space=True)
+        self.tokenizer = T5Tokenizer.from_pretrained(self.pretrained_model_path)
         self.configuration = T5Config.from_pretrained(self.pretrained_model_path)
 
         self.model = T5ForConditionalGeneration.from_pretrained(self.pretrained_model_path, config=self.configuration)

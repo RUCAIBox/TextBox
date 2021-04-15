@@ -33,7 +33,6 @@ We provide the support for 9 benchmark text generation datasets. A user can appl
   <b>Figure</b>: The Overall Architecture of TextBox
 </p>
 
-
 ## Feature
 
 - **Unified and modularized framework.** TextBox is built upon PyTorch and designed to be highly modularized, by decoupling diverse models into a set of highly reusable modules.
@@ -486,8 +485,19 @@ ROUGE metric on test dataset using beam search (with `beam_size` 5):
 <td align="center">40.06</td>
 <td align="center">26.21</td>
 </tr>
+<td align="center"><strong>ProphetNet</strong></td>
+<td align="center">38.49</td>
+<td align="center">18.41</td>
+<td align="center">39.84</td>
+<td align="center">26.12</td>
+</tr>
+<td align="center"><strong>T5</strong></td>
+<td align="center">38.83</td>
+<td align="center">19.68</td>
+<td align="center">40.76</td>
+<td align="center">26.73</td>
+</tr>
 </tbody></table>
-
 Part of generated examples:
 
 <table align="center">
@@ -507,6 +517,18 @@ Part of generated examples:
 <tr>
 <td align="center"><b>Transformer</b></td>
 <td>nec computer to join forces in chip sales</td>
+</tr>
+<td align="center"><b>BART</b></td>
+<td>nec computer corp.</td>
+</tr>
+<td align="center"><b>BERT2BERT</b></td>
+<td>nec computer form alliance for supercomputer sales</td>
+</tr>
+<td align="center"><b>ProphetNet</b></td>
+<td>nec computer to join forces in supercomputer sales</td>
+</tr>
+<td align="center"><b>T5</b></td>
+<td>nec computer to join forces in supercomputer sales</td>
 </tr>
 </tbody></table>
 
@@ -606,6 +628,87 @@ Part of generated examples:
 </tr>
 </tbody></table>
 
+#### Persona Chat (Dialogue)
+
+BLEU and distinct metrics on test dataset using beam search (with `beam_size` 5):
+
+<table align="center">
+<thead>
+<tr>
+<th align="center">Model</th>
+<th align="center">Distinct-1</th>
+<th align="center">Distinct-2</th>
+<th align="center">BLEU-1</th>
+<th align="center">BLEU-2</th>
+<th align="center">BLEU-3</th>
+<th align="center">BLEU-4</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center"><strong>RNN with Attention</strong></td>
+<td align="center">0.24</td>
+<td align="center">0.72</td>
+<td align="center">17.51</td>
+<td align="center">4.65</td>
+<td align="center">2.11</td>
+<td align="center">1.47</td>
+</tr>
+<tr>
+<td align="center"><strong>Transformer</strong></td>
+<td align="center">0.38</td>
+<td align="center">2.28</td>
+<td align="center">17.29</td>
+<td align="center">4.85</td>
+<td align="center">2.32</td>
+<td align="center">1.65</td>
+</tr>
+<tr>
+<td align="center"><strong>HRED</strong></td>
+<td align="center">0.22</td>
+<td align="center">0.63</td>
+<td align="center">17.29</td>
+<td align="center">4.72</td>
+<td align="center">2.20</td>
+<td align="center">1.60</td>
+</tr>
+</tbody></table>
+
+#### Amazon Electronic (Attribute to text)
+
+BLEU and distinct metrics on test dataset using beam search (with `beam_size` 5):
+
+<table align="center">
+<thead>
+<tr>
+<th align="center">Model</th>
+<th align="center">Distinct-1</th>
+<th align="center">Distinct-2</th>
+<th align="center">BLEU-1</th>
+<th align="center">BLEU-2</th>
+<th align="center">BLEU-3</th>
+<th align="center">BLEU-4</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center"><strong>Context2Seq</strong></td>
+<td align="center">0.07</td>
+<td align="center">0.39</td>
+<td align="center">17.21</td>
+<td align="center">2.80</td>
+<td align="center">0.83</td>
+<td align="center">0.43</td>
+</tr>
+<tr>
+<td align="center"><strong>Attr2Seq</strong></td>
+<td align="center">0.14</td>
+<td align="center">2.81</td>
+<td align="center">17.14</td>
+<td align="center">2.81</td>
+<td align="center">0.87</td>
+<td align="center">0.48</td>
+</tr>
+</tbody></table>
+
 ## Releases
 
 | Releases |    Date    |   Features    |
@@ -620,6 +723,8 @@ Please let us know if you encounter a bug or have any suggestions by [filing an 
 We welcome all contributions from bug fixes to new features and extensions.
 
 We expect all contributions discussed in the issue tracker and going through PRs.
+
+We thank [@LucasTsui0725](https://github.com/LucasTsui0725/) for contributing HRED model and [@Richar-Du](https://github.com/Richar-Du/) for CVAE model.
 
 ## Reference
 

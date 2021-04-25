@@ -28,7 +28,7 @@ from time import time
 from logging import getLogger
 
 from textbox.module.Optimizer.optim import ScheduledOptim
-from textbox.evaluator import BaseEvaluator
+from textbox.evaluator import BaseEvaluator, evaluator_list
 from textbox.utils import ensure_dir, early_stopping
 
 class AbstractTrainer(object):
@@ -99,12 +99,30 @@ class Trainer(AbstractTrainer):
         self.train_loss_dict = dict()
         self.optimizer = self._build_optimizer()
         
-        self.evaluator = BaseEvaluator(config)
+        self.metrics = config["metrics"]
+        self._check_metrics()
+        self.evaluator = BaseEvaluator(config, self.metrics)
 
         self.is_logger = (self.DDP and torch.distributed.get_rank() == 0) or not self.DDP
         self.item_tensor = None
         self.tot_item_num = None
         self.iid_field = config['ITEM_ID_FIELD']
+    
+    def _check_metrics(self):
+        r"""check the correct of the setting"""
+        if isinstance(self.metrics, (str, list)):
+            if isinstance(self.metrics, str):
+                if self.metrics[0] == '[':
+                    self.metrics = self.metrics[1: ]
+                if self.metrics[-1] == ']':  
+                    self.metrics = self.metrics[: -1]
+                self.metrics = self.metrics.strip().split(",")
+            self.metrics = [metric.lower() for metric in self.metrics]
+            for metric in self.metrics:
+                if metric not in evaluator_list:
+                    raise ValueError("evaluator {} can't be found. ".format(metric) + "(evaluator should be in [" + ", ".join(evaluator_list) + "])")
+        else:
+            raise TypeError('evaluator must be a string or list')
 
     def _build_optimizer(self):
         r"""Init the Optimizer
@@ -406,8 +424,8 @@ class Trainer(AbstractTrainer):
         self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
-        result['nll_test'] = self._evaluate_nll_test(eval_data)
-
+        if "nll_test" in self.metrics and self.config['task_type'].lower() == "unconditional":
+            result['nll_test'] = self._evaluate_nll_test(eval_data)
         return result
 
     def plot_train_loss(self, show=True, save_path=None):

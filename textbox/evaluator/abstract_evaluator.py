@@ -2,11 +2,16 @@
 # @Author : Junyi Li, Gaole He
 # @Email  : lijunyi@ruc.edu.cn
 
+# UPDATE
+# @Time   : 2021/4/12
+# @Author : Lai Xu
+# @Email  : tsui_lai@163.com
+
 """
 textbox.evaluator.abstract_evaluator
 #####################################
 """
-
+import numpy as np
 
 class AbstractEvaluator(object):
     """:class:`AbstractEvaluator` is an abstract object which supports
@@ -21,25 +26,27 @@ class AbstractEvaluator(object):
 
     """
 
-    def __init__(self, config):
-        self.metrics = config['metrics']
+    def evaluate(self, generate_corpus, reference_corpus):
+        r"""get metrics result
 
-    def _check_args(self):
-        """check the correct of the setting"""
-        raise NotImplementedError
+        Args:
+            generate_corpus: the generated corpus
+            reference_corpus: the referenced corpus
+        
+        Returns:
+            dict: such as ``{metric-1: xxx}``
+        """
+        # get metrics
+        metric_dict = {}
+        info_dict = self._calc_metrics_info(
+            generate_corpus=generate_corpus, reference_corpus=reference_corpus
+        )
+        for key in info_dict:
+            tp_list = info_dict[key]
+            tp_val = np.mean(tp_list)
+            metric_dict[key] = round(tp_val, 4)
+        return metric_dict
 
-    def collect(self):
-        """get the intermediate results for each batch, it is called at the end of each batch"""
-        raise NotImplementedError
-
-    def evaluate(self):
-        """calculate the metrics of all batches, it is called at the end of each epoch"""
-        raise NotImplementedError
-
-    def metrics_info(self):
-        """get metrics result"""
-        raise NotImplementedError
-
-    def _calculate_metrics(self):
+    def _calc_metrics_info(self):
         """ to calculate the metrics"""
         raise NotImplementedError

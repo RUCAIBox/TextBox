@@ -16,6 +16,7 @@
 textbox.evaluator.rouge_evaluator
 #################################
 """
+
 import os
 import tempfile
 import logging
@@ -25,7 +26,7 @@ from pyrouge import Rouge155
 from collections import defaultdict
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 
-class RougeEvaluator(AbstractEvaluator, Rouge155):
+class RougeEvaluator(AbstractEvaluator):
     r"""Rouge Evaluator. Now we support rouge-based ngram metrics which conains rouge-n, rouge-l and rouge-w.
     """
     def __init__(self):
@@ -66,7 +67,7 @@ class RougeEvaluator(AbstractEvaluator, Rouge155):
 
         s = settings.Settings()
         s._load()
-        with tempfile.TemporaryDirectory() as dirpath:  # generate virtual route
+        with tempfile.TemporaryDirectory() as dirpath: 
             sys_root, model_root = [os.path.join(dirpath, _) for _ in ["system", "model"]]
             utils.mkdirs([sys_root, model_root])
             ignored = utils.split_files(model_path=ref_path,

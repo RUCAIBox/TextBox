@@ -11,6 +11,7 @@
 textbox.evaluator.abstract_evaluator
 #####################################
 """
+
 import numpy as np
 
 class AbstractEvaluator(object):

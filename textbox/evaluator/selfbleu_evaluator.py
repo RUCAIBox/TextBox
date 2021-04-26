@@ -16,6 +16,7 @@
 textbox.evaluator.selfbleu_evaluator
 #######################################
 """
+
 import numpy as np
 from fast_bleu import SelfBLEU
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator

@@ -35,8 +35,6 @@ class CIDErEvaluator(AbstractEvaluator):
         return res
     
     def _generate_ngrams(self, input_sentence):
-        r"""
-        """
         ngrams_counts = defaultdict(int)
         for n_gram in range(1, max(self.n_grams) + 1):
             for index in range(len(input_sentence) - n_gram + 1):
@@ -45,8 +43,6 @@ class CIDErEvaluator(AbstractEvaluator):
         return ngrams_counts
     
     def _generate_ngrams_count(self):
-        r"""
-        """
         for i in range(self.total_num):
             gen_result = self._generate_ngrams(self.generate_corpus[i])
             ref_result = [self._generate_ngrams(reference_sentence) for reference_sentence in self.reference_corpus[i]]
@@ -54,7 +50,7 @@ class CIDErEvaluator(AbstractEvaluator):
             self.ref_corpus_count.append(ref_result)
     
     def _count_document_times(self):
-        r"""
+        r"""calculate df
         """
         for gen in self.gen_corpus_count:
             for ngram in set([ngram for (ngram, count) in gen.items()]):

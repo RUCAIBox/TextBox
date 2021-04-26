@@ -119,7 +119,7 @@ class AbstractDataLoader(object):
 
     def __next__(self):
         if (self.drop_last
-            and self.std_pr + self.batch_size > self.pr_end) or (not self.drop_last and self.pr > self.pr_end):
+            and self.std_pr + self.batch_size >= self.pr_end) or (not self.drop_last and self.pr >= self.pr_end):
             if (self.DDP == True):
                 self.pr = self.batch_size // torch.distributed.get_world_size() * torch.distributed.get_rank()
             else:

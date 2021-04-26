@@ -16,84 +16,103 @@
 textbox.evaluator.rouge_evaluator
 #################################
 """
+import os
+import tempfile
+import logging
+from files2rouge import settings
+from files2rouge import utils
+from pyrouge import Rouge155
+from collections import defaultdict
+from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 
-import numpy as np
-import rouge
-
-rouge_metrics = ["rouge-1", "rouge-2", "rouge-l", "rouge-w"]
-
-class RougeEvaluator():
+class RougeEvaluator(AbstractEvaluator, Rouge155):
     r"""Rouge Evaluator. Now we support rouge-based ngram metrics which conains rouge-n, rouge-l and rouge-w.
     """
+    def __init__(self):
+        #"-c 95 -r 1000 -n 2 -w 1.2 -a"
+        self.rouge_args =[
+                '-c', 95,
+                '-r', 1000,
+                '-n', 2,
+                '-w', 1.2,
+                '-a'
+                ]
+        self._deal_args()
 
-    def __init__(self, max_tar_length):
-        self.n_grams = [1, 2, 3, 4]
-        self.evaluator = rouge.Rouge(
-            metrics=["rouge-n", "rouge-l", "rouge-w"],
-            max_n=2,
-            limit_length=True,
-            length_limit=max_tar_length,
-            length_limit_type="words",
-            apply_avg=True,
-            apply_best=False,
-            alpha=0.5,  # Default F1_core
-            weight_factor=1.2,
-            stemming=True
-        )
-    
-    def transform_words2str(self, corpus):
-        new_corpus = []
-        for words in corpus:
-            new_corpus.append(" ".join(words))
-        return new_corpus
-    
-    def evaluate(self, generate_corpus, reference_corpus):
-        r"""get metrics result
+    def _deal_args(self):
+        self.rouge_args = " ".join([str(_) for _ in self.rouge_args])
 
-        Args:
-            generate_corpus: the generated corpus
-            reference_corpus: the references corpus
-        
-        Returns:
-            dict: such as ``{'rouge-1': xxx}``
-        """
-        assert len(generate_corpus) == len(reference_corpus)
-        generate_corpus = self.transform_words2str(generate_corpus)
-        reference_corpus = self.transform_words2str(reference_corpus)
-        metric_dict = {}
-        rouge_dict = self._calc_metrics_info(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
-        for metric in rouge_dict:
-            tp_list = rouge_dict[metric]
-            tp_val = np.mean(tp_list)
-            metric_dict[metric] = round(tp_val, 4)
-        return metric_dict
-    
-    def _calc_metrics_info(self, generate_corpus, reference_corpus):
-        r"""get metrics result
+    def _preprocess(self, input_sentence):
+        return " ".join(input_sentence)
 
-        Args:
-            generate_corpus: the generated corpus
-            reference_corpus: the referenced corpus
-        
-        Returns:
-            list: a list of metrics <metric> which record the results according to self.ngrams
-        """
-        assert len(generate_corpus) == len(reference_corpus)
-        rouge_dict = {}
-        for i in rouge_metrics:
-            rouge_dict[i] = []
-        for i in range(len(generate_corpus)):
-            pred_sent = generate_corpus[i]
-            gold_sent = reference_corpus[i]
-            result = self.calc_rouge(gen_corpus=[pred_sent], ref_corpus=[gold_sent])
-            for key_ in rouge_dict:
-                rouge_dict[key_].append(result[key_]["f"])
+    def _write_file(self, write_path, content):
+        f = open(write_path, 'w')
+        f.write("\n".join(content))
+        f.close()
+
+    def _split_rouge(self, input_sentence):
+        res_list = input_sentence.split()
+        res = {}
+        res[res_list[1].lower()] = float(res_list[3])
+        return res
+
+    def _calc_rouge(self, args):
+        summ_path = args['summ_path']
+        ref_path = args['ref_path']
+        eos = args['eos']
+        ignore_empty_reference = args['ignore_empty_reference']
+        ignore_empty_summary = args['ignore_empty_summary']
+        stemming = args['stemming']
+
+        s = settings.Settings()
+        s._load()
+        with tempfile.TemporaryDirectory() as dirpath:  # generate virtual route
+            sys_root, model_root = [os.path.join(dirpath, _) for _ in ["system", "model"]]
+            utils.mkdirs([sys_root, model_root])
+            ignored = utils.split_files(model_path=ref_path,
+                                        system_path=summ_path,
+                                        model_dir=model_root,
+                                        system_dir=sys_root,
+                                        eos=eos,
+                                        ignore_empty_reference=ignore_empty_reference,
+                                        ignore_empty_summary=ignore_empty_summary)
+            r = Rouge155(rouge_dir=os.path.dirname(s.data['ROUGE_path']),
+                                log_level=logging.ERROR,
+                                stemming=stemming)
+            r.system_dir = sys_root
+            r.model_dir = model_root
+            r.system_filename_pattern = r's.(\d+).txt'
+            r.model_filename_pattern = 'm.[A-Z].#ID#.txt'
+            data_arg = "-e %s" % s.data['ROUGE_data']
+            rouge_args_str = "%s %s" % (data_arg, self.rouge_args)
+            output = r.convert_and_evaluate(rouge_args=rouge_args_str)
+            res = self._get_info(output)
+        return res
+
+    def _get_info(self, input_str):
+        rouge_list = input_str.replace("---------------------------------------------", "").replace("\n\n", "\n").strip().split("\n")
+        rouge_list = [rouge for rouge in rouge_list if "Average_F" in rouge]
+        rouge_dict = defaultdict(float)
+        for each in list(map(self._split_rouge, rouge_list)):
+            rouge_dict.update(each)
         return rouge_dict
-    
-    def calc_rouge(self, gen_corpus, ref_corpus):
-        scores = self.evaluator.get_scores(gen_corpus, ref_corpus)
-        return scores
-    
-    def __str__(self):
-        mesg = 'The Rouge Evaluator Info:\n' + '\tMetrics:[' + ', '.join(rouge_metrics) + ']',
-        return mesg
+
+    def _calc_metrics_info(self, generate_corpus, reference_corpus):
+        generate_corpus = [self._preprocess(generate_sentence) for generate_sentence in generate_corpus]
+        reference_corpus = [self._preprocess(reference_sentence) for reference_sentence in reference_corpus]
+        with tempfile.TemporaryDirectory() as path:
+            generate_path = os.path.join(path, 'generate_corpus.txt')
+            reference_path = os.path.join(path, 'reference_corpus.txt')
+            self._write_file(generate_path, generate_corpus)
+            self._write_file(reference_path, reference_corpus)
+            
+            calc_args = {
+                'summ_path': generate_path,
+                'ref_path': reference_path,
+                'eos': '.',
+                'ignore_empty_reference': False,
+                'ignore_empty_summary': False,
+                'stemming': True
+            }
+            res = self._calc_rouge(calc_args)
+        return res

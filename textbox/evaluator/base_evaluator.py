@@ -52,8 +52,7 @@ class BaseEvaluator():
             elif metric == 'self_bleu':
                 evaluator = SelfBleuEvaluator()
             elif metric == 'rouge':
-                self.max_target_length = self.config["max_target_length"]
-                evaluator = RougeEvaluator(self.max_target_length)
+                evaluator = RougeEvaluator()
             elif metric == 'distinct':
                 evaluator = DistinctEvaluator()
             elif metric == 'avg_len':

@@ -18,8 +18,8 @@ textbox.evaluator.distinct_evaluator
 """
 
 import numpy as np
-from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 from collections import defaultdict, Counter
+from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 
 class DistinctEvaluator(AbstractEvaluator):
     r"""Distinct Evaluator. Now, we support metrics `'inter-distinct'` and `'intra-distinct'`.
@@ -64,7 +64,3 @@ class DistinctEvaluator(AbstractEvaluator):
             dist_dict[key] = np.average(intra_ngrams[i])
         return dist_dict
     
-    def __str__(self):
-        mesg = "The Distinct Evaluator Info:\n" + "\tMetrics:[distinct], Ngram:["\
-                + ", ".join(map(str, self.n_grams)) + "]"
-        return mesg

@@ -53,15 +53,7 @@ class BleuEvaluator(AbstractEvaluator):
         
         bleu = BLEU(reference_corpus, weights)
         scores = bleu.get_score(generate_corpus)
-
-        results = {}
-        for n_gram in self.n_grams:
-            score = np.array(scores['bleu-{}'.format(n_gram)])
-            results['bleu-{}'.format(n_gram)] = score.mean()
-        for n_gram in self.n_grams:
-            score = np.array(scores['bleu-{}-avg'.format(n_gram)])
-            results['bleu-{}-avg'.format(n_gram)] = score.mean()
-        return results
+        return scores
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus):
         r"""get metrics result
@@ -88,15 +80,12 @@ class BleuEvaluator(AbstractEvaluator):
                     generate_corpus=[pred_sent], reference_corpus=[gold_sent]
                 )
                 for n_gram in self.n_grams:
-                    bleu_dict['bleu-{}'.format(n_gram)].append(results['bleu-{}'.format(n_gram)])
-                    bleu_dict['bleu-{}-avg'.format(n_gram)].append(results['bleu-{}-avg'.format(n_gram)])
+                    bleu_dict['bleu-{}'.format(n_gram)].append(np.array(results['bleu-{}'.format(n_gram)]).mean())
+                    bleu_dict['bleu-{}-avg'.format(n_gram)].append(np.array(results['bleu-{}-avg'.format(n_gram)]).mean())
         else:
             results = self._bleu(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
             for n_gram in self.n_grams:
-                bleu_dict['bleu-{}'.format(n_gram)].append(results['bleu-{}'.format(n_gram)])
-                bleu_dict['bleu-{}-avg'.format(n_gram)].append(results['bleu-{}-avg'.format(n_gram)])
+                bleu_dict['bleu-{}'.format(n_gram)].append(np.array(results['bleu-{}'.format(n_gram)]).mean())
+                bleu_dict['bleu-{}-avg'.format(n_gram)].append(np.array(results['bleu-{}-avg'.format(n_gram)]).mean())
         return bleu_dict
     
-    def __str__(self):
-        mesg = 'The Bleu Evaluator Info:\n' + '\tMetrics:[bleu], Ngram:[' + ', '.join(map(str, self.n_grams)) + ']'
-        return mesg

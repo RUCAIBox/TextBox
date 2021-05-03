@@ -25,8 +25,10 @@ from textbox.evaluator.averagelength_evaluator import *
 from textbox.evaluator.cider_evaluator import *
 from textbox.evaluator.chrfplusplus_evaluator import *
 from textbox.evaluator.meteor_evaluator import *
+from textbox.evaluator.bertscore_evaluator import *
+from textbox.evaluator.unique_evaluator import *
 
-evaluator_list = ['bleu', 'self_bleu', 'rouge', 'distinct', 'nll_test', 'avg_len', 'cider', 'chrf++', 'meteor']
+evaluator_list = ['bleu', 'self_bleu', 'rouge', 'distinct', 'nll_test', 'avg_len', 'cider', 'chrf++', 'meteor', 'unique', 'bert_score']
 
 class BaseEvaluator():
     def __init__(self, config, metrics):
@@ -63,6 +65,12 @@ class BaseEvaluator():
                 evaluator = ChrfPlusPlusEvaluator()
             elif metric == 'meteor':
                 evaluator = MeteorEvaluator()
+            elif metric == 'bert_score':
+                model = self.config['bert_score_model_path']
+                layers = self.config['num_layers']
+                evaluator = BertScoreEvaluator(model, layers)
+            elif metric == 'unique':
+                evaluator = UniqueEvaluator()
             elif metric == 'nll_test':
                 continue
             metric_result = evaluator.evaluate(generate_corpus=generate_corpus, reference_corpus=reference_corpus)

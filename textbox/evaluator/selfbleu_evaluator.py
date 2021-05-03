@@ -51,15 +51,7 @@ class SelfBleuEvaluator(AbstractEvaluator):
         
         bleu = SelfBLEU(generate_corpus, weights)
         scores = bleu.get_score()
-
-        results = {}
-        for n_gram in self.n_grams:
-            score = np.array(scores['self-bleu-{}'.format(n_gram)])
-            results['self-bleu-{}'.format(n_gram)] = score.mean()
-        for n_gram in self.n_grams:
-            score = np.array(scores['self-bleu-{}-avg'.format(n_gram)])
-            results['self-bleu-{}-avg'.format(n_gram)] = score.mean()
-        return results
+        return scores
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus=None):
         r"""get metrics result
@@ -80,10 +72,7 @@ class SelfBleuEvaluator(AbstractEvaluator):
         
         results = self._self_bleu(generate_corpus=generate_corpus)
         for n_gram in self.n_grams:
-            bleu_dict['self-bleu-{}'.format(n_gram)].append(results['self-bleu-{}'.format(n_gram)])
-            bleu_dict['self-bleu-{}-avg'.format(n_gram)].append(results['self-bleu-{}-avg'.format(n_gram)])
+            bleu_dict['self-bleu-{}'.format(n_gram)].append(np.array(results['self-bleu-{}'.format(n_gram)]).mean())
+            bleu_dict['self-bleu-{}-avg'.format(n_gram)].append(np.array(results['self-bleu-{}-avg'.format(n_gram)]).mean())
         return bleu_dict
     
-    def __str__(self):
-        mesg = 'The Self-Bleu Evaluator Info:\n' + '\tMetrics:[self-bleu], Ngram:[' + ', '.join(map(str, self.n_grams)) + ']'
-        return mesg

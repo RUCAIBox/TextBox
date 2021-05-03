@@ -134,6 +134,3 @@ class CIDErEvaluator(AbstractEvaluator):
         result['CIDEr'] = np.mean(scores, axis=0)
         return result
     
-    def __str__(self):
-        mesg = 'The CIDEr Evaluator Info:\n' + '\tMetrics:[CIDEr], Ngram:[' + ', '.join(map(str, self.n_grams)) + ']'
-        return mesg

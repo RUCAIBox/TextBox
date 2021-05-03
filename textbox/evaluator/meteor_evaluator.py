@@ -10,7 +10,6 @@ textbox.evaluator.meteor_evaluator
 import numpy as np
 from nltk.translate.meteor_score import meteor_score
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
-from nltk.translate.meteor_score import meteor_score
 
 class MeteorEvaluator(AbstractEvaluator):
     

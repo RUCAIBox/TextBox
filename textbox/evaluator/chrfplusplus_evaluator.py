@@ -165,8 +165,3 @@ class ChrfPlusPlusEvaluator(AbstractEvaluator):
         result['avg-sentence-F'] = avgTotalF
         result['beta'] = self.beta
         return result
-
-    def __str__(self):
-        mesg = 'The CHRF++ Evaluator Info:\n' + '\tMetrics:[CHRF, WORDF], Char_Ngram:[' + ', '.join(map(str, self.char_n_grams)) + \
-               '], Word_Ngram:[' + ', '.join(map(str, self.word_n_grams)) + ']'
-        return mesg

@@ -1,5 +1,5 @@
 #!/bin/bash
-pip install -r requirements.txt --no-build-isolation
+pip install -r requirements.txt 
 
 pip install -U git+https://github.com/pltrdy/pyrouge
 git clone https://github.com/pltrdy/files2rouge.git 

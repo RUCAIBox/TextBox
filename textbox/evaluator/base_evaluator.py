@@ -67,7 +67,8 @@ class BaseEvaluator():
                 evaluator = MeteorEvaluator()
             elif metric == 'bert_score':
                 model = self.config['bert_score_model_path']
-                evaluator = BertScoreEvaluator(model)
+                num_layers = self.config['num_layers']
+                evaluator = BertScoreEvaluator(model, num_layers)
             elif metric == 'unique':
                 evaluator = UniqueEvaluator()
             elif metric == 'nll_test':

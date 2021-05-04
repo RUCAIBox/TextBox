@@ -16,8 +16,9 @@ from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 class BertScoreEvaluator(AbstractEvaluator):
     r"""Bert Score Evaluator. Now, we support metrics `'bert score'`.
     """
-    def __init__(self, model):
+    def __init__(self, model, num_layers):
         self.model = model
+        self.num_layers = num_layers
         self.lang = "en"
         
     def _preprocess(self, input_sentence):
@@ -36,6 +37,8 @@ class BertScoreEvaluator(AbstractEvaluator):
         if self.model == None:
             P, R, F1 = score(generate_corpus, reference_corpus, lang=self.lang, verbose=False)
         else:
-            P, R, F1 = score(generate_corpus, reference_corpus, model_type=self.model, verbose=False)
+            if self.num_layers == None:
+                raise ValueError("num_layer should be an integer")
+            P, R, F1 = score(generate_corpus, reference_corpus, model_type=self.model, num_layers=self.num_layers, verbose=False)
         result['bert-score'] = F1.tolist()
         return result

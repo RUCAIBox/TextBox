@@ -19,17 +19,31 @@ textbox.evaluator.bleu_evaluator
 
 import numpy as np
 from fast_bleu import BLEU
+from textbox.evaluator.sentence_bleu import sentence_bleu
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 
 class BleuEvaluator(AbstractEvaluator):
     r"""Bleu Evaluator. Now, we support metrics `'bleu'`
     """
 
-    def __init__(self, per_gen_ref):
+    def __init__(self, task_type):
         self.n_grams = [1, 2, 3, 4]
-        self.per_gen_ref = per_gen_ref
+        self.task_type = task_type
+        self.weights = self._generate_weights()
     
-    def _bleu(self, generate_corpus, reference_corpus):
+    def _generate_weights(self):
+        weight = [0] * max(self.n_grams)
+        weights = {}
+        for n_gram in self.n_grams:
+            weight[n_gram - 1] = 1.0
+            weights['bleu-{}'.format(n_gram)] = tuple(weight)
+            weight[n_gram - 1] = 0.0
+            avg_weight = [1. / n_gram] * n_gram
+            avg_weight.extend([0. for index in range(max(self.n_grams) - n_gram)])
+            weights['bleu-{}-avg'.format(n_gram)] = tuple(avg_weight)
+        return weights
+
+    def _calc_fast_bleu(self, generate_corpus, reference_corpus):
         r""" Calculate the BLEU metrics of the generated corpus in referenced corpus.
 
         Args:
@@ -40,18 +54,8 @@ class BleuEvaluator(AbstractEvaluator):
         Returns:
             list: the BLEU results and average BLEU scores
         """
-
-        weight = [0] * max(self.n_grams)
-        weights = {}
-        for n_gram in self.n_grams:
-            weight[n_gram - 1] = 1.0
-            weights['bleu-{}'.format(n_gram)] = tuple(weight)
-            weight[n_gram - 1] = 0.0
-            avg_weight = [1. / n_gram] * n_gram
-            avg_weight.extend([0. for index in range(max(self.n_grams) - n_gram)])
-            weights['bleu-{}-avg'.format(n_gram)] = tuple(avg_weight)
         
-        bleu = BLEU(reference_corpus, weights)
+        bleu = BLEU(reference_corpus, self.weights)
         scores = bleu.get_score(generate_corpus)
         return scores
 
@@ -72,20 +76,22 @@ class BleuEvaluator(AbstractEvaluator):
         for n_gram in self.n_grams:
             bleu_dict['bleu-{}-avg'.format(n_gram)] = []
         
-        if self.per_gen_ref:
+        if self.task_type:
+            results = self._calc_fast_bleu(
+                generate_corpus=generate_corpus, reference_corpus=reference_corpus
+            )
+            for n_gram in self.n_grams:
+                bleu_dict['bleu-{}'.format(n_gram)].append(np.array(results['bleu-{}'.format(n_gram)]).mean())
+                bleu_dict['bleu-{}-avg'.format(n_gram)].append(np.array(results['bleu-{}-avg'.format(n_gram)]).mean())
+        else:
             for i in range(len(generate_corpus)):
                 pred_sent = generate_corpus[i]
                 gold_sent = reference_corpus[i]
-                results = self._bleu(
-                    generate_corpus=[pred_sent], reference_corpus=[gold_sent]
+                results = sentence_bleu(
+                    hypothesis=pred_sent, references=[gold_sent], weights=self.weights
                 )
                 for n_gram in self.n_grams:
                     bleu_dict['bleu-{}'.format(n_gram)].append(np.array(results['bleu-{}'.format(n_gram)]).mean())
                     bleu_dict['bleu-{}-avg'.format(n_gram)].append(np.array(results['bleu-{}-avg'.format(n_gram)]).mean())
-        else:
-            results = self._bleu(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
-            for n_gram in self.n_grams:
-                bleu_dict['bleu-{}'.format(n_gram)].append(np.array(results['bleu-{}'.format(n_gram)]).mean())
-                bleu_dict['bleu-{}-avg'.format(n_gram)].append(np.array(results['bleu-{}-avg'.format(n_gram)]).mean())
         return bleu_dict
     

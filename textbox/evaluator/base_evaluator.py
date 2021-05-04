@@ -49,10 +49,13 @@ class BaseEvaluator():
         result_dict = {}
         for metric in self.metrics:
             if metric == 'bleu':
-                per_gen_ref = (self.config['task_type'].lower() == "unconditional")
-                evaluator = BleuEvaluator(per_gen_ref)
+                task_type = (self.config['task_type'].lower() == "unconditional")
+                evaluator = BleuEvaluator(task_type)
             elif metric == 'self_bleu':
-                evaluator = SelfBleuEvaluator()
+                if self.config['task_type'].lower() == "unconditional":
+                    evaluator = SelfBleuEvaluator()
+                else:
+                    raise ValueError("task_type should be 'unconditional' for self-bleu")
             elif metric == 'rouge':
                 evaluator = RougeEvaluator()
             elif metric == 'distinct':

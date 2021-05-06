@@ -19,7 +19,7 @@ textbox.evaluator.bleu_evaluator
 
 import numpy as np
 from fast_bleu import BLEU
-from textbox.evaluator.sentence_bleu import sentence_bleu
+from textbox.evaluator.sentence_bleu import sentence_bleu, SmoothingFunction
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 
 class BleuEvaluator(AbstractEvaluator):
@@ -88,7 +88,7 @@ class BleuEvaluator(AbstractEvaluator):
                 pred_sent = generate_corpus[i]
                 gold_sent = reference_corpus[i]
                 results = sentence_bleu(
-                    hypothesis=pred_sent, references=[gold_sent], weights=self.weights
+                    hypothesis=pred_sent, references=[gold_sent], weights=self.weights, smoothing_function=SmoothingFunction().method1
                 )
                 for n_gram in self.n_grams:
                     bleu_dict['bleu-{}'.format(n_gram)].append(np.array(results['bleu-{}'.format(n_gram)]).mean())

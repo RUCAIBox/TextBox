@@ -12,6 +12,7 @@ from nltk import stem
 from collections import defaultdict
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 
+
 class CIDErEvaluator(AbstractEvaluator):
     r"""CIDEr Evaluator. Now, we support metrics `'CIDEr'`.
     """
@@ -33,22 +34,22 @@ class CIDErEvaluator(AbstractEvaluator):
         for word in input_sentence:
             res.append(self.stem_generator.stem(word))
         return res
-    
+
     def _generate_ngrams(self, input_sentence):
         ngrams_counts = defaultdict(int)
         for n_gram in range(1, max(self.n_grams) + 1):
             for index in range(len(input_sentence) - n_gram + 1):
-                cur_ngram = tuple(input_sentence[index: index + n_gram])
+                cur_ngram = tuple(input_sentence[index:index + n_gram])
                 ngrams_counts[cur_ngram] += 1
         return ngrams_counts
-    
+
     def _generate_ngrams_count(self):
         for i in range(self.total_num):
             gen_result = self._generate_ngrams(self.generate_corpus[i])
             ref_result = [self._generate_ngrams(reference_sentence) for reference_sentence in self.reference_corpus[i]]
             self.gen_corpus_count.append(gen_result)
             self.ref_corpus_count.append(ref_result)
-    
+
     def _count_document_times(self):
         r"""calculate df
         """
@@ -58,7 +59,7 @@ class CIDErEvaluator(AbstractEvaluator):
         for refs in self.ref_corpus_count:
             for ngram in set([ngram for ref in refs for (ngram, count) in ref.items()]):
                 self.ref_document_frequency[ngram] += 1
-    
+
     def _generate_vector(self, ngram_count, corpus_type):
         r"""
         Args:
@@ -74,7 +75,7 @@ class CIDErEvaluator(AbstractEvaluator):
 
         vec = [defaultdict(float) for _ in self.n_grams]
         norm = [0. for _ in self.n_grams]
-        
+
         for (ngram, times) in ngram_count.items():
             tf = times / sum(ngram_count.values())
             df = max(1.0, document_frequency[ngram])
@@ -85,7 +86,7 @@ class CIDErEvaluator(AbstractEvaluator):
             index = self.n_grams.index(len(ngram))
             vec[index][ngram] = tf * idf
             norm[index] += pow(vec[index][ngram], 2)
-        
+
         norm = [np.sqrt(val) for val in norm]
         return vec, norm
 
@@ -113,8 +114,10 @@ class CIDErEvaluator(AbstractEvaluator):
 
         for i in range(self.total_num):
             self.generate_corpus.append(self._get_stem(generate_corpus[i]))
-            self.reference_corpus.append([self._get_stem(reference_sentence) for reference_sentence in reference_corpus[i]])
-        
+            self.reference_corpus.append([
+                self._get_stem(reference_sentence) for reference_sentence in reference_corpus[i]
+            ])
+
         self._generate_ngrams_count()
         self._count_document_times()
 
@@ -133,4 +136,3 @@ class CIDErEvaluator(AbstractEvaluator):
         result = {}
         result['CIDEr'] = np.mean(scores, axis=0)
         return result
-    

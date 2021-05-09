@@ -11,8 +11,9 @@ import numpy as np
 from nltk.translate.meteor_score import meteor_score
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 
+
 class MeteorEvaluator(AbstractEvaluator):
-    
+
     def _preprocess(self, input_sentence):
         return " ".join(input_sentence)
 
@@ -26,7 +27,6 @@ class MeteorEvaluator(AbstractEvaluator):
         for gen, refs in zip(generate_corpus, reference_corpus):
             score = meteor_score(refs, gen)
             scores.append(score)
-        
+
         result['meteor'] = scores
         return result
-        

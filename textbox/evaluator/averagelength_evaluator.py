@@ -10,8 +10,9 @@ textbox.evaluator.averagelength_evaluator
 import numpy as np
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 
+
 class AvgLenEvaluator(AbstractEvaluator):
-    
+
     def _calc_metrics_info(self, generate_corpus, reference_corpus=None):
         result = {}
         length = []
@@ -19,4 +20,3 @@ class AvgLenEvaluator(AbstractEvaluator):
             length.append(len(sentence))
         result['avg-length'] = length
         return result
-        

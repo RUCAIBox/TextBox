@@ -13,6 +13,7 @@ from nltk.util import ngrams
 from collections import defaultdict, Counter
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 
+
 class ChrfPlusPlusEvaluator(AbstractEvaluator):
 
     def __init__(self):
@@ -42,7 +43,7 @@ class ChrfPlusPlusEvaluator(AbstractEvaluator):
         for ngram in ngrams_list:
             ngram_dict = Counter(ngrams(input_sentence, ngram))
             result[ngram] = ngram_dict
-        return result        
+        return result
 
     def _ngrams_match(self, gen_ngrams, ref_ngrams):
         matchNgramCount = defaultdict(float)
@@ -57,7 +58,7 @@ class ChrfPlusPlusEvaluator(AbstractEvaluator):
                 if ngram in gen_ngrams[index]:
                     matchNgramCount[index] += min(gen_ngrams[index][ngram], ref_ngrams[index][ngram])
         return matchNgramCount, totalGenNgramCount, totalRefNgramCount
-    
+
     def _calc_F(self, matchCount, genCount, refCount, beta=3.0):
         ngramF = defaultdict(float)
         ngramRecall = defaultdict(float)
@@ -104,7 +105,9 @@ class ChrfPlusPlusEvaluator(AbstractEvaluator):
         generate_corpus_process = [self._preprocess(generate_sentence) for generate_sentence in generate_corpus]
         reference_corpus_process = []
         for reference_sentences in reference_corpus:
-            reference_corpus_process.append([self._preprocess(reference_sentence) for reference_sentence in reference_sentences])
+            reference_corpus_process.append([
+                self._preprocess(reference_sentence) for reference_sentence in reference_sentences
+            ])
 
         for i in range(len(generate_corpus)):
             curMatchWordCount = defaultdict(float)
@@ -116,19 +119,30 @@ class ChrfPlusPlusEvaluator(AbstractEvaluator):
 
             generate_char_ngrams = self._generate_ngrams(input_sentence=generate_corpus_process[i], task_type='char')
             generate_word_ngrams = self._generate_ngrams(input_sentence=generate_corpus[i], task_type='word')
-            
+
             cur_max_F = 0
             for j in range(len(reference_corpus[i])):
-                reference_char_ngrams = self._generate_ngrams(input_sentence=reference_corpus_process[i][j], task_type='char')
+                reference_char_ngrams = self._generate_ngrams(
+                    input_sentence=reference_corpus_process[i][j], task_type='char'
+                )
                 reference_word_ngrams = self._generate_ngrams(input_sentence=reference_corpus[i][j], task_type='word')
 
-                matchNgramWordCount, totalGenNgramWordCount, totalRefNgramWordCount = self._ngrams_match(gen_ngrams=generate_word_ngrams, ref_ngrams=reference_word_ngrams)
-                matchNgramCharCount, totalGenNgramCharCount, totalRefNgramCharCount = self._ngrams_match(gen_ngrams=generate_char_ngrams, ref_ngrams=reference_char_ngrams)
+                matchNgramWordCount, totalGenNgramWordCount, totalRefNgramWordCount = self._ngrams_match(
+                    gen_ngrams=generate_word_ngrams, ref_ngrams=reference_word_ngrams
+                )
+                matchNgramCharCount, totalGenNgramCharCount, totalRefNgramCharCount = self._ngrams_match(
+                    gen_ngrams=generate_char_ngrams, ref_ngrams=reference_char_ngrams
+                )
 
-                ngramWordF, _, _ = self._calc_F(matchNgramWordCount, totalGenNgramWordCount, totalRefNgramWordCount, beta=self.beta)
-                ngramCharF, _, _ = self._calc_F(matchNgramCharCount, totalGenNgramCharCount, totalRefNgramCharCount, beta=self.beta)
-            
-                cur_F = (sum(ngramCharF.values()) + sum(ngramWordF.values())) / (max(self.char_n_grams) + max(self.word_n_grams))
+                ngramWordF, _, _ = self._calc_F(
+                    matchNgramWordCount, totalGenNgramWordCount, totalRefNgramWordCount, beta=self.beta
+                )
+                ngramCharF, _, _ = self._calc_F(
+                    matchNgramCharCount, totalGenNgramCharCount, totalRefNgramCharCount, beta=self.beta
+                )
+
+                cur_F = (sum(ngramCharF.values()) +
+                         sum(ngramWordF.values())) / (max(self.char_n_grams) + max(self.word_n_grams))
 
                 if cur_F > cur_max_F:
                     cur_max_F = cur_F
@@ -138,7 +152,7 @@ class ChrfPlusPlusEvaluator(AbstractEvaluator):
                     curMatchCharCount = matchNgramCharCount
                     curRefCharCount = totalRefNgramCharCount
                     curGenCharCount = totalGenNgramCharCount
-                
+
             for ngram in self.char_n_grams:
                 totalMatchCharCount[ngram] += curMatchCharCount[ngram]
                 totalRefCharCount[ngram] += curRefCharCount[ngram]
@@ -148,15 +162,22 @@ class ChrfPlusPlusEvaluator(AbstractEvaluator):
                 totalMatchWordCount[ngram] += curMatchWordCount[ngram]
                 totalRefWordCount[ngram] += curRefWordCount[ngram]
                 totalGenWordCount[ngram] += curGenWordCount[ngram]
-            
+
             avgTotalF += cur_max_F
 
-        totalWordF, totalWordRecall, totalWordPrec = self._calc_F(totalMatchWordCount, totalGenWordCount, totalRefWordCount, beta=self.beta)
-        totalCharF, totalCharRecall, totalCharPrec = self._calc_F(totalMatchCharCount, totalGenCharCount, totalRefCharCount, beta=self.beta)
-        
-        totalF = (sum(totalCharF.values()) + sum(totalWordF.values())) / (max(self.char_n_grams) + max(self.word_n_grams))
-        totalRecall = (sum(totalCharRecall.values()) + sum(totalWordRecall.values())) / (max(self.char_n_grams) + max(self.word_n_grams))
-        totalPrec = (sum(totalCharPrec.values()) + sum(totalWordPrec.values())) / (max(self.char_n_grams) + max(self.word_n_grams))
+        totalWordF, totalWordRecall, totalWordPrec = self._calc_F(
+            totalMatchWordCount, totalGenWordCount, totalRefWordCount, beta=self.beta
+        )
+        totalCharF, totalCharRecall, totalCharPrec = self._calc_F(
+            totalMatchCharCount, totalGenCharCount, totalRefCharCount, beta=self.beta
+        )
+
+        totalF = (sum(totalCharF.values()) +
+                  sum(totalWordF.values())) / (max(self.char_n_grams) + max(self.word_n_grams))
+        totalRecall = (sum(totalCharRecall.values()) +
+                       sum(totalWordRecall.values())) / (max(self.char_n_grams) + max(self.word_n_grams))
+        totalPrec = (sum(totalCharPrec.values()) +
+                     sum(totalWordPrec.values())) / (max(self.char_n_grams) + max(self.word_n_grams))
         avgTotalF /= len(generate_corpus)
 
         result['precision'] = totalPrec

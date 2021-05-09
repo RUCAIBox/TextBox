@@ -26,18 +26,14 @@ from pyrouge import Rouge155
 from collections import defaultdict
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 
+
 class RougeEvaluator(AbstractEvaluator):
     r"""Rouge Evaluator. Now we support rouge-based ngram metrics which conains rouge-n, rouge-l and rouge-w.
     """
+
     def __init__(self):
         #"-c 95 -r 1000 -n 2 -w 1.2 -a"
-        self.rouge_args =[
-                '-c', 95,
-                '-r', 1000,
-                '-n', 2,
-                '-w', 1.2,
-                '-a'
-                ]
+        self.rouge_args = ['-c', 95, '-r', 1000, '-n', 2, '-w', 1.2, '-a']
         self._deal_args()
 
     def _deal_args(self):
@@ -67,19 +63,19 @@ class RougeEvaluator(AbstractEvaluator):
 
         s = settings.Settings()
         s._load()
-        with tempfile.TemporaryDirectory() as dirpath: 
+        with tempfile.TemporaryDirectory() as dirpath:
             sys_root, model_root = [os.path.join(dirpath, _) for _ in ["system", "model"]]
             utils.mkdirs([sys_root, model_root])
-            ignored = utils.split_files(model_path=ref_path,
-                                        system_path=summ_path,
-                                        model_dir=model_root,
-                                        system_dir=sys_root,
-                                        eos=eos,
-                                        ignore_empty_reference=ignore_empty_reference,
-                                        ignore_empty_summary=ignore_empty_summary)
-            r = Rouge155(rouge_dir=os.path.dirname(s.data['ROUGE_path']),
-                                log_level=logging.ERROR,
-                                stemming=stemming)
+            ignored = utils.split_files(
+                model_path=ref_path,
+                system_path=summ_path,
+                model_dir=model_root,
+                system_dir=sys_root,
+                eos=eos,
+                ignore_empty_reference=ignore_empty_reference,
+                ignore_empty_summary=ignore_empty_summary
+            )
+            r = Rouge155(rouge_dir=os.path.dirname(s.data['ROUGE_path']), log_level=logging.ERROR, stemming=stemming)
             r.system_dir = sys_root
             r.model_dir = model_root
             r.system_filename_pattern = r's.(\d+).txt'
@@ -91,7 +87,8 @@ class RougeEvaluator(AbstractEvaluator):
         return res
 
     def _get_info(self, input_str):
-        rouge_list = input_str.replace("---------------------------------------------", "").replace("\n\n", "\n").strip().split("\n")
+        rouge_list = input_str.replace("---------------------------------------------",
+                                       "").replace("\n\n", "\n").strip().split("\n")
         rouge_list = [rouge for rouge in rouge_list if "Average_F" in rouge]
         rouge_dict = defaultdict(float)
         for each in list(map(self._split_rouge, rouge_list)):
@@ -106,7 +103,7 @@ class RougeEvaluator(AbstractEvaluator):
             reference_path = os.path.join(path, 'reference_corpus.txt')
             self._write_file(generate_path, generate_corpus)
             self._write_file(reference_path, reference_corpus)
-            
+
             calc_args = {
                 'summ_path': generate_path,
                 'ref_path': reference_path,

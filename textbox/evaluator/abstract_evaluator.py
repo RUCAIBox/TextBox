@@ -14,6 +14,7 @@ textbox.evaluator.abstract_evaluator
 
 import numpy as np
 
+
 class AbstractEvaluator(object):
     """:class:`AbstractEvaluator` is an abstract object which supports
     the evaluation of the model. It is called by :class:`Trainer`.
@@ -39,9 +40,7 @@ class AbstractEvaluator(object):
         """
         # get metrics
         metric_dict = {}
-        info_dict = self._calc_metrics_info(
-            generate_corpus=generate_corpus, reference_corpus=reference_corpus
-        )
+        info_dict = self._calc_metrics_info(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
         for key in info_dict:
             tp_list = info_dict[key]
             tp_val = np.mean(tp_list)

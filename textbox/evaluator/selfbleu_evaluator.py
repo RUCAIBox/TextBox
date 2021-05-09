@@ -21,13 +21,14 @@ import numpy as np
 from fast_bleu import SelfBLEU
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 
+
 class SelfBleuEvaluator(AbstractEvaluator):
     r"""Bleu Evaluator. Now, we support metrics `'self-bleu'`.
     """
 
     def __init__(self):
         self.n_grams = [1, 2, 3, 4]
-    
+
     def _self_bleu(self, generate_corpus):
         r""" Calculate the Self-BLEU metrics of the generated corpus in referenced corpus.
 
@@ -48,7 +49,7 @@ class SelfBleuEvaluator(AbstractEvaluator):
             avg_weight = [1. / n_gram] * n_gram
             avg_weight.extend([0. for i in range(max(self.n_grams) - n_gram)])
             weights["self-bleu-{}-avg".format(n_gram)] = tuple(avg_weight)
-        
+
         bleu = SelfBLEU(generate_corpus, weights)
         scores = bleu.get_score()
         return scores
@@ -69,10 +70,11 @@ class SelfBleuEvaluator(AbstractEvaluator):
             bleu_dict['self-bleu-{}'.format(n_gram)] = []
         for n_gram in self.n_grams:
             bleu_dict['self-bleu-{}-avg'.format(n_gram)] = []
-        
+
         results = self._self_bleu(generate_corpus=generate_corpus)
         for n_gram in self.n_grams:
             bleu_dict['self-bleu-{}'.format(n_gram)].append(np.array(results['self-bleu-{}'.format(n_gram)]).mean())
-            bleu_dict['self-bleu-{}-avg'.format(n_gram)].append(np.array(results['self-bleu-{}-avg'.format(n_gram)]).mean())
+            bleu_dict['self-bleu-{}-avg'.format(n_gram)].append(
+                np.array(results['self-bleu-{}-avg'.format(n_gram)]).mean()
+            )
         return bleu_dict
-    

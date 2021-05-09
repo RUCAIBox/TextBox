@@ -28,14 +28,18 @@ from textbox.evaluator.meteor_evaluator import *
 from textbox.evaluator.bertscore_evaluator import *
 from textbox.evaluator.unique_evaluator import *
 
-evaluator_list = ['bleu', 'self_bleu', 'rouge', 'distinct', 'nll_test', 'avg_len', 'cider', 'chrf++', 'meteor', 'unique', 'bert_score']
+evaluator_list = [
+    'bleu', 'self_bleu', 'rouge', 'distinct', 'nll_test', 'avg_len', 'cider', 'chrf++', 'meteor', 'unique', 'bert_score'
+]
+
 
 class BaseEvaluator():
+
     def __init__(self, config, metrics):
         self.config = config
         self.metrics = metrics
         # [1, 2, 3, 4]
-    
+
     def evaluate(self, generate_corpus, reference_corpus):
         r"""get metrics result
 
@@ -79,5 +83,3 @@ class BaseEvaluator():
             metric_result = evaluator.evaluate(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
             result_dict[metric] = metric_result
         return result_dict
-        
-

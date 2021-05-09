@@ -7,6 +7,11 @@
 # @Author : Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang, Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
 
+# UPDATE
+# @Time   : 2021/4/12
+# @Author : Lai Xu
+# @Email  : tsui_lai@163.com
+
 r"""
 textbox.trainer.trainer
 ################################
@@ -30,6 +35,7 @@ from logging import getLogger
 from textbox.module.Optimizer.optim import ScheduledOptim
 from textbox.evaluator import BaseEvaluator, evaluator_list
 from textbox.utils import ensure_dir, early_stopping
+
 
 class AbstractTrainer(object):
     r"""Trainer Class is used to manage the training and evaluation processes of text generation system models.
@@ -98,7 +104,7 @@ class Trainer(AbstractTrainer):
         self.best_valid_result = None
         self.train_loss_dict = dict()
         self.optimizer = self._build_optimizer()
-        
+
         self.metrics = config["metrics"]
         self._check_metrics()
         self.evaluator = BaseEvaluator(config, self.metrics)
@@ -107,20 +113,23 @@ class Trainer(AbstractTrainer):
         self.item_tensor = None
         self.tot_item_num = None
         self.iid_field = config['ITEM_ID_FIELD']
-    
+
     def _check_metrics(self):
         r"""check the correct of the setting"""
         if isinstance(self.metrics, (str, list)):
             if isinstance(self.metrics, str):
                 if self.metrics[0] == '[':
-                    self.metrics = self.metrics[1: ]
-                if self.metrics[-1] == ']':  
-                    self.metrics = self.metrics[: -1]
+                    self.metrics = self.metrics[1:]
+                if self.metrics[-1] == ']':
+                    self.metrics = self.metrics[:-1]
                 self.metrics = self.metrics.strip().split(",")
             self.metrics = [metric.lower() for metric in self.metrics]
             for metric in self.metrics:
                 if metric not in evaluator_list:
-                    raise ValueError("evaluator {} can't be found. ".format(metric) + "(evaluator should be in [" + ", ".join(evaluator_list) + "])")
+                    raise ValueError(
+                        "evaluator {} can't be found. ".format(metric) + "(evaluator should be in [" +
+                        ", ".join(evaluator_list) + "])"
+                    )
         else:
             raise TypeError('evaluator must be a string or list')
 

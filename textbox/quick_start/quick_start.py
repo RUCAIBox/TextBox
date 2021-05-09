@@ -11,13 +11,12 @@
 textbox.quick_start
 ########################
 """
-import os
 import torch
 import logging
 from logging import getLogger
 from textbox.utils import init_logger, get_model, get_trainer, init_seed
 from textbox.config import Config
-from textbox.data import create_dataset, data_preparation
+from textbox.data import data_preparation
 
 
 def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=None, saved=True):
@@ -77,7 +76,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
         logger.info('Test only')
         test_result = trainer.evaluate(test_data, load_best_model=saved, model_file=config['load_experiment'])
     else:
-        if config['load_experiment'] is not None:
+        if config['load_experiment'] is not None and is_logger:
             trainer.resume_checkpoint(resume_file=config['load_experiment'])
         # model training
         best_valid_score, best_valid_result = trainer.fit(train_data, valid_data, saved=saved)

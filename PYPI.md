@@ -1,11 +1,11 @@
 # TextBox (妙笔)
 
-TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 16 text generation algorithms, covering two major tasks:
+TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 21 text generation algorithms, covering two major tasks:
 
 + Unconditional (input-free) Generation
-+ Sequence-to-Sequence (Seq2Seq) Generation, including Machine Translation and Summarization
++ Conditional (Seq2Seq) Generation, including Machine Translation, Text Summarization, Attribute-to-Text, and Dialogue Systems
 
-We provide the support for 6 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team. 
+We provide the support for 9 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team. 
 
 **View TextBox homepage for more information: [https://github.com/RUCAIBox/TextBox](https://github.com/RUCAIBox/TextBox).**
 
@@ -64,12 +64,10 @@ We also support to modify YAML configuration files in corresponding dataset and 
 If you want to change the model, the dataset or the task type, just run the script by modifying corresponding command parameters: 
 
 ```bash
-python run_textbox.py --model=[model_name] --dataset=[dataset_name] --task_type=[task_name]
+python run_textbox.py --model=[model_name] --dataset=[dataset_name]
 ```
 
 `model_name` is the model to be run, such as RNN and BART.
-
-TextBox covers three major task types of text generation, namely `unconditional`, `translation` and `summarization`.
 
 ### Start from API
 
@@ -80,15 +78,14 @@ from textbox.quick_start import run_textbox
 
 run_textbox(config_dict={'model': 'RNN',
                          'dataset': 'COCO',
-                         'data_path': './dataset',
-                         'task_type': 'unconditional'})
+                         'data_path': './dataset'})
 ```
 
 This will perform the training and test of the RNN model on the COCO dataset.
 
 If you want to run different models, parameters or datasets, the operations are same with **Start from source**.
 
-### **Using Pretrained Language Model**
+### **Use Pretrained Language Model**
 
 TextBox supports to apply part of pretrained language models (PLM) to conduct text generation. Take the GPT-2 for example, we will show you how to use PLMs to fine-tune.
 
@@ -97,9 +94,23 @@ TextBox supports to apply part of pretrained language models (PLM) to conduct te
 2. After downloading, you just need to run the command:
 
 ```bash
-python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
+python run_textbox.py --model=GPT2 --dataset=COCO \
                       --pretrained_model_path=pretrained_model/gpt2
 ```
+
+### **Train with Distributed Data Parallel**
+
+TextBox supports to train models with multiple GPUs conveniently. You don't need to modify the model, just run the following command:
+
+```bash
+python -m torch.distributed.launch --nproc_per_node=[gpu_num] \
+       run_textbox.py --model=[model_name] \
+       --dataset=[dataset_name] --gpu_id=[gpu_ids] --DDP=True
+```
+
+`gpu_num` is the number of GPUs you want to train with (such as 4), and `gpu_ids` is the usable GPU id list (such as 0,1,2,3).
+
+Notice that: we only support DDP for end-to-end model. We will add support for non-end-to-end models, such as GAN, in the future.
 
 ## The Team
 

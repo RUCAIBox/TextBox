@@ -89,6 +89,7 @@ class Trainer(AbstractTrainer):
         self.embedding_size = config['embedding_size']
         self.warmup_steps = config['warmup_steps']
         self.checkpoint_dir = config['checkpoint_dir']
+        self.grad_clip = config['grad_clip']
         ensure_dir(self.checkpoint_dir)
         saved_model_file = self.config['filename'] + '.pth'
         self.saved_model_file = os.path.join(self.checkpoint_dir, saved_model_file)
@@ -189,6 +190,7 @@ class Trainer(AbstractTrainer):
                 total_loss = losses.item() if total_loss is None else total_loss + losses.item()
 
             self._check_nan(loss)
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
             loss.backward()
             self.optimizer.step()
         train_loss = total_loss / len(train_data)
@@ -310,6 +312,11 @@ class Trainer(AbstractTrainer):
             train_loss_output += "train loss: %.4f" % losses
         return train_loss_output + ']'
 
+    def reduce_loss(self, loss):
+        torch.distributed.all_reduce(loss, op=torch.distributed.ReduceOp.SUM)
+        loss /= torch.distributed.get_world_size()
+        return loss
+
     def fit(self, train_data, valid_data=None, verbose=True, saved=True):
         r"""Train the model based on the train data and the valid data.
 
@@ -330,8 +337,11 @@ class Trainer(AbstractTrainer):
             # train
             training_start_time = time()
             train_loss = self._train_epoch(train_data, epoch_idx)
-            self.train_loss_dict[epoch_idx] = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
             training_end_time = time()
+            train_loss = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
+            if self.DDP:
+                train_loss = self.reduce_loss(torch.tensor(train_loss).to("cuda")).item()
+            self.train_loss_dict[epoch_idx] = train_loss
             train_loss_output = \
                 self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss)
             if verbose:
@@ -352,6 +362,8 @@ class Trainer(AbstractTrainer):
                 with torch.no_grad():
                     valid_score, valid_result = self._valid_epoch(valid_data)
                 # valid_loss, ppl
+                if self.DDP:
+                    valid_score = self.reduce_loss(torch.tensor(valid_score).to("cuda")).item()
                 self.best_valid_score, self.cur_step, stop_flag, update_flag = early_stopping(
                     valid_score, self.best_valid_score, self.cur_step, max_step=self.stopping_step, bigger=False
                 )
@@ -399,7 +411,7 @@ class Trainer(AbstractTrainer):
         return total_loss / len(eval_data)
 
     @torch.no_grad()
-    def evaluate(self, eval_data, load_best_model=True, model_file=None):
+    def evaluate(self, eval_data, load_best_model=True, model_file=None, eval=True):
         r"""Evaluate the model based on the eval data.
 
         Args:
@@ -424,6 +436,12 @@ class Trainer(AbstractTrainer):
                 self.logger.info(message_output)
 
         self.model.eval()
+
+        if not eval:
+            generate_sentence = self.model.generate(eval_data.__next__(), eval_data)
+            print(' '.join(generate_sentence[0]))
+            return
+
         generate_corpus = []
         with torch.no_grad():
             for batch_data in tqdm(eval_data):
@@ -469,7 +487,6 @@ class GANTrainer(Trainer):
         self.g_optimizer = self._build_module_optimizer(self.model.generator)
         self.d_optimizer = self._build_module_optimizer(self.model.discriminator)
 
-        self.grad_clip = config['grad_clip']
         self.g_pretraining_epochs = config['g_pretraining_epochs']
         self.d_pretraining_epochs = config['d_pretraining_epochs']
         self.d_sample_num = config['d_sample_num']
@@ -815,7 +832,7 @@ class Seq2SeqTrainer(Trainer):
         super(Seq2SeqTrainer, self).__init__(config, model)
 
     @torch.no_grad()
-    def evaluate(self, eval_data, load_best_model=True, model_file=None):
+    def evaluate(self, eval_data, load_best_model=True, model_file=None, eval=True):
         r"""Evaluate the model based on the eval data.
 
         Args:
@@ -839,6 +856,11 @@ class Seq2SeqTrainer(Trainer):
             self.logger.info(message_output)
 
         self.model.eval()
+
+        if not eval:
+            print(self.model.generate(eval_data.__next__(), eval_data))
+            return
+
         generate_corpus = []
         with torch.no_grad():
             for batch_data in tqdm(eval_data):

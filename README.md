@@ -28,7 +28,7 @@ TextBox is developed based on Python and PyTorch for reproducing and developing 
 We provide the support for 9 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team. 
 
 <p align="center">
-  <img src="asset/framework.png" alt="TextBox v0.1 architecture">
+  <img src="asset/framework.png" alt="TextBox v0.2 architecture">
   <br>
   <b>Figure</b>: The Overall Architecture of TextBox
 </p>
@@ -94,12 +94,10 @@ We also support to modify YAML configuration files in corresponding dataset and 
 If you want to change the model, the dataset or the task type, just run the script by modifying corresponding command parameters: 
 
 ```bash
-python run_textbox.py --model=[model_name] --dataset=[dataset_name] --task_type=[task_name]
+python run_textbox.py --model=[model_name] --dataset=[dataset_name]
 ```
 
 `model_name` is the model to be run, such as RNN and BART. Models we implemented can be found in [Model](#Model).
-
-TextBox covers three major task types of text generation, namely `unconditional`, `translation` and `summarization`.
 
 If you want to change the datasets, please refer to [Dataset](#Dataset).
 
@@ -112,15 +110,14 @@ from textbox.quick_start import run_textbox
 
 run_textbox(config_dict={'model': 'RNN',
                          'dataset': 'COCO',
-                         'data_path': './dataset',
-                         'task_type': 'unconditional'})
+                         'data_path': './dataset'})
 ```
 
 This will perform the training and test of the RNN model on the COCO dataset.
 
 If you want to run different models, parameters or datasets, the operations are same with [Start from source](#Start-from-source).
 
-### **Using Pretrained Language Model**
+### **Use Pretrained Language Model**
 
 TextBox supports to apply part of pretrained language models (PLM) to conduct text generation. Take the GPT-2 for example, we will show you how to use PLMs to fine-tune.
 
@@ -129,9 +126,23 @@ TextBox supports to apply part of pretrained language models (PLM) to conduct te
 2. After downloading, you just need to run the command:
 
 ```bash
-python run_textbox.py --model=GPT2 --dataset=COCO --task_type=unconditional \
+python run_textbox.py --model=GPT2 --dataset=COCO \
                       --pretrained_model_path=pretrained_model/gpt2
 ```
+
+### **Train with Distributed Data Parallel (DDP)**
+
+TextBox supports to train models with multiple GPUs conveniently. You don't need to modify the model, just run the following command:
+
+```bash
+python -m torch.distributed.launch --nproc_per_node=[gpu_num] \
+       run_textbox.py --model=[model_name] \
+       --dataset=[dataset_name] --gpu_id=[gpu_ids] --DDP=True
+```
+
+`gpu_num` is the number of GPUs you want to train with (such as 4), and `gpu_ids` is the usable GPU id list (such as 0,1,2,3).
+
+Notice that: we only support DDP for end-to-end model. We will add support for non-end-to-end models, such as GAN, in the future.
 
 ## Architecture
 
@@ -139,20 +150,18 @@ The above [Figure](#textbox-妙笔) presents the overall architecture of our lib
 
 ### Model
 
-We implement 16 text generation models covering unconditional generation and sequence-to-sequence generation. We include the basic RNN language model for unconditional generation, and the remaining 15 models in the following table:
+We implement 21 text generation models, covering unconditional generation and sequence-to-sequence generation, in the following table:
 
 <table align="center">
 <thead>
 <tr>
 <th align="center">Category</th>
-<th align="center">Task Type</th>
 <th align="center">Model</th>
 <th align="center">Reference</th>
 </tr>
 </thead>
 <tbody><tr>
-<td align="center" rowspan="3"><strong>VAE</strong></td>
-<td align="center" rowspan="9"><strong>Unconditional</strong></td>
+<td align="center" rowspan="4"><strong>VAE</strong></td>
 <td align="center">LSTMVAE</td>
 <td align="center"><a href="https://arxiv.org/abs/1511.06349">(Bowman et al., 2016)</a></td>
 </tr>
@@ -163,6 +172,10 @@ We implement 16 text generation models covering unconditional generation and seq
 <tr>
 <td align="center">HybridVAE</td>
 <td align="center"><a href="https://arxiv.org/abs/1702.02390">(Semeniuta et al., 2017)</a></td>
+</tr>
+<tr>
+<td align="center">CVAE</td>
+<td align="center"><a href="https://www.aclweb.org/anthology/D18-1423.pdf">(Li et al., 2018)</a></td>
 </tr>
 <tr>
 <td align="center" rowspan="6"><strong>GAN</strong></td>
@@ -190,18 +203,9 @@ We implement 16 text generation models covering unconditional generation and seq
 <td align="center"><a href="https://arxiv.org/abs/1801.07736">(Fedus et al., 2018)</a></td>
 </tr>
 <tr>
-<td align="center" rowspan="6"><strong>Seq2Seq</strong></td>
-<td align="center" rowspan="6"><strong>Translation<br></b><br></b>Summarization</strong></td>
-<td align="center">RNN</td>
-<td align="center"><a href="https://arxiv.org/abs/1409.3215">(Sutskever et al., 2014)</a></td>
-</tr>
-<tr>
-<td align="center">Transformer</td>
-<td align="center"><a href="https://arxiv.org/abs/1706.03762">(Vaswani et al., 2017b)</a></td>
-</tr>
-<tr>
+<td align="center" rowspan="6"><strong>PLM</strong></td>
 <td align="center">GPT-2</td>
-<td align="center"><a href="https://d4mucfpksywv.cloudfront.net/better-language-models/language-models.pdf">(Radford et al.)</a></td>
+<td align="center"><a href="https://d4mucfpksywv.cloudfront.net/better-language-models/language-models.pdf">(Radford et al., 2019)</a></td>
 </tr>
 <tr>
 <td align="center">XLNet</td>
@@ -215,13 +219,41 @@ We implement 16 text generation models covering unconditional generation and seq
 <td align="center">BART</td>
 <td align="center"><a href="https://arxiv.org/abs/1910.13461">(Lewis et al., 2020)</a></td>
 </tr>
+<tr>
+<td align="center">T5</td>
+<td align="center"><a href="https://arxiv.org/abs/1910.10683">(Raffel et al., 2020)</a></td>
+</tr>
+<tr>
+<td align="center">ProphetNet</td>
+<td align="center"><a href="https://arxiv.org/abs/2001.04063">(Qi et al., 2020)</a></td>
+</tr>
+<td align="center" rowspan="5"><strong>Seq2Seq</strong></td>
+<td align="center">RNN</td>
+<td align="center"><a href="https://arxiv.org/abs/1409.3215">(Sutskever et al., 2014)</a></td>
+</tr>
+<tr>
+<td align="center">Transformer</td>
+<td align="center"><a href="https://arxiv.org/abs/1706.03762">(Vaswani et al., 2017b)</a></td>
+</tr>
+<tr>
+<td align="center">Context2Seq</td>
+<td align="center"><a href="https://arxiv.org/abs/1611.09900">(Tang et al., 2016)</a></td>
+</tr>
+<tr>
+<td align="center">Attr2Seq</td>
+<td align="center"><a href="https://www.aclweb.org/anthology/E17-1059/">(Dong et al., 2017)</a></td>
+</tr>
+<tr>
+<td align="center">HRED</td>
+<td align="center"><a href="https://arxiv.org/abs/1507.04808">(Serban et al., 2016)</a></td>
+</tr>
 </tbody></table>
 
 ### Dataset
 
-We have also collected 6 datasets that are commonly used for above three tasks, which can be downloaded from [Google Drive](https://drive.google.com/drive/folders/1iNRErGM3YRDF3hjY8DMpWaQo-prmUtNX?usp=sharing) and [Baidu Wangpan](https://pan.baidu.com/s/1upHl8SXGNjZ2LCfV-L164Q) (Password: lwy6), including raw data and processed data. 
+We have also collected 9 datasets that are commonly used for six tasks, which can be downloaded from [Google Drive](https://drive.google.com/drive/folders/1iNRErGM3YRDF3hjY8DMpWaQo-prmUtNX?usp=sharing) and [Baidu Wangpan](https://pan.baidu.com/s/1upHl8SXGNjZ2LCfV-L164Q) (Password: lwy6), including raw data and processed data. 
 
-We list the 6 datasets in the following table:
+We list the 9 datasets in the following table:
 
 <table align="center">
 <thead>
@@ -251,9 +283,20 @@ We list the 6 datasets in the following table:
 <td align="center"><strong>Summarization</strong></td>
 <td align="center">GigaWord</td>
 </tr>
+<tr>
+<td align="center"><strong>Dialog</strong></td>
+<td align="center">Persona Chat</td>
+</tr>
+<tr>
+<td align="center"><strong>Attribute to Text</strong></td>
+<td align="center">Amazon Electronic</td>
+</tr>
+<tr>
+<td align="center"><strong>Poem Generation</strong></td>
+<td align="center">Chinese Classical Poetry Corpus</td>
+</tr>
 </tbody>
 </table>
-
 The downloaded dataset should be placed in the `dataset` folder, just as our main branch.
 
 We also support you to run our model using your own dataset. Just follow the three steps:
@@ -268,7 +311,7 @@ We also support you to run our model using your own dataset. Just follow the thr
 
 3. For unconditional generation, name the corpus file `corpus.txt` if you set`"by_ratio"`, name the corpus files `train.txt, valid.txt, dev.txt` if you set `"load_split"`.
 
-   For sequence-to-sequence generation, we only support to load the splitted data. Please name the corpus files `train.[xx/yy], valid.[xx/yy], dev.[xx/yy]`, and the `xx` or `yy` is the suffix of the source or target file which should be consistent with `source_suffix` and `target_suffix` in the YAML.
+   For sequence-to-sequence generation, please name the corpus files `train.[xx/yy], valid.[xx/yy], dev.[xx/yy]`, and the `xx` or `yy` is the suffix of the source or target file which should be consistent with `source_suffix` and `target_suffix` in the YAML.
 
 ## Experiment Results
 
@@ -375,7 +418,7 @@ NLL, BLEU and SBLEU on test dataset:
 |  **MaskGAN**  | 509.58 | 56.61  | 21.41  |  4.49  |  0.86  |  92.09  |  77.88  |  59.62  |  42.36  |
 |   **GPT-2**   | 348.67 | 72.52  | 41.75  | 15.40  |  4.22  |  86.21  |  58.26  |  30.03  |  12.56  |
 
-Part of generated examples (with `max_length` 100):
+Part of generated examples (with `max_length=100`):
 
 <table align="center">
 <thead>
@@ -400,9 +443,98 @@ Part of generated examples (with `max_length` 100):
 
 ### Sequence-to-Sequence Generation
 
+#### GigaWord (Summarization)
+
+ROUGE metric on test dataset using beam search (with `beam_size=5`):
+
+<table align="center">
+<thead>
+<tr>
+<th align="center">Model</th>
+<th align="center">ROUGE-1</th>
+<th align="center">ROUGE-2</th>
+<th align="center">ROUGE-L</th>
+<th align="center">ROUGE-W</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center"><strong>RNN with Attention</strong></td>
+<td align="center">36.32</td>
+<td align="center">17.63</td>
+<td align="center">38.36</td>
+<td align="center">25.08</td>
+</tr>
+<tr>
+<td align="center"><strong>Transformer</strong></td>
+<td align="center">36.21</td>
+<td align="center">17.64</td>
+<td align="center">38.10</td>
+<td align="center">24.89</td>
+</tr>
+<tr>
+<td align="center"><strong>BART</strong></td>
+<td align="center">39.34</td>
+<td align="center">20.07</td>
+<td align="center">41.25</td>
+<td align="center">27.13</td>
+</tr>
+<tr>
+<td align="center"><strong>BERT2BERT</strong></td>
+<td align="center">38.16</td>
+<td align="center">18.89</td>
+<td align="center">40.06</td>
+<td align="center">26.21</td>
+</tr>
+<td align="center"><strong>ProphetNet</strong></td>
+<td align="center">38.49</td>
+<td align="center">18.41</td>
+<td align="center">39.84</td>
+<td align="center">26.12</td>
+</tr>
+<td align="center"><strong>T5</strong></td>
+<td align="center">38.83</td>
+<td align="center">19.68</td>
+<td align="center">40.76</td>
+<td align="center">26.73</td>
+</tr>
+</tbody></table>
+Part of generated examples:
+
+<table align="center">
+<tbody><tr>
+<td align="center"><b>Article</b></td>
+<td>japan 's nec corp. and computer corp. of the united states said wednesday they had agreed to join forces in supercomputer sales .
+</td>
+</tr>
+<tr>
+<td align="center"><b>Gold Summary</b></td>
+<td>nec in computer sales tie-up</td>
+</tr>
+<tr>
+<td align="center"><b>RNN with Attention</b></td>
+<td>nec computer corp .</td>
+</tr>
+<tr>
+<td align="center"><b>Transformer</b></td>
+<td>nec computer to join forces in chip sales</td>
+</tr>
+<td align="center"><b>BART</b></td>
+<td>nec computer corp.</td>
+</tr>
+<td align="center"><b>BERT2BERT</b></td>
+<td>nec computer form alliance for supercomputer sales</td>
+</tr>
+<td align="center"><b>ProphetNet</b></td>
+<td>nec computer to join forces in supercomputer sales</td>
+</tr>
+<td align="center"><b>T5</b></td>
+<td>nec computer to join forces in supercomputer sales</td>
+</tr>
+</tbody></table>
+
 #### IWSLT2014 German-English (Translation)
 
-BLEU metric on test dataset with three decoding strategies: top-k sampling, greedy search and beam search (with `beam_size` 5):
+BLEU metric on test dataset with three decoding strategies: top-k sampling, greedy search and beam search (with `beam_size=5`):
 
 <table align="center">
 <thead>
@@ -496,74 +628,92 @@ Part of generated examples:
 </tr>
 </tbody></table>
 
-#### GigaWord (Summarization)
+#### Persona Chat (Dialogue)
 
-ROUGE metric on test dataset using beam search (with `beam_size` 5):
+BLEU and distinct metrics on test dataset using beam search (with `beam_size=5`):
 
 <table align="center">
 <thead>
 <tr>
 <th align="center">Model</th>
-<th align="center">ROUGE-1</th>
-<th align="center">ROUGE-2</th>
-<th align="center">ROUGE-L</th>
-<th align="center">ROUGE-W</th>
+<th align="center">Distinct-1</th>
+<th align="center">Distinct-2</th>
+<th align="center">BLEU-1</th>
+<th align="center">BLEU-2</th>
+<th align="center">BLEU-3</th>
+<th align="center">BLEU-4</th>
 </tr>
 </thead>
 <tbody><tr>
 <td align="center"><strong>RNN with Attention</strong></td>
-<td align="center">36.32</td>
-<td align="center">17.63</td>
-<td align="center">38.36</td>
-<td align="center">25.08</td>
+<td align="center">0.24</td>
+<td align="center">0.72</td>
+<td align="center">17.51</td>
+<td align="center">4.65</td>
+<td align="center">2.11</td>
+<td align="center">1.47</td>
 </tr>
 <tr>
 <td align="center"><strong>Transformer</strong></td>
-<td align="center">36.21</td>
-<td align="center">17.64</td>
-<td align="center">38.10</td>
-<td align="center">24.89</td>
+<td align="center">0.38</td>
+<td align="center">2.28</td>
+<td align="center">17.29</td>
+<td align="center">4.85</td>
+<td align="center">2.32</td>
+<td align="center">1.65</td>
 </tr>
 <tr>
-<td align="center"><strong>BART</strong></td>
-<td align="center">39.34</td>
-<td align="center">20.07</td>
-<td align="center">41.25</td>
-<td align="center">27.13</td>
-</tr>
-<tr>
-<td align="center"><strong>BERT2BERT</strong></td>
-<td align="center">38.16</td>
-<td align="center">18.89</td>
-<td align="center">40.06</td>
-<td align="center">26.21</td>
+<td align="center"><strong>HRED</strong></td>
+<td align="center">0.22</td>
+<td align="center">0.63</td>
+<td align="center">17.29</td>
+<td align="center">4.72</td>
+<td align="center">2.20</td>
+<td align="center">1.60</td>
 </tr>
 </tbody></table>
-Part of generated examples:
+
+#### Amazon Electronic (Attribute to text)
+
+BLEU and distinct metrics on test dataset using beam search (with `beam_size=5`):
 
 <table align="center">
+<thead>
+<tr>
+<th align="center">Model</th>
+<th align="center">Distinct-1</th>
+<th align="center">Distinct-2</th>
+<th align="center">BLEU-1</th>
+<th align="center">BLEU-2</th>
+<th align="center">BLEU-3</th>
+<th align="center">BLEU-4</th>
+</tr>
+</thead>
 <tbody><tr>
-<td align="center"><b>Article</b></td>
-<td>japan 's nec corp. and computer corp. of the united states said wednesday they had agreed to join forces in supercomputer sales .
-</td>
+<td align="center"><strong>Context2Seq</strong></td>
+<td align="center">0.07</td>
+<td align="center">0.39</td>
+<td align="center">17.21</td>
+<td align="center">2.80</td>
+<td align="center">0.83</td>
+<td align="center">0.43</td>
 </tr>
 <tr>
-<td align="center"><b>Gold Summary</b></td>
-<td>nec in computer sales tie-up</td>
-</tr>
-<tr>
-<td align="center"><b>RNN with Attention</b></td>
-<td>nec computer corp .</td>
-</tr>
-<tr>
-<td align="center"><b>Transformer</b></td>
-<td>nec computer to join forces in chip sales</td>
+<td align="center"><strong>Attr2Seq</strong></td>
+<td align="center">0.14</td>
+<td align="center">2.81</td>
+<td align="center">17.14</td>
+<td align="center">2.81</td>
+<td align="center">0.87</td>
+<td align="center">0.48</td>
 </tr>
 </tbody></table>
+
 ## Releases
 
 | Releases |    Date    |   Features    |
 | :------: | :--------: | :-----------: |
+|  v0.2.1  | 15/04/2021 |    TextBox    |
 |  v0.1.5  | 01/11/2021 | Basic TextBox |
 
 ## Contributing
@@ -573,6 +723,8 @@ Please let us know if you encounter a bug or have any suggestions by [filing an 
 We welcome all contributions from bug fixes to new features and extensions.
 
 We expect all contributions discussed in the issue tracker and going through PRs.
+
+We thank [@LucasTsui0725](https://github.com/LucasTsui0725/) for contributing HRED model and [@Richar-Du](https://github.com/Richar-Du/) for CVAE model.
 
 ## Reference
 

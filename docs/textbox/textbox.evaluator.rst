@@ -5,9 +5,16 @@ textbox.evaluator
    :maxdepth: 4
 
    textbox.evaluator.abstract_evaluator
-   textbox.evaluator.metrics
-   textbox.evaluator.ngram_evaluator
-   textbox.evaluator.summarization_evaluator
-   textbox.evaluator.translation_evaluator
-   textbox.evaluator.dialog_evaluator
-
+   textbox.evaluator.averagelength_evaluator
+   textbox.evaluator.base_evaluator
+   textbox.evaluator.bertscore_evaluator
+   textbox.evaluator.bleu_evaluator
+   textbox.evaluator.chrfplusplus_evaluator
+   textbox.evaluator.cider_evaluator
+   textbox.evaluator.distinct_evaluator
+   textbox.evaluator.meteor_evaluator
+   textbox.evaluator.rouge_evaluator
+   textbox.evaluator.selfbleu_evaluator
+   textbox.evaluator.unique_evaluator
+   textbox.evaluator.sentence_bleu
+   

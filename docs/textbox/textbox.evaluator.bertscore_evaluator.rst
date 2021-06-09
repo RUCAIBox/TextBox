@@ -1,4 +1,4 @@
-.. automodule:: textbox.evaluator.ngram_evaluator
+.. automodule:: textbox.evaluator.bertscore_evaluator
    :members:
    :undoc-members:
    :show-inheritance:

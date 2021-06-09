@@ -1,4 +1,4 @@
-.. automodule:: textbox.evaluator.dialog_evaluator
+.. automodule:: textbox.evaluator.base_evaluator
    :members:
    :undoc-members:
    :show-inheritance:

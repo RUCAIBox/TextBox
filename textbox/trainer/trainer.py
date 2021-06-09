@@ -190,8 +190,8 @@ class Trainer(AbstractTrainer):
                 total_loss = losses.item() if total_loss is None else total_loss + losses.item()
 
             self._check_nan(loss)
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
             self.optimizer.step()
         train_loss = total_loss / len(train_data)
         return train_loss

@@ -9,5 +9,5 @@ source_language: english
 target_language: english
 source_suffix: article
 target_suffix: summary
-share_vocab: true
+share_vocab: True
 task_type: "summarization"

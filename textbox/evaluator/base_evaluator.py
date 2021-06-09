@@ -19,7 +19,6 @@ textbox.evaluator.base_evaluator
 
 from textbox.evaluator.bleu_evaluator import BleuEvaluator
 from textbox.evaluator.distinct_evaluator import DistinctEvaluator
-from textbox.evaluator.rouge_evaluator import RougeEvaluator
 from textbox.evaluator.selfbleu_evaluator import SelfBleuEvaluator
 from textbox.evaluator.averagelength_evaluator import AvgLenEvaluator
 from textbox.evaluator.cider_evaluator import CIDErEvaluator
@@ -27,6 +26,7 @@ from textbox.evaluator.chrfplusplus_evaluator import ChrfPlusPlusEvaluator
 from textbox.evaluator.meteor_evaluator import MeteorEvaluator
 from textbox.evaluator.bertscore_evaluator import BertScoreEvaluator
 from textbox.evaluator.unique_evaluator import UniqueEvaluator
+from textbox.evaluator.rouge_evaluator import RougeEvaluator
 
 evaluator_list = [
     'bleu', 'self_bleu', 'rouge', 'distinct', 'nll_test', 'avg_len', 'cider', 'chrf++', 'meteor', 'unique', 'bert_score'

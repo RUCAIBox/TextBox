@@ -16,5 +16,3 @@ textbox.evaluator
    textbox.evaluator.rouge_evaluator
    textbox.evaluator.selfbleu_evaluator
    textbox.evaluator.unique_evaluator
-   textbox.evaluator.sentence_bleu
-   

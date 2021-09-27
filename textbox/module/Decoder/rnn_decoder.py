@@ -74,8 +74,8 @@ class BasicRNNDecoder(torch.nn.Module):
         """
         if hidden_states is None:
             hidden_states = self.init_hidden(input_embeddings)
-
-        hidden_states = hidden_states.contiguous()
+        if not isinstance(hidden_states, tuple):
+            hidden_states = hidden_states.contiguous()
         outputs, hidden_states = self.decoder(input_embeddings, hidden_states)
         return outputs, hidden_states
 

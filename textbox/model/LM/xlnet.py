@@ -39,7 +39,6 @@ class XLNet(UnconditionalGenerator):
         self.sos_token_idx = self.tokenizer.bos_token_id
         self.eos_token_idx = self.tokenizer.eos_token_id
         self.padding_token_idx = self.tokenizer.pad_token_id
-        self.max_seq_length = config['max_seq_length']
 
         self.configuration = XLNetConfig.from_pretrained(
             self.pretrained_model_path,
@@ -59,7 +58,7 @@ class XLNet(UnconditionalGenerator):
         sample_outputs = self.decoder.generate(
             bos_token_id=self.sos_token_idx,
             do_sample=True,
-            max_length=self.max_seq_length,
+            max_length=self.max_length,
             num_return_sequences=batch_size
         )
         generated_text = self.tokenizer.batch_decode(sample_outputs, skip_special_tokens=True)
@@ -74,7 +73,7 @@ class XLNet(UnconditionalGenerator):
             sentence = ' '.join([self.sos_token] + text + [self.eos_token])
             encoding_dict = self.tokenizer(
                 sentence,
-                max_length=self.max_seq_length,
+                max_length=self.max_length,
                 padding="max_length",
                 truncation=True,
                 return_tensors="pt",

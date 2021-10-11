@@ -40,28 +40,19 @@ class Attr2Seq(AttributeGenerator):
         if (self.strategy == 'beam_search'):
             self.beam_size = config['beam_size']
 
-        self.padding_token_idx = dataset.padding_token_idx
-        self.sos_token_idx = dataset.sos_token_idx
-        self.eos_token_idx = dataset.eos_token_idx
-
         self.source_token_embedder = nn.ModuleList([
             nn.Embedding(self.attribute_size[i], self.embedding_size) for i in range(self.attribute_num)
         ])
         self.target_token_embedder = nn.Embedding(
             self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx
         )
-
         self.decoder = AttentionalRNNDecoder(
             self.embedding_size, self.hidden_size, self.embedding_size, self.num_dec_layers, self.rnn_type,
             self.dropout_ratio, self.attention_type, self.alignment_method
         )
-
         self.dropout = nn.Dropout(self.dropout_ratio)
         self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
-
-        self.max_target_length = config['max_seq_length']
-
         self.H = nn.Linear(self.attribute_num * self.embedding_size, self.num_dec_layers * self.hidden_size)
 
         # parameters initialization
@@ -96,7 +87,7 @@ class Attr2Seq(AttributeGenerator):
     def generate(self, batch_data, eval_data):
         generate_corpus = []
         idx2token = eval_data.idx2token
-        source_idx = batch_data['attribute_idx']
+        source_idx = batch_data['source_idx']
         self.batch_size = source_idx.size(0)
 
         encoder_outputs, encoder_states = self.encoder(source_idx)
@@ -113,7 +104,7 @@ class Attr2Seq(AttributeGenerator):
                     self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token
                 )
 
-            for gen_idx in range(self.max_target_length):
+            for gen_idx in range(self.target_max_length):
                 decoder_input = self.target_token_embedder(input_seq)
                 decoder_outputs, decoder_states, _ = self.decoder(decoder_input, decoder_states, encoder_output)
 
@@ -146,13 +137,13 @@ class Attr2Seq(AttributeGenerator):
     def forward(self, corpus, epoch_idx=0):
         # target_length (Torch.Tensor): shape: [batch_size]
         target_length = corpus['target_length']
-        # attribute_idx (Torch.Tensor): shape: [batch_size, attribute_num].
-        attribute_idx = corpus['attribute_idx']
+        # source_idx (Torch.Tensor): shape: [batch_size, attribute_num].
+        source_idx = corpus['source_idx']
         # target_idx (torch.Tensor): shape: [batch_size, length].
         target_idx = corpus['target_idx']
-        self.batch_size = attribute_idx.size(0)
+        self.batch_size = source_idx.size(0)
 
-        encoder_outputs, encoder_states = self.encoder(attribute_idx)
+        encoder_outputs, encoder_states = self.encoder(source_idx)
         encoder_states = encoder_states.contiguous()
 
         input_text = target_idx[:, :-1]

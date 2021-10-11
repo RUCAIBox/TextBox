@@ -1,13 +1,5 @@
-# special tokens
-max_vocab_size: 30000
-max_source_length: 200
-max_target_length: 50
-split_strategy: "load_split"
-overlength_strategy: "drop"
-tokenize_strategy: "by_space"
-source_language: english
-target_language: english
-source_suffix: article
-target_suffix: summary
+vocab_size: 30000
+src_len: 200
+tgt_len: 50
 share_vocab: True
 task_type: "summarization"

@@ -20,17 +20,13 @@ class RankGANGenerator(UnconditionalGenerator):
 
     def __init__(self, config, dataset):
         super(RankGANGenerator, self).__init__(config, dataset)
-
         self.hidden_size = config['hidden_size']
         self.embedding_size = config['generator_embedding_size']
-        self.max_length = config['max_seq_length'] + 2
+        self.max_length = config['seq_len'] + 2
         self.monte_carlo_num = config['Monte_Carlo_num']
-        self.start_idx = dataset.sos_token_idx
-        self.end_idx = dataset.eos_token_idx
-        self.pad_idx = dataset.padding_token_idx
 
         self.LSTM = nn.LSTM(self.embedding_size, self.hidden_size)
-        self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.pad_idx)
+        self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
         self.vocab_projection = nn.Linear(self.hidden_size, self.vocab_size)
 
     def calculate_loss(self, corpus, nll_test=False):
@@ -51,7 +47,10 @@ class RankGANGenerator(UnconditionalGenerator):
 
         target_word = datas[1:]  # len * b
         target_word_prob = F.cross_entropy(
-            logits.reshape(-1, self.vocab_size), target_word.reshape(-1), ignore_index=self.pad_idx, reduction='none'
+            logits.reshape(-1, self.vocab_size),
+            target_word.reshape(-1),
+            ignore_index=self.padding_token_idx,
+            reduction='none'
         )  # (len * b)
         target_word_prob = target_word_prob.reshape_as(target_word)  # len * b
         if (nll_test):
@@ -65,7 +64,7 @@ class RankGANGenerator(UnconditionalGenerator):
         r"""Sample a batch of generated sentence indice.
 
         Returns:
-            torch.Tensor: The generated sentence indice, shape: [batch_size, max_seq_length].
+            torch.Tensor: The generated sentence indice, shape: [batch_size, max_length].
         """
         self.eval()
         sentences = []
@@ -74,10 +73,10 @@ class RankGANGenerator(UnconditionalGenerator):
             o_prev = torch.zeros(1, self.batch_size, self.hidden_size, device=self.device)  # 1 * b * h
             prev_state = (h_prev, o_prev)
             X = self.word_embedding(
-                torch.tensor([self.start_idx] * self.batch_size, dtype=torch.long, device=self.device)
+                torch.tensor([self.sos_token_idx] * self.batch_size, dtype=torch.long, device=self.device)
             ).unsqueeze(0)  # 1 * b * e
             sentences = torch.zeros((self.max_length, self.batch_size), dtype=torch.long, device=self.device)
-            sentences[0] = self.start_idx
+            sentences[0] = self.sos_token_idx
 
             for i in range(1, self.max_length):
                 output, prev_state = self.LSTM(X, prev_state)
@@ -89,9 +88,9 @@ class RankGANGenerator(UnconditionalGenerator):
             sentences = sentences.permute(1, 0)  # b * l
 
             for i in range(self.batch_size):
-                end_pos = (sentences[i] == self.end_idx).nonzero(as_tuple=False)
+                end_pos = (sentences[i] == self.eos_token_idx).nonzero(as_tuple=False)
                 if (end_pos.shape[0]):
-                    sentences[i][end_pos[0][0] + 1:] = self.pad_idx
+                    sentences[i][end_pos[0][0] + 1:] = self.padding_token_idx
 
         self.train()
         return sentences
@@ -103,7 +102,7 @@ class RankGANGenerator(UnconditionalGenerator):
             sample_num (int): The number to generate.
 
         Returns:
-            torch.Tensor: The generated sentence indice, shape: [sample_num, max_seq_length].
+            torch.Tensor: The generated sentence indice, shape: [sample_num, max_length].
         """
         samples = []
         batch_num = math.ceil(sample_num // self.batch_size)
@@ -130,7 +129,9 @@ class RankGANGenerator(UnconditionalGenerator):
             h_prev = torch.zeros(1, 1, self.hidden_size, device=self.device)  # 1 * 1 * h
             o_prev = torch.zeros(1, 1, self.hidden_size, device=self.device)  # 1 * 1 * h
             prev_state = (h_prev, o_prev)
-            X = self.word_embedding(torch.tensor([[self.start_idx]], dtype=torch.long, device=self.device))  # 1 * 1 * e
+            X = self.word_embedding(
+                torch.tensor([[self.sos_token_idx]], dtype=torch.long, device=self.device)
+            )  # 1 * 1 * e
             generate_tokens = []
 
             for _ in range(self.max_length):
@@ -138,7 +139,7 @@ class RankGANGenerator(UnconditionalGenerator):
                 P = F.softmax(self.vocab_projection(output), dim=-1).squeeze()  # v
                 token = torch.multinomial(P, 1)[0]
                 X = self.word_embedding(torch.tensor([[token]], dtype=torch.long, device=self.device))  # 1 * 1 * e
-                if (token.item() == self.end_idx):
+                if (token.item() == self.eos_token_idx):
                     break
                 else:
                     generate_tokens.append(idx2token[token.item()])
@@ -161,7 +162,7 @@ class RankGANGenerator(UnconditionalGenerator):
         fake_samples = self.sample(self.batch_size)
         h_prev = torch.zeros(1, self.batch_size, self.hidden_size, device=self.device)  # 1 * b * h
         o_prev = torch.zeros(1, self.batch_size, self.hidden_size, device=self.device)  # 1 * b * h
-        X = self.word_embedding(torch.tensor([self.start_idx] * self.batch_size,
+        X = self.word_embedding(torch.tensor([self.sos_token_idx] * self.batch_size,
                                              device=self.device)).unsqueeze(0)  # 1 * b * e
 
         rewards = 0
@@ -205,7 +206,7 @@ class RankGANGenerator(UnconditionalGenerator):
                 reward = torch.mean(all_rank_score, dim=0)  # b
 
             self.train()
-            mask = word_t != self.pad_idx
+            mask = word_t != self.padding_token_idx
             reward = reward * P_t * mask.float()
             mask_sum = mask.sum()
             if (mask_sum):

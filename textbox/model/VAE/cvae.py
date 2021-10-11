@@ -39,16 +39,11 @@ class CVAE(Seq2SeqGenerator):
         self.bidirectional = config['bidirectional']
         self.dropout_ratio = config['dropout_ratio']
         self.eval_generate_num = config['eval_generate_num']
-        self.max_target_length = config['max_target_length']
         self.prior_neuron_size = config['prior_neuron_size']  # neuron size in the prior network
         self.posterior_neuron_size = config['posterior_neuron_size']  # neuron size in the posterior network
         self.latent_neuron_size = config['latent_neuron_size']  # neuron size in latent_to_hidden
-        self.max_target_num = config['max_target_num']
 
         self.num_directions = 2 if self.bidirectional else 1
-        self.padding_token_idx = dataset.padding_token_idx
-        self.sos_token_idx = dataset.sos_token_idx
-        self.eos_token_idx = dataset.eos_token_idx
 
         # define layers and loss
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
@@ -134,7 +129,7 @@ class CVAE(Seq2SeqGenerator):
         sentence_length = torch.Tensor([sentence_length[i][0].item() for i in range(len(sentence_length))])
         batch_size = title_text.size(0)
 
-        pad_text = torch.full((batch_size, self.max_target_length + 2), self.padding_token_idx).to(self.device)
+        pad_text = torch.full((batch_size, self.target_max_length + 2), self.padding_token_idx).to(self.device)
         pad_emb = self.token_embedder(pad_text)
         title_emb = self.token_embedder(title_text)
         title_o, title_hidden = self.encoder(title_emb, title_length)
@@ -164,7 +159,7 @@ class CVAE(Seq2SeqGenerator):
             poem = []
             pre_h = torch.unsqueeze(fir_h[bid], 0)
             single_title_h = torch.unsqueeze(title_h[bid], 0)
-            for i in range(self.max_target_num):
+            for i in range(self.target_max_num):
                 generate_sentence = []
                 generate_sentence_idx = []
                 condition = torch.cat((single_title_h, pre_h), 1)
@@ -224,14 +219,14 @@ class CVAE(Seq2SeqGenerator):
         return generate_corpus
 
     def forward(self, corpus, epoch_idx=0):
-        # title_text Torch.tensor): shape: [batch_size,max_source_length+2]
+        # title_text Torch.tensor): shape: [batch_size,source_max_length+2]
         title_text = corpus['source_idx']
         # title_length (Torch.tensor): shape: [batch_size]
         title_length = corpus['source_length']
-        # sentence_text (Torch.tensor): shape: [batch_size,max_target_num,max_target_length+2]
+        # sentence_text (Torch.tensor): shape: [batch_size,target_max_num,target_max_length+2]
         sentence_text = corpus['target_idx']
         target_text = sentence_text[:, :, 1:]
-        # sentence_length (Torch.tensor): shape: [batch_size,max_target_num]
+        # sentence_length (Torch.tensor): shape: [batch_size,target_max_num]
         sentence_length = corpus['target_length']
         # sentence_length (Torch.tensor): shape: [batch_size]
         sentence_length = torch.Tensor([sentence_length[i][0].item()
@@ -240,24 +235,24 @@ class CVAE(Seq2SeqGenerator):
 
         # title_emb (Torch.tensor): shape:[batch_size,source_length,embedding_size]
         title_emb = self.token_embedder(title_text)
-        # sentence_emb (Torch.tensor): shape:[batch_size,max_target_num,max_target_length+2,embedding_size]
+        # sentence_emb (Torch.tensor): shape:[batch_size,target_max_num,target_max_length+2,embedding_size]
         sentence_emb = self.token_embedder(sentence_text)
 
-        # title_o (Torch.tensor): shape:[batch_size,max_source_length+2,hidden_size*2]
+        # title_o (Torch.tensor): shape:[batch_size,source_max_length+2,hidden_size*2]
         # title_hidden (Torch.tensor): shape:[num_enc_layers*num_directions,batch_size,hidden_size]
         title_o, title_hidden = self.encoder(title_emb, title_length)
 
         # pad_text (Torch.tensor): shape:[batch_size,sentence_length]
-        pad_text = torch.full((batch_size, self.max_target_length + 2), self.padding_token_idx).to(
+        pad_text = torch.full((batch_size, self.target_max_length + 2), self.padding_token_idx).to(
             self.device
         )  # prepare 'pad' to generate the first line, because there is no "previous" line for the first line"
-        # pad_emb (Torch.tensor): shape:[batch_size,max_target_length+2，embedding_size]
+        # pad_emb (Torch.tensor): shape:[batch_size,target_max_length+2，embedding_size]
         pad_emb = self.token_embedder(pad_text)
 
         total_loss = torch.zeros(1).to(self.device)
-        for i in range(self.max_target_num):
+        for i in range(self.target_max_num):
             if i == 0:  # there is no previous line for the first line
-                # pre_o (Torch.tensor): shape:[batch_size,max_target_length+2,hidden_size*2]
+                # pre_o (Torch.tensor): shape:[batch_size,target_max_length+2,hidden_size*2]
                 # pre_hidden (Torch.tensor): shape:[num_enc_layers*num_directions,batch_size,hidden_size]
                 pre_o, pre_hidden = self.encoder(pad_emb, sentence_length)
             else:
@@ -364,6 +359,6 @@ class CVAE(Seq2SeqGenerator):
             kld_coef = float(epoch_idx / self.max_epoch) + 1e-3
             loss = loss.mean() + kld_coef * kld.mean()
             total_loss += loss
-        total_loss = total_loss / self.max_target_num
+        total_loss = total_loss / self.target_max_num
 
         return total_loss

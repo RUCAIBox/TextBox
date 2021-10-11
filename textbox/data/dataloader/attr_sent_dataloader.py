@@ -2,17 +2,18 @@
 # @Author : Tianyi Tang
 # @Email  : steven_tang@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2021/10/10
+# @Author : Tianyi Tang
+# @Email  : steven_tang@ruc.edu.cn
+
 """
 textbox.data.dataloader.attr_sent_dataloader
 ################################################
 """
 
-import numpy as np
-import random
-import math
 import torch
-
-from textbox.data.dataloader.abstract_dataloader import AbstractDataLoader
+from textbox.data.dataloader import AbstractDataLoader
 
 
 class AttributedSentenceDataLoader(AbstractDataLoader):
@@ -27,61 +28,16 @@ class AttributedSentenceDataLoader(AbstractDataLoader):
 
     def __init__(self, config, dataset, batch_size=1, shuffle=False, drop_last=True, DDP=False):
         super().__init__(config, dataset, batch_size, shuffle, drop_last, DDP)
-        self._data_preprocess(dataset)
+        self.attribute_size = [len(a2t) for a2t in self.source_idx2token]
+        self.attribute_num = len(self.attribute_size)
 
-    def _build_attribute(self, attribute_data, attribute2idx):
-        attribute_idx_data = []
-        for attribute in attribute_data:
-            attribute_idx = []
-            for i, attr in enumerate(attribute):
-                idx = attribute2idx[i][attr]
-                attribute_idx.append(idx)
-            attribute_idx_data.append(attribute_idx)
-        return attribute_idx_data
-
-    def _data_preprocess(self, dataset):
-        required_key_list = ['text_data', 'idx2token', 'token2idx', 'attribute_data', 'idx2attribute', 'attribute2idx']
-        for dataset_attr in required_key_list:
-            assert dataset_attr in dataset
-            setattr(self, dataset_attr, dataset[dataset_attr])
-        self.text_idx_data, self.idx_length_data = self._build_data(self.text_data, self.token2idx)
-        self.attribute_idx_data = self._build_attribute(self.attribute_data, self.attribute2idx)
-
-    def get_reference(self):
-        return self.text_data
-
-    @property
-    def pr_end(self):
-        return len(self.text_idx_data)
-
-    def _shuffle(self):
-        temp = list(
-            zip(self.text_data, self.text_idx_data, self.idx_length_data, self.attribute_data, self.attribute_idx_data)
-        )
-        random.shuffle(temp)
-        self.text_data[:
-                       ], self.text_idx_data[:
-                                             ], self.idx_length_data[:
-                                                                     ], self.attribute_data[:
-                                                                                            ], self.attribute_idx_data[:] = zip(
-                                                                                                *temp
-                                                                                            )
-
-    def _next_batch_data(self):
-        tp_text_data = self.text_data[self.pr:self.pr + self.step]
-        tp_text_idx_data = self.text_idx_data[self.pr:self.pr + self.step]
-        tp_idx_length_data = self.idx_length_data[self.pr:self.pr + self.step]
-        padded_idx, length = self._pad_batch_sequence(tp_text_idx_data, tp_idx_length_data)
-
-        tp_attribute_data = self.attribute_data[self.pr:self.pr + self.step]
-        tp_attribute_idx_data = self.attribute_idx_data[self.pr:self.pr + self.step]
-        attribute_idx = torch.LongTensor(tp_attribute_idx_data)
+    def _next_source_patch(self):
+        source_text = self.source_text[self.pr:self.pr + self.step]
+        source_idx = self.source_idx[self.pr:self.pr + self.step]
+        source_idx = torch.LongTensor(source_idx)
 
         batch_data = {
-            'target_text': tp_text_data,
-            'target_idx': padded_idx.to(self.device),
-            'target_length': length.to(self.device),
-            'attribute_text': tp_attribute_data,
-            'attribute_idx': attribute_idx.to(self.device)
+            'source_text': source_text,
+            'source_idx': source_idx.to(self.device),
         }
         return batch_data

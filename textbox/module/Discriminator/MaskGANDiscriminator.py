@@ -22,7 +22,6 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
 
     def __init__(self, config, dataset):
         super(MaskGANDiscriminator, self).__init__(config, dataset)
-
         # load parameters info
         self.embedding_size = config['embedding_size']
         self.hidden_size = config['hidden_size']
@@ -35,10 +34,6 @@ class MaskGANDiscriminator(GenerativeAdversarialNet):
         self.attention_type = config['attention_type']
         self.context_size = config['context_size']
         self.attention_type = config['attention_type']
-
-        self.padding_token_idx = dataset.padding_token_idx
-        self.sos_token_idx = dataset.sos_token_idx
-        self.eos_token_idx = dataset.eos_token_idx
         self.mask_token_idx = dataset.user_token_idx[0]
 
         self.encoder = BasicRNNEncoder(

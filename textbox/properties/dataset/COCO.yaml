@@ -1,8 +1,3 @@
-# special tokens
-max_vocab_size: 5000
-max_seq_length: 40
-split_strategy: "load_split"
-overlength_strategy: "drop"
-tokenize_strategy: "by_space"
-language: "English"
+vocab_size: 5000
+seq_len: 40
 task_type: "unconditional"

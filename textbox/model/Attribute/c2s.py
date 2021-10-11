@@ -32,40 +32,26 @@ class C2S(AttributeGenerator):
         self.num_dec_layers = config['num_dec_layers']
         self.dropout_ratio = config['dropout_ratio']
         self.rnn_type = config['rnn_type']
-
-        self.max_length = config['max_seq_length']
         self.is_gated = config['gated']
         self.decoding_strategy = config['decoding_strategy']
-
         if self.decoding_strategy == 'beam_search':
             self.beam_size = config['beam_size']
 
-        self.padding_token_idx = dataset.padding_token_idx
-        self.sos_token_idx = dataset.sos_token_idx
-        self.eos_token_idx = dataset.eos_token_idx
-
         # Layers
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
-
         self.attr_embedder = nn.ModuleList([
             nn.Embedding(self.attribute_size[i], self.embedding_size) for i in range(self.attribute_num)
         ])
-
         self.decoder = BasicRNNDecoder(
             self.embedding_size, self.hidden_size, self.num_dec_layers, self.rnn_type, self.dropout_ratio
         )
-
         self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
         self.attr_linear = nn.Linear(self.attribute_num * self.embedding_size, self.hidden_size)
-
         if self.is_gated:
             self.gate_linear = nn.Linear(self.hidden_size, self.hidden_size)
-
         self.dropout = nn.Dropout(self.dropout_ratio)
-
         # Loss
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
-
         # Initialize parameters
         self.apply(xavier_normal_initialization)
 
@@ -83,7 +69,7 @@ class C2S(AttributeGenerator):
 
     def forward(self, corpus, epoch_idx=-1, nll_test=False):
         input_text = corpus['target_idx'][:, :-1]
-        input_attr = corpus['attribute_idx']
+        input_attr = corpus['source_idx']
         target_text = corpus['target_idx'][:, 1:]
 
         attr_embeddings, h_c_1D = self.encoder(input_attr)
@@ -110,8 +96,8 @@ class C2S(AttributeGenerator):
     def generate(self, batch_data, eval_data):
         generate_corpus = []
         idx2token = eval_data.idx2token
-        batch_size = batch_data['attribute_idx'].size(0)
-        attr_embeddings, h_c_1D = self.encoder(batch_data['attribute_idx'])
+        batch_size = batch_data['source_idx'].size(0)
+        attr_embeddings, h_c_1D = self.encoder(batch_data['source_idx'])
         h_c = h_c_1D.repeat(self.num_dec_layers, 1, 1)
 
         for bid in range(batch_size):

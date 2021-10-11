@@ -3,14 +3,10 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2020/12/2, 2020/11/27, 2020/12/3, 2020/12/26
-# @Author : Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang, Jinhao Jiang
-# @Email  : jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
+# @Time   : 2021/10/11, 2021/4/12, 2020/12/2, 2020/11/27, 2020/12/3, 2020/12/26
+# @Author : Tang Tianyi, Lai Xu, Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang, Jinhao Jiang
+# @Email  : tsui_lai@163.com, jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
 
-# UPDATE
-# @Time   : 2021/4/12
-# @Author : Lai Xu
-# @Email  : tsui_lai@163.com
 
 r"""
 textbox.trainer.trainer
@@ -32,7 +28,7 @@ from torch.utils.data import DataLoader
 from time import time
 from logging import getLogger
 
-from textbox.module.Optimizer.optim import ScheduledOptim
+from textbox.module.Optimizer.optim import ScheduledOptim, InverseSquareRootOptim
 from textbox.evaluator import BaseEvaluator, evaluator_list
 from textbox.utils import ensure_dir, early_stopping
 
@@ -153,6 +149,8 @@ class Trainer(AbstractTrainer):
                 optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-09), self.learning_rate,
                 self.embedding_size, self.warmup_steps
             )
+        elif self.learner.lower() == 'inverse':
+            optimizer = InverseSquareRootOptim(optim.AdamW(self.model.parameters()), self.learning_rate, 1e-7, 1000)
         else:
             if self.is_logger:
                 self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
@@ -496,8 +494,8 @@ class GANTrainer(Trainer):
 
         self.g_pretraining_loss_dict = dict()
         self.d_pretraining_loss_dict = dict()
-        self.max_length = config['max_seq_length'] + 2
-        self.pad_idx = model.pad_idx
+        self.max_length = config['seq_len'] + 2
+        self.padding_token_idx = model.padding_token_idx
 
     def _build_module_optimizer(self, module):
         r"""Init the Module Optimizer
@@ -567,10 +565,13 @@ class GANTrainer(Trainer):
             data (torch.Tensor): The data to be padded, shape: [batch_size, max_batch_length].
 
         Returns:
-            torch.Tensor: The padded data, shape: [batch_size, max_seq_length].
+            torch.Tensor: The padded data, shape: [batch_size, max_length].
         """
         batch_size = data.shape[0]
-        padded_data = torch.full((batch_size, self.max_length), self.pad_idx, dtype=torch.long, device=self.device)
+        padded_data = torch.full((batch_size, self.max_length),
+                                 self.padding_token_idx,
+                                 dtype=torch.long,
+                                 device=self.device)
         padded_data[:, :data.shape[1]] = data
         return padded_data
 
@@ -878,8 +879,8 @@ class MaskGANTrainer(GANTrainer):
 
     def __init__(self, config, model):
         super(MaskGANTrainer, self).__init__(config, model)
-        self.max_length = config["max_seq_length"]
-        self.eos_token_idx = model.eos_idx
+        self.max_length = config["seq_len"]
+        self.eos_token_idx = model.eos_token_idx
         self.adversarail_c_epochs = config['adversarail_c_epochs']
         self.g_mask_pretraining_epochs = config['g_mask_pretraining_epochs']
         self.g_lr = config['gen_learning_rate']
@@ -1303,7 +1304,7 @@ class LeakGANTrainer(GANTrainer):
         self.g_optimizer = self._build_module_optimizer_(self.model.generator, gen_lr)  # (manager_opt, worker_opt)
         self.d_optimizer = self._build_module_optimizer_(self.model.discriminator, dis_lr)
         self.iters_num = config['iter_num']
-        self.end_idx = model.end_idx
+        self.eos_token_idx = model.eos_token_idx
 
     def _build_module_optimizer_(self, module, learing_rate):
         r"""Specified for leakgan
@@ -1391,7 +1392,10 @@ class LeakGANTrainer(GANTrainer):
 
     def _add_eos(self, data, length):
         batch_size = data.shape[0]
-        padded_data = torch.full((batch_size, self.max_length), self.end_idx, dtype=torch.long, device=self.device)
+        padded_data = torch.full((batch_size, self.max_length),
+                                 self.eos_token_idx,
+                                 dtype=torch.long,
+                                 device=self.device)
         for i in range(batch_size):
             len = length[i].cpu().data
             padded_data[i, :len] = data[i, :len]

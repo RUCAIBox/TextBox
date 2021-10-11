@@ -29,7 +29,6 @@ class RankGAN(GenerativeAdversarialNet):
         super(RankGAN, self).__init__(config, dataset)
         self.generator = RankGANGenerator(config, dataset)
         self.discriminator = RankGANDiscriminator(config, dataset)
-        self.pad_idx = dataset.padding_token_idx
         self.ref_size = config['ref_size']
 
     def calculate_g_train_loss(self, corpus, epoch_idx):

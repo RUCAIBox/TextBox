@@ -25,8 +25,6 @@ class BERT2BERT(Seq2SeqGenerator):
 
         self.sos_token_idx = 101
         self.eos_token_idx = 102
-        self.max_source_length = dataset.max_source_length
-        self.max_target_length = dataset.max_target_length
         self.pretrained_model_path = config['pretrained_model_path']
 
         self.tokenizer = BertTokenizer.from_pretrained(self.pretrained_model_path)
@@ -62,7 +60,7 @@ class BERT2BERT(Seq2SeqGenerator):
             bos_token_id=self.sos_token_idx,
             eos_token_id=self.eos_token_idx,
             num_beams=5,
-            max_length=self.max_target_length,
+            max_length=self.target_max_length,
             early_stopping=True
         )
         generated_text = self.tokenizer.batch_decode(sample_outputs, skip_special_tokens=True)
@@ -74,7 +72,7 @@ class BERT2BERT(Seq2SeqGenerator):
         attn_masks = []
         texts = [' '.join(t) for t in text]
         encoding_dict = self.tokenizer(
-            texts, max_length=self.max_source_length, padding=True, truncation=True, return_tensors="pt"
+            texts, max_length=self.source_max_length, padding=True, truncation=True, return_tensors="pt"
         )
 
         input_ids = encoding_dict['input_ids'].to(self.device)

@@ -50,9 +50,6 @@ class RNNEncDec(Seq2SeqGenerator):
             self.beam_size = config['beam_size']
 
         self.context_size = self.hidden_size
-        self.padding_token_idx = dataset.padding_token_idx
-        self.sos_token_idx = dataset.sos_token_idx
-        self.eos_token_idx = dataset.eos_token_idx
 
         # define layers and loss
         self.source_token_embedder = nn.Embedding(
@@ -84,8 +81,6 @@ class RNNEncDec(Seq2SeqGenerator):
         self.dropout = nn.Dropout(self.dropout_ratio)
         self.vocab_linear = nn.Linear(self.hidden_size, self.target_vocab_size)
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
-
-        self.max_target_length = dataset.max_target_length
 
         # parameters initialization
         self.apply(xavier_normal_initialization)
@@ -119,7 +114,7 @@ class RNNEncDec(Seq2SeqGenerator):
                     self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token
                 )
 
-            for gen_idx in range(self.max_target_length):
+            for gen_idx in range(self.target_max_length):
                 decoder_input = self.target_token_embedder(input_seq)
                 if self.attention_type is not None:
                     decoder_outputs, decoder_states, _ = self.decoder(
@@ -160,7 +155,6 @@ class RNNEncDec(Seq2SeqGenerator):
     def forward(self, corpus, epoch_idx=0):
         source_text = corpus['source_idx']
         source_length = corpus['source_length']
-
         input_text = corpus['target_idx'][:, :-1]
         target_text = corpus['target_idx'][:, 1:]
 

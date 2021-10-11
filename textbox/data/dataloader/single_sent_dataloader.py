@@ -3,7 +3,7 @@
 # @email  : hegaole@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2021/1/29
+# @Time   : 2021/10/10, 2021/1/29
 # @Author : Tianyi Tang
 # @Email  : steven_tang@ruc.edu.cn
 
@@ -12,12 +12,7 @@ textbox.data.dataloader.single_sent_dataloader
 ################################################
 """
 
-import numpy as np
-import random
-import math
-import torch
-
-from textbox.data.dataloader.abstract_dataloader import AbstractDataLoader
+from textbox.data.dataloader import AbstractDataLoader
 
 
 class SingleSentenceDataLoader(AbstractDataLoader):
@@ -32,36 +27,6 @@ class SingleSentenceDataLoader(AbstractDataLoader):
 
     def __init__(self, config, dataset, batch_size=1, shuffle=False, drop_last=True, DDP=False):
         super().__init__(config, dataset, batch_size, shuffle, drop_last, DDP)
-        self._data_preprocess(dataset)
 
-    def _data_preprocess(self, dataset):
-        required_key_list = ['text_data', 'idx2token', 'token2idx']
-        for dataset_attr in required_key_list:
-            assert dataset_attr in dataset
-            setattr(self, dataset_attr, dataset[dataset_attr])
-        self.text_idx_data, self.idx_length_data = self._build_data(self.text_data, self.token2idx)
-
-    def get_reference(self):
-        return self.text_data
-
-    @property
-    def pr_end(self):
-        return len(self.text_idx_data)
-
-    def _shuffle(self):
-        temp = list(zip(self.text_data, self.text_idx_data, self.idx_length_data))
-        random.shuffle(temp)
-        self.text_data[:], self.text_idx_data[:], self.idx_length_data[:] = zip(*temp)
-
-    def _next_batch_data(self):
-        tp_text_data = self.text_data[self.pr:self.pr + self.step]
-        tp_text_idx_data = self.text_idx_data[self.pr:self.pr + self.step]
-        tp_idx_length_data = self.idx_length_data[self.pr:self.pr + self.step]
-        padded_idx, length = self._pad_batch_sequence(tp_text_idx_data, tp_idx_length_data)
-
-        batch_data = {
-            'target_text': tp_text_data,
-            'target_idx': padded_idx.to(self.device),
-            'target_length': length.to(self.device)
-        }
-        return batch_data
+    def _next_source_patch(self):
+        return dict()

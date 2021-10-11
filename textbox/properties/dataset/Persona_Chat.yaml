@@ -1,16 +1,6 @@
-max_vocab_size: 30000
-knowledge_format: 'multiple'
-source_format: 'multiple'
-target_format: 'single'
-combine_knw_src: False
-max_seq_length: 50
-max_source_num: 16
-max_knowledge_num: 16
-max_knowledge_length: 16
-group_split_token: "\t"
-sentence_split_token: " __eou__ "
-split_strategy: "load_split"
-overlength_strategy: "truncate"
-tokenize_strategy: "by_space"
-language: "English"
-task_type: "multi_dialog"
+vocab_size: 30000
+seq_len: 50
+src_num: 20
+src_multi_sent: True
+task_type: "translation"
+share_vocab: True

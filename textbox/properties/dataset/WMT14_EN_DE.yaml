@@ -1,14 +1,4 @@
-# special tokens
-max_vocab_size: 50000
-max_source_length: 250
-max_target_length: 250
-split_strategy: "load_split"
-overlength_strategy: "drop"
-tokenize_strategy: "by_space"
-source_language: english
-target_language: german
-source_suffix: en
-target_suffix: de
+vocab_size: 50000
+src_len: 250
+tgt_len: 250
 task_type: "translation"
-train_batch_size: 16
-eval_batch_size: 16

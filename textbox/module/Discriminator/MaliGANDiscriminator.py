@@ -22,14 +22,12 @@ class MaliGANDiscriminator(UnconditionalGenerator):
 
         self.hidden_size = config['hidden_size']
         self.embedding_size = config['discriminator_embedding_size']
-        self.max_length = config['max_seq_length'] + 2
+        self.max_length = config['seq_len'] + 2
         self.num_dis_layers = config['num_dis_layers']
         self.dropout_rate = config['dropout_rate']
 
-        self.pad_idx = dataset.padding_token_idx
-
         self.LSTM = nn.LSTM(self.embedding_size, self.hidden_size, self.num_dis_layers, batch_first=True)
-        self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.pad_idx)
+        self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
         self.vocab_projection = nn.Linear(self.hidden_size, self.vocab_size)
 
         self.hidden_linear = nn.Linear(self.num_dis_layers * self.hidden_size, self.hidden_size)

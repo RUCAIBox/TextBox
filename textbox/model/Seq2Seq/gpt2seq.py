@@ -26,20 +26,10 @@ class GPT2Seq(Seq2SeqGenerator):
 
     def __init__(self, config, dataset):
         super(GPT2Seq, self).__init__(config, dataset)
-
-        self.max_source_length = dataset.max_source_length
-        self.max_target_length = dataset.max_target_length
-
         self.pretrained_model_path = config['pretrained_model_path']
         self.tokenizer = GPT2TokenizerFast.from_pretrained(self.pretrained_model_path, pad_token='[PAD]')
-        
-        self.eos_token = self.tokenizer.eos_token
-        self.padding_token_idx = self.tokenizer.pad_token_id
 
-        self.configuration = GPT2Config.from_pretrained(
-            self.pretrained_model_path,
-            pad_token_id=self.padding_token_idx
-        )
+        self.configuration = GPT2Config.from_pretrained(self.pretrained_model_path, pad_token_id=self.padding_token_idx)
 
         self.model = GPT2LMHeadModel.from_pretrained(self.pretrained_model_path, config=self.configuration)
         self.model.resize_token_embeddings(len(self.tokenizer))
@@ -59,11 +49,13 @@ class GPT2Seq(Seq2SeqGenerator):
         source_text = batch_data['source_text']
         generate_corpus = []
         for src in source_text:
-            input_ids = self.tokenize_text(src, self.task_text, self.max_source_length).unsqueeze(0)
+            input_ids = self.tokenize_text(src, self.task_text, self.source_max_length).unsqueeze(0)
 
             sample_outputs = self.model.generate(
                 input_ids,
-                num_beams=4, max_length=input_ids.size(1) + self.max_target_length, early_stopping=True,
+                num_beams=4,
+                max_length=input_ids.size(1) + self.target_max_length,
+                early_stopping=True,
             )
             generated_text = self.tokenizer.decode(sample_outputs[0][input_ids.size(1) + 1:], skip_special_tokens=True)
             generated_text = generated_text.split()
@@ -75,7 +67,9 @@ class GPT2Seq(Seq2SeqGenerator):
         suff_ids = suff_dict['input_ids'].to(self.device)[0]
 
         texts = ' '.join(text)
-        encoding_dict = self.tokenizer(texts, max_length=max_length-suff_ids.size(0), truncation=True, return_tensors="pt")
+        encoding_dict = self.tokenizer(
+            texts, max_length=max_length - suff_ids.size(0), truncation=True, return_tensors="pt"
+        )
         input_ids = encoding_dict['input_ids'].to(self.device)[0]
 
         input_ids = torch.cat((input_ids, suff_ids)).long()
@@ -88,10 +82,10 @@ class GPT2Seq(Seq2SeqGenerator):
         input_ids = []
         src_length = []
         for src, tgt in zip(source_text, target_text):
-            src_ids = self.tokenize_text(src, self.task_text, self.max_source_length)
-            tgt_ids = self.tokenize_text(tgt, self.eos_token, self.max_target_length)
+            src_ids = self.tokenize_text(src, self.task_text, self.source_max_length)
+            tgt_ids = self.tokenize_text(tgt, self.eos_token, self.target_max_length)
             input_id = torch.cat((src_ids, tgt_ids))
-            
+
             src_length.append(src_ids.size(0))
             input_ids.append(input_id)
 

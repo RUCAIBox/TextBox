@@ -51,10 +51,6 @@ class TransformerEncDec(Seq2SeqGenerator):
         if (self.decoding_strategy == 'beam_search'):
             self.beam_size = config['beam_size']
 
-        self.padding_token_idx = dataset.padding_token_idx
-        self.sos_token_idx = dataset.sos_token_idx
-        self.eos_token_idx = dataset.eos_token_idx
-
         # define layers and loss
         self.source_token_embedder = nn.Embedding(
             self.source_vocab_size, self.embedding_size, padding_idx=self.padding_token_idx
@@ -93,7 +89,6 @@ class TransformerEncDec(Seq2SeqGenerator):
         self.vocab_linear = nn.Linear(self.embedding_size, self.target_vocab_size)
 
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
-        self.max_target_length = dataset.max_target_length
 
         # parameters initialization
         self.reset_parameters()
@@ -125,7 +120,7 @@ class TransformerEncDec(Seq2SeqGenerator):
                     self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token
                 )
 
-            for gen_idx in range(self.max_target_length):
+            for gen_idx in range(self.target_max_length):
                 self_attn_mask = self.self_attn_mask(input_seq.size(-1)).bool().to(self.device)
                 decoder_input = self.target_token_embedder(input_seq) + \
                                 self.position_embedder(input_seq).to(self.device)

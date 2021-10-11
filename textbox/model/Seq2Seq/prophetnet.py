@@ -22,10 +22,6 @@ class ProphetNet(Seq2SeqGenerator):
 
     def __init__(self, config, dataset):
         super(ProphetNet, self).__init__(config, dataset)
-
-        self.max_source_length = dataset.max_source_length
-        self.max_target_length = dataset.max_target_length
-
         self.pretrained_model_path = config['pretrained_model_path']
         self.config = ProphetNetConfig.from_pretrained(self.pretrained_model_path)
         self.tokenizer = ProphetNetTokenizer.from_pretrained(self.pretrained_model_path)
@@ -39,7 +35,7 @@ class ProphetNet(Seq2SeqGenerator):
         input_ids, attn_masks = self.tokenize_text(source_text)
 
         sample_outputs = self.model.generate(
-            input_ids, attention_mask=attn_masks, num_beams=5, max_length=self.max_target_length, early_stopping=True
+            input_ids, attention_mask=attn_masks, num_beams=5, max_length=self.target_max_length, early_stopping=True
         )
         generated_text = self.tokenizer.batch_decode(sample_outputs, skip_special_tokens=True)
         generate_corpus = [text.lower().split() for text in generated_text]
@@ -50,7 +46,7 @@ class ProphetNet(Seq2SeqGenerator):
         attn_masks = []
         texts = [' '.join(t) for t in text]
         encoding_dict = self.tokenizer(
-            texts, max_length=self.max_source_length, padding=True, truncation=True, return_tensors="pt"
+            texts, max_length=self.source_max_length, padding=True, truncation=True, return_tensors="pt"
         )
 
         input_ids = encoding_dict['input_ids'].to(self.device)

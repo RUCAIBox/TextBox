@@ -45,6 +45,9 @@ def get_dataset(config):
     elif task_type in ["kg2text"]:
         from .dataset import KGSentenceDataset
         return KGSentenceDataset
+    elif config['dataset'] == 'WikiBio':
+        from .dataset import WikiBioSentenceDataset
+        return WikiBioSentenceDataset
     else:
         raise NotImplementedError("No such dataset for TASK_TYPE: {}".format(task_type))
 
@@ -99,6 +102,9 @@ def get_dataloader(config):
     elif task_type in ["kg2text"]:
         from .dataloader import KGSentenceDataLoader
         return KGSentenceDataLoader
+    elif config['dataset'] == 'WikiBio':
+        from .dataloader import WikiBioSentenceDataLoader
+        return WikiBioSentenceDataLoader
     else:
         raise NotImplementedError("No such dataloader for TASK_TYPE: {}".format(task_type))
 
@@ -305,10 +311,10 @@ def text2idx(text, token2idx, tokenize_strategy):
     """
     new_idx = []
     new_length = []
+    requires_start_end = tokenize_strategy != 'none'
     sos_idx = token2idx[SpecialTokens.SOS]
     eos_idx = token2idx[SpecialTokens.EOS]
     unknown_idx = token2idx[SpecialTokens.UNK]
-    requires_start_end = tokenize_strategy != 'none'
 
     if isinstance(text[0][0][0], str):  # single sentence
         for group in text:

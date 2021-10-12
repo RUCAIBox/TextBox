@@ -27,7 +27,6 @@ class MaliGAN(GenerativeAdversarialNet):
         super(MaliGAN, self).__init__(config, dataset)
         self.generator = MaliGANGenerator(config, dataset)
         self.discriminator = MaliGANDiscriminator(config, dataset)
-        self.pad_idx = dataset.padding_token_idx
 
     def calculate_g_train_loss(self, corpus, epoch_idx):
         return self.generator.calculate_loss(corpus)

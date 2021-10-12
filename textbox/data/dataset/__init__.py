@@ -2,4 +2,4 @@ from textbox.data.dataset.abstract_dataset import AbstractDataset
 from textbox.data.dataset.single_sent_dataset import SingleSentenceDataset
 from textbox.data.dataset.paired_sent_dataset import PairedSentenceDataset
 from textbox.data.dataset.attr_sent_dataset import AttributedSentenceDataset
-from textbox.data.dataset.multi_sent_dataset import MultipleSentenceDataset
+from textbox.data.dataset.kg_sent_dataset import KGSentenceDataset

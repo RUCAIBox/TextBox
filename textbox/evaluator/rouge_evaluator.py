@@ -114,4 +114,3 @@ class RougeEvaluator(AbstractEvaluator):
             }
             res = self._calc_rouge(calc_args)
         return res
-

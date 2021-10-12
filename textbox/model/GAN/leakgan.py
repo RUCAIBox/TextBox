@@ -28,10 +28,7 @@ class LeakGAN(GenerativeAdversarialNet):
         self.generator = LeakGANGenerator(config, dataset)
         self.discriminator = LeakGANDiscriminator(config, dataset)
         self.dis_sample_num = config['d_sample_num']
-        self.start_idx = dataset.sos_token_idx
-        self.pad_idx = dataset.padding_token_idx
-        self.end_idx = dataset.eos_token_idx
-        self.max_length = config['max_seq_length'] + 2
+        self.max_length = config['seq_len'] + 2
 
     def calculate_g_train_loss(self, corpus, epoch_idx):
         self.discriminator.eval()
@@ -53,7 +50,7 @@ class LeakGAN(GenerativeAdversarialNet):
 
     def sample(self, sample_num):
         self.discriminator.eval()
-        samples = self.generator.sample(sample_num, self.discriminator, self.start_idx)
+        samples = self.generator.sample(sample_num, self.discriminator, self.sos_token_idx)
         self.discriminator.train()
         return samples
 
@@ -64,7 +61,10 @@ class LeakGAN(GenerativeAdversarialNet):
 
     def _add_eos(self, data, length):
         batch_size = data.shape[0]
-        padded_data = torch.full((batch_size, self.max_length), self.end_idx, dtype=torch.long, device=self.device)
+        padded_data = torch.full((batch_size, self.max_length),
+                                 self.eos_token_idx,
+                                 dtype=torch.long,
+                                 device=self.device)
         for i in range(batch_size):
             len = length[i].cpu().data
             padded_data[i, :len] = data[i, :len]

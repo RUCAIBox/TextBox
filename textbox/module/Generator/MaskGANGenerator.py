@@ -41,12 +41,8 @@ class MaskGANGenerator(GenerativeAdversarialNet):
         self.advantage_clipping = config['advantage_clipping']
         self.attention_type = config['attention_type']
 
-        self.padding_token_idx = dataset.padding_token_idx
-        self.sos_token_idx = dataset.sos_token_idx
-        self.eos_token_idx = dataset.eos_token_idx
-
         self.mask_token_idx = dataset.user_token_idx[0]
-        self.max_length = config['max_seq_length']
+        self.max_length = config['seq_len']
         self.embedder = nn.Embedding(self.vocab_size, self.embedding_size)
 
         # note!!! batch_first is true

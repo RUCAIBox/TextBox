@@ -45,9 +45,6 @@ class HRED(Seq2SeqGenerator):
             self.beam_size = config['beam_size']
 
         self.context_size = self.hidden_size * self.num_directions
-        self.padding_token_idx = dataset.padding_token_idx
-        self.sos_token_idx = dataset.sos_token_idx
-        self.eos_token_idx = dataset.eos_token_idx
 
         # define layers and loss
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
@@ -77,8 +74,6 @@ class HRED(Seq2SeqGenerator):
         self.vocab_linear = nn.Linear(self.hidden_size, self.vocab_size)
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
 
-        self.max_target_length = config['max_seq_length']
-
         # parameters initialization
         self.apply(xavier_normal_initialization)
 
@@ -104,7 +99,7 @@ class HRED(Seq2SeqGenerator):
                     self.beam_size, self.sos_token_idx, self.eos_token_idx, self.device, idx2token
                 )
 
-            for gen_idx in range(self.max_target_length):
+            for gen_idx in range(self.target_max_length):
                 input_embedding = self.token_embedder(input_seq)  # [beam, 1, e]
                 decoder_input = torch.cat((input_embedding, context_state.repeat(input_embedding.size(0), 1, 1)),
                                           dim=-1)  # [beam, 1, e + h]

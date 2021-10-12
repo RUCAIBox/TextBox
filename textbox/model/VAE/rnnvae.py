@@ -40,12 +40,8 @@ class RNNVAE(UnconditionalGenerator):
         self.max_epoch = config['epochs']
         self.bidirectional = config['bidirectional']
         self.dropout_ratio = config['dropout_ratio']
-        self.max_length = config['max_seq_length']
 
         self.num_directions = 2 if self.bidirectional else 1
-        self.padding_token_idx = dataset.padding_token_idx
-        self.sos_token_idx = dataset.sos_token_idx
-        self.eos_token_idx = dataset.eos_token_idx
 
         # define layers and loss
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)

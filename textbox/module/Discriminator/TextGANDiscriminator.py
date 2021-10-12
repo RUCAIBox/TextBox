@@ -28,12 +28,11 @@ class TextGANDiscriminator(UnconditionalGenerator):
         self.dropout_rate = config['dropout_rate']
         self.filter_sizes = config['filter_sizes']
         self.filter_nums = config['filter_nums']
-        self.max_length = config['max_seq_length'] + 2
+        self.max_length = config['seq_len'] + 2
         self.gaussian_sigmas = torch.tensor(config['gaussian_sigmas'], device=self.device)
-        self.pad_idx = dataset.padding_token_idx
         self.filter_sum = sum(self.filter_nums)
 
-        self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.pad_idx)
+        self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)
         self.dropout = nn.Dropout(self.dropout_rate)
         self.filters = nn.ModuleList([])
 

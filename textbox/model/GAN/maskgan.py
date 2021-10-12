@@ -28,12 +28,9 @@ class MaskGAN(GenerativeAdversarialNet):
         self.target_vocab_size = self.vocab_size
         self.generator = MaskGANGenerator(config, dataset)
         self.discriminator = MaskGANDiscriminator(config, dataset)
-        self.pad_idx = dataset.padding_token_idx
-        self.eos_idx = dataset.eos_token_idx
         self.mask_strategy = config['mask_strategy']
         self.is_present_rate = config['is_present_rate']
         self.is_present_rate_decay = config['is_present_rate_decay']
-        self.max_length = config['max_seq_length']
 
     def calculate_g_train_loss(self, corpus, epoch_idx=0, validate=False):
         r"""Specified for maskgan calculate generator masked token predicted

@@ -1,0 +1,3 @@
+src_len: 50
+tgt_len: 300
+task_type: "kg2text"

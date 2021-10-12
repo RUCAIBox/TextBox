@@ -3,7 +3,7 @@
 # @email  : hegaole@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2021/1/29
+# @Time   : 2021/10/10, 2021/1/29
 # @Author : Tianyi Tang
 # @Email  : steven_tang@ruc.edu.cn
 
@@ -14,9 +14,10 @@ textbox.data.dataloader.abstract_dataloader
 
 import math
 import torch
+import random
 from logging import getLogger
-
 from textbox.utils.enum_type import SpecialTokens
+from textbox.data.utils import pad_sequence
 
 
 class AbstractDataLoader(object):
@@ -54,60 +55,12 @@ class AbstractDataLoader(object):
             self.pr = 0
 
         self.std_pr = 0
+        self.pr_end = len(self.target_text)
 
-        self.padding_token = SpecialTokens.PAD
-        self.unknown_token = SpecialTokens.UNK
-        self.sos_token = SpecialTokens.SOS
-        self.eos_token = SpecialTokens.EOS
-        if ('user_token_list' in config):
-            self.user_token_list = config['user_token_list']
-            self.user_token_idx = [4 + i for i, _ in enumerate(self.user_token_list)]
-
-        if 'max_source_length' in dataset:
-            self.max_source_length = dataset['max_source_length']
-        self.max_target_length = dataset['max_target_length']
-        if 'source_vocab_size' in dataset:
-            self.source_vocab_size = dataset['source_vocab_size']
-            self.target_vocab_size = dataset['target_vocab_size']
-        else:
-            self.source_vocab_size = self.target_vocab_size = self.vocab_size = dataset['vocab_size']
-
-    def _build_data(self, text_data, token2idx, need_text_start_end=True):
-        r"""transform text to id and add sos and eos token index.
-        input:
-            text_data: list -> list -> character, original text
-            token2idx: dict, map token to index
-            need_text_start_end, bool, indicates whether we should add sos and eos token index.
-        output:
-            text_idx_data: list -> list -> int, list of word index
-            idx_length_data: list of sequence length
-        """
-        text_idx_data = []
-        idx_length_data = []
-        for text in text_data:
-            text_idx = self._token2idx(text, token2idx)
-            if need_text_start_end:
-                text_idx = [self.sos_token_idx] + text_idx + [self.eos_token_idx]
-            text_idx_data.append(text_idx)
-            idx_length_data.append(len(text_idx))
-        return text_idx_data, idx_length_data
-
-    def _pad_batch_sequence(self, text_idx_data, idx_length_data):
-        r"""padding a batch of word index data, to make them have equivalent length
-        input:
-            text_idx_data: list -> list -> int, a batch of word index
-            idx_length_data: list -> int, a batch of sequence length
-        output:
-            new_data: torch.LongTensor (batch_size, max_length_in_batch)
-            length: torch.LongTensor (batch_size)
-        """
-        max_len = max(idx_length_data)
-        new_data = []
-        for seq, len_seq in zip(text_idx_data, idx_length_data):
-            new_data.append(seq + [self.padding_token_idx] * (max_len - len_seq))
-        new_data = torch.LongTensor(new_data)
-        length = torch.LongTensor(idx_length_data)
-        return new_data, length
+    def __getattr__(self, name):
+        if hasattr(self.dataset, name):
+            return getattr(self.dataset, name)
+        return None
 
     def __len__(self):
         return math.floor(self.pr_end / self.batch_size) if self.drop_last else math.ceil(self.pr_end / self.batch_size)
@@ -132,60 +85,51 @@ class AbstractDataLoader(object):
         self.std_pr += self.batch_size
         return next_batch
 
-    def _idx2token(self, inputs, idx2token):
-        if isinstance(inputs, list):
-            return [self._idx2token(x, idx2token) for x in inputs]
-        return idx2token[inputs]
-
-    def _token2idx(self, inputs, token2idx):
-        if isinstance(inputs, list):
-            return [self._token2idx(x, token2idx) for x in inputs]
-        return token2idx.get(inputs, self.unknown_token_idx)
-
-    def _data_preprocess(self, dataset):
-        r"""obtain necessary elements from dataset(dict) and conduct preprocess
-        """
-        raise NotImplementedError('Method [data_preprocess] should be implemented')
-
-    def get_reference(self):
-        r"""Get reference documents for current data loader
-        return is supposed to be reference_corpus as list -> list -> word
-        """
-        raise NotImplementedError('Method [get_reference] should be implemented')
-
-    @property
-    def padding_token_idx(self):
-        r"""The `int` index of the special token indicating the padding token.
-        """
-        return self.token2idx[self.padding_token]
-
-    @property
-    def unknown_token_idx(self):
-        r"""The `int` index of the special token indicating the unknown token.
-        """
-        return self.token2idx[self.unknown_token]
-
-    @property
-    def sos_token_idx(self):
-        r"""The `int` index of the special token indicating the start of sequence.
-        """
-        return self.token2idx[self.sos_token]
-
-    @property
-    def eos_token_idx(self):
-        r"""The `int` index of the special token indicating the end of sequence.
-        """
-        return self.token2idx[self.eos_token]
-
-    @property
-    def pr_end(self):
-        r"""This property marks the end of dataloader.pr which is used in :meth:`__next__()`."""
-        raise NotImplementedError('Method [pr_end] should be implemented')
-
     def _shuffle(self):
         r"""Shuffle the order of data, and it will be called by :meth:`__iter__()` if self.shuffle is True.
         """
-        raise NotImplementedError('Method [shuffle] should be implemented.')
+        keys = []
+        values = []
+        for key, value in self.dataset.__dict__.items():
+            if key.startswith(('source', 'target')) and isinstance(value,
+                                                                   list) and isinstance(value[0], (list, str, int)):
+                keys.append(key)
+                values.append(value)
+        values = list(zip(*values))
+        random.shuffle(values)
+        for key, value in zip(keys, list(zip(*values))):
+            getattr(self.dataset, key)[:] = value
+
+    def _next_source_patch(self):
+        r"""Assemble next batch of source data in form of Interaction, and return these data.
+        
+        Returns:
+            Interaction: The next batch of source data.
+        """
+        raise NotImplementedError('Method [next_batch_data] should be implemented.')
+
+    def _next_target_patch(self):
+        r"""Assemble next batch of target data in form of Interaction, and return these data.
+        
+        Returns:
+            Interaction: The next batch of target data.
+        """
+        target_text = self.target_text[self.pr:self.pr + self.step]
+        target_idx = self.target_idx[self.pr:self.pr + self.step]
+        target_length = self.target_length[self.pr:self.pr + self.step]
+        target_num = self.target_num[self.pr:self.pr + self.step] if self.target_num is not None else None
+        target_idx, target_length, target_num = pad_sequence(
+            target_idx, target_length, self.padding_token_idx, target_num
+        )
+
+        batch_data = {
+            'target_text': target_text,
+            'target_idx': target_idx.to(self.device),
+            'target_length': target_length.to(self.device)
+        }
+        if target_num is not None:
+            batch_data['target_num'] = target_num
+        return batch_data
 
     def _next_batch_data(self):
         r"""Assemble next batch of data in form of Interaction, and return these data.
@@ -193,4 +137,15 @@ class AbstractDataLoader(object):
         Returns:
             Interaction: The next batch of data.
         """
-        raise NotImplementedError('Method [next_batch_data] should be implemented.')
+        source_batch = self._next_source_patch()
+        target_batch = self._next_target_patch()
+        return dict(**source_batch, **target_batch)
+
+    def get_reference(self):
+        r"""Get reference documents for current data loader
+        return is supposed to be reference_corpus as list -> list -> word
+        """
+        if isinstance(self.target_text[0][0], str):
+            return self.target_text
+        else:
+            return [sum(doc, []) for doc in self.target_text]

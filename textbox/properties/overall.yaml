@@ -15,11 +15,11 @@ train_batch_size: 64
 learner: adam
 learning_rate: 0.001
 eval_step: 1
-stopping_step: 3
-grad_clip: 1.0
+stopping_step: 2
+grad_clip: 0.1
 
 # evaluation settings
-metrics: ["bleu", "self_bleu"]
+metrics: ["bleu"]
 n_grams: [1,2,3,4,5]
 eval_batch_size: 64
 

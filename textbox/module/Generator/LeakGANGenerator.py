@@ -21,10 +21,9 @@ class LeakGANGenerator(UnconditionalGenerator):
 
     def __init__(self, config, dataset):
         super(LeakGANGenerator, self).__init__(config, dataset)
-
         self.hidden_size = config['hidden_size']
         self.embedding_size = config['generator_embedding_size']
-        self.max_length = config['max_seq_length'] + 1  # max_length is the length of origin_max_len + sos
+        self.max_length = config['seq_len'] + 1  # max_length is the length of origin_max_len + sos
         self.monte_carlo_num = config['Monte_Carlo_num']
         self.filter_nums = config['filter_nums']
         self.goal_out_size = sum(self.filter_nums)
@@ -32,9 +31,6 @@ class LeakGANGenerator(UnconditionalGenerator):
         self.step_size = config['step_size']
         self.temperature = config['temperature']
         self.dis_sample_num = config['d_sample_num']
-        self.start_idx = dataset.sos_token_idx
-        self.end_idx = dataset.eos_token_idx
-        self.pad_idx = dataset.padding_token_idx
 
         self.word_embedding = nn.Embedding(self.vocab_size, self.embedding_size)
         self.vocab_projection = nn.Linear(self.hidden_size, self.vocab_size)
@@ -172,8 +168,9 @@ class LeakGANGenerator(UnconditionalGenerator):
         work_hidden = self.init_hidden(batch_size)
         mana_hidden = self.init_hidden(batch_size)
         # Special operations for step 0
-        leak_inp_t = torch.LongTensor([self.start_idx] * batch_size)  # the input token for worker at step t
-        cur_dis_inp = torch.LongTensor([self.pad_idx] * batch_size * seq_len)  # current sentence for dis ar step t
+        leak_inp_t = torch.LongTensor([self.sos_token_idx] * batch_size)  # the input token for worker at step t
+        cur_dis_inp = torch.LongTensor([self.padding_token_idx] * batch_size * seq_len
+                                       )  # current sentence for dis ar step t
         cur_dis_inp = cur_dis_inp.view((batch_size, seq_len))  # bs*seq_len
         leak_inp_t = leak_inp_t.to(self.device)
         cur_dis_inp = cur_dis_inp.to(self.device)
@@ -225,10 +222,10 @@ class LeakGANGenerator(UnconditionalGenerator):
             o_prev = torch.zeros(1, self.batch_size, self.hidden_size, device=self.device)  # 1 * b * h
             prev_state = (h_prev, o_prev)
             X = self.word_embedding(
-                torch.tensor([self.start_idx] * self.batch_size, dtype=torch.long, device=self.device)
+                torch.tensor([self.sos_token_idx] * self.batch_size, dtype=torch.long, device=self.device)
             ).unsqueeze(0)  # 1 * b * e
             sentences = torch.zeros((self.max_length, self.batch_size), dtype=torch.long, device=self.device)
-            sentences[0] = self.start_idx
+            sentences[0] = self.sos_token_idx
 
             for i in range(1, self.max_length):
                 output, prev_state = self.LSTM(X, prev_state)
@@ -240,9 +237,9 @@ class LeakGANGenerator(UnconditionalGenerator):
             sentences = sentences.permute(1, 0)  # b * l
 
             for i in range(self.batch_size):
-                end_pos = (sentences[i] == self.end_idx).nonzero(as_tuple=False)
+                end_pos = (sentences[i] == self.eos_token_idx).nonzero(as_tuple=False)
                 if (end_pos.shape[0]):
-                    sentences[i][end_pos[0][0] + 1:] = self.pad_idx
+                    sentences[i][end_pos[0][0] + 1:] = self.padding_token_idx
 
         self.train()
 
@@ -254,7 +251,7 @@ class LeakGANGenerator(UnconditionalGenerator):
         num_batch = sample_num // self.batch_size + 1 if sample_num != self.batch_size else 1
         samples = torch.zeros(num_batch * self.batch_size, self.max_length).long()  # larger than num_samples
         fake_sentences = torch.zeros((self.batch_size, self.max_length))
-        fake_sentences[:, :] = self.pad_idx
+        fake_sentences[:, :] = self.padding_token_idx
 
         for b in range(num_batch):
             leak_sample = self.leakgan_generate(fake_sentences, dis, train=train)
@@ -280,8 +277,8 @@ class LeakGANGenerator(UnconditionalGenerator):
 
         for i in range(0, self.max_length):
             if i == 0:
-                leak_inp_t = torch.LongTensor([self.start_idx] * batch_size)  # the input token for worker at step t
-                cur_dis_inp = torch.LongTensor([self.pad_idx] * batch_size * seq_len
+                leak_inp_t = torch.LongTensor([self.sos_token_idx] * batch_size)  # the input token for worker at step t
+                cur_dis_inp = torch.LongTensor([self.padding_token_idx] * batch_size * seq_len
                                                )  # current sentence for dis ar step t
                 cur_dis_inp = cur_dis_inp.view((batch_size, seq_len))  # bs*seq_len
             else:
@@ -332,7 +329,7 @@ class LeakGANGenerator(UnconditionalGenerator):
         for sen in samples:
             text = []
             for w in sen:
-                if w != self.end_idx:
+                if w != self.eos_token_idx:
                     text.append(idx2token[w])
                 else:
                     break
@@ -345,7 +342,7 @@ class LeakGANGenerator(UnconditionalGenerator):
         """
         with torch.no_grad():
             gen_samples = self.sample(
-                self.batch_size, dis, self.start_idx, train=True
+                self.batch_size, dis, self.sos_token_idx, train=True
             )  # !!! train=True, the only place
 
         rewards = self.get_reward_leakgan(gen_samples, self.monte_carlo_num, dis).cpu()  # reward with MC search
@@ -536,8 +533,9 @@ class LeakGANGenerator(UnconditionalGenerator):
         real_goal = self.goal_init[:batch_size, :]
         out = 0
 
-        leak_inp_t = torch.LongTensor([self.start_idx] * batch_size)  # the input token for worker at step t
-        cur_dis_inp = torch.LongTensor([self.pad_idx] * batch_size * seq_len)  # current sentence for dis ar step t
+        leak_inp_t = torch.LongTensor([self.sos_token_idx] * batch_size)  # the input token for worker at step t
+        cur_dis_inp = torch.LongTensor([self.padding_token_idx] * batch_size * seq_len
+                                       )  # current sentence for dis ar step t
         cur_dis_inp = cur_dis_inp.view((batch_size, seq_len))  # bs*seq_len
         leak_out_array = []
         leak_inp_t = leak_inp_t.to(self.device)

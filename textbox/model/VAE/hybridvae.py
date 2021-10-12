@@ -38,11 +38,6 @@ class HybridVAE(UnconditionalGenerator):
         self.alpha_aux = config['alpha_aux']
         self.rnn_type = config['rnn_type']
         self.dropout_ratio = config['dropout_ratio']
-        self.max_length = config['max_seq_length']
-
-        self.padding_token_idx = dataset.padding_token_idx
-        self.sos_token_idx = dataset.sos_token_idx
-        self.eos_token_idx = dataset.eos_token_idx
 
         # define layers and loss
         self.token_embedder = nn.Embedding(self.vocab_size, self.embedding_size, padding_idx=self.padding_token_idx)

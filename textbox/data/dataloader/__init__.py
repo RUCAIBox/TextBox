@@ -2,3 +2,4 @@ from textbox.data.dataloader.abstract_dataloader import AbstractDataLoader
 from textbox.data.dataloader.single_sent_dataloader import SingleSentenceDataLoader
 from textbox.data.dataloader.paired_sent_dataloader import PairedSentenceDataLoader
 from textbox.data.dataloader.attr_sent_dataloader import AttributedSentenceDataLoader
+from textbox.data.dataloader.kg_sent_dataloader import KGSentenceDataLoader

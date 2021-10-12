@@ -42,6 +42,9 @@ def get_dataset(config):
     elif task_type in ["translation", "summarization"]:
         from .dataset import PairedSentenceDataset
         return PairedSentenceDataset
+    elif task_type in ["kg2text"]:
+        from .dataset import KGSentenceDataset
+        return KGSentenceDataset
     else:
         raise NotImplementedError("No such dataset for TASK_TYPE: {}".format(task_type))
 
@@ -93,6 +96,9 @@ def get_dataloader(config):
     elif task_type in ["translation", "summarization"]:
         from .dataloader import PairedSentenceDataLoader
         return PairedSentenceDataLoader
+    elif task_type in ["kg2text"]:
+        from .dataloader import KGSentenceDataLoader
+        return KGSentenceDataLoader
     else:
         raise NotImplementedError("No such dataloader for TASK_TYPE: {}".format(task_type))
 
@@ -265,8 +271,11 @@ def build_vocab(text, max_vocab_size, special_token_list):
             if isinstance(doc[0], str):  # single sentence
                 word_list.extend(doc)
             else:
-                for sent in doc:  # multiple sentences
-                    word_list.extend(sent)
+                for sent in doc:  
+                    if isinstance(sent, tuple): # kg
+                        word_list.extend(sent[0] + [sent[1]] + sent[2])
+                    else: # multiple sentences
+                        word_list.extend(sent)
 
     token_count = [(count, token) for token, count in collections.Counter(word_list).items()]
     token_count.sort(reverse=True)

@@ -15,7 +15,6 @@ from textbox.data.utils import build_vocab, text2idx
 class KGSentenceDataset(AbstractDataset):
 
     def __init__(self, config):
-        self.share_vocab = config['share_vocab']
         super().__init__(config)
 
     def _get_preset(self):

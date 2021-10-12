@@ -14,7 +14,7 @@ textbox.data.dataset.attr_sent_dataset
 
 import os
 from textbox.data.dataset import AbstractDataset
-from textbox.data.utils import build_vocab, text2idx
+from textbox.data.utils import build_vocab, text2idx, build_attribute_vocab, attribute2idx
 
 
 class AttributedSentenceDataset(AbstractDataset):
@@ -46,41 +46,14 @@ class AttributedSentenceDataset(AbstractDataset):
             assert len(text_data) == len(self.target_text[i])
             self.source_text.append(text_data)
 
-    def _build_attribute_vocab(self):
-        attribute_num = len(self.source_text[0][0])
-        attribute_set = [set() for _ in range(attribute_num)]
-        for group in self.source_text:
-            for attribute in group:
-                assert len(attribute) == attribute_num
-                for i, attr in enumerate(attribute):
-                    attribute_set[i].add(attr)
-
-        self.source_idx2token = []
-        self.source_token2idx = []
-        for i in range(attribute_num):
-            attribute = list(attribute_set[i])
-            attribute_size = len(attribute)
-            self.source_idx2token.append(dict(zip(range(attribute_size), attribute)))
-            self.source_token2idx.append(dict(zip(attribute, range(attribute_size))))
-
     def _build_vocab(self):
+        self.source_idx2token, self.source_token2idx = build_attribute_vocab(self.source_text)
         self.target_idx2token, self.target_token2idx, self.target_vocab_size = build_vocab(
             self.target_text, self.target_vocab_size, self.special_token_list
         )
-        self._build_attribute_vocab()
-
-    def _attribute2idx(self, source_text, source_token2idx):
-        new_idx = []
-        for group in source_text:
-            idx = []
-            for sent in group:
-                sent_idx = [source_token2idx[i][attr] for i, attr in enumerate(sent)]
-                idx.append(sent_idx)
-            new_idx.append(idx)
-        return new_idx
 
     def _text2idx(self):
-        self.source_idx = self._attribute2idx(self.source_text, self.source_token2idx)
+        self.source_idx = attribute2idx(self.source_text, self.source_token2idx)
         self.target_idx, self.target_length, _ = text2idx(
             self.target_text, self.target_token2idx, self.tokenize_strategy
         )

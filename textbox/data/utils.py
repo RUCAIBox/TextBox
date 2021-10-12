@@ -48,6 +48,9 @@ def get_dataset(config):
     elif config['dataset'] == 'WikiBio':
         from .dataset import WikiBioSentenceDataset
         return WikiBioSentenceDataset
+    elif config['dataset'] == 'RotoWire':
+        from .dataset import RotoWireSentenceDataset
+        return RotoWireSentenceDataset
     else:
         raise NotImplementedError("No such dataset for TASK_TYPE: {}".format(task_type))
 
@@ -105,6 +108,9 @@ def get_dataloader(config):
     elif config['dataset'] == 'WikiBio':
         from .dataloader import WikiBioSentenceDataLoader
         return WikiBioSentenceDataLoader
+    elif config['dataset'] == 'RotoWire':
+        from .dataloader import RotoWireSentenceDataLoader
+        return RotoWireSentenceDataLoader
     else:
         raise NotImplementedError("No such dataloader for TASK_TYPE: {}".format(task_type))
 
@@ -295,6 +301,39 @@ def build_vocab(text, max_vocab_size, special_token_list):
 
     return idx2token, token2idx, max_vocab_size
 
+def build_attribute_vocab(text):
+    """Build attribute vocabulary of list of attribute data.
+
+    Args:
+        text (List[List[List[str]]] or List[List[List[List[str]]]]): list of attribute data, consisting of multiple groups.
+    
+    Returns:
+        tuple:
+            - idx2token (dict): map index to token.
+            - token2idx (dict): map token to index.
+    """
+    attribute_num = len(text[0][0]) if isinstance(text[0][0][0], str) else len(text[0][0][0])
+    attribute_set = [set() for _ in range(attribute_num)]
+    for group in text:
+        for doc in group:
+            if isinstance(doc[0], str):
+                assert len(doc) == attribute_num
+                for i, attr in enumerate(doc):
+                    attribute_set[i].add(attr)
+            else:
+                for sent in doc:
+                    assert len(sent) == attribute_num
+                    for i, attr in enumerate(sent):
+                        attribute_set[i].add(attr)
+
+    idx2token = []
+    token2idx = []
+    for i in range(attribute_num):
+        attribute = list(attribute_set[i])
+        attribute_size = len(attribute)
+        idx2token.append(dict(zip(range(attribute_size), attribute)))
+        token2idx.append(dict(zip(attribute, range(attribute_size))))
+    return idx2token, token2idx
 
 def text2idx(text, token2idx, tokenize_strategy):
     r"""transform text to id and add sos and eos token index.
@@ -305,9 +344,9 @@ def text2idx(text, token2idx, tokenize_strategy):
         tokenize_strategy (str): strategy of tokenizer.
     
     Returns:
-        idx (List[List[int]] or List[List[List[int]]]): word index
-        length (List[int] or List[List[int]]): sequence length
-        num (List[int]): sequence number
+        idx (List[List[List[int]]] or List[List[List[List[int]]]]): word index
+        length (List[List[int]] or List[List[List[int]]]): sequence length
+        num (None or List[List[int]]): sequence number
     """
     new_idx = []
     new_length = []
@@ -352,6 +391,39 @@ def text2idx(text, token2idx, tokenize_strategy):
             new_num.append(num)
         return new_idx, new_length, new_num
 
+def attribute2idx(text, token2idx):
+    r"""transform attribute to id.
+
+    Args:
+        text (List[List[List[str]]] or List[List[List[List[str]]]]): list of attribute data, consisting of multiple groups.
+        token2idx (dict): map token to index
+
+    Returns:
+        idx (List[List[List[int]]] or List[List[List[List[int]]]]): attribute index
+        length (None or List[List[int]]): sequence length
+    """
+    new_idx = []
+    new_length = []
+    for group in text:
+        idx = []
+        length = []
+        for doc in group:
+            if isinstance(doc[0], str):
+                doc_idx = [token2idx[i][attr] for i, attr in enumerate(doc)]
+            else:
+                doc_idx = []
+                for sent in doc:
+                    sent_idx = [token2idx[i][attr] for i, attr in enumerate(sent)]
+                    doc_idx.append(sent_idx)
+                length.append(len(doc))
+            idx.append(doc_idx)
+        new_idx.append(idx)
+        new_length.append(length)
+    
+    if new_length[0] != []:
+        return new_idx, new_length
+    else:
+        return new_idx
 
 def pad_sequence(idx, length, padding_idx, num=None):
     r"""padding a batch of word index data, to make them have equivalent length
@@ -380,7 +452,6 @@ def pad_sequence(idx, length, padding_idx, num=None):
         max_num = max(num)
         new_length = []
         new_idx = []
-
         for doc_idx, doc_length, doc_num in zip(idx, length, num):
             new_length.append(doc_length + [0] * (max_num - doc_num))
             new_sent_idx = []

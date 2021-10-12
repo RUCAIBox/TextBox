@@ -117,9 +117,9 @@ class AbstractDataset(object):
         """
         for key, value in self.__dict__.items():
             if key.startswith(('source', 'target')) or key in ['vocab_size', 'max_length', 'idx2token', 'token2idx']:
-                if isinstance(value, list) and isinstance(value[0], (list, str, int)) and len(value) == 3:
-                    for i, prefix in enumerate(['train', 'valid', 'test']):
-                        getattr(self, f'{prefix}_data')[key] = value[i]
+                if isinstance(value, list) and isinstance(value[0], (list, str, int)) and len(value) in [2, 3]:
+                    for i, (prefix, v) in enumerate(zip(['train', 'valid', 'test'], value)):
+                        getattr(self, f'{prefix}_data')[key] = v
                 else:
                     for prefix in ['train', 'valid', 'test']:
                         getattr(self, f'{prefix}_data')[key] = value

@@ -4,3 +4,4 @@ from textbox.data.dataloader.paired_sent_dataloader import PairedSentenceDataLoa
 from textbox.data.dataloader.attr_sent_dataloader import AttributedSentenceDataLoader
 from textbox.data.dataloader.kg_sent_dataloader import KGSentenceDataLoader
 from textbox.data.dataloader.wikibio_sent_dataloader import WikiBioSentenceDataLoader
+from textbox.data.dataloader.rotowire_sent_dataloader import RotoWireSentenceDataLoader

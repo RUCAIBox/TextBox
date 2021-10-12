@@ -4,3 +4,4 @@ from textbox.data.dataset.paired_sent_dataset import PairedSentenceDataset
 from textbox.data.dataset.attr_sent_dataset import AttributedSentenceDataset
 from textbox.data.dataset.kg_sent_dataset import KGSentenceDataset
 from textbox.data.dataset.wikibio_sent_dataset import WikiBioSentenceDataset
+from textbox.data.dataset.rotowire_sent_dataset import RotoWireSentenceDataset

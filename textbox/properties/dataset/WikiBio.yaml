@@ -1,0 +1,4 @@
+src_len: 50
+src_num: 50
+tgt_len: 200
+task_type: "table2text"

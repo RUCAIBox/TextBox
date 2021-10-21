@@ -32,7 +32,7 @@ class BART(Seq2SeqGenerator):
 
     def generate(self, batch_data, eval_data):
         source_text = batch_data['source_text']
-        input_ids, attn_masks = self.tokenize_text(source_text)
+        input_ids, attn_masks = self.tokenize_text(source_text, self.source_max_length)
 
         sample_outputs = self.model.generate(
             input_ids, attention_mask=attn_masks, num_beams=5, max_length=self.target_max_length, early_stopping=True

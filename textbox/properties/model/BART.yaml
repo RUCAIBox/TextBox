@@ -1,5 +1,6 @@
-learning_rate: 0.00001
-epochs: 10
-train_batch_size: 32
-eval_batch_size: 32
-pretrained_model_path: "pretrained_model/bart-base"
+learning_rate: 0.00003
+tokenize_strategy: none
+train_batch_size: 8
+eval_batch_size: 8
+label_smoothing: 0.0
+pretrained_model_path: "pretrained_model/bart-large"

@@ -31,18 +31,21 @@ class PairedSentenceDataLoader(AbstractDataLoader):
 
     def _next_source_patch(self):
         source_text = self.source_text[self.pr:self.pr + self.step]
-        source_idx = self.source_idx[self.pr:self.pr + self.step]
-        source_length = self.source_length[self.pr:self.pr + self.step]
-        source_num = self.source_num[self.pr:self.pr + self.step] if self.source_num is not None else None
-        source_idx, source_length, source_num = pad_sequence(
-            source_idx, source_length, self.padding_token_idx, source_num
-        )
+        if self.source_idx is not None:
+            source_idx = self.source_idx[self.pr:self.pr + self.step]
+            source_length = self.source_length[self.pr:self.pr + self.step]
+            source_num = self.source_num[self.pr:self.pr + self.step] if self.source_num is not None else None
+            source_idx, source_length, source_num = pad_sequence(
+                source_idx, source_length, self.padding_token_idx, source_num
+            )
 
-        batch_data = {
-            'source_text': source_text,
-            'source_idx': source_idx.to(self.device),
-            'source_length': source_length.to(self.device)
-        }
-        if source_num is not None:
-            batch_data['source_num'] = source_num
-        return batch_data
+            batch_data = {
+                'source_text': source_text,
+                'source_idx': source_idx.to(self.device),
+                'source_length': source_length.to(self.device)
+            }
+            if source_num is not None:
+                batch_data['source_num'] = source_num
+            return batch_data
+        else:
+            return {'source_text': source_text}

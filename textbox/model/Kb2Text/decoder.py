@@ -22,7 +22,7 @@ class Decoder(torch.nn.Module):
             dropout_ratio=0.0,
             attention_type='LuongAttention',
             alignment_method='concat',
-            num_heads=6,
+            num_heads=4,
             attn_weight_dropout_ratio=0.1
     ):
         super(Decoder, self).__init__()
@@ -63,7 +63,7 @@ class Decoder(torch.nn.Module):
 
     def forward(
             self, input_embeddings, hidden_states=None, encoder_outputs_items=None, encoder_outputs_titles=None,
-            encoder_masks=None
+            encoder_item_masks=None, encoder_title_masks=None
     ):
         r""" Implement the attention-based decoding process.
 
@@ -72,7 +72,8 @@ class Decoder(torch.nn.Module):
             hidden_states (Torch.Tensor): initial hidden states, default: None.
             encoder_outputs_items: (Torch.Tensor): encoder output features, shape: [batch_size, sequence_length, hidden_size], default: None.
             encoder_outputs_titles: (Torch.Tensor): encoder output features, shape: [batch_size, sequence_length, hidden_size], default: None.
-            encoder_masks (Torch.Tensor): encoder state masks, shape: [batch_size, sequence_length], default: None.
+            encoder_item_masks (Torch.Tensor): encoder state masks, shape: [batch_size, sequence_length], default: None.
+            encoder_title_masks (Torch.Tensor): encoder state masks, shape: [batch_size, sequence_length], default: None.
 
         Returns:
             tuple:
@@ -87,16 +88,17 @@ class Decoder(torch.nn.Module):
         all_outputs = []
         for step in range(decode_length):
             inputs = input_embeddings[:, step, :].unsqueeze(1)
-            context = None
-            hidden_states = hidden_states.contiguous()
-            outputs, (hidden_states, _) = self.decoder(inputs, hidden_states)
+            outputs, hidden_states = self.decoder(inputs, hidden_states)
 
-            if context is None:
-                context_items, _ = hidden_states + self.attentioner(outputs, encoder_outputs_items, encoder_masks)
-                context_titles, _ = hidden_states + self.attentioner(outputs, encoder_outputs_titles, encoder_masks)
-                context = torch.cat((context_items, context_titles), dim=2)
-            outputs = self.attention_dense(torch.cat((outputs, context), dim=2))
+            h_ = hidden_states[0].transpose(0, 1)
+            context_items = h_ + self.item_attentioner(
+                h_, encoder_outputs_items, encoder_outputs_items, encoder_item_masks)[0]
+            context_titles = h_ + self.title_attentioner(
+                h_, encoder_outputs_titles, encoder_outputs_titles, encoder_title_masks)[0]
+            context = torch.cat((context_items, context_titles), dim=2).squeeze(1)
+            # outputs = self.attention_dense(torch.cat((outputs, context), dim=1))
+            outputs = torch.cat((outputs.squeeze(1), context), dim=1)
             all_outputs.append(outputs)
 
-        outputs = torch.cat(all_outputs, dim=1)
+        outputs = torch.stack(all_outputs, dim=1)
         return outputs, hidden_states

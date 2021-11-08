@@ -1,0 +1,14 @@
+embedding_size: 500
+hidden_size: 500
+num_enc_layers: 2
+bidirectional: True
+num_dec_layers: 1
+dropout_ratio: 0.1
+rnn_type: "gru"
+attention_type: "LuongAttention"
+alignment_method: "concat"
+beam_size: 4
+decoding_strategy: 'greedy_search'
+num_heads: 4
+attn_weight_dropout_ratio: 0.3
+GAT_layer_nums: 6

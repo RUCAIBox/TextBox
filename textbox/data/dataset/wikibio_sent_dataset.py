@@ -43,6 +43,7 @@ class WikiBioSentenceDataset(AbstractDataset):
             self.source_key_text.append(key_data)
 
     def _build_vocab(self):
+        self.source_key_vocab_size = int(self.config['key_size'] or 1e8)
         self.source_key_idx2token, self.source_key_token2idx, self.source_key_vocab_size = build_vocab(
             self.source_key_text, self.source_key_vocab_size, self.special_token_list
         )

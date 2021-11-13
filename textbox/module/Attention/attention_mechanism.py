@@ -7,11 +7,6 @@
 # @Author : Jinhao Jiang
 # @Email  : jiangjinhao@std.uestc.edu.cn
 
-# UPDATE:
-# @Time   : 2021/8/27
-# @Author : Gaowei Zhang
-# @Email  : 1462034631@qq.com
-
 r"""
 Attention Layers
 ################################################

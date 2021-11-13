@@ -7,10 +7,6 @@
 # @Author : Tianyi Tang
 # @Email  : steven_tang@ruc.edu.cn
 
-# UPDATE:
-# @Time   : 2021/11/4
-# @Author : Gaowei Zhang
-# @Email  : 1462034631@qq.com
 """
 textbox.data.dataset.abstract_dataset
 #####################################

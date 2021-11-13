@@ -119,6 +119,53 @@ class LstmUnit(nn.Module):
         return out, state
 
 
+class FieldDualAttentionWrapper(torch.nn.Module):
+
+    def __init__(self, hidden_size, input_size, field_size):
+        super(FieldDualAttentionWrapper, self).__init__()
+        self.hidden_size = hidden_size
+        self.input_size = input_size
+        self.field_size = field_size
+        self.linear_1 = nn.Linear(input_size, hidden_size)
+        self.linear_2 = nn.Linear(input_size, hidden_size)
+        self.linear_3 = nn.Linear(2 * input_size, hidden_size)
+        self.linear_4 = nn.Linear(field_size, hidden_size)
+        self.linear_5 = nn.Linear(input_size, hidden_size)
+
+    def set_hidden_state(self, hidden_state, field_hidden_state):
+        self.hidden_state = hidden_state.permute(1, 0, 2)
+        self.field_hidden_state = field_hidden_state.permute(1, 0, 2)
+
+        hidden_state_2d = self.hidden_state.reshape([-1, self.input_size])
+        phi_hidden_state_2d = torch.tanh(self.linear_1(hidden_state_2d))
+        self.phi_hidden_state = phi_hidden_state_2d.reshape(self.hidden_state.shape)
+
+        field_hidden_state_2d = self.field_hidden_state.reshape([-1, self.field_size])
+        phi_field_state_2d = torch.tanh(self.linear_4(field_hidden_state_2d))
+        self.phi_field_state = phi_field_state_2d.reshape(self.hidden_state.shape)
+
+    def forward(self, input, finished=None):
+        gamma_h = torch.tanh(self.linear_2(input))
+        alpha_h = torch.tanh(self.linear_5(input))
+        field_weights = torch.sum(self.phi_field_state * alpha_h, dim=2, keepdim=True)
+        field_weights = torch.exp(field_weights - torch.max(field_weights, dim=0, keepdim=True)[0])
+        field_weights = torch.divide(field_weights, (1e-6 + torch.sum(field_weights, dim=0, keepdim=True)))
+
+        weights = torch.sum(self.phi_hidden_state * gamma_h, dim=2, keepdim=True)
+        weights = torch.exp(weights - torch.max(weights, dim=0, keepdim=True)[0])
+        weights = torch.divide(weights, (1e-6 + torch.sum(weights, dim=0, keepdim=True)))
+        weights = torch.divide(
+            weights * field_weights, (1e-6 + torch.sum(weights * field_weights, dim=0, keepdim=True))
+        )
+
+        context = torch.sum(self.hidden_state * weights, dim=0)
+        out = self.linear_3(torch.cat([context, input], -1))
+
+        if finished is not None:
+            out = torch.where(finished, torch.zeros_like(out), out)
+        return out, weights
+
+
 class NonFieldLstmEncoder(torch.nn.Module):
     r"""
     Lstm Table2text Encoder without field input

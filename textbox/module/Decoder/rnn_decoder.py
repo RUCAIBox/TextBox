@@ -15,8 +15,7 @@ RNN Decoder
 import torch
 from torch import nn
 import torch.nn.functional as F
-from textbox.module.Attention.attention_mechanism import LuongAttention, BahdanauAttention, MonotonicAttention, FieldDualAttentionWrapper, FieldAttentionWrapper
-from textbox.module.layers import LstmUnit, OutputUnit
+from textbox.module.Attention.attention_mechanism import LuongAttention, BahdanauAttention, MonotonicAttention
 
 
 class BasicRNNDecoder(torch.nn.Module):

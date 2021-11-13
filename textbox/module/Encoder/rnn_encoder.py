@@ -104,4 +104,3 @@ class BasicRNNEncoder(torch.nn.Module):
         outputs, outputs_length = torch.nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
 
         return outputs, hidden_states
-

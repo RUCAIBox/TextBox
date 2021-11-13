@@ -7,6 +7,10 @@
 # @Author : Tianyi Tang
 # @Email  : steven_tang@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2021/11/4
+# @Author : Gaowei Zhang
+# @Email  : 1462034631@qq.com
 """
 textbox.data.dataset.abstract_dataset
 #####################################
@@ -29,6 +33,7 @@ class AbstractDataset(object):
 
     def __init__(self, config):
         self.config = config
+        self._get_keysize()
         self.dataset_path = config['data_path']
         self.source_language = (config['src_lang'] or 'english').lower()
         self.target_language = (config['tgt_lang'] or 'english').lower()
@@ -57,6 +62,12 @@ class AbstractDataset(object):
         """
         for prefix in ['train', 'valid', 'test']:
             setattr(self, f'{prefix}_data', dict())
+
+    def _get_keysize(self):
+        """Load the config of key_size if key_size is used
+        """
+        if 'key_size' in self.config:
+            self.source_key_vocab_size = int(self.config['key_size'])
 
     def _init_special_token(self):
         self.padding_token = SpecialTokens.PAD

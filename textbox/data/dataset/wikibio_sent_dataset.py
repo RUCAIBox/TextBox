@@ -28,8 +28,8 @@ class WikiBioSentenceDataset(AbstractDataset):
             filename = os.path.join(self.dataset_path, f'{prefix}.src')
 
             text_data = load_data(
-                filename, self.tokenize_strategy, self.source_max_length, self.source_language,
-                True, self.source_max_num
+                filename, self.tokenize_strategy, self.source_max_length, self.source_language, True,
+                self.source_max_num
             )
             assert len(text_data) == len(self.target_text[i])
             key_data = []
@@ -54,12 +54,8 @@ class WikiBioSentenceDataset(AbstractDataset):
         self.target_idx2token, self.target_token2idx, self.target_vocab_size = self.source_idx2token, self.source_token2idx, self.source_vocab_size
 
     def _text2idx(self):
-        self.source_key_idx, _, _ = text2idx(
-            self.source_key_text, self.source_key_token2idx, 'none'
-        )
-        self.source_value_idx, _, _ = text2idx(
-            self.source_value_text, self.source_token2idx, 'none'
-        )
+        self.source_key_idx, _, _ = text2idx(self.source_key_text, self.source_key_token2idx, 'none')
+        self.source_value_idx, _, _ = text2idx(self.source_value_text, self.source_token2idx, 'none')
         self.target_idx, self.target_length, _ = text2idx(
             self.target_text, self.target_token2idx, self.tokenize_strategy
         )

@@ -1,4 +1,5 @@
-src_len: 50
-src_num: 50
-tgt_len: 200
+src_len: 100
+src_num: 100
+key_size: 1480
 task_type: "table2text"
+vocab_size: 20003

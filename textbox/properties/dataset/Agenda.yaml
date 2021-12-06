@@ -1,3 +1,4 @@
 src_len: 50
-tgt_len: 300
+tgt_len: 200
 task_type: "kg2text"
+tgt_vocab_size: 20000

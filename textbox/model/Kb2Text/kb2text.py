@@ -27,7 +27,7 @@ from textbox.module.Attention.attention_mechanism import MultiHeadAttention, Luo
 NODE_TYPE = {'entity': 0, 'root': 1, 'relation': 2}
 
 
-class Decoder(torch.nn.Module):
+class ContextAttentionalDecoder(torch.nn.Module):
     r"""
     Attention-based Recurrent Neural Network (RNN) decoder.
     """
@@ -45,7 +45,7 @@ class Decoder(torch.nn.Module):
             num_heads=4,
             attn_weight_dropout_ratio=0.1
     ):
-        super(Decoder, self).__init__()
+        super(ContextAttentionalDecoder, self).__init__()
 
         self.attn_weight_dropout_ratio = attn_weight_dropout_ratio
         self.num_heads = num_heads
@@ -227,13 +227,23 @@ class Kb2Text(Seq2SeqGenerator):
         self.num_heads = config['num_heads']
         self.GAT_layer_nums = config['GAT_layer_nums']
         self.NODE_TYPE = {'entity': 0, 'root': 1, 'relation': 2}
-        self.REL_SET = ['USED-FOR', 'CONJUNCTION', 'FEATURE-OF', 'PART-OF', 'COMPARE', 'EVALUATE-FOR',
-                        'HYPONYM-OF']
+        # self.REL_SET = ['USED-FOR', 'CONJUNCTION', 'FEATURE-OF', 'PART-OF', 'COMPARE', 'EVALUATE-FOR',
+        #                 'HYPONYM-OF']
         self.source_relation_idx2token = dataset.source_relation_idx2token
         self.source_relation_token2idx = dataset.source_relation_token2idx
-        self.ALL_REL_SET = ['root', 'USED-FOR', 'CONJUNCTION', 'FEATURE-OF', 'PART-OF', 'COMPARE', 'EVALUATE-FOR',
-                            'HYPONYM-OF', 'USER-FOR-INV', 'CONJUNCTION-INV', 'FEATURE-OF-INV', 'PART-OF-INV',
-                            'COMPARE-INV', 'EVALUATE-FOR-INV', 'HYPNOYM-OF-INV']
+        # self.ALL_REL_SET = ['root', 'USED-FOR', 'CONJUNCTION', 'FEATURE-OF', 'PART-OF', 'COMPARE', 'EVALUATE-FOR',
+        #                     'HYPONYM-OF', 'USER-FOR-INV', 'CONJUNCTION-INV', 'FEATURE-OF-INV', 'PART-OF-INV',
+        #                     'COMPARE-INV', 'EVALUATE-FOR-INV', 'HYPNOYM-OF-INV']
+        self.REL_SET = []
+        self.type_vocab = []
+        with open("dataset/Agenda/relation.vocab") as f:
+            for line in f:
+                self.REL_SET.append(line.rstrip())
+        with open("dataset/Agenda/type.vocab") as f:
+            for line in f:
+                self.type_vocab.append(line.rstrip())
+
+        self.REL_LEN = 2 * len(self.REL_SET) + 1
 
         if (self.strategy not in ['topk_sampling', 'greedy_search', 'beam_search']):
             raise NotImplementedError("{} decoding strategy not implemented".format(self.strategy))
@@ -260,7 +270,7 @@ class Kb2Text(Seq2SeqGenerator):
         )
 
         self.rel_token_embedder = nn.Embedding(
-            len(self.ALL_REL_SET), self.embedding_size, padding_idx=self.padding_token_idx
+            self.REL_LEN, self.embedding_size, padding_idx=self.padding_token_idx
         )
 
         self.entity_encoder = BasicRNNEncoder(
@@ -276,7 +286,7 @@ class Kb2Text(Seq2SeqGenerator):
 
         self.attn_layer = MultiHeadAttention(self.embedding_size, self.num_heads, self.attn_weight_dropout_ratio)
 
-        self.decoder = Decoder(
+        self.decoder = ContextAttentionalDecoder(
             self.embedding_size, self.hidden_size, self.embedding_size, self.num_dec_layers, self.rnn_type,
             self.dropout_ratio, self.attention_type, self.alignment_method
         )
@@ -285,7 +295,7 @@ class Kb2Text(Seq2SeqGenerator):
         self.vocab_linear = nn.Linear(3 * self.hidden_size, self.target_vocab_size)
         self.copy_linear = nn.Linear(3 * self.hidden_size, 1)
         self.d_linear = nn.Linear(3 * self.embedding_size, self.embedding_size)
-        self.copy_attn = MultiHeadAttention(self.embedding_size, 1, 0.,)
+        self.copy_attn = MultiHeadAttention(self.embedding_size, 1, 0., )
 
         self.loss = nn.NLLLoss(ignore_index=self.padding_token_idx, reduction='none')
 
@@ -303,7 +313,7 @@ class Kb2Text(Seq2SeqGenerator):
         entity_list = []
         entity_len_list = []
         # total nums of relations
-        rel_len = 7
+        rel_len = len(self.REL_SET)
         for i in range(self.batch_size):
             entity_set = source_entity[i]
             entity_len = len(entity_set)
@@ -470,8 +480,8 @@ class Kb2Text(Seq2SeqGenerator):
         mention_text = corpus['target_mention']
 
         mention_idx = target_text.cpu().numpy()
-        entity_tag = ["<task>", "<material>", "<method>", "<otherscientificterm>", "<metric>"]
-        entity_tag = [self.target_token2idx[i] for i in entity_tag]
+        # entity_tag = ["<task>", "<material>", "<method>", "<otherscientificterm>", "<metric>"]
+        entity_tag = [self.target_token2idx[i] for i in self.type_vocab]
         for sent_idx in range(self.batch_size):
             for j in range(mention_idx.shape[1]):
                 if mention_idx[sent_idx][j] in entity_tag:

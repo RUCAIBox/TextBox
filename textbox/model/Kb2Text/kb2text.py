@@ -227,13 +227,8 @@ class Kb2Text(Seq2SeqGenerator):
         self.num_heads = config['num_heads']
         self.GAT_layer_nums = config['GAT_layer_nums']
         self.NODE_TYPE = {'entity': 0, 'root': 1, 'relation': 2}
-        # self.REL_SET = ['USED-FOR', 'CONJUNCTION', 'FEATURE-OF', 'PART-OF', 'COMPARE', 'EVALUATE-FOR',
-        #                 'HYPONYM-OF']
         self.source_relation_idx2token = dataset.source_relation_idx2token
         self.source_relation_token2idx = dataset.source_relation_token2idx
-        # self.ALL_REL_SET = ['root', 'USED-FOR', 'CONJUNCTION', 'FEATURE-OF', 'PART-OF', 'COMPARE', 'EVALUATE-FOR',
-        #                     'HYPONYM-OF', 'USER-FOR-INV', 'CONJUNCTION-INV', 'FEATURE-OF-INV', 'PART-OF-INV',
-        #                     'COMPARE-INV', 'EVALUATE-FOR-INV', 'HYPNOYM-OF-INV']
         self.REL_SET = []
         self.type_vocab = []
         with open("dataset/Agenda/relation.vocab") as f:

@@ -34,9 +34,6 @@ class Kb2TextEvaluator(AbstractEvaluator):
 
         return final_scores
 
-    def evaluate(self, generate_corpus, reference_corpus):
-        return self._calc_metrics_info(generate_corpus, reference_corpus)
-
     def _calc_metrics_info(self, generate_corpus, reference_corpus):
         # make dictionary
         ref = {}

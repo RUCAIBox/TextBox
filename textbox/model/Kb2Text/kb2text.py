@@ -231,10 +231,10 @@ class Kb2Text(Seq2SeqGenerator):
         self.source_relation_token2idx = dataset.source_relation_token2idx
         self.REL_SET = []
         self.type_vocab = []
-        with open("dataset/Agenda/relation.vocab") as f:
+        with open(config["relation_vocab"]) as f:
             for line in f:
                 self.REL_SET.append(line.rstrip())
-        with open("dataset/Agenda/type.vocab") as f:
+        with open(config["type_vocab"]) as f:
             for line in f:
                 self.type_vocab.append(line.rstrip())
 

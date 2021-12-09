@@ -1,6 +1,11 @@
-import pickle
-import collections
-import sys
+# @Time   : 2021/12/9
+# @Author : ZikangLiu
+# @Email  : jason8121@foxmail.com
+
+"""
+textbox.evaluator.abstract_evaluator
+#####################################
+"""
 
 from pycocoevalcap.bleu.bleu import Bleu
 from pycocoevalcap.rouge.rouge import Rouge

@@ -186,7 +186,7 @@ class FieldLstmEncoder(torch.nn.Module):
         if self.field_size is not None:
             field_ta = field_embeddings.permute(1, 0, 2)
         else:
-            field_ta = [None] * input_length
+            field_ta = [None] * input_ta.size(0)
         emit_ta = []
         t = 0
         while not is_all_finished(finished):

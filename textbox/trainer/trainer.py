@@ -29,7 +29,7 @@ from time import time
 from logging import getLogger
 
 from textbox.module.Optimizer.optim import ScheduledOptim, InverseSquareRootOptim
-from textbox.evaluator import BaseEvaluator, evaluator_list
+from textbox.evaluator import BaseEvaluator, evaluator_list, kb2text_evaluator
 from textbox.utils import ensure_dir, early_stopping
 
 

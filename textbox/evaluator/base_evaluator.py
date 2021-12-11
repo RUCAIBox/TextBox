@@ -27,9 +27,11 @@ from textbox.evaluator.meteor_evaluator import MeteorEvaluator
 from textbox.evaluator.bertscore_evaluator import BertScoreEvaluator
 from textbox.evaluator.unique_evaluator import UniqueEvaluator
 from textbox.evaluator.rouge_evaluator import RougeEvaluator
+from textbox.evaluator.kb2text_evaluator import Kb2TextEvaluator
 
 evaluator_list = [
-    'bleu', 'self_bleu', 'rouge', 'distinct', 'nll_test', 'avg_len', 'cider', 'chrf++', 'meteor', 'unique', 'bert_score'
+    'bleu', 'self_bleu', 'rouge', 'distinct', 'nll_test', 'avg_len', 'cider', 'chrf++', 'meteor', 'unique',
+    'bert_score', 'kb2text'
 ]
 
 
@@ -55,6 +57,8 @@ class BaseEvaluator():
             if metric == 'bleu':
                 task_type = (self.config['task_type'].lower() == "unconditional")
                 evaluator = BleuEvaluator(task_type)
+            elif metric == 'kb2text':
+                evaluator = Kb2TextEvaluator()
             elif metric == 'self_bleu':
                 if self.config['task_type'].lower() == "unconditional":
                     evaluator = SelfBleuEvaluator()

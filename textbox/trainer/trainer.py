@@ -873,55 +873,6 @@ class Seq2SeqTrainer(Trainer):
         return result
 
 
-class Kb2TextTrainer(Trainer):
-    r"""Seq2SeqTrainer is designed for seq2seq testing, which is a typically used setting.
-    """
-
-    def __init__(self, config, model):
-        super(Kb2TextTrainer, self).__init__(config, model)
-        self.evaluator = kb2text_evaluator.Kb2TextEvaluator()
-
-    @torch.no_grad()
-    def evaluate(self, eval_data, load_best_model=True, model_file=None, eval=True):
-        r"""Evaluate the model based on the eval data.
-
-        Args:
-            eval_data (DataLoader): the eval data
-            load_best_model (bool, optional): whether load the best model in the training process, default: True.
-                                              It should be set True, if users want to test the model after training.
-            model_file (str, optional): the saved model file, default: None. If users want to test the previously
-                                        trained model file, they can set this parameter.
-
-        Returns:
-            dict: eval result, key is the eval metric and value in the corresponding metric value
-        """
-        if load_best_model:
-            if model_file:
-                checkpoint_file = model_file
-            else:
-                checkpoint_file = self.saved_model_file
-            checkpoint = torch.load(checkpoint_file)
-            self.model.load_state_dict(checkpoint['state_dict'])
-            message_output = 'Loading model structure and parameters from {}'.format(checkpoint_file)
-            self.logger.info(message_output)
-
-        self.model.eval()
-
-        if not eval:
-            print(self.model.generate(eval_data.__next__(), eval_data))
-            return
-
-        generate_corpus = []
-        with torch.no_grad():
-            for batch_data in tqdm(eval_data):
-                generate_corpus.extend(self.model.generate(batch_data, eval_data))
-        self._save_generated_text(generate_corpus)
-        reference_corpus = eval_data.get_reference()
-        result = self.evaluator.evaluate(generate_corpus, reference_corpus)
-
-        return result
-
-
 class MaskGANTrainer(GANTrainer):
     r""" Trainer specifically designed for MaskGAN training process.
     """

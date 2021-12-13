@@ -32,6 +32,7 @@ class KGSentenceDataLoader(AbstractDataLoader):
         source_triple_idx = self.source_triple_idx[self.pr:self.pr + self.step]
         source_entity = self.source_entity[self.pr:self.pr + self.step]
         target_mention = self.target_mention[self.pr:self.pr + self.step]
+        dict_data = self.target_dict[self.pr:self.pr + self.step]
         source_idx, source_length, _ = pad_sequence(
             source_idx, source_length, self.padding_token_idx
         )
@@ -44,5 +45,6 @@ class KGSentenceDataLoader(AbstractDataLoader):
             'source_triple_idx': source_triple_idx,
             'source_entity': source_entity,
             'target_mention': target_mention,
+            'target_dict': dict_data,
         }
         return batch_data

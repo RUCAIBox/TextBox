@@ -6,7 +6,7 @@
 """
 textbox.module.ModelConstructor
 make model for table2text
-Contains Decoder,Encoder,Embeddings,BeamSearch,TextGeneration module .etc .
+Contains Decoder, Encoder, Embeddings, BeamSearch, TextGeneration module 
 """
 from __future__ import division, unicode_literals
 import torch

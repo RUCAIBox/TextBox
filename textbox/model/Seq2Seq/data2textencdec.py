@@ -3,7 +3,7 @@
 # @Email  : jjzhang_233@stu.xidian.edu.cn
 
 r"""
-table2text
+data2textencdec
 ################################################
 Reference:
     Puduppully et al. " Data-to-Text Generation with Content Selection and Planning" in AAAI 2019.
@@ -20,9 +20,9 @@ from textbox.module.ModelConstructor import make_base_model，TranslationBuilder
 from textbox.model.init import  xavier_normal_initialization
 TGT_VOCAB_SIZE = 606
 
-class table2text(TwoStageGenerator):
+class data2textencdec(TwoStageGenerator):
     def __init__(self,config,dataset):
-        super(table2text, self).__init__(config, dataset)
+        super(data2textencdec, self).__init__(config, dataset)
 
         # load parameters info
         self.config = config

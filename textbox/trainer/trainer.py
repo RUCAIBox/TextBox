@@ -3,9 +3,9 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2021/10/11, 2021/4/12, 2020/12/2, 2020/11/27, 2020/12/3, 2020/12/26
-# @Author : Tang Tianyi, Lai Xu, Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang, Jinhao Jiang
-# @Email  : tsui_lai@163.com, jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
+# @Time   : 2021/12/14, 2021/10/11, 2021/4/12, 2020/12/2, 2020/11/27, 2020/12/3, 2020/12/26
+# @Author : Junjie Zhang, Tang Tianyi, Lai Xu, Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang, Jinhao Jiang
+# @Email  : jjzhang_233@stu.xidian.edu.cn, tsui_lai@163.com, jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
 
 
 r"""
@@ -1575,3 +1575,193 @@ class LeakGANTrainer(GANTrainer):
 
         self._save_checkpoint(self.adversarail_training_epochs)
         return -1, None
+    
+    
+class TwoStageTrainer(Trainer):
+    r"""TwoStageTrainer is designed for model which has two stage training.
+        We save the two-stage model respectively.
+        """
+
+    def __init__(self, config, model):
+        super(TwoStageTrainer, self).__init__(config, model)
+
+    def _save_checkpoint(self, epoch,stage1):
+        r"""Store the model parameters information and training information.
+
+        Args:
+            epoch (int): the current epoch id
+
+        """
+        state = {
+            'config': self.config,
+            'epoch': epoch,
+            'cur_step': self.cur_step,
+            'best_valid_score': self.best_valid_score,
+            'state_dict': self.model.model1.state_dict() if stage1 else self.model.model2.state_dict(),
+            'optimizer': self.optimizer.state_dict(),
+        }
+        if self.DDP:
+            if (torch.distributed.get_rank() == 0):
+                saved_dict = collections.OrderedDict()
+                for key, val in state.items():
+                    if (key == 'state_dict'):
+                        for state_dict_key, state_dict_val in val.items():
+                            if (state_dict_key[0:7] == 'module.'):
+                                changed_key = state_dict_key[7:]
+                            else:
+                                changed_key = state_dict_key
+                            saved_dict[changed_key] = state_dict_val
+                        state[key] = saved_dict
+                torch.save(state, self.saved_model_file1 if stage1 else self.saved_model_file2)
+        else:
+            torch.save(state, self.saved_model_file1 if stage1 else self.saved_model_file2)
+
+    @torch.no_grad()
+    def evaluate(self, eval_data, load_best_model=True, model_file1=None, model_file2=None, eval=True):
+        r"""Evaluate the model based on the eval data.
+
+        Args:
+            eval_data (DataLoader): the eval data
+            load_best_model (bool, optional): whether load the best model in the training process, default: True.
+                                              It should be set True, if users want to test the model after training.
+            model_file (str, optional): the saved model file, default: None. If users want to test the previously
+                                        trained model file, they can set this parameter.
+
+        Returns:
+            dict: eval result, key is the eval metric and value in the corresponding metric value
+        """
+        if load_best_model:
+
+            if model_file1:
+                checkpoint_file1 = model_file1
+                checkpoint_file2 = model_file2
+            else:
+                checkpoint_file1 = self.saved_model_file1
+                checkpoint_file2 = self.saved_model_file2
+            checkpoint1 = torch.load(checkpoint_file1)
+            checkpoint2 = torch.load(checkpoint_file2)
+            self.model.model1.load_state_dict(checkpoint1['state_dict'])
+            self.model.model2.load_state_dict(checkpoint2['state_dict'])
+
+        # message_output = 'Loading model structure and parameters from {}'.format(checkpoint_file)
+        # self.logger.info(message_output)
+
+        self.model.eval()
+
+        if not eval:
+            print(self.model.generate(eval_data.__next__(), eval_data))
+            return
+
+        generate_corpus = []
+        with torch.no_grad():
+            for batch_data in tqdm(eval_data):
+                generate_corpus.extend(self.model.generate(batch_data, eval_data))
+        self._save_generated_text(generate_corpus)
+        reference_corpus = eval_data.get_reference()
+        result = self.evaluator.evaluate(generate_corpus, reference_corpus)
+
+        return result
+
+    def fit(self, train_data, valid_data=None, verbose=True, saved=True):
+        r"""Train the model based on the train data and the valid data.
+
+        Args:
+            train_data (DataLoader): the train data
+            valid_data (DataLoader, optional): the valid data, default: None.
+                                               If it's None, the early_stopping is invalid.
+            verbose (bool, optional): whether to write training and evaluation information to logger, default: True
+            saved (bool, optional): whether to save the model parameters, default: True
+
+        Returns:
+             (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
+        """
+        if self.start_epoch >= self.epochs or self.epochs <= 0:
+            self._save_checkpoint(-1)
+
+        for epoch_idx in range(self.start_epoch, self.epochs):
+            # train
+            training_start_time = time()
+            train_loss = self._train_epoch(train_data, epoch_idx)
+            training_end_time = time()
+            train_loss = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
+            if self.DDP:
+                train_loss = self.reduce_loss(torch.tensor(train_loss).to("cuda")).item()
+            self.train_loss_dict[epoch_idx] = train_loss
+            train_loss_output = \
+                self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss)
+            if verbose:
+                if self.is_logger:
+                    self.logger.info(train_loss_output)
+
+            # eval
+            if self.eval_step <= 0 or not valid_data:
+                if saved:
+                    self._save_checkpoint(epoch_idx, True)
+                    self._save_checkpoint(epoch_idx, False)
+                    update_output = 'Saving current: %s' % self.saved_model_file1
+                    if verbose:
+                        if self.is_logger:
+                            self.logger.info(update_output)
+                continue
+            if (epoch_idx + 1) % self.eval_step == 0:
+                valid_start_time = time()
+                with torch.no_grad():
+                    valid_score, valid_result = self._valid_epoch(valid_data)
+                if self.DDP:
+                    valid_score = self.reduce_loss(torch.tensor(valid_score).to("cuda")).item()
+                print(valid_score)
+                self.best_valid_score, self.cur_step, stop_flag, update_flag, update_flag2 = early_stopping(
+                    valid_score, self.best_valid_score, self.cur_step, max_step=self.stopping_step, bigger=False
+                )
+                # better model are supposed to provide smaller perplexity and loss
+                valid_score = sum(valid_score)
+                valid_end_time = time()
+                valid_score_output = "epoch %d evaluating [time: %.2fs, valid_loss: %f]" % \
+                                     (epoch_idx, valid_end_time - valid_start_time, valid_score)
+                valid_result_output = 'valid ppl: {}'.format(valid_result)
+                self.epoch_step0(valid_result[0], epoch_idx)
+                self.epoch_step1(valid_result[1], epoch_idx)
+                if verbose:
+                    if self.is_logger:
+                        self.logger.info(valid_score_output)
+                        self.logger.info(valid_result_output)
+                if update_flag:
+                    if saved:
+                        self._save_checkpoint(epoch_idx, True)
+                        update_output = 'Saving current best1: %s' % self.saved_model_file1
+                        if verbose:
+                            if self.is_logger:
+                                self.logger.info(update_output)
+                    self.best_valid_result[0] = valid_result[0]
+                if update_flag2:
+                    if saved:
+                        self._save_checkpoint(epoch_idx, False)
+                        update_output = 'Saving current best2: %s' % self.saved_model_file2
+                        if verbose:
+                            if self.is_logger:
+                                self.logger.info(update_output)
+                    self.best_valid_result[1] = valid_result[1]
+
+                if stop_flag:
+                    stop_output = 'Finished training, best eval result in epoch %d' % \
+                                  (epoch_idx - self.cur_step * self.eval_step)
+                    if verbose:
+                        if self.is_logger:
+                            self.logger.info(stop_output)
+                    break
+
+        return sum(self.best_valid_score), sum(self.best_valid_result)
+
+    def epoch_step1(self, ppl, epoch_idx):
+        if epoch_idx > self.start_epoch + 5 \
+                and self.last_ppl1 is not None and ppl > self.last_ppl1:
+            for param_group in self.optimizer.param_groups:
+                param_group['lr'] = param_group['lr'] * 0.9
+        self.last_ppl1 = ppl
+
+    def epoch_step0(self, ppl, epoch_idx):
+        if epoch_idx > self.start_epoch + 5 \
+                and self.last_ppl0 is not None and ppl > self.last_ppl0:
+            for param_group in self.optimizer.param_groups:
+                param_group['lr'] = param_group['lr'] * 0.9
+        self.last_ppl0 = ppl

@@ -6,7 +6,7 @@ r"""
 table2text
 ################################################
 Reference:
-    Sutskever et al. "Sequence to Sequence Learning with Neural Networks" in NIPS 2014.
+    Puduppully et al. " Data-to-Text Generation with Content Selection and Planning" in AAAI 2019.
 """
 from __future__ import division
 import os
@@ -14,10 +14,9 @@ from collections import Counter
 import torch
 import torch.nn as nn
 import torchtext
-from textbox.module.CopyGenerator import CopyGeneratorCriterion
+from textbox.module.strategy import CopyGeneratorCriterion
 from textbox.model.abstract_generator import TwoStageGenerator
-from textbox.module.ModelConstructor import make_base_model
-from textbox.module.Translation import TranslationBuilder,Translator,GNMTGlobalScorer
+from textbox.module.ModelConstructor import make_base_model，TranslationBuilder, Translator, GNMTGlobalScorer
 from textbox.model.init import  xavier_normal_initialization
 TGT_VOCAB_SIZE = 606
 

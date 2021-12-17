@@ -87,8 +87,17 @@ class Trainer(AbstractTrainer):
         self.checkpoint_dir = config['checkpoint_dir']
         self.grad_clip = config['grad_clip']
         ensure_dir(self.checkpoint_dir)
-        saved_model_file = self.config['filename'] + '.pth'
-        self.saved_model_file = os.path.join(self.checkpoint_dir, saved_model_file)
+        if self.config['model'].lower() == 'data2textencdec':
+            saved_model_file1 = self.config['filename'] + '1.pth'
+            self.saved_model_file1 = os.path.join(self.checkpoint_dir, saved_model_file1)
+            saved_model_file2 = self.config['filename'] + '2.pth'
+            self.saved_model_file2 = os.path.join(self.checkpoint_dir, saved_model_file2)
+            self.best_valid_score = [1e20, 1e20]
+            self.best_valid_result = [1e20, 1e20]
+        else:
+            self.saved_model_file = os.path.join(self.checkpoint_dir, saved_model_file)
+            self.best_valid_score = 100000000
+            self.best_valid_result = None
 
         self.generated_text_dir = config['generated_text_dir']
         ensure_dir(self.generated_text_dir)

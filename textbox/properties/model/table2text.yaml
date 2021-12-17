@@ -1,0 +1,13 @@
+embedding_size: 80
+hidden_size: 80
+num_enc_layers1: 1
+num_dec_layers1: 1
+num_enc_layers2: 2
+bidirectional: True
+num_dec_layers2: 2
+dropout_ratio: 0.3
+rnn_type: "LSTM"
+attention_type: "LuongAttenttion"
+alignment_method: "concat"
+beam_size: 5
+decoding_strategy: 'beam_search'

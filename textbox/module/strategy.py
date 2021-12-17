@@ -188,3 +188,107 @@ class Beam_Search_Hypothesis(object):
             returns += [encoder_mask]
 
         return returns
+    
+def collapse_copy_scores(scores, batch, tgt_vocab, src_vocabs):
+    r"""
+    Given scores from an expanded dictionary
+    corresponding to a batch, sums together copies,
+    with a dictionary word when it is ambiguous.
+    """
+    offset = len(tgt_vocab)
+    for b in range(batch.batch_size):
+        blank = []
+        fill = []
+        index = batch.indices.data[b]
+        src_vocab = src_vocabs[index]
+        for i in range(1, len(src_vocab)):
+            sw = src_vocab.itos[i]
+            ti = tgt_vocab.stoi[sw]
+            if ti != 0:
+                blank.append(offset + i)
+                fill.append(ti)
+        if blank:
+            blank = torch.Tensor(blank).type_as(batch.indices.data)
+            fill = torch.Tensor(fill).type_as(batch.indices.data)
+            scores[:, b].index_add_(1, fill,
+                                    scores[:, b].index_select(1, blank))
+            scores[:, b].index_fill_(1, blank, 1e-10)
+    return scores
+
+class CopyGenerator(nn.Module):
+    r"""Generator module that additionally considers copying words directly from the source.
+    The model returns a distribution over the extend dictionary,
+    computed as
+    :math:`p(w) = p(z=1)  p_{copy}(w)  +  p(z=0)  p_{softmax}(w)`
+    Args:
+       input_size (int): size of input representation
+       tgt_dict (Vocab): output target dictionary
+
+    """
+    def __init__(self, input_size, tgt_dict):
+        super(CopyGenerator, self).__init__()
+        self.linear = nn.Linear(input_size, len(tgt_dict)) # hidden_size -> tgt_vocab_size
+        self.linear_copy = nn.Linear(input_size, 1)
+        self.tgt_dict = tgt_dict
+
+    def forward(self, hidden, attn, src_map=None, align=None, ptrs=None):
+        r"""
+        Compute a distribution over the target dictionary
+        extended by the dynamic dictionary implied by compying
+        source words.
+
+        Args:
+           hidden (`FloatTensor`): hidden outputs `[batch*tlen, input_size]`
+           attn (`FloatTensor`): attn for each `[batch*tlen, input_size]`
+           src_map (`FloatTensor`):
+             A sparse indicator matrix mapping each source word to
+             its index in the "extended" vocab containing.
+             `[src_len, batch, extra_words]`
+        """
+        batch_by_tlen_, slen = attn.size()
+        slen_, batch, cvocab = src_map.size()
+
+        # Original probabilities.
+        logits = self.linear(hidden) 
+        logits[:, 0] = -float('inf')
+        prob = F.softmax(logits,dim=1) 
+        p_copy = torch.sigmoid(self.linear_copy(hidden))
+
+        if self.training:
+            align_unk = align.eq(0).float().view(-1, 1)
+            align_not_unk = align.ne(0).float().view(-1, 1)
+            out_prob = torch.mul(prob, align_unk.expand_as(prob)) 
+            mul_attn = torch.mul(attn, align_not_unk.expand_as(attn))
+        else:
+            out_prob = torch.mul(prob,  1 - p_copy.expand_as(prob))
+            mul_attn = torch.mul(attn, p_copy.expand_as(attn))
+        copy_prob = torch.bmm(mul_attn.view(-1, batch, slen).transpose(0, 1),
+                              src_map.transpose(0, 1)).transpose(0, 1)
+        copy_prob = copy_prob.contiguous().view(-1, cvocab)
+
+        return torch.cat([out_prob, copy_prob], 1), p_copy
+
+class CopyGeneratorCriterion(object):
+    """
+    Calculate loss in copy mechanism
+    """
+    def __init__(self, vocab_size,  pad, eps=1e-20):
+
+        self.eps = eps
+        self.offset = vocab_size
+        self.pad = pad
+
+    def __call__(self, scores, align, target):
+        # Compute unks in align and target for readability
+        align_unk = align.eq(0).float()
+        align_not_unk = align.ne(0).float()
+        # Copy probability of tokens in source
+        out = scores.gather(1, align.view(-1, 1) + self.offset).view(-1)
+        # Set scores for unk to 0 and add eps
+        out = out.mul(align_not_unk) + self.eps
+        # Get scores for tokens in target
+        tmp = scores.gather(1, target.view(-1, 1)).view(-1)
+        out = out + tmp.mul(align_unk)
+        # Drop padding.
+        loss = -out.log().mul(target.ne(self.pad).float())
+        return loss

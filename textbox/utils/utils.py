@@ -87,6 +87,8 @@ def get_trainer(model_type, model_name):
             return getattr(importlib.import_module('textbox.trainer'), 'GANTrainer')
         elif model_type in [ModelType.SEQ2SEQ, ModelType.ATTRIBUTE]:
             return getattr(importlib.import_module('textbox.trainer'), 'Seq2SeqTrainer')
+        elif model_type in [ModelType.TwoStage]:
+            return getattr(importlib.import_module('textbox.trainer'), 'TwoStageTrainer')
         else:
             return getattr(importlib.import_module('textbox.trainer'), 'Trainer')
 

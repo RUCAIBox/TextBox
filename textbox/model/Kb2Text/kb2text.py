@@ -290,7 +290,7 @@ class Kb2Text(Seq2SeqGenerator):
         self.vocab_linear = nn.Linear(3 * self.hidden_size, self.target_vocab_size)
         self.copy_linear = nn.Linear(3 * self.hidden_size, 1)
         self.d_linear = nn.Linear(3 * self.embedding_size, self.embedding_size)
-        self.copy_attn = MultiHeadAttention(self.embedding_size, 1, 0., )
+        self.copy_attn = MultiHeadAttention(self.embedding_size, 1, 0., return_distribute=True)
 
         self.loss = nn.NLLLoss(ignore_index=self.padding_token_idx, reduction='none')
 

@@ -280,7 +280,7 @@ class MultiHeadAttention(torch.nn.Module):
         https://arxiv.org/abs/1706.03762
     """
 
-    def __init__(self, embedding_size, num_heads, attn_weight_dropout_ratio=0.0):
+    def __init__(self, embedding_size, num_heads, attn_weight_dropout_ratio=0.0, return_distribute=False):
         super(MultiHeadAttention, self).__init__()
         self.embedding_size = embedding_size
         self.num_heads = num_heads
@@ -297,6 +297,7 @@ class MultiHeadAttention(torch.nn.Module):
         self.out_proj = nn.Linear(embedding_size, embedding_size)
 
         self.weight_dropout = nn.Dropout(attn_weight_dropout_ratio)
+        self.return_distribute = return_distribute
 
         self.reset_parameters()
 
@@ -346,6 +347,7 @@ class MultiHeadAttention(torch.nn.Module):
         if key_padding_mask is not None:
             attn_weights.masked_fill_(key_padding_mask.unsqueeze(1).unsqueeze(2), float('-inf'))
 
+        attn_weights_ = torch.log_softmax(attn_weights, -1)
         attn_weights = self.weight_dropout(F.softmax(attn_weights, dim=-1))
         attn_repre = torch.matmul(attn_weights, v)
 
@@ -357,7 +359,10 @@ class MultiHeadAttention(torch.nn.Module):
         # maximum attention weight over heads
         attn_weights, _ = attn_weights.max(dim=1)
 
-        return attn_repre, attn_weights
+        if self.return_distribute:
+            return attn_repre, attn_weights, attn_weights_
+        else:
+            return attn_repre, attn_weights
 
 
 class SelfAttentionMask(torch.nn.Module):

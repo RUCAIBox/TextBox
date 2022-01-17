@@ -210,3 +210,117 @@ class AttentionalRNNDecoder(torch.nn.Module):
 
         outputs = torch.cat(all_outputs, dim=1)
         return outputs, hidden_states, probs
+
+
+class PointerRNNDecoder(nn.Module):
+    def __init__(
+            self,
+            vocab_size,
+            embedding_size,
+            hidden_size,
+            context_size,
+            num_dec_layers,
+            rnn_type,
+            dropout_ratio=0.0,
+            is_attention=False,
+            is_pgen=False,
+            is_coverage=False
+    ):
+        super(PointerRNNDecoder, self).__init__()
+        self.embedding_size = embedding_size
+        self.hidden_size = hidden_size
+        self.context_size = context_size
+        self.num_dec_layers = num_dec_layers
+        self.rnn_type = rnn_type
+
+        dec_input_size = embedding_size
+        if rnn_type == 'lstm':
+            self.decoder = nn.LSTM(dec_input_size, hidden_size, num_dec_layers, batch_first=True, dropout=dropout_ratio)
+        elif rnn_type == 'gru':
+            self.decoder = nn.GRU(dec_input_size, hidden_size, num_dec_layers, batch_first=True, dropout=dropout_ratio)
+        elif rnn_type == 'rnn':
+            self.decoder = nn.RNN(dec_input_size, hidden_size, num_dec_layers, batch_first=True, dropout=dropout_ratio)
+        else:
+            raise ValueError("RNN type in attentional decoder must be in ['lstm', 'gru', 'rnn'].")
+
+        self.is_attention = is_attention
+        self.is_pgen = is_pgen and is_attention
+        self.is_coverage = is_coverage and is_attention
+        self.vocab_linear = nn.Linear(hidden_size, vocab_size)
+
+        if self.is_attention:
+            self.x_context = nn.Linear(embedding_size + context_size, embedding_size)
+            self.attention = LuongAttention(self.context_size, self.hidden_size, 'concat', self.is_coverage)
+            self.attention_dense = nn.Linear(hidden_size + context_size, hidden_size)
+
+        if self.is_pgen:
+            self.p_gen_linear = nn.Linear(context_size + hidden_size + embedding_size, 1)
+
+    def forward(self, input_embeddings, decoder_hidden_states, kwargs=None):
+        if not self.is_attention:
+            decoder_outputs, decoder_hidden_states = self.decoder(input_embeddings, decoder_hidden_states)
+            vocab_dists = F.softmax(self.vocab_linear(decoder_outputs), dim=-1)
+            return vocab_dists, decoder_hidden_states, kwargs
+
+        else:
+            vocab_dists = []
+            encoder_outputs = kwargs['encoder_outputs']  # B x src_len x 256
+            encoder_masks = kwargs['encoder_masks']  # B x src_len
+            context = kwargs['context']  # B x 1 x 256
+
+            extra_zeros = None
+            source_extended_idx = None
+            if self.is_pgen:
+                extra_zeros = kwargs['extra_zeros']  # B x max_oovs_num
+                source_extended_idx = kwargs['source_extended_idx']  # B x src_len (contains oovs ids)
+
+            coverage = None
+            attn_dists = None
+            coverages = None
+            if self.is_coverage:
+                coverage = kwargs['coverages']
+                coverages = []
+                attn_dists = []
+
+            tgt_len = input_embeddings.size(1)
+
+            for step in range(tgt_len):
+                step_input_embeddings = input_embeddings[:, step, :].unsqueeze(1)  # B x 1 x 128
+
+                x = self.x_context(torch.cat((step_input_embeddings, context), dim=-1))  # B x 1 x 128
+
+                decoder_outputs, decoder_hidden_states = self.decoder(x, decoder_hidden_states)  # B x 1 x 256
+
+                context, attn_dist, coverage = self.attention(decoder_outputs, encoder_outputs,
+                                                              encoder_masks, coverage)  # B x 1 x src_len
+
+                vocab_logits = self.vocab_linear(self.attention_dense(torch.cat((decoder_outputs, context), dim=-1)))
+                vocab_dist = F.softmax(vocab_logits, dim=-1)  # B x 1 x vocab_size
+
+                if self.is_pgen:
+                    p_gen_input = torch.cat((context, decoder_outputs, x), dim=-1)  # B x 1 x (256 + 256 + 128)
+                    p_gen = torch.sigmoid(self.p_gen_linear(p_gen_input))  # B x 1 x 1
+                    copy_attn_dist = (1 - p_gen) * attn_dist  # B x 1 x src_len
+
+                    # B x 1 x (vocab_size+max_oovs_num)
+                    extended_vocab_dist = torch.cat(((vocab_dist * p_gen), extra_zeros.unsqueeze(1)), dim=-1)
+                    # add copy probs to vocab dist
+                    vocab_dist = extended_vocab_dist.scatter_add(2, source_extended_idx.unsqueeze(1), copy_attn_dist)
+
+                if self.is_coverage:
+                    attn_dists.append(attn_dist)
+                    coverages.append(coverage)
+
+                vocab_dists.append(vocab_dist)
+
+            vocab_dists = torch.cat(vocab_dists, dim=1)  # B x tgt_len x vocab_size+(max_oovs_num)
+
+            kwargs['context'] = context
+
+            if self.is_coverage:
+                coverages = torch.cat(coverages, dim=1)  # B x tgt_len x src_len
+                attn_dists = torch.cat(attn_dists, dim=1)  # B x tgt_len x src_len
+                kwargs['attn_dists'] = attn_dists
+                kwargs['coverages'] = coverages
+
+            return vocab_dists, decoder_hidden_states, kwargs

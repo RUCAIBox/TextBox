@@ -40,8 +40,12 @@ def get_dataset(config):
         from .dataset import AttributedSentenceDataset
         return AttributedSentenceDataset
     elif task_type in ["translation", "summarization"]:
+        if config['model'] == 'PointerNet':
+            from .dataset import CopyPairedSentenceDataset
+            return CopyPairedSentenceDataset
         from .dataset import PairedSentenceDataset
         return PairedSentenceDataset
+
     elif task_type in ["kg2text"]:
         from .dataset import KGSentenceDataset
         return KGSentenceDataset
@@ -100,6 +104,9 @@ def get_dataloader(config):
         from .dataloader import AttributedSentenceDataLoader
         return AttributedSentenceDataLoader
     elif task_type in ["translation", "summarization"]:
+        if config['model'] == 'PointerNet':
+            from .dataloader import CopyPairedSentenceDataLoader
+            return CopyPairedSentenceDataLoader
         from .dataloader import PairedSentenceDataLoader
         return PairedSentenceDataLoader
     elif task_type in ["kg2text"]:

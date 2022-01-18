@@ -87,7 +87,7 @@ class LuongAttention(torch.nn.Module):
         Return:
             tuple:
                 - context: shape: [batch_size, tgt_len, source_size]
-                - sprobs: shape: [batch_size, tgt_len, src_len]
+                - probs: shape: [batch_size, tgt_len, src_len]
         """
         tgt_len = hidden_states.size(1)
         energy = self.score(hidden_states, encoder_outputs, coverages=coverages)

@@ -1,17 +1,13 @@
-# @Time   : 2020/12/28
-# @Author : Junyi Li
-# @Email  : lijunyi@ruc.edu.cn
+# @Time   : 2022/1/18
+# @Author : Wenxun Dai
+# @Email  : wxdai@stu.xidian.edu.cn
 
-# UPDATE:
-# @Time   : 2020/12/25
-# @Author : Tianyi Tang
-# @Email  : steventang@ruc.edu.cn
 
 r"""
-RNNEncDec
+Pointer-Generator Networks
 ################################################
 Reference:
-    Sutskever et al. "Sequence to Sequence Learning with Neural Networks" in NIPS 2014.
+    See et al. "Get To The Point: Summarization with Pointer-Generator Networks" in ACL 2017.
 """
 
 import torch

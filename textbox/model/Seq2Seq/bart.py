@@ -62,21 +62,10 @@ class BART(Seq2SeqGenerator):
         source_text = corpus['source_text']
         target_text = corpus['target_text']
         input_ids, attn_masks = self.tokenize_text(source_text, self.source_max_length)
-        decoder_ids, decoder_attn_masks = self.tokenize_text(target_text, self.target_max_length)
+        labels, _ = self.tokenize_text(target_text, self.target_max_length)
+        labels[labels == self.tokenizer.pad_token_id] = -100
 
-        decoder_input_ids = decoder_ids[:, :-1].contiguous()
-        decoder_attn_masks = decoder_attn_masks[:, :-1].contiguous()
-        labels = decoder_ids[:, 1:].contiguous()
-        labels = torch.where(labels != self.padding_token_idx, labels, -100)
-
-        outputs = self.model(
-            input_ids,
-            attention_mask=attn_masks,
-            decoder_input_ids=decoder_input_ids,
-            decoder_attention_mask=decoder_attn_masks,
-            labels=labels,
-            use_cache=False
-        )
+        outputs = self.model(input_ids, attention_mask=attn_masks, labels=labels)
 
         if self.label_smoothing:
             return self.compute_labelsmooth_loss(outputs.logits, labels)

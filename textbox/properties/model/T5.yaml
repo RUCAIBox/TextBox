@@ -1,5 +1,7 @@
 learning_rate: 0.00001
+tokenize_strategy: none
 epochs: 10
 train_batch_size: 10
 eval_batch_size: 10
 pretrained_model_path: "pretrained_model/t5-base"
+task_prefix: "summarize: "

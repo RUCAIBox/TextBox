@@ -2,6 +2,12 @@
 # @Author : Zhuohao Yu
 # @Email  : zhuohao@ruc.edu.cn
 
+# UPDATE:
+# @Time   : 2022/1/18
+# @Author : Wenxun Dai
+# @Email  : wxdai@stu.xidian.edu.cn
+
+
 r"""
 T5
 ################################################
@@ -25,17 +31,8 @@ class T5(Seq2SeqGenerator):
         self.pretrained_model_path = config['pretrained_model_path']
         self.tokenizer = T5Tokenizer.from_pretrained(self.pretrained_model_path)
         self.configuration = T5Config.from_pretrained(self.pretrained_model_path)
-
         self.model = T5ForConditionalGeneration.from_pretrained(self.pretrained_model_path, config=self.configuration)
-
-        self.padding_token_idx = self.tokenizer.pad_token_id
-        self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token_idx, reduction='none')
-        if config['task_type'] == "summarization":
-            self.t5_task_text = "summarize: "
-        elif config['task_type'] == "translation":
-            self.t5_task_text = "translate German to English: "
-        else:
-            raise NotImplementedError("Only summarization and translation are supported.")
+        self.task_prefix = config['task_prefix'] if config['task_prefix'] else ''
 
     def generate(self, batch_data, eval_data):
         source_text = batch_data['source_text']
@@ -44,21 +41,18 @@ class T5(Seq2SeqGenerator):
         sample_outputs = self.model.generate(
             input_ids, attention_mask=attn_masks, num_beams=5, max_length=self.target_max_length, early_stopping=True
         )
-        generated_text = self.tokenizer.batch_decode(sample_outputs, skip_special_tokens=True)
+        generated_text = self.tokenizer.batch_decode(sample_outputs, skip_special_tokens=True, clean_up_tokenization_spaces=False)
         generate_corpus = [text.lower().split() for text in generated_text]
         return generate_corpus
 
     def tokenize_text(self, text, is_target=False):
-        input_ids = []
-        attn_masks = []
-        texts = [(self.t5_task_text if not is_target else '') + ' '.join(t) for t in text]
+        texts = [self.task_prefix + t for t in text] if not is_target else text
         encoding_dict = self.tokenizer(
             texts, max_length=self.source_max_length, padding=True, truncation=True, return_tensors="pt"
         )
 
         input_ids = encoding_dict['input_ids'].to(self.device)
         attn_masks = encoding_dict['attention_mask'].to(self.device)
-
         return input_ids, attn_masks
 
     def forward(self, corpus, epoch_idx=-1):
@@ -66,25 +60,9 @@ class T5(Seq2SeqGenerator):
         target_text = corpus['target_text']
 
         input_ids, attn_masks = self.tokenize_text(source_text)
-        target_ids, decoder_attn_masks = self.tokenize_text(target_text, is_target=True)
+        labels, _ = self.tokenize_text(target_text, is_target=True)
+        labels[labels == self.tokenizer.pad_token_id] = -100
 
-        decoder_input_ids = target_ids[:, :-1].contiguous()
-        decoder_attn_masks = decoder_attn_masks[:, :-1].contiguous()
-        decoder_target_ids = target_ids[:, 1:].contiguous()
+        outputs = self.model(input_ids, attention_mask=attn_masks, labels=labels)
 
-        outputs = self.model(
-            input_ids,
-            attention_mask=attn_masks,
-            decoder_input_ids=decoder_input_ids,
-            decoder_attention_mask=decoder_attn_masks,
-            use_cache=False
-        )
-
-        token_logits = outputs.logits
-        loss = self.loss(token_logits.view(-1, token_logits.size(-1)), decoder_target_ids.view(-1))
-        loss = loss.reshape_as(decoder_target_ids)
-
-        length = (decoder_target_ids != self.padding_token_idx).sum(dim=1).float()
-        loss = loss.sum(dim=1) / length
-
-        return loss.mean()
+        return outputs.loss

@@ -36,7 +36,7 @@ class T5(Seq2SeqGenerator):
 
     def generate(self, batch_data, eval_data):
         source_text = batch_data['source_text']
-        input_ids, attn_masks = self.tokenize_text(source_text)
+        input_ids, attn_masks = self.tokenize_text(source_text, self.source_max_length)
 
         sample_outputs = self.model.generate(
             input_ids, attention_mask=attn_masks, num_beams=5, max_length=self.target_max_length, early_stopping=True
@@ -45,10 +45,10 @@ class T5(Seq2SeqGenerator):
         generate_corpus = [text.lower().split() for text in generated_text]
         return generate_corpus
 
-    def tokenize_text(self, text, is_target=False):
+    def tokenize_text(self, text, max_length, is_target=False):
         texts = [self.task_prefix + t for t in text] if not is_target else text
         encoding_dict = self.tokenizer(
-            texts, max_length=self.source_max_length, padding=True, truncation=True, return_tensors="pt"
+            texts, max_length=max_length, padding=True, truncation=True, return_tensors="pt"
         )
 
         input_ids = encoding_dict['input_ids'].to(self.device)
@@ -59,8 +59,8 @@ class T5(Seq2SeqGenerator):
         source_text = corpus['source_text']
         target_text = corpus['target_text']
 
-        input_ids, attn_masks = self.tokenize_text(source_text)
-        labels, _ = self.tokenize_text(target_text, is_target=True)
+        input_ids, attn_masks = self.tokenize_text(source_text, self.source_max_length)
+        labels, _ = self.tokenize_text(target_text, self.target_max_length, is_target=True)
         labels[labels == self.tokenizer.pad_token_id] = -100
 
         outputs = self.model(input_ids, attention_mask=attn_masks, labels=labels)

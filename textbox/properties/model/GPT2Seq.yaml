@@ -1,5 +1,3 @@
-learning_rate: 0.00001
-epochs: 10
-train_batch_size: 10
-eval_batch_size: 10
+tokenize_strategy: none
 pretrained_model_path: "pretrained_model/gpt2"
+task_prefix: "TL;DR:"

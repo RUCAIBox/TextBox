@@ -39,3 +39,6 @@ class SpecialTokens:
     UNK = "<|unk|>"
     SOS = "<|startoftext|>"
     EOS = "<|endoftext|>"
+
+
+Seq2SeqTransformers = ['t5', 'gpt2seq', 'bart', 'bert2bert']

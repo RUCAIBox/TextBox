@@ -1,3 +1,0 @@
-tokenize_strategy: none
-pretrained_model_path: "pretrained_model/t5-base"
-task_prefix: "summarize: "

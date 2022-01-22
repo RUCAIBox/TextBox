@@ -1,3 +1,0 @@
-tokenize_strategy: none
-pretrained_model_path: "pretrained_model/gpt2"
-task_prefix: "TL;DR:"

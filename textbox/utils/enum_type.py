@@ -41,4 +41,4 @@ class SpecialTokens:
     EOS = "<|endoftext|>"
 
 
-Seq2SeqTransformers = ['t5', 'gpt2seq', 'bart', 'bert2bert']
+Seq2SeqTransformers = ['t5', 'bart', 'bert2bert', 'gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq']

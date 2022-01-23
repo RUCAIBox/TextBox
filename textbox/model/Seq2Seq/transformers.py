@@ -10,7 +10,10 @@ from transformers import (
     T5Tokenizer, T5ForConditionalGeneration,
     BartTokenizer, BartForConditionalGeneration,
     GPT2Tokenizer, GPT2LMHeadModel,
-    BertTokenizer, BertGenerationEncoder, BertGenerationDecoder, EncoderDecoderModel
+    BertTokenizer, BertGenerationEncoder, BertGenerationDecoder, EncoderDecoderModel,
+    BigBirdTokenizer, BigBirdForCausalLM,
+    BertLMHeadModel,
+    RobertaTokenizer, RobertaForCausalLM
 )
 
 MODEL_CLASSES = {
@@ -22,16 +25,30 @@ MODEL_CLASSES = {
         'tokenizer': BartTokenizer,
         'model': BartForConditionalGeneration
     },
-    'gpt2seq': {
-        'tokenizer': GPT2Tokenizer,
-        'model': GPT2LMHeadModel
-    },
     'bert2bert': {
         'tokenizer': BertTokenizer,
         'model': EncoderDecoderModel
     },
-
+    'gpt2seq': {
+        'tokenizer': GPT2Tokenizer,
+        'model': GPT2LMHeadModel
+    },
+    'big_bird2seq': {
+        'tokenizer': BigBirdTokenizer,
+        'model': BigBirdForCausalLM
+    },
+    'bert2seq': {
+        'tokenizer': BertTokenizer,
+        'model': BertLMHeadModel
+    },
+    'roberta2seq': {
+        'tokenizer': RobertaTokenizer,
+        'model': RobertaForCausalLM
+    }
 }
+
+
+DECODERS = ['gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq']
 
 
 class Transformers(Seq2SeqGenerator):
@@ -47,17 +64,32 @@ class Transformers(Seq2SeqGenerator):
         if self.model_name == 'bert2bert':
             self.model = model_class.from_encoder_decoder_pretrained(self.model_name_or_path, self.model_name_or_path)
         else:
-            self.model = model_class.from_pretrained(self.model_name_or_path)
+            init_kwargs = {'is_decoder': True} if self.model_name in DECODERS else {}
+            self.model = model_class.from_pretrained(self.model_name_or_path, **init_kwargs)
 
         self.configuration = self.model.config
         self.tokenizer = tokenizer_class.from_pretrained(self.model_name_or_path)
 
         self._check_params()
 
-        self.task_prefix = config['task_prefix'] if config['task_prefix'] else ''
-        self.task_infix = config['task_infix'] if config['task_infix'] else ''
-        self.task_prefix_ids = self.tokenizer.encode(self.task_prefix, add_special_tokens=False)
-        self.task_infix_ids = self.tokenizer.encode(self.task_infix, add_special_tokens=False)
+        self.prefix = config['prefix_prompt'] if config['prefix_prompt'] else ''
+        self.infix = config['infix_prompt'] if config['infix_prompt'] else ''
+        self.postfix = config['postfix_prompt'] if config['postfix_prompt'] else ''
+
+        self.prefix_ids = self.tokenizer.encode(self.prefix, add_special_tokens=False)
+        self.infix_ids = self.tokenizer.encode(self.infix, add_special_tokens=False)
+        self.postfix_ids = self.tokenizer.encode(self.postfix, add_special_tokens=False)
+
+        if self.model_name in DECODERS:
+            if self.tokenizer.cls_token is not None:
+                self.prefix_ids = [self.tokenizer.cls_token_id] + self.prefix_ids
+            elif self.tokenizer.bos_token is not None:
+                self.prefix_ids = [self.tokenizer.bos_token_id] + self.prefix_ids
+
+            if self.tokenizer.sep_token is not None:
+                self.postfix_ids = self.postfix_ids + [self.tokenizer.sep_token_id]
+            elif self.tokenizer.eos_token is not None:
+                self.postfix_ids = self.postfix_ids + [self.tokenizer.eos_token_id]
 
     # def generate(self, batch_data, eval_data):
     #     source_text = batch_data['source_text']
@@ -95,11 +127,10 @@ class Transformers(Seq2SeqGenerator):
             src_ids = self.tokenizer.encode(src, add_special_tokens=False)
             tgt_ids = self.tokenizer.encode(tgt, add_special_tokens=False)
 
-            if self.model_name == 'gpt2seq':
-                src_ids = src_ids[:self.source_max_length - len(self.task_prefix_ids) - len(self.task_infix_ids)]
-                tgt_ids = tgt_ids[:self.target_max_length - len([self.tokenizer.eos_token_id])]
-                input_id = self.task_prefix_ids + src_ids + self.task_infix_ids + tgt_ids + [
-                    self.tokenizer.eos_token_id]
+            if self.model_name in DECODERS:
+                src_ids = src_ids[:self.source_max_length - len(self.prefix_ids) - len(self.infix_ids)]
+                tgt_ids = tgt_ids[:self.target_max_length - len(self.postfix_ids)]
+                input_id = self.prefix_ids + src_ids + self.infix_ids + tgt_ids + self.postfix_ids
                 label = copy.deepcopy(input_id)
 
                 padding_length = self.source_max_length + self.target_max_length - len(input_id)
@@ -111,9 +142,9 @@ class Transformers(Seq2SeqGenerator):
 
             else:
                 src_ids = src_ids[:self.source_max_length - self.tokenizer.num_special_tokens_to_add()
-                                  - len(self.task_prefix_ids)]
+                                  - len(self.prefix_ids)]
                 tgt_ids = tgt_ids[:self.target_max_length - self.tokenizer.num_special_tokens_to_add()]
-                input_id = self.tokenizer.build_inputs_with_special_tokens(self.task_prefix_ids + src_ids)
+                input_id = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + src_ids)
                 label = self.tokenizer.build_inputs_with_special_tokens(tgt_ids)
 
                 input_padding_length = self.source_max_length - len(input_id)
@@ -126,8 +157,6 @@ class Transformers(Seq2SeqGenerator):
                 assert label_padding_length >= 0
 
                 label = label + [-100] * label_padding_length
-
-            assert self.tokenizer.eos_token_id in input_id and self.tokenizer.eos_token_id in label
 
             input_ids.append(input_id)
             labels.append(label)
@@ -149,15 +178,14 @@ class Transformers(Seq2SeqGenerator):
         return outputs.loss
 
     def _check_params(self):
-        if self.model_name == 'gpt2seq':
+        if isinstance(self.tokenizer, GPT2Tokenizer):  # gpt2, roberta,
             self.tokenizer.add_prefix_space = True
+
+        if self.model_name == 'gpt2seq':
             self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-            self.configuration.pad_token_id = self.tokenizer.pad_token_id
             self.model.resize_token_embeddings(len(self.tokenizer))
         elif self.model_name == 'bart':
             self.configuration.forced_bos_token_id = self.tokenizer.bos_token_id
-
         elif self.model_name == 'bert2bert':
             self.configuration.decoder_start_token_id = self.tokenizer.cls_token_id
-            self.configuration.eos_token_id = self.tokenizer.sep_token_id
-            self.tokenizer.eos_token = self.tokenizer.sep_token
+

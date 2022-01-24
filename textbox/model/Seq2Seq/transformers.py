@@ -3,6 +3,7 @@ import copy
 import torch
 import torch.nn as nn
 import torch.functional as F
+from torch.nn.utils.rnn import pad_sequence
 
 from textbox.model.abstract_generator import Seq2SeqGenerator
 
@@ -55,7 +56,9 @@ MODEL_CLASSES = {
 }
 
 
-DECODERS = ['gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq']
+CLM_CLASSES = ['gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq']
+
+EncDecLM_CLASSES = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus']
 
 
 class Transformers(Seq2SeqGenerator):
@@ -71,32 +74,32 @@ class Transformers(Seq2SeqGenerator):
         if self.model_name == 'bert2bert':
             self.model = model_class.from_encoder_decoder_pretrained(self.model_name_or_path, self.model_name_or_path)
         else:
-            init_kwargs = {'is_decoder': True} if self.model_name in DECODERS else {}
+            init_kwargs = {'is_decoder': True} if self.model_name in CLM_CLASSES else {}
             self.model = model_class.from_pretrained(self.model_name_or_path, **init_kwargs)
 
         self.configuration = self.model.config
         self.tokenizer = tokenizer_class.from_pretrained(self.model_name_or_path)
 
-        self._check_params()
+        self._init_params()
 
         self.prefix = config['prefix_prompt'] if config['prefix_prompt'] else ''
         self.infix = config['infix_prompt'] if config['infix_prompt'] else ''
-        self.postfix = config['postfix_prompt'] if config['postfix_prompt'] else ''
+        self.suffix = config['suffix_prompt'] if config['suffix_prompt'] else ''
 
         self.prefix_ids = self.tokenizer.encode(self.prefix, add_special_tokens=False)
         self.infix_ids = self.tokenizer.encode(self.infix, add_special_tokens=False)
-        self.postfix_ids = self.tokenizer.encode(self.postfix, add_special_tokens=False)
+        self.suffix_ids = self.tokenizer.encode(self.suffix, add_special_tokens=False)
 
-        if self.model_name in DECODERS:
+        if self.model_name in CLM_CLASSES:
             if self.tokenizer.cls_token is not None:
                 self.prefix_ids = [self.tokenizer.cls_token_id] + self.prefix_ids
             elif self.tokenizer.bos_token is not None:
                 self.prefix_ids = [self.tokenizer.bos_token_id] + self.prefix_ids
 
             if self.tokenizer.sep_token is not None:
-                self.postfix_ids = self.postfix_ids + [self.tokenizer.sep_token_id]
+                self.suffix_ids = self.suffix_ids + [self.tokenizer.sep_token_id]
             elif self.tokenizer.eos_token is not None:
-                self.postfix_ids = self.postfix_ids + [self.tokenizer.eos_token_id]
+                self.suffix_ids = self.suffix_ids + [self.tokenizer.eos_token_id]
 
     # def generate(self, batch_data, eval_data):
     #     source_text = batch_data['source_text']
@@ -134,19 +137,11 @@ class Transformers(Seq2SeqGenerator):
             src_ids = self.tokenizer.encode(src, add_special_tokens=False)
             tgt_ids = self.tokenizer.encode(tgt, add_special_tokens=False)
 
-            if self.model_name in DECODERS:
+            if self.model_name in CLM_CLASSES:
                 src_ids = src_ids[:self.source_max_length - len(self.prefix_ids) - len(self.infix_ids)]
-                tgt_ids = tgt_ids[:self.target_max_length - len(self.postfix_ids)]
-                input_id = self.prefix_ids + src_ids + self.infix_ids + tgt_ids + self.postfix_ids
-                label = copy.deepcopy(input_id)
-
-                padding_length = self.source_max_length + self.target_max_length - len(input_id)
-                assert padding_length >= 0
-
-                attn_mask = [1] * len(input_id) + [0] * padding_length
-                input_id = input_id + [self.tokenizer.pad_token_id] * padding_length
-                label = label + [-100] * padding_length
-
+                tgt_ids = tgt_ids[:self.target_max_length - len(self.suffix_ids)]
+                input_id = self.prefix_ids + src_ids + self.infix_ids + tgt_ids + self.suffix_ids
+                label = input_id
             else:
                 src_ids = src_ids[:self.source_max_length - self.tokenizer.num_special_tokens_to_add()
                                   - len(self.prefix_ids)]
@@ -154,28 +149,17 @@ class Transformers(Seq2SeqGenerator):
                 input_id = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + src_ids)
                 label = self.tokenizer.build_inputs_with_special_tokens(tgt_ids)
 
-                input_padding_length = self.source_max_length - len(input_id)
-                assert input_padding_length >= 0
+            input_ids.append(torch.tensor(input_id, dtype=torch.long))
+            attn_masks.append(torch.ones(len(input_id), dtype=torch.long))
+            labels.append(torch.tensor(label))
 
-                attn_mask = [1] * len(input_id) + [0] * input_padding_length
-                input_id = input_id + [self.tokenizer.pad_token_id] * input_padding_length
-
-                label_padding_length = self.target_max_length - len(label)
-                assert label_padding_length >= 0
-
-                label = label + [-100] * label_padding_length
-
-            input_ids.append(input_id)
-            labels.append(label)
-            attn_masks.append(attn_mask)
-
-        input_ids = torch.tensor(input_ids, dtype=torch.long).to(self.device)
-        labels = torch.tensor(labels, dtype=torch.long).to(self.device)
-        attn_masks = torch.tensor(attn_masks, dtype=torch.long).to(self.device)
+        input_ids = pad_sequence(input_ids, batch_first=True, padding_value=self.tokenizer.pad_token_id).to(self.device)
+        attn_masks = pad_sequence(attn_masks, batch_first=True, padding_value=0).to(self.device)
+        labels = pad_sequence(labels, batch_first=True, padding_value=-100).to(self.device)
 
         inputs = {'input_ids': input_ids, 'attention_mask': attn_masks, 'labels': labels}
         if self.model_name == 'bert2bert':
-            inputs['decoder_input_ids'] = labels.clone().detach()
+            inputs['labels'] = labels[:, 1:].clone()
 
         return inputs
 
@@ -184,7 +168,7 @@ class Transformers(Seq2SeqGenerator):
         outputs = self.model(**inputs)
         return outputs.loss
 
-    def _check_params(self):
+    def _init_params(self):
         if isinstance(self.tokenizer, GPT2Tokenizer):  # gpt2, roberta,
             self.tokenizer.add_prefix_space = True
 
@@ -195,4 +179,6 @@ class Transformers(Seq2SeqGenerator):
             self.configuration.forced_bos_token_id = self.tokenizer.bos_token_id
         elif self.model_name == 'bert2bert':
             self.configuration.decoder_start_token_id = self.tokenizer.cls_token_id
+            self.configuration.pad_token_id = self.tokenizer.pad_token_id
+
 

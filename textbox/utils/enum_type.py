@@ -41,4 +41,4 @@ class SpecialTokens:
     EOS = "<|endoftext|>"
 
 
-Seq2SeqTransformers = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq']
+PLM_CLASSES = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq']

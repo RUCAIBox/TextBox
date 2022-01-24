@@ -13,7 +13,8 @@ from transformers import (
     BertTokenizer, BertGenerationEncoder, BertGenerationDecoder, EncoderDecoderModel,
     BigBirdTokenizer, BigBirdForCausalLM,
     BertLMHeadModel,
-    RobertaTokenizer, RobertaForCausalLM
+    RobertaTokenizer, RobertaForCausalLM,
+    PegasusTokenizer, BigBirdPegasusForConditionalGeneration
 )
 
 MODEL_CLASSES = {
@@ -29,6 +30,12 @@ MODEL_CLASSES = {
         'tokenizer': BertTokenizer,
         'model': EncoderDecoderModel
     },
+    'big_bird_pegasus': {
+        'tokenizer': PegasusTokenizer,
+        'model': BigBirdPegasusForConditionalGeneration
+    },
+    
+    
     'gpt2seq': {
         'tokenizer': GPT2Tokenizer,
         'model': GPT2LMHeadModel

@@ -56,9 +56,9 @@ MODEL_CLASSES = {
 }
 
 
-CLM_CLASSES = ['gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq']
+CLM_MODELS = ['gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq']
 
-EncDecLM_CLASSES = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus']
+EncDecLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus']
 
 
 class Transformers(Seq2SeqGenerator):
@@ -74,7 +74,7 @@ class Transformers(Seq2SeqGenerator):
         if self.model_name == 'bert2bert':
             self.model = model_class.from_encoder_decoder_pretrained(self.model_name_or_path, self.model_name_or_path)
         else:
-            init_kwargs = {'is_decoder': True} if self.model_name in CLM_CLASSES else {}
+            init_kwargs = {'is_decoder': True} if self.model_name in CLM_MODELS else {}
             self.model = model_class.from_pretrained(self.model_name_or_path, **init_kwargs)
 
         self.configuration = self.model.config
@@ -83,24 +83,14 @@ class Transformers(Seq2SeqGenerator):
         self._init_params()
 
         self.prefix = config['prefix_prompt'] if config['prefix_prompt'] else ''
-        self.infix = config['infix_prompt'] if config['infix_prompt'] else ''
         self.suffix = config['suffix_prompt'] if config['suffix_prompt'] else ''
 
         self.prefix_ids = self.tokenizer.encode(self.prefix, add_special_tokens=False)
-        self.infix_ids = self.tokenizer.encode(self.infix, add_special_tokens=False)
         self.suffix_ids = self.tokenizer.encode(self.suffix, add_special_tokens=False)
 
-        if self.model_name in CLM_CLASSES:
-            if self.tokenizer.cls_token is not None:
-                self.prefix_ids = [self.tokenizer.cls_token_id] + self.prefix_ids
-            elif self.tokenizer.bos_token is not None:
-                self.prefix_ids = [self.tokenizer.bos_token_id] + self.prefix_ids
-
-            if self.tokenizer.sep_token is not None:
-                self.suffix_ids = self.suffix_ids + [self.tokenizer.sep_token_id]
-            elif self.tokenizer.eos_token is not None:
-                self.suffix_ids = self.suffix_ids + [self.tokenizer.eos_token_id]
-
+        if self.model_name in CLM_MODELS:
+            self.bos_token_id = self.tokenizer.cls_token_id if self.tokenizer.cls_token else self.bos_token_id
+            self.eos_token_id = self.tokenizer.sep_token_id if self.tokenizer.sep_token else self.eos_token_id
     # def generate(self, batch_data, eval_data):
     #     source_text = batch_data['source_text']
     #
@@ -137,21 +127,23 @@ class Transformers(Seq2SeqGenerator):
             src_ids = self.tokenizer.encode(src, add_special_tokens=False)
             tgt_ids = self.tokenizer.encode(tgt, add_special_tokens=False)
 
-            if self.model_name in CLM_CLASSES:
-                src_ids = src_ids[:self.source_max_length - len(self.prefix_ids) - len(self.infix_ids)]
-                tgt_ids = tgt_ids[:self.target_max_length - len(self.suffix_ids)]
-                input_id = self.prefix_ids + src_ids + self.infix_ids + tgt_ids + self.suffix_ids
-                label = input_id
+            if self.model_name in CLM_MODELS:
+                src_ids = src_ids[:self.source_max_length - len(self.prefix_ids) - len(self.suffix_ids) - 1]
+                tgt_ids = tgt_ids[:self.target_max_length - 1]
+                src_input_id = [self.bos_token_id] + self.prefix_ids + src_ids + self.suffix_ids
+                tgt_input_id = tgt_ids + [self.eos_token_id]
+                input_id = src_input_id + tgt_input_id
+                label = len(src_input_id) * [-100] + tgt_input_id
             else:
                 src_ids = src_ids[:self.source_max_length - self.tokenizer.num_special_tokens_to_add()
-                                  - len(self.prefix_ids)]
+                                  - len(self.prefix_ids) - len(self.suffix_ids)]
                 tgt_ids = tgt_ids[:self.target_max_length - self.tokenizer.num_special_tokens_to_add()]
-                input_id = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + src_ids)
+                input_id = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + src_ids + self.suffix_ids)
                 label = self.tokenizer.build_inputs_with_special_tokens(tgt_ids)
 
             input_ids.append(torch.tensor(input_id, dtype=torch.long))
             attn_masks.append(torch.ones(len(input_id), dtype=torch.long))
-            labels.append(torch.tensor(label))
+            labels.append(torch.tensor(label, dtype=torch.long))
 
         input_ids = pad_sequence(input_ids, batch_first=True, padding_value=self.tokenizer.pad_token_id).to(self.device)
         attn_masks = pad_sequence(attn_masks, batch_first=True, padding_value=0).to(self.device)

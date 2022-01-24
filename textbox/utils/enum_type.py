@@ -41,4 +41,4 @@ class SpecialTokens:
     EOS = "<|endoftext|>"
 
 
-PLM_CLASSES = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq']
+PLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq']

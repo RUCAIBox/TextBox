@@ -128,9 +128,9 @@ class Transformers(Seq2SeqGenerator):
             tgt_ids = self.tokenizer.encode(tgt, add_special_tokens=False)
 
             if self.model_name in CLM_MODELS:
-                src_ids = src_ids[:self.source_max_length - len(self.prefix_ids) - len(self.suffix_ids) - 1]
+                src_ids = src_ids[:self.source_max_length - len(self.prefix_ids) - len(self.suffix_ids) - 2]
                 tgt_ids = tgt_ids[:self.target_max_length - 1]
-                src_input_id = [self.bos_token_id] + self.prefix_ids + src_ids + self.suffix_ids
+                src_input_id = [self.bos_token_id] + self.prefix_ids + src_ids + self.suffix_ids + [self.eos_token_id]
                 tgt_input_id = tgt_ids + [self.eos_token_id]
                 input_id = src_input_id + tgt_input_id
                 label = len(src_input_id) * [-100] + tgt_input_id

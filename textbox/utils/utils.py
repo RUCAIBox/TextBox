@@ -19,7 +19,7 @@ import importlib
 import random
 import torch
 import numpy as np
-from textbox.utils.enum_type import ModelType
+from textbox.utils.enum_type import ModelType, PLM_MODELS
 
 
 def get_local_time():
@@ -56,6 +56,7 @@ def get_model(model_name):
     """
     model_submodule = ['GAN', 'LM', 'VAE', 'Seq2Seq', 'Attribute', 'Kb2Text']
     try:
+        model_name = 'Transformers' if model_name.lower() in PLM_MODELS else model_name
         model_file_name = model_name.lower()
         for submodule in model_submodule:
             module_path = '.'.join(['...model', submodule, model_file_name])

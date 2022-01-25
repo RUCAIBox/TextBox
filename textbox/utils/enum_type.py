@@ -39,3 +39,6 @@ class SpecialTokens:
     UNK = "<|unk|>"
     SOS = "<|startoftext|>"
     EOS = "<|endoftext|>"
+
+
+PLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq']

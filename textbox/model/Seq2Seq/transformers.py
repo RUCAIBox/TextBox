@@ -16,7 +16,8 @@ from transformers import (
     BertLMHeadModel,
     RobertaTokenizer, RobertaForCausalLM,
     PegasusTokenizer, BigBirdPegasusForConditionalGeneration,
-    BlenderbotTokenizer, BlenderbotForConditionalGeneration
+    BlenderbotTokenizer, BlenderbotForConditionalGeneration,
+    BlenderbotSmallTokenizer, BlenderbotSmallForConditionalGeneration
 )
 
 MODEL_CLASSES = {
@@ -40,7 +41,10 @@ MODEL_CLASSES = {
         'tokenizer': BlenderbotTokenizer,
         'model': BlenderbotForConditionalGeneration
     },
-    
+    'blender_bot_small': {
+        'tokenizer': BlenderbotSmallTokenizer,
+        'model': BlenderbotSmallForConditionalGeneration
+    },
     
     'gpt2seq': {
         'tokenizer': GPT2Tokenizer,
@@ -63,7 +67,7 @@ MODEL_CLASSES = {
 
 CLM_MODELS = ['gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq']
 
-EncDecLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'blender_bot']
+EncDecLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'blender_bot', 'blender_bot_small']
 
 
 class Transformers(Seq2SeqGenerator):
@@ -96,6 +100,7 @@ class Transformers(Seq2SeqGenerator):
         if self.model_name in CLM_MODELS:
             self.bos_token_id = self.tokenizer.cls_token_id if self.tokenizer.cls_token else self.bos_token_id
             self.eos_token_id = self.tokenizer.sep_token_id if self.tokenizer.sep_token else self.eos_token_id
+
     # def generate(self, batch_data, eval_data):
     #     source_text = batch_data['source_text']
     #

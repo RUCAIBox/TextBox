@@ -15,7 +15,8 @@ from transformers import (
     BigBirdTokenizer, BigBirdForCausalLM,
     BertLMHeadModel,
     RobertaTokenizer, RobertaForCausalLM,
-    PegasusTokenizer, BigBirdPegasusForConditionalGeneration
+    PegasusTokenizer, BigBirdPegasusForConditionalGeneration,
+    BlenderbotTokenizer, BlenderbotForConditionalGeneration
 )
 
 MODEL_CLASSES = {
@@ -34,6 +35,10 @@ MODEL_CLASSES = {
     'big_bird_pegasus': {
         'tokenizer': PegasusTokenizer,
         'model': BigBirdPegasusForConditionalGeneration
+    },
+    'blender_bot': {
+        'tokenizer': BlenderbotTokenizer,
+        'model': BlenderbotForConditionalGeneration
     },
     
     
@@ -58,7 +63,7 @@ MODEL_CLASSES = {
 
 CLM_MODELS = ['gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq']
 
-EncDecLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus']
+EncDecLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'blender_bot']
 
 
 class Transformers(Seq2SeqGenerator):

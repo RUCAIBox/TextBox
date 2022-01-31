@@ -98,8 +98,10 @@ class Transformers(Seq2SeqGenerator):
         self.suffix_ids = self.tokenizer.encode(self.suffix, add_special_tokens=False)
 
         if self.model_name in CLM_MODELS:
-            self.bos_token_id = self.tokenizer.cls_token_id if self.tokenizer.cls_token else self.bos_token_id
-            self.eos_token_id = self.tokenizer.sep_token_id if self.tokenizer.sep_token else self.eos_token_id
+            self.bos_token_id = [self.tokenizer.cls_token_id] if self.tokenizer.cls_token else [self.bos_token_id]
+            self.eos_token_id = [self.tokenizer.sep_token_id] if self.tokenizer.sep_token else [self.eos_token_id]
+        else:
+            self.eos_token_id = [self.tokenizer.eos_token_id] if self.tokenizer.num_special_tokens_to_add() == 0 else []
 
     # def generate(self, batch_data, eval_data):
     #     source_text = batch_data['source_text']
@@ -147,9 +149,10 @@ class Transformers(Seq2SeqGenerator):
             else:
                 src_ids = src_ids[:self.source_max_length - self.tokenizer.num_special_tokens_to_add()
                                   - len(self.prefix_ids) - len(self.suffix_ids)]
-                tgt_ids = tgt_ids[:self.target_max_length - self.tokenizer.num_special_tokens_to_add()]
+                tgt_ids = tgt_ids[:self.target_max_length - self.tokenizer.num_special_tokens_to_add()
+                                  - len(self.eos_token_id)]
                 input_id = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + src_ids + self.suffix_ids)
-                label = self.tokenizer.build_inputs_with_special_tokens(tgt_ids)
+                label = self.tokenizer.build_inputs_with_special_tokens(tgt_ids+self.eos_token_id)
 
             input_ids.append(torch.tensor(input_id, dtype=torch.long))
             attn_masks.append(torch.ones(len(input_id), dtype=torch.long))

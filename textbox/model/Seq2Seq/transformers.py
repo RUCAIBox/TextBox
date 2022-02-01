@@ -17,7 +17,8 @@ from transformers import (
     RobertaTokenizer, RobertaForCausalLM,
     PegasusTokenizer, BigBirdPegasusForConditionalGeneration,
     BlenderbotTokenizer, BlenderbotForConditionalGeneration,
-    BlenderbotSmallTokenizer, BlenderbotSmallForConditionalGeneration
+    BlenderbotSmallTokenizer, BlenderbotSmallForConditionalGeneration,
+    CpmTokenizer,
 )
 
 MODEL_CLASSES = {
@@ -61,11 +62,15 @@ MODEL_CLASSES = {
     'roberta2seq': {
         'tokenizer': RobertaTokenizer,
         'model': RobertaForCausalLM
+    },
+    'cpm': {
+        'tokenizer': CpmTokenizer,
+        'model': GPT2LMHeadModel
     }
 }
 
 
-CLM_MODELS = ['gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq']
+CLM_MODELS = ['gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq', 'cpm']
 
 EncDecLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'blender_bot', 'blender_bot_small']
 
@@ -98,8 +103,8 @@ class Transformers(Seq2SeqGenerator):
         self.suffix_ids = self.tokenizer.encode(self.suffix, add_special_tokens=False)
 
         if self.model_name in CLM_MODELS:
-            self.bos_token_id = [self.tokenizer.cls_token_id] if self.tokenizer.cls_token else [self.bos_token_id]
-            self.eos_token_id = [self.tokenizer.sep_token_id] if self.tokenizer.sep_token else [self.eos_token_id]
+            self.bos_token_id = [self.tokenizer.cls_token_id] if self.tokenizer.cls_token else [self.tokenizer.bos_token_id]
+            self.eos_token_id = [self.tokenizer.sep_token_id] if self.tokenizer.sep_token else [self.tokenizer.eos_token_id]
         else:
             self.eos_token_id = [self.tokenizer.eos_token_id] if self.tokenizer.num_special_tokens_to_add() == 0 else []
 
@@ -142,8 +147,8 @@ class Transformers(Seq2SeqGenerator):
             if self.model_name in CLM_MODELS:
                 src_ids = src_ids[:self.source_max_length - len(self.prefix_ids) - len(self.suffix_ids) - 2]
                 tgt_ids = tgt_ids[:self.target_max_length - 1]
-                src_input_id = [self.bos_token_id] + self.prefix_ids + src_ids + self.suffix_ids + [self.eos_token_id]
-                tgt_input_id = tgt_ids + [self.eos_token_id]
+                src_input_id = self.bos_token_id + self.prefix_ids + src_ids + self.suffix_ids + self.eos_token_id
+                tgt_input_id = tgt_ids + self.eos_token_id
                 input_id = src_input_id + tgt_input_id
                 label = len(src_input_id) * [-100] + tgt_input_id
             else:

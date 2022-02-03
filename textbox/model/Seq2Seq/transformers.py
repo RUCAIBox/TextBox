@@ -19,6 +19,7 @@ from transformers import (
     BlenderbotTokenizer, BlenderbotForConditionalGeneration,
     BlenderbotSmallTokenizer, BlenderbotSmallForConditionalGeneration,
     CpmTokenizer,
+    LEDTokenizer, LEDForConditionalGeneration
 )
 
 MODEL_CLASSES = {
@@ -46,6 +47,10 @@ MODEL_CLASSES = {
         'tokenizer': BlenderbotSmallTokenizer,
         'model': BlenderbotSmallForConditionalGeneration
     },
+    'led': {
+        'tokenizer': LEDTokenizer,
+        'model': LEDForConditionalGeneration
+    },
     
     'gpt2seq': {
         'tokenizer': GPT2Tokenizer,
@@ -72,7 +77,7 @@ MODEL_CLASSES = {
 
 CLM_MODELS = ['gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq', 'cpm']
 
-EncDecLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'blender_bot', 'blender_bot_small']
+EncDecLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'blender_bot', 'blender_bot_small', 'led']
 
 
 class Transformers(Seq2SeqGenerator):
@@ -106,7 +111,7 @@ class Transformers(Seq2SeqGenerator):
             self.bos_token_id = [self.tokenizer.cls_token_id] if self.tokenizer.cls_token else [self.tokenizer.bos_token_id]
             self.eos_token_id = [self.tokenizer.sep_token_id] if self.tokenizer.sep_token else [self.tokenizer.eos_token_id]
         else:
-            self.eos_token_id = [self.tokenizer.eos_token_id] if self.tokenizer.num_special_tokens_to_add() == 0 else []
+            self.eos_token_id = [self.tokenizer.eos_token_id] if self.tokenizer.num_special_tokens_to_add() == 0 else [] # blender_bot_small
 
     # def generate(self, batch_data, eval_data):
     #     source_text = batch_data['source_text']
@@ -185,7 +190,7 @@ class Transformers(Seq2SeqGenerator):
         if self.model_name == 'gpt2seq':
             self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
             self.model.resize_token_embeddings(len(self.tokenizer))
-        elif self.model_name == 'bart':
+        elif self.model_name == 'bart' or self.model_name == 'led':
             self.configuration.forced_bos_token_id = self.tokenizer.bos_token_id
         elif self.model_name == 'bert2bert':
             self.configuration.decoder_start_token_id = self.tokenizer.cls_token_id

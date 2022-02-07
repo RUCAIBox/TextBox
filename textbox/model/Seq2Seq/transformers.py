@@ -20,7 +20,8 @@ from transformers import (
     BlenderbotSmallTokenizer, BlenderbotSmallForConditionalGeneration,
     CpmTokenizer,
     LEDTokenizer, LEDForConditionalGeneration,
-    M2M100Tokenizer, M2M100ForConditionalGeneration
+    M2M100Tokenizer, M2M100ForConditionalGeneration,
+    CTRLTokenizer, CTRLLMHeadModel,
 )
 
 MODEL_CLASSES = {
@@ -57,29 +58,33 @@ MODEL_CLASSES = {
         'model': M2M100ForConditionalGeneration
     },
 
-    'gpt2seq': {
+    'gpt2': {
         'tokenizer': GPT2Tokenizer,
         'model': GPT2LMHeadModel
     },
-    'big_bird2seq': {
+    'big_bird': {
         'tokenizer': BigBirdTokenizer,
         'model': BigBirdForCausalLM
     },
-    'bert2seq': {
+    'bert': {
         'tokenizer': BertTokenizer,
         'model': BertLMHeadModel
     },
-    'roberta2seq': {
+    'roberta': {
         'tokenizer': RobertaTokenizer,
         'model': RobertaForCausalLM
     },
     'cpm': {
         'tokenizer': CpmTokenizer,
         'model': GPT2LMHeadModel
+    },
+    'ctrl': {
+        'tokenizer': CTRLTokenizer,
+        'model': CTRLLMHeadModel
     }
 }
 
-CLM_MODELS = ['gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq', 'cpm']
+CLM_MODELS = ['gpt2', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl']
 
 EncDecLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'blender_bot', 'blender_bot_small', 'led', 'm2m100']
 
@@ -112,10 +117,20 @@ class Transformers(Seq2SeqGenerator):
         self.suffix_ids = self.tokenizer.encode(self.suffix, add_special_tokens=False)
 
         if self.model_name in CLM_MODELS:
-            self.bos_token_id = [self.tokenizer.cls_token_id] if self.tokenizer.cls_token else [
-                self.tokenizer.bos_token_id]
-            self.eos_token_id = [self.tokenizer.sep_token_id] if self.tokenizer.sep_token else [
-                self.tokenizer.eos_token_id]
+            # set bos_id & eos_id for CLM
+            if self.tokenizer.cls_token:  # big_bird, bert, roberta, cpm
+                self.bos_token_id = [self.tokenizer.cls_token_id]
+            elif self.tokenizer.bos_token:  # gpt2,
+                self.bos_token_id = [self.tokenizer.bos_token_id]
+            else:  # ctrl
+                self.bos_token_id = []
+
+            if self.tokenizer.sep_token:  # big_bird, bert, roberta, cpm
+                self.eos_token_id = [self.tokenizer.sep_token_id]
+            elif self.tokenizer.eos_token:  # gpt2, ctrl
+                self.eos_token_id = [self.tokenizer.eos_token_id]
+            else:
+                raise ValueError("eos token id is not set, check _init_params() first")
 
     # def generate(self, batch_data, eval_data):
     #     source_text = batch_data['source_text']
@@ -154,12 +169,7 @@ class Transformers(Seq2SeqGenerator):
             tgt_ids = self.tokenizer.encode(tgt, add_special_tokens=False)
 
             if self.model_name in CLM_MODELS:
-                src_ids = src_ids[:self.source_max_length - len(self.prefix_ids) - len(self.suffix_ids) - 2]
-                tgt_ids = tgt_ids[:self.target_max_length - 1]
-                src_input_id = self.bos_token_id + self.prefix_ids + src_ids + self.suffix_ids + self.eos_token_id
-                tgt_input_id = tgt_ids + self.eos_token_id
-                input_id = src_input_id + tgt_input_id
-                label = len(src_input_id) * [-100] + tgt_input_id
+                input_id, label = self._casual_model_encode(src_ids, tgt_ids)
             else:
                 input_id, label = self._encoder_decoder_model_encode(src_ids, tgt_ids)
 
@@ -183,9 +193,13 @@ class Transformers(Seq2SeqGenerator):
         if isinstance(self.tokenizer, GPT2Tokenizer):  # gpt2, roberta, bart, led
             self.tokenizer.add_prefix_space = True
 
-        if self.model_name == 'gpt2seq':
+        if self.model_name == 'gpt2':
             self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
             self.model.resize_token_embeddings(len(self.tokenizer))
+        elif self.model_name == 'ctrl':
+            self.tokenizer.add_special_tokens(({'eos_token': '</s>', 'pad_token': '[PAD]'}))
+            self.model.resize_token_embeddings(len(self.tokenizer))
+            self.tokenizer.build_inputs_with_special_tokens = lambda t0, t1: t0 + [self.tokenizer.eos_token_id]
         elif self.model_name == 'bart' or self.model_name == 'led':
             self.configuration.forced_bos_token_id = self.tokenizer.bos_token_id
         elif self.model_name == 'bert2bert':
@@ -227,4 +241,18 @@ class Transformers(Seq2SeqGenerator):
         return input_id, label
 
     def _casual_model_encode(self, src_ids, tgt_ids):
-        pass
+        """
+        gpt2: [<|endoftext|>, src, <|endoftext|>, tgt, <|endoftext|>]
+        big_bird, bert: [[CLS], src, [SEP], tgt, [SEP]]
+        roberta: [<s>, src, </s>, tgt, </s>]
+        cpm: [<cls>, src, <sep>, tgt, <sep>]
+        ctrl: [src, </s>, tgt, </s>]
+        """
+        src_ids = src_ids[:self.source_max_length-len(self.prefix_ids)-len(self.suffix_ids)-1-len(self.bos_token_id)]
+        tgt_ids = tgt_ids[:self.target_max_length - 1]
+        src_input_id = self.bos_token_id + self.prefix_ids + src_ids + self.suffix_ids + self.eos_token_id
+        tgt_input_id = tgt_ids + self.eos_token_id
+        input_id = src_input_id + tgt_input_id
+        label = len(src_input_id) * [-100] + tgt_input_id
+
+        return input_id, label

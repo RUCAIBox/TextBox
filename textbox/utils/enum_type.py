@@ -42,4 +42,4 @@ class SpecialTokens:
 
 
 PLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'blender_bot', 'blender_bot_small', 'led', 'm2m100',
-              'gpt2seq', 'big_bird2seq', 'bert2seq', 'roberta2seq', 'cpm']
+              'gpt2', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl']

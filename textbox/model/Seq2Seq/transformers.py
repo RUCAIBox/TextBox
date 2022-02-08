@@ -22,6 +22,7 @@ from transformers import (
     LEDTokenizer, LEDForConditionalGeneration,
     M2M100Tokenizer, M2M100ForConditionalGeneration,
     CTRLTokenizer, CTRLLMHeadModel,
+    OpenAIGPTTokenizer, OpenAIGPTLMHeadModel,
 )
 
 MODEL_CLASSES = {
@@ -86,9 +87,13 @@ MODEL_CLASSES = {
         'tokenizer': GPT2Tokenizer,
         'model': GPT2LMHeadModel
     },
+    'gpt': {
+        'tokenizer': OpenAIGPTTokenizer,
+        'model': OpenAIGPTLMHeadModel
+    },
 }
 
-CLM_MODELS = ['gpt2', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'dialo_gpt']
+CLM_MODELS = ['gpt2', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'dialo_gpt', 'gpt']
 
 EncDecLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'blender_bot', 'blender_bot_small', 'led', 'm2m100']
 
@@ -199,7 +204,7 @@ class Transformers(Seq2SeqGenerator):
 
         if self.model_name == 'gpt2' or self.model_name == 'dialo_gpt':
             self.tokenizer.pad_token = self.tokenizer.eos_token
-        elif self.model_name == 'ctrl':
+        elif self.model_name == 'ctrl' or self.model_name == 'gpt':
             self.tokenizer.add_special_tokens(({'eos_token': '</s>'}))
             self.tokenizer.pad_token = self.tokenizer.eos_token
             self.model.resize_token_embeddings(len(self.tokenizer))
@@ -250,7 +255,7 @@ class Transformers(Seq2SeqGenerator):
         big_bird, bert: [[CLS], src, [SEP], tgt, [SEP]]
         roberta: [<s>, src, </s>, tgt, </s>]
         cpm: [<cls>, src, <sep>, tgt, <sep>]
-        ctrl: [src, </s>, tgt, </s>]
+        ctrl, gpt: [src, </s>, tgt, </s>]
         """
         src_ids = src_ids[:self.source_max_length-len(self.prefix_ids)-len(self.suffix_ids)-1-len(self.bos_token_id)]
         tgt_ids = tgt_ids[:self.target_max_length - 1]

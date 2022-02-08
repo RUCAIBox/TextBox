@@ -23,6 +23,7 @@ from transformers import (
     M2M100Tokenizer, M2M100ForConditionalGeneration,
     CTRLTokenizer, CTRLLMHeadModel,
     OpenAIGPTTokenizer, OpenAIGPTLMHeadModel,
+    MegatronBertForCausalLM,
 )
 
 MODEL_CLASSES = {
@@ -91,9 +92,13 @@ MODEL_CLASSES = {
         'tokenizer': OpenAIGPTTokenizer,
         'model': OpenAIGPTLMHeadModel
     },
+    'megatron_bert': {
+        'tokenizer': BertTokenizer,
+        'model': MegatronBertForCausalLM
+    },
 }
 
-CLM_MODELS = ['gpt2', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'dialo_gpt', 'gpt']
+CLM_MODELS = ['gpt2', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'dialo_gpt', 'gpt', 'megatron_bert']
 
 EncDecLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'blender_bot', 'blender_bot_small', 'led', 'm2m100']
 
@@ -252,7 +257,7 @@ class Transformers(Seq2SeqGenerator):
     def _casual_model_encode(self, src_ids, tgt_ids):
         """
         gpt2, dialo_gpt: [<|endoftext|>, src, <|endoftext|>, tgt, <|endoftext|>]
-        big_bird, bert: [[CLS], src, [SEP], tgt, [SEP]]
+        big_bird, bert, megatron_bert: [[CLS], src, [SEP], tgt, [SEP]]
         roberta: [<s>, src, </s>, tgt, </s>]
         cpm: [<cls>, src, <sep>, tgt, <sep>]
         ctrl, gpt: [src, </s>, tgt, </s>]

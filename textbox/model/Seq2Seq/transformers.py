@@ -25,13 +25,19 @@ from transformers import (
     OpenAIGPTTokenizer, OpenAIGPTLMHeadModel,
     MegatronBertForCausalLM,
     XLNetTokenizer, XLNetLMHeadModel,
-    TransfoXLTokenizer, TransfoXLLMHeadModel
+    TransfoXLTokenizer, TransfoXLLMHeadModel,
+    MBartTokenizer, MBartForConditionalGeneration,
+    MT5ForConditionalGeneration,
 )
 
 MODEL_CLASSES = {
     't5': {
         'tokenizer': T5Tokenizer,
         'model': T5ForConditionalGeneration
+    },
+    'mt5': {
+        'tokenizer': T5Tokenizer,
+        'model': MT5ForConditionalGeneration
     },
     'bart': {
         'tokenizer': BartTokenizer,
@@ -111,7 +117,7 @@ MODEL_CLASSES = {
 CLM_MODELS = ['gpt2', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'dialo_gpt', 'gpt', 'megatron_bert', 'xlnet',
               'transfo_xl']
 
-EncDecLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'blender_bot', 'blender_bot_small', 'led', 'm2m100']
+EncDecLM_MODELS = ['t5', 'mt5', 'bart', 'bert2bert', 'big_bird_pegasus', 'blender_bot', 'blender_bot_small', 'led', 'm2m100']
 
 
 class Transformers(Seq2SeqGenerator):
@@ -248,7 +254,7 @@ class Transformers(Seq2SeqGenerator):
 
     def _encoder_decoder_model_encode(self, src_ids, tgt_ids):
         """
-        t5: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
+        t5, mt5: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
         bart, led: [<s>, src, </s>], [<s>, tgt, </s>], decoder_start_token_id: </s>, forced_bos_token_id: <s>
         bert2bert: [[CLS], src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [CLS]
         big_bird_pegasus: [src, </s>], [tgt, </s>], decoder_start_token_id: <s>
@@ -279,8 +285,8 @@ class Transformers(Seq2SeqGenerator):
         gpt2, dialo_gpt: [<|endoftext|>, src, <|endoftext|>, tgt, <|endoftext|>]
         big_bird, bert, megatron_bert: [[CLS], src, [SEP], tgt, [SEP]]
         roberta: [<s>, src, </s>, tgt, </s>]
-        cpm: [<cls>, src, <sep>, tgt, <sep>]
-        ctrl, gpt: [src, </s>, tgt, </s>]
+        cpm, xlnet: [<cls>, src, <sep>, tgt, <sep>]
+        ctrl, gpt, transfo_xl: [src, </s>, tgt, </s>]
         """
         src_ids = src_ids[:self.source_max_length-len(self.prefix_ids)-len(self.suffix_ids)-1-len(self.bos_token_id)]
         tgt_ids = tgt_ids[:self.target_max_length - 1]

@@ -111,13 +111,18 @@ MODEL_CLASSES = {
     'transfo_xl': {
         'tokenizer': TransfoXLTokenizer,
         'model': TransfoXLLMHeadModel
+    },
+    'mbart': {
+        'tokenizer': MBartTokenizer,
+        'model': MBartForConditionalGeneration
     }
 }
 
 CLM_MODELS = ['gpt2', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'dialo_gpt', 'gpt', 'megatron_bert', 'xlnet',
               'transfo_xl']
 
-EncDecLM_MODELS = ['t5', 'mt5', 'bart', 'bert2bert', 'big_bird_pegasus', 'blender_bot', 'blender_bot_small', 'led', 'm2m100']
+EncDecLM_MODELS = ['t5', 'mt5', 'bart', 'mbart', 'bert2bert', 'big_bird_pegasus', 'blender_bot', 'blender_bot_small',
+                   'led', 'm2m100']
 
 
 class Transformers(Seq2SeqGenerator):
@@ -241,7 +246,12 @@ class Transformers(Seq2SeqGenerator):
         if self.model_name in ['gpt2', 'dialo_gpt', 'transfo_xl', 'blender_bot_small']:
             self.tokenizer.build_inputs_with_special_tokens = lambda t0, t1: t0 + [self.tokenizer.eos_token_id]
 
-        # (4): model specific init
+        # (4): tokenizer needs to set src_lang, tgt_lang (used in translation)
+        if self.model_name in ['m2m100', 'mbart']:
+            self.tokenizer.src_lang = self.config['src_lang']
+            self.tokenizer.tgt_lang = self.config['tgt_lang']
+
+        # (5): model specific init
         if self.model_name in ['bart', 'led']:
             self.configuration.forced_bos_token_id = self.tokenizer.bos_token_id
         elif self.model_name == 'bert2bert':
@@ -249,8 +259,6 @@ class Transformers(Seq2SeqGenerator):
             self.configuration.pad_token_id = self.tokenizer.pad_token_id
         elif self.model_name == 'm2m100':
             self.configuration.forced_bos_token_id = self.tokenizer.get_lang_id(self.config['tgt_lang'])
-            self.tokenizer.src_lang = self.config['src_lang']
-            self.tokenizer.tgt_lang = self.config['tgt_lang']
 
     def _encoder_decoder_model_encode(self, src_ids, tgt_ids):
         """
@@ -261,15 +269,13 @@ class Transformers(Seq2SeqGenerator):
         blender_bot: [src, </s>], [tgt, </s>], decoder_start_token_id: <s>
         blender_bot_small: [src, __end__], [tgt, __end__], decoder_start_token_id: __start__
         m2m100: [src_lang_id, src, </s>], [tgt_lang_id, tgt, </s>], decoder_start_token_id: </s>, forced_bos_token_id: tgt_lang_id
+        mbart: [src, </s>, src_lang_id], [tgt, </s>, tgt_lang_id], decoder_start_token_id: tgt_lang_id
         """
-        assert self.configuration.pad_token_id
-        assert self.configuration.decoder_start_token_id
-
         src_ids = src_ids[:self.source_max_length - self.tokenizer.num_special_tokens_to_add()
                           - len(self.prefix_ids) - len(self.suffix_ids)]
         tgt_ids = tgt_ids[:self.target_max_length - self.tokenizer.num_special_tokens_to_add()]
         input_id = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + src_ids + self.suffix_ids)
-        if self.model_name == 'm2m100':
+        if self.model_name in ['m2m100', 'mbart']:
             with self.tokenizer.as_target_tokenizer():
                 label = self.tokenizer.build_inputs_with_special_tokens(tgt_ids)
         else:

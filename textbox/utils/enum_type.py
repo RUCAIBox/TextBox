@@ -41,6 +41,6 @@ class SpecialTokens:
     EOS = "<|endoftext|>"
 
 
-PLM_MODELS = ['t5', 'mt5', 'bart', 'mbart', 'bert2bert', 'big_bird_pegasus', 'blender_bot', 'blender_bot_small', 'led', 'm2m100',
-              'gpt2', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'dialo_gpt', 'gpt', 'megatron_bert', 'xlnet',
-              'transfo_xl']
+PLM_MODELS = ['t5', 'mt5', 'bart', 'mbart', 'bert2bert', 'big_bird_pegasus', 'pegasus', 'blender_bot',
+              'blender_bot_small', 'led', 'm2m100', 'gpt2', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'dialo_gpt',
+              'gpt', 'megatron_bert', 'xlnet', 'transfo_xl']

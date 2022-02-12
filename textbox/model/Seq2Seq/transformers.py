@@ -28,6 +28,7 @@ from transformers import (
     TransfoXLTokenizer, TransfoXLLMHeadModel,
     MBartTokenizer, MBartForConditionalGeneration,
     MT5ForConditionalGeneration,
+    PegasusForConditionalGeneration,
 )
 
 MODEL_CLASSES = {
@@ -50,6 +51,10 @@ MODEL_CLASSES = {
     'big_bird_pegasus': {
         'tokenizer': PegasusTokenizer,
         'model': BigBirdPegasusForConditionalGeneration
+    },
+    'pegasus': {
+        'tokenizer': PegasusTokenizer,
+        'model': PegasusForConditionalGeneration
     },
     'blender_bot': {
         'tokenizer': BlenderbotTokenizer,
@@ -115,14 +120,14 @@ MODEL_CLASSES = {
     'mbart': {
         'tokenizer': MBartTokenizer,
         'model': MBartForConditionalGeneration
-    }
+    },
 }
 
 CLM_MODELS = ['gpt2', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'dialo_gpt', 'gpt', 'megatron_bert', 'xlnet',
               'transfo_xl']
 
-EncDecLM_MODELS = ['t5', 'mt5', 'bart', 'mbart', 'bert2bert', 'big_bird_pegasus', 'blender_bot', 'blender_bot_small',
-                   'led', 'm2m100']
+EncDecLM_MODELS = ['t5', 'mt5', 'bart', 'mbart', 'bert2bert', 'big_bird_pegasus', 'pegasus', 'blender_bot',
+                   'blender_bot_small', 'led', 'm2m100']
 
 
 class Transformers(Seq2SeqGenerator):
@@ -246,7 +251,7 @@ class Transformers(Seq2SeqGenerator):
         if self.model_name in ['gpt2', 'dialo_gpt', 'transfo_xl', 'blender_bot_small']:
             self.tokenizer.build_inputs_with_special_tokens = lambda t0, t1: t0 + [self.tokenizer.eos_token_id]
 
-        # (4): tokenizer needs to set src_lang, tgt_lang (used in translation)
+        # (4): tokenizer needs to set src_lang, tgt_lang (used in translation task)
         if self.model_name in ['m2m100', 'mbart']:
             self.tokenizer.src_lang = self.config['src_lang']
             self.tokenizer.tgt_lang = self.config['tgt_lang']
@@ -266,6 +271,7 @@ class Transformers(Seq2SeqGenerator):
         bart, led: [<s>, src, </s>], [<s>, tgt, </s>], decoder_start_token_id: </s>, forced_bos_token_id: <s>
         bert2bert: [[CLS], src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [CLS]
         big_bird_pegasus: [src, </s>], [tgt, </s>], decoder_start_token_id: <s>
+        pegasus: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
         blender_bot: [src, </s>], [tgt, </s>], decoder_start_token_id: <s>
         blender_bot_small: [src, __end__], [tgt, __end__], decoder_start_token_id: __start__
         m2m100: [src_lang_id, src, </s>], [tgt_lang_id, tgt, </s>], decoder_start_token_id: </s>, forced_bos_token_id: tgt_lang_id
@@ -306,5 +312,7 @@ class Transformers(Seq2SeqGenerator):
     def _inputs_postprocess(self, inputs):
         if self.model_name == 'transfo_xl':
             inputs.pop('attention_mask')
+        elif self.model_name == 'xlnet':
+            pass
 
         return inputs

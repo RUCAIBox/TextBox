@@ -24,6 +24,8 @@ from transformers import (
     CTRLTokenizer, CTRLLMHeadModel,
     OpenAIGPTTokenizer, OpenAIGPTLMHeadModel,
     MegatronBertForCausalLM,
+    XLNetTokenizer, XLNetLMHeadModel,
+    TransfoXLTokenizer, TransfoXLLMHeadModel
 )
 
 MODEL_CLASSES = {
@@ -96,9 +98,18 @@ MODEL_CLASSES = {
         'tokenizer': BertTokenizer,
         'model': MegatronBertForCausalLM
     },
+    'xlnet': {
+        'tokenizer': XLNetTokenizer,
+        'model': XLNetLMHeadModel
+    },
+    'transfo_xl': {
+        'tokenizer': TransfoXLTokenizer,
+        'model': TransfoXLLMHeadModel
+    }
 }
 
-CLM_MODELS = ['gpt2', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'dialo_gpt', 'gpt', 'megatron_bert']
+CLM_MODELS = ['gpt2', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'dialo_gpt', 'gpt', 'megatron_bert', 'xlnet',
+              'transfo_xl']
 
 EncDecLM_MODELS = ['t5', 'bart', 'bert2bert', 'big_bird_pegasus', 'blender_bot', 'blender_bot_small', 'led', 'm2m100']
 
@@ -136,12 +147,12 @@ class Transformers(Seq2SeqGenerator):
                 self.bos_token_id = [self.tokenizer.cls_token_id]
             elif self.tokenizer.bos_token:  # gpt2, dialo_gpt
                 self.bos_token_id = [self.tokenizer.bos_token_id]
-            else:  # ctrl
+            else:  # ctrl, transfo_xl
                 self.bos_token_id = []
 
             if self.tokenizer.sep_token:  # big_bird, bert, roberta, cpm
                 self.eos_token_id = [self.tokenizer.sep_token_id]
-            elif self.tokenizer.eos_token:  # gpt2, ctrl, dialo_gpt
+            elif self.tokenizer.eos_token:  # gpt2, ctrl, dialo_gpt, transfo_xl
                 self.eos_token_id = [self.tokenizer.eos_token_id]
             else:
                 raise ValueError("eos token id is not set yet, check _init_params() first")
@@ -196,25 +207,36 @@ class Transformers(Seq2SeqGenerator):
         labels = pad_sequence(labels, batch_first=True, padding_value=-100).to(self.device)
 
         inputs = {'input_ids': input_ids, 'attention_mask': attn_masks, 'labels': labels}
-        return inputs
+        processed_inputs = self._inputs_postprocess(inputs)
+        return processed_inputs
 
     def forward(self, corpus, epoch_idx=-1):
         inputs = self._generate_default_inputs(corpus)
         outputs = self.model(**inputs)
-        return outputs.loss
+        if hasattr(outputs, 'loss'):
+            return outputs.loss
+        else:
+            return outputs.losses.mean()
 
     def _init_params(self):
         if isinstance(self.tokenizer, GPT2Tokenizer):  # gpt2, roberta, bart, led
             self.tokenizer.add_prefix_space = True
 
-        if self.model_name == 'gpt2' or self.model_name == 'dialo_gpt':
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-        elif self.model_name == 'ctrl' or self.model_name == 'gpt':
+        # (1): tokenizer needs to add eos token
+        if self.model_name in ['ctrl', 'gpt']:
             self.tokenizer.add_special_tokens(({'eos_token': '</s>'}))
-            self.tokenizer.pad_token = self.tokenizer.eos_token
             self.model.resize_token_embeddings(len(self.tokenizer))
+
+        # (2): tokenizer needs to add pad token
+        if self.model_name in ['gpt2', 'dialo_gpt', 'transfo_xl']:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+
+        # (3): tokenizer needs to modify build_inputs_with_special_tokens()
+        if self.model_name in ['gpt2', 'dialo_gpt', 'transfo_xl', 'blender_bot_small']:
             self.tokenizer.build_inputs_with_special_tokens = lambda t0, t1: t0 + [self.tokenizer.eos_token_id]
-        elif self.model_name == 'bart' or self.model_name == 'led':
+
+        # (4): model specific init
+        if self.model_name in ['bart', 'led']:
             self.configuration.forced_bos_token_id = self.tokenizer.bos_token_id
         elif self.model_name == 'bert2bert':
             self.configuration.decoder_start_token_id = self.tokenizer.cls_token_id
@@ -223,8 +245,6 @@ class Transformers(Seq2SeqGenerator):
             self.configuration.forced_bos_token_id = self.tokenizer.get_lang_id(self.config['tgt_lang'])
             self.tokenizer.src_lang = self.config['src_lang']
             self.tokenizer.tgt_lang = self.config['tgt_lang']
-        elif self.model_name == 'blender_bot_small':  # num_special_tokens_to_add() == 0
-            self.tokenizer.build_inputs_with_special_tokens = lambda t0, t1: t0 + [self.tokenizer.eos_token_id]
 
     def _encoder_decoder_model_encode(self, src_ids, tgt_ids):
         """
@@ -270,3 +290,9 @@ class Transformers(Seq2SeqGenerator):
         label = len(src_input_id) * [-100] + tgt_input_id
 
         return input_id, label
+
+    def _inputs_postprocess(self, inputs):
+        if self.model_name == 'transfo_xl':
+            inputs.pop('attention_mask')
+
+        return inputs

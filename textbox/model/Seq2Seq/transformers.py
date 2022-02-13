@@ -1,9 +1,6 @@
-import copy
-
 import torch
-import torch.nn as nn
-import torch.functional as F
-from torch.nn.utils.rnn import pad_sequence
+from torch import Tensor
+from typing import List
 
 from textbox.model.abstract_generator import Seq2SeqGenerator
 
@@ -29,10 +26,12 @@ from transformers import (
     MBartTokenizer, MBartForConditionalGeneration,
     MT5ForConditionalGeneration,
     PegasusForConditionalGeneration,
-    ProphetNetTokenizer, ProphetNetForConditionalGeneration
+    ProphetNetTokenizer, ProphetNetForConditionalGeneration,
+    GPTNeoForCausalLM
 )
 
 MODEL_CLASSES = {
+    # EncDecLM_MODELS
     't5': {
         'tokenizer': T5Tokenizer,
         'model': T5ForConditionalGeneration
@@ -73,10 +72,23 @@ MODEL_CLASSES = {
         'tokenizer': M2M100Tokenizer,
         'model': M2M100ForConditionalGeneration
     },
+    'mbart': {
+        'tokenizer': MBartTokenizer,
+        'model': MBartForConditionalGeneration
+    },
+    'prophetnet': {
+        'tokenizer': ProphetNetTokenizer,
+        'model': ProphetNetForConditionalGeneration
+    },
 
+    # CLM_MODELS
     'gpt2': {
         'tokenizer': GPT2Tokenizer,
         'model': GPT2LMHeadModel
+    },
+    'gpt': {
+        'tokenizer': OpenAIGPTTokenizer,
+        'model': OpenAIGPTLMHeadModel
     },
     'big_bird': {
         'tokenizer': BigBirdTokenizer,
@@ -98,37 +110,51 @@ MODEL_CLASSES = {
         'tokenizer': CTRLTokenizer,
         'model': CTRLLMHeadModel
     },
-    'gpt': {
-        'tokenizer': OpenAIGPTTokenizer,
-        'model': OpenAIGPTLMHeadModel
+    'xlnet': {
+        'tokenizer': XLNetTokenizer,
+        'model': XLNetLMHeadModel
     },
     'megatron_bert': {
         'tokenizer': BertTokenizer,
         'model': MegatronBertForCausalLM
     },
-    'xlnet': {
-        'tokenizer': XLNetTokenizer,
-        'model': XLNetLMHeadModel
-    },
     'transfo_xl': {
         'tokenizer': TransfoXLTokenizer,
         'model': TransfoXLLMHeadModel
     },
-    'mbart': {
-        'tokenizer': MBartTokenizer,
-        'model': MBartForConditionalGeneration
-    },
-    'prophetnet': {
-        'tokenizer': ProphetNetTokenizer,
-        'model': ProphetNetForConditionalGeneration
+    'gpt_neo': {
+        'tokenizer': GPT2Tokenizer,
+        'model': GPTNeoForCausalLM
     }
 }
 
-CLM_MODELS = ['gpt2', 'gpt', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'megatron_bert', 'xlnet',
-              'transfo_xl']
+CLM_MODELS = ['gpt2', 'gpt', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'xlnet', 'megatron_bert', 'transfo_xl',
+              'gpt_neo']
 
 EncDecLM_MODELS = ['t5', 'mt5', 'bart', 'mbart', 'bert2bert', 'big_bird_pegasus', 'pegasus', 'blender_bot',
                    'blender_bot_small', 'led', 'm2m100', 'prophetnet']
+
+
+def pad_sequence(tensors: List[Tensor], padding_value: int, padding_side: str = 'right'):
+    """
+    Pad encoded inputs (on left/right and up to max length in the batch)
+    """
+    max_len = max(tensor.size()[0] for tensor in tensors)
+    padded_tensors = []
+    if padding_side == 'right':
+        for tensor in tensors:
+            padding_length = max_len-len(tensor)
+            padded_tensor = torch.cat([tensor, torch.full([padding_length], padding_value, dtype=tensor.dtype)], dim=-1)
+            padded_tensors.append(padded_tensor)
+    elif padding_side == 'left':
+        for tensor in tensors:
+            padding_length = max_len-len(tensor)
+            padded_tensor = torch.cat([torch.full([padding_length], padding_value, dtype=tensor.dtype), tensor], dim=-1)
+            padded_tensors.append(padded_tensor)
+    else:
+        raise ValueError("Invalid padding strategy:" + str(padding_side))
+    padded_tensors = torch.tensor(padded_tensors)
+    return padded_tensors
 
 
 class Transformers(Seq2SeqGenerator):
@@ -138,6 +164,8 @@ class Transformers(Seq2SeqGenerator):
         self.model_name_or_path = config['pretrained_model_path']
         self.model_name = config['model'].lower()
         self.is_casual_model = bool(self.model_name in CLM_MODELS)
+        self.is_enc_dec_model = bool(self.model_name in EncDecLM_MODELS)
+        assert self.is_casual_model or self.is_enc_dec_model, "model must be one of CLMs or EncDecLMs"
 
         tokenizer_class = MODEL_CLASSES[self.model_name]['tokenizer']
         model_class = MODEL_CLASSES[self.model_name]['model']
@@ -176,11 +204,11 @@ class Transformers(Seq2SeqGenerator):
             self.model.resize_token_embeddings(len(self.tokenizer))
 
         # (2): tokenizer needs to add pad token
-        if self.model_name in ['gpt2', 'transfo_xl']:
+        if self.model_name in ['gpt2', 'transfo_xl', 'gpt_neo']:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
         # (3): tokenizer needs to modify build_inputs_with_special_tokens()
-        if self.model_name in ['gpt2', 'transfo_xl', 'blender_bot_small']:
+        if self.model_name in ['gpt2', 'transfo_xl', 'blender_bot_small', 'gpt_neo']:
             self.tokenizer.build_inputs_with_special_tokens = lambda t0, t1: t0 + [self.tokenizer.eos_token_id]
 
         # (4): tokenizer needs to set src_lang, tgt_lang (used in translation task)
@@ -200,11 +228,11 @@ class Transformers(Seq2SeqGenerator):
     def _prepare_bos_eos_token_for_casual_model(self):
         """
         BOS = cls_token: big_bird, bert, roberta, cpm, megatron_bert, xlnet
-            = bos_token: gpt2
-            = None: ctrl, gpt, transfo_xl,
+            = bos_token: gpt2, gpt_neo
+            = None: ctrl, gpt, transfo_xl
 
         EOS = sep_token: big_bird, bert, roberta, cpm, megatron_bert, xlnet
-            = eos_token: gpt2, ctrl, transfo_xl, gpt
+            = eos_token: gpt2, ctrl, transfo_xl, gpt, gpt_neo
         """
 
         if self.tokenizer.cls_token:
@@ -228,11 +256,14 @@ class Transformers(Seq2SeqGenerator):
         labels = []
         attn_masks = []
 
+        pad_token_id = self.tokenizer.pad_token_id
+        padding_side = self.tokenizer.padding_side
+
         for src, tgt in zip(source_text, target_text):
             src_ids = self.tokenizer.encode(src, add_special_tokens=False)
             tgt_ids = self.tokenizer.encode(tgt, add_special_tokens=False)
 
-            if self.model_name in CLM_MODELS:
+            if self.is_casual_model:
                 input_id, label = self._casual_model_encode(src_ids, tgt_ids)
             else:
                 input_id, label = self._encoder_decoder_model_encode(src_ids, tgt_ids)
@@ -241,12 +272,12 @@ class Transformers(Seq2SeqGenerator):
             attn_masks.append(torch.ones(len(input_id), dtype=torch.long))
             labels.append(torch.tensor(label, dtype=torch.long))
 
-        input_ids = pad_sequence(input_ids, batch_first=True, padding_value=self.tokenizer.pad_token_id).to(self.device)
-        attn_masks = pad_sequence(attn_masks, batch_first=True, padding_value=0).to(self.device)
-        labels = pad_sequence(labels, batch_first=True, padding_value=-100).to(self.device)
+        input_ids = pad_sequence(input_ids, padding_value=pad_token_id, padding_side=padding_side).to(self.device)
+        attn_masks = pad_sequence(attn_masks, padding_value=0, padding_side=padding_side).to(self.device)
+        labels = pad_sequence(labels, padding_value=-100, padding_side=padding_side).to(self.device)
 
         inputs = {'input_ids': input_ids, 'attention_mask': attn_masks, 'labels': labels}
-        processed_inputs = self._inputs_postprocess(inputs)
+        processed_inputs = self._inputs_postprocess(**inputs)
         return processed_inputs
 
     def _encoder_decoder_model_encode(self, src_ids, tgt_ids):
@@ -275,7 +306,7 @@ class Transformers(Seq2SeqGenerator):
 
     def _casual_model_encode(self, src_ids, tgt_ids):
         """
-        gpt2: [<|endoftext|>, src, <|endoftext|>, tgt, <|endoftext|>]
+        gpt2, gpt_neo: [<|endoftext|>, src, <|endoftext|>, tgt, <|endoftext|>]
         big_bird, bert, megatron_bert: [[CLS], src, [SEP], tgt, [SEP]]
         roberta: [<s>, src, </s>, tgt, </s>]
         cpm, xlnet: [src, <sep>, tgt, <sep>, <cls>]
@@ -299,13 +330,8 @@ class Transformers(Seq2SeqGenerator):
 
         return input_id, label
 
-    def _inputs_postprocess(self, inputs):
-        if self.model_name == 'transfo_xl':
-            inputs.pop('attention_mask')
-        elif self.model_name == 'xlnet':
-            pass
-
-        return inputs
+    def _inputs_postprocess(self, input_ids, attention_mask, labels):
+        pass
 
     def forward(self, corpus, epoch_idx=-1):
         inputs = self._generate_default_inputs(corpus)

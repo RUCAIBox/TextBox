@@ -199,11 +199,11 @@ class Transformers(Seq2SeqGenerator):
 
     def _prepare_bos_eos_token_for_casual_model(self):
         """
-        BOS = cls_token: big_bird, bert, roberta, cpm
+        BOS = cls_token: big_bird, bert, roberta, cpm, megatron_bert, xlnet
             = bos_token: gpt2
             = None: ctrl, gpt, transfo_xl,
 
-        EOS = sep_token: big_bird, bert, roberta, cpm
+        EOS = sep_token: big_bird, bert, roberta, cpm, megatron_bert, xlnet
             = eos_token: gpt2, ctrl, transfo_xl, gpt
         """
 
@@ -278,13 +278,22 @@ class Transformers(Seq2SeqGenerator):
         gpt2: [<|endoftext|>, src, <|endoftext|>, tgt, <|endoftext|>]
         big_bird, bert, megatron_bert: [[CLS], src, [SEP], tgt, [SEP]]
         roberta: [<s>, src, </s>, tgt, </s>]
-        cpm, xlnet: [<cls>, src, <sep>, tgt, <sep>]
-        ctrl, gpt, transfo_xl: [src, </s>, tgt, </s>]
+        cpm, xlnet: [src, <sep>, tgt, <sep>, <cls>]
+        ctrl, gpt: [src, </s>, tgt, </s>]
+        transfo_xl: [src, <eos>, tgt, <eos>]
         """
+
         src_ids = src_ids[:self.source_max_length-len(self.prefix_ids)-len(self.suffix_ids)-1-len(self.bos_token_id)]
         tgt_ids = tgt_ids[:self.target_max_length - 1]
-        src_input_id = self.bos_token_id + self.prefix_ids + src_ids + self.suffix_ids + self.eos_token_id
+
+        src_input_id = self.prefix_ids + src_ids + self.suffix_ids + self.eos_token_id
         tgt_input_id = tgt_ids + self.eos_token_id
+
+        if self.tokenizer.padding_side == 'left':  # cpm, xlnet
+            tgt_input_id = tgt_input_id + self.bos_token_id
+        else:
+            src_input_id = self.bos_token_id + src_input_id
+
         input_id = src_input_id + tgt_input_id
         label = len(src_input_id) * [-100] + tgt_input_id
 
@@ -318,6 +327,7 @@ class Transformers(Seq2SeqGenerator):
     #             input_id = src_ids + self.task_infix_ids
     #             max_length = self.max_source_length + len(self.task_infix_ids) + self.max_target_length
     #         else:
+    #             input_id = self.task_prefix_ids + src_ids
     #             max_length = self.max_target_length
     #
     #         input_id = torch.tensor(input_id, dtype=torch.long, device=self.device).unsqueeze(1, -1)

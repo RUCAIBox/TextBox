@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from torch import Tensor
 from typing import List
 
@@ -153,7 +154,7 @@ def pad_sequence(tensors: List[Tensor], padding_value: int, padding_side: str = 
             padded_tensors.append(padded_tensor)
     else:
         raise ValueError("Invalid padding strategy:" + str(padding_side))
-    padded_tensors = torch.tensor(padded_tensors)
+    padded_tensors = torch.stack(padded_tensors, dim=0)
     return padded_tensors
 
 
@@ -183,6 +184,8 @@ class Transformers(Seq2SeqGenerator):
         self._init_params()
         if self.is_casual_model:
             self._prepare_bos_eos_token_for_casual_model()
+
+        self.label_smoothing = config['label_smoothing'] if config['label_smoothing'] else 0.
 
     def _process_prompt(self):
         """
@@ -331,15 +334,34 @@ class Transformers(Seq2SeqGenerator):
         return input_id, label
 
     def _inputs_postprocess(self, input_ids, attention_mask, labels):
-        pass
+
+        return {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
+
+    def _compute_loss(self, outputs, labels, ignore_index=-100):
+        if self.model_name == 'prophenet':
+            pass
+        else:
+            loss = outputs.loss
+
+        if self.label_smoothing > 0:
+            if self.is_casual_model:
+                logits = outputs.logits[:, :-1, :].contiguous()
+                labels = labels[:, 1:].view(-1).contiguous()
+            else:
+                logits = outputs.logits
+
+            probs = F.log_softmax(logits, dim=-1).view(-1, logits.size(-1))  # b * l, v
+            probs = -probs.mean(dim=-1)  # b * l
+            smooth_loss = probs[labels != ignore_index].mean()
+            loss = loss * (1 - self.label_smoothing) + smooth_loss * self.label_smoothing
+
+        return loss
 
     def forward(self, corpus, epoch_idx=-1):
         inputs = self._generate_default_inputs(corpus)
         outputs = self.model(**inputs)
-        if hasattr(outputs, 'loss'):
-            return outputs.loss
-        else:
-            return outputs.losses.mean()
+        loss = self._compute_loss(outputs, inputs['labels'])
+        return loss
 
     # def generate(self, batch_data, eval_data):
     #     source_text = batch_data['source_text']

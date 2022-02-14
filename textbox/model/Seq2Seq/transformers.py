@@ -1,4 +1,5 @@
 import torch
+import warnings
 import torch.nn.functional as F
 from torch import Tensor
 from typing import List
@@ -207,7 +208,7 @@ class Transformers(Seq2SeqGenerator):
             self.model.resize_token_embeddings(len(self.tokenizer))
 
         # (2): tokenizer needs to add pad token
-        if self.model_name in ['gpt2', 'transfo_xl', 'gpt_neo']:
+        if self.model_name in ['gpt2', 'transfo_xl', 'gpt_neo', 'ctrl']:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
         # (3): tokenizer needs to modify build_inputs_with_special_tokens()
@@ -227,6 +228,8 @@ class Transformers(Seq2SeqGenerator):
             self.configuration.pad_token_id = self.tokenizer.pad_token_id
         elif self.model_name == 'm2m100':
             self.configuration.forced_bos_token_id = self.tokenizer.get_lang_id(self.config['tgt_lang'])
+        elif self.model_name == 'ctrl':
+            self.tokenizer.create_token_type_ids_from_sequences = lambda t0, t1: [0] * (len(t0)+1) + [1] * (len(t1)+1)
 
     def _prepare_bos_eos_token_for_casual_model(self):
         """
@@ -258,6 +261,7 @@ class Transformers(Seq2SeqGenerator):
         input_ids = []
         labels = []
         attn_masks = []
+        token_type_ids = []
 
         pad_token_id = self.tokenizer.pad_token_id
         padding_side = self.tokenizer.padding_side
@@ -267,19 +271,25 @@ class Transformers(Seq2SeqGenerator):
             tgt_ids = self.tokenizer.encode(tgt, add_special_tokens=False)
 
             if self.is_casual_model:
-                input_id, label = self._casual_model_encode(src_ids, tgt_ids)
+                input_id, label, token_type_id = self._casual_model_encode(src_ids, tgt_ids)
             else:
-                input_id, label = self._encoder_decoder_model_encode(src_ids, tgt_ids)
+                input_id, label, token_type_id = self._encoder_decoder_model_encode(src_ids, tgt_ids)
 
             input_ids.append(torch.tensor(input_id, dtype=torch.long))
             attn_masks.append(torch.ones(len(input_id), dtype=torch.long))
             labels.append(torch.tensor(label, dtype=torch.long))
+            if token_type_id is not None:
+                token_type_ids.append(torch.tensor(token_type_id, dtype=torch.long))
 
         input_ids = pad_sequence(input_ids, padding_value=pad_token_id, padding_side=padding_side).to(self.device)
         attn_masks = pad_sequence(attn_masks, padding_value=0, padding_side=padding_side).to(self.device)
         labels = pad_sequence(labels, padding_value=-100, padding_side=padding_side).to(self.device)
+        if token_type_ids:
+            token_type_ids = pad_sequence(token_type_ids, padding_value=0, padding_side=padding_side).to(self.device)
 
-        inputs = {'input_ids': input_ids, 'attention_mask': attn_masks, 'labels': labels}
+        inputs = {'input_ids': input_ids, 'attention_mask': attn_masks, 'labels': labels,
+                  'token_type_ids': token_type_ids}
+
         processed_inputs = self._inputs_postprocess(**inputs)
         return processed_inputs
 
@@ -316,37 +326,51 @@ class Transformers(Seq2SeqGenerator):
         ctrl, gpt: [src, </s>, tgt, </s>]
         transfo_xl: [src, <eos>, tgt, <eos>]
         """
-
         src_ids = src_ids[:self.source_max_length-len(self.prefix_ids)-len(self.suffix_ids)-1-len(self.bos_token_id)]
         tgt_ids = tgt_ids[:self.target_max_length - 1]
+        src_ids = self.prefix_ids + src_ids + self.suffix_ids
 
-        src_input_id = self.prefix_ids + src_ids + self.suffix_ids + self.eos_token_id
-        tgt_input_id = tgt_ids + self.eos_token_id
+        token_type_id = None
+        if 'token_type_ids' in self.tokenizer.model_input_names:  # bert, cpm, ctrl, xlnet, megatron_bert
+            token_type_id = self.tokenizer.create_token_type_ids_from_sequences(src_ids, tgt_ids)
 
         if self.tokenizer.padding_side == 'left':  # cpm, xlnet
-            tgt_input_id = tgt_input_id + self.bos_token_id
+            src_input_id = src_ids + self.eos_token_id
+            tgt_input_id = tgt_ids + self.eos_token_id + self.bos_token_id
         else:
-            src_input_id = self.bos_token_id + src_input_id
+            src_input_id = self.bos_token_id + src_ids + self.eos_token_id
+            tgt_input_id = tgt_ids + self.eos_token_id
 
         input_id = src_input_id + tgt_input_id
         label = len(src_input_id) * [-100] + tgt_input_id
 
-        return input_id, label
+        return input_id, label, token_type_id
 
-    def _inputs_postprocess(self, input_ids, attention_mask, labels):
+    def _inputs_postprocess(self, input_ids, attention_mask, labels, token_type_ids):
+        inputs_dict = {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
+        if 'token_type_ids' in self.tokenizer.model_input_names:  # bert, cpm, ctrl, xlnet, megatron_bert
+            inputs_dict['token_type_ids'] = token_type_ids
 
-        return {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
+        if self.model_name == 'transfo_xl':  # transfo_xl construct mask inside the model
+            inputs_dict.pop('attention_mask')
+
+        return inputs_dict
 
     def _compute_loss(self, outputs, labels, ignore_index=-100):
         if self.model_name == 'prophenet':
             pass
+        elif self.model_name == 'transfo_xl':
+            loss = outputs.losses.mean()
+            if self.label_smoothing > 0:
+                warnings.warn("label smoothing for transformer-xl is not implemented")  # no logits returned
+            return loss
         else:
             loss = outputs.loss
 
         if self.label_smoothing > 0:
             if self.is_casual_model:
                 logits = outputs.logits[:, :-1, :].contiguous()
-                labels = labels[:, 1:].view(-1).contiguous()
+                labels = labels[:, 1:].contiguous().view(-1)
             else:
                 logits = outputs.logits
 

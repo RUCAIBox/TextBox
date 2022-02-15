@@ -45,6 +45,14 @@ MODEL_CLASSES = {
         'tokenizer': BartTokenizer,
         'model': BartForConditionalGeneration
     },
+    'led': {
+        'tokenizer': LEDTokenizer,
+        'model': LEDForConditionalGeneration
+    },
+    'mbart': {
+        'tokenizer': MBartTokenizer,
+        'model': MBartForConditionalGeneration
+    },
     'bert2bert': {
         'tokenizer': BertTokenizer,
         'model': EncoderDecoderModel
@@ -65,19 +73,11 @@ MODEL_CLASSES = {
         'tokenizer': BlenderbotSmallTokenizer,
         'model': BlenderbotSmallForConditionalGeneration
     },
-    'led': {
-        'tokenizer': LEDTokenizer,
-        'model': LEDForConditionalGeneration
-    },
     'm2m100': {
         'tokenizer': M2M100Tokenizer,
         'model': M2M100ForConditionalGeneration
     },
-    'mbart': {
-        'tokenizer': MBartTokenizer,
-        'model': MBartForConditionalGeneration
-    },
-    'prophetnet': {
+    'prophet_net': {
         'tokenizer': ProphetNetTokenizer,
         'model': ProphetNetForConditionalGeneration
     },
@@ -127,8 +127,8 @@ MODEL_CLASSES = {
 
 CLM_MODELS = ['gpt2', 'gpt', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'megatron_bert', 'transfo_xl', 'gpt_neo']
 
-EncDecLM_MODELS = ['t5', 'mt5', 'bart', 'mbart', 'bert2bert', 'big_bird_pegasus', 'pegasus', 'blender_bot',
-                   'blender_bot_small', 'led', 'm2m100', 'prophetnet']
+EncDecLM_MODELS = ['t5', 'mt5', 'bart', 'led', 'mbart', 'bert2bert', 'big_bird_pegasus', 'pegasus', 'blender_bot',
+                   'blender_bot_small', 'm2m100', 'prophet_net']
 
 
 def pad_sequence(tensors: List[Tensor], padding_value: int, padding_side: str = 'right'):
@@ -211,6 +211,8 @@ class Transformers(Seq2SeqGenerator):
 
         # (4): tokenizer needs to set src_lang, tgt_lang (used in translation task)
         if self.model_name in ['m2m100', 'mbart']:
+            assert self.config['src_lang'] and self.config['tgt_lang'], \
+                self.model_name + ' needs to specify source language and target language'
             self.tokenizer.src_lang = self.config['src_lang']
             self.tokenizer.tgt_lang = self.config['tgt_lang']
 
@@ -223,7 +225,7 @@ class Transformers(Seq2SeqGenerator):
         elif self.model_name == 'm2m100':
             self.configuration.forced_bos_token_id = self.tokenizer.get_lang_id(self.config['tgt_lang'])
         elif self.model_name == 'ctrl':
-            self.tokenizer.create_token_type_ids_from_sequences = lambda t0, t1: [0]*(len(t0)+1)+[1]*(len(t1)+1)
+            self.tokenizer.create_token_type_ids_from_sequences = lambda t0, t1: [0] * (len(t0)+1) + [1] * (len(t1)+1)
 
     def _prepare_bos_eos_token_for_casual_model(self):
         """
@@ -291,16 +293,17 @@ class Transformers(Seq2SeqGenerator):
         """
         t5, mt5: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
         bart, led: [<s>, src, </s>], [<s>, tgt, </s>], decoder_start_token_id: </s>, forced_bos_token_id: <s>
-        bert2bert: [[CLS], src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [CLS]
+        bert2bert: [[CLS], src, [SEP]], [[CLS](**remove later**), tgt, [SEP]], decoder_start_token_id: [CLS]
         big_bird_pegasus: [src, </s>], [tgt, </s>], decoder_start_token_id: <s>
         pegasus: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
         blender_bot: [src, </s>], [tgt, </s>], decoder_start_token_id: <s>
         blender_bot_small: [src, __end__], [tgt, __end__], decoder_start_token_id: __start__
         m2m100: [src_lang_id, src, </s>], [tgt_lang_id, tgt, </s>], decoder_start_token_id: </s>, forced_bos_token_id: tgt_lang_id
         mbart: [src, </s>, src_lang_id], [tgt, </s>, tgt_lang_id], decoder_start_token_id: tgt_lang_id
+        prophet_net: [src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [SEP]
         """
         src_ids = src_ids[:self.source_max_length - self.tokenizer.num_special_tokens_to_add()
-                           - len(self.prefix_ids) - len(self.suffix_ids)]
+                          - len(self.prefix_ids) - len(self.suffix_ids)]
         tgt_ids = tgt_ids[:self.target_max_length - self.tokenizer.num_special_tokens_to_add()]
         input_id = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + src_ids + self.suffix_ids)
         if self.model_name in ['m2m100', 'mbart']:
@@ -308,8 +311,7 @@ class Transformers(Seq2SeqGenerator):
                 label = self.tokenizer.build_inputs_with_special_tokens(tgt_ids)
         else:
             label = self.tokenizer.build_inputs_with_special_tokens(tgt_ids)
-
-        return input_id, label
+        return input_id, label, None  # To be compatible with the casual model
 
     def _casual_model_encode(self, src_ids, tgt_ids):
         """
@@ -320,7 +322,8 @@ class Transformers(Seq2SeqGenerator):
         ctrl, gpt: [src, </s>, tgt, </s>]
         transfo_xl: [src, <eos>, tgt, <eos>]
         """
-        src_ids = src_ids[:self.source_max_length-len(self.prefix_ids)-len(self.suffix_ids)-1-len(self.bos_token_id)]
+        src_ids = src_ids[
+                  :self.source_max_length - len(self.prefix_ids) - len(self.suffix_ids) - 1 - len(self.bos_token_id)]
         tgt_ids = tgt_ids[:self.target_max_length - 1]
         src_ids = self.prefix_ids + src_ids + self.suffix_ids
 
@@ -342,18 +345,19 @@ class Transformers(Seq2SeqGenerator):
 
     def _inputs_postprocess(self, input_ids, attention_mask, labels, token_type_ids):
         inputs_dict = {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
-        if 'token_type_ids' in self.tokenizer.model_input_names:  # bert, cpm, ctrl, megatron_bert
+        if 'token_type_ids' in self.tokenizer.model_input_names and self.is_casual_model:  # bert,cpm,ctrl,megatron_bert
             inputs_dict['token_type_ids'] = token_type_ids
 
-        if self.model_name == 'transfo_xl':  # transfo_xl construct mask inside the model
-            inputs_dict.pop('attention_mask')
+        # model specific process
+        if self.model_name == 'transfo_xl':
+            inputs_dict.pop('attention_mask')  # transfo_xl construct mask inside the model
+        elif self.model_name == 'bert2bert':
+            inputs_dict['labels'] = labels[:, 1:]  # remove the decoder_start_token_id: [CLS]
 
         return inputs_dict
 
     def _compute_loss(self, outputs, labels, ignore_index=-100):
-        if self.model_name == 'prophenet':
-            pass
-        elif self.model_name == 'transfo_xl':
+        if self.model_name == 'transfo_xl':
             loss = outputs.losses.mean()
             if self.label_smoothing > 0:
                 warnings.warn("label smoothing for transformer-xl is not implemented")  # no logits returned
@@ -367,6 +371,7 @@ class Transformers(Seq2SeqGenerator):
                 labels = labels[:, 1:].contiguous().view(-1)
             else:
                 logits = outputs.logits
+                labels = labels.view(-1)
 
             probs = F.log_softmax(logits, dim=-1).view(-1, logits.size(-1))  # b * l, v
             probs = -probs.mean(dim=-1)  # b * l

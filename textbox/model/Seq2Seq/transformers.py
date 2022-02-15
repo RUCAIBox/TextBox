@@ -23,7 +23,6 @@ from transformers import (
     CTRLTokenizer, CTRLLMHeadModel,
     OpenAIGPTTokenizer, OpenAIGPTLMHeadModel,
     MegatronBertForCausalLM,
-    XLNetTokenizer, XLNetLMHeadModel,
     TransfoXLTokenizer, TransfoXLLMHeadModel,
     MBartTokenizer, MBartForConditionalGeneration,
     MT5ForConditionalGeneration,
@@ -112,10 +111,6 @@ MODEL_CLASSES = {
         'tokenizer': CTRLTokenizer,
         'model': CTRLLMHeadModel
     },
-    'xlnet': {
-        'tokenizer': XLNetTokenizer,
-        'model': XLNetLMHeadModel
-    },
     'megatron_bert': {
         'tokenizer': BertTokenizer,
         'model': MegatronBertForCausalLM
@@ -130,8 +125,7 @@ MODEL_CLASSES = {
     }
 }
 
-CLM_MODELS = ['gpt2', 'gpt', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'xlnet', 'megatron_bert', 'transfo_xl',
-              'gpt_neo']
+CLM_MODELS = ['gpt2', 'gpt', 'big_bird', 'bert', 'roberta', 'cpm', 'ctrl', 'megatron_bert', 'transfo_xl', 'gpt_neo']
 
 EncDecLM_MODELS = ['t5', 'mt5', 'bart', 'mbart', 'bert2bert', 'big_bird_pegasus', 'pegasus', 'blender_bot',
                    'blender_bot_small', 'led', 'm2m100', 'prophetnet']
@@ -145,12 +139,12 @@ def pad_sequence(tensors: List[Tensor], padding_value: int, padding_side: str = 
     padded_tensors = []
     if padding_side == 'right':
         for tensor in tensors:
-            padding_length = max_len-len(tensor)
+            padding_length = max_len - len(tensor)
             padded_tensor = torch.cat([tensor, torch.full([padding_length], padding_value, dtype=tensor.dtype)], dim=-1)
             padded_tensors.append(padded_tensor)
     elif padding_side == 'left':
         for tensor in tensors:
-            padding_length = max_len-len(tensor)
+            padding_length = max_len - len(tensor)
             padded_tensor = torch.cat([torch.full([padding_length], padding_value, dtype=tensor.dtype), tensor], dim=-1)
             padded_tensors.append(padded_tensor)
     else:
@@ -229,15 +223,15 @@ class Transformers(Seq2SeqGenerator):
         elif self.model_name == 'm2m100':
             self.configuration.forced_bos_token_id = self.tokenizer.get_lang_id(self.config['tgt_lang'])
         elif self.model_name == 'ctrl':
-            self.tokenizer.create_token_type_ids_from_sequences = lambda t0, t1: [0] * (len(t0)+1) + [1] * (len(t1)+1)
+            self.tokenizer.create_token_type_ids_from_sequences = lambda t0, t1: [0]*(len(t0)+1)+[1]*(len(t1)+1)
 
     def _prepare_bos_eos_token_for_casual_model(self):
         """
-        BOS = cls_token: big_bird, bert, roberta, cpm, megatron_bert, xlnet
+        BOS = cls_token: big_bird, bert, roberta, cpm, megatron_bert
             = bos_token: gpt2, gpt_neo
             = None: ctrl, gpt, transfo_xl
 
-        EOS = sep_token: big_bird, bert, roberta, cpm, megatron_bert, xlnet
+        EOS = sep_token: big_bird, bert, roberta, cpm, megatron_bert
             = eos_token: gpt2, ctrl, transfo_xl, gpt, gpt_neo
         """
 
@@ -306,7 +300,7 @@ class Transformers(Seq2SeqGenerator):
         mbart: [src, </s>, src_lang_id], [tgt, </s>, tgt_lang_id], decoder_start_token_id: tgt_lang_id
         """
         src_ids = src_ids[:self.source_max_length - self.tokenizer.num_special_tokens_to_add()
-                          - len(self.prefix_ids) - len(self.suffix_ids)]
+                           - len(self.prefix_ids) - len(self.suffix_ids)]
         tgt_ids = tgt_ids[:self.target_max_length - self.tokenizer.num_special_tokens_to_add()]
         input_id = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + src_ids + self.suffix_ids)
         if self.model_name in ['m2m100', 'mbart']:
@@ -322,7 +316,7 @@ class Transformers(Seq2SeqGenerator):
         gpt2, gpt_neo: [<|endoftext|>, src, <|endoftext|>, tgt, <|endoftext|>]
         big_bird, bert, megatron_bert: [[CLS], src, [SEP], tgt, [SEP]]
         roberta: [<s>, src, </s>, tgt, </s>]
-        cpm, xlnet: [src, <sep>, tgt, <sep>, <cls>]
+        cpm: [src, <sep>, tgt, <sep>, <cls>]
         ctrl, gpt: [src, </s>, tgt, </s>]
         transfo_xl: [src, <eos>, tgt, <eos>]
         """
@@ -331,10 +325,10 @@ class Transformers(Seq2SeqGenerator):
         src_ids = self.prefix_ids + src_ids + self.suffix_ids
 
         token_type_id = None
-        if 'token_type_ids' in self.tokenizer.model_input_names:  # bert, cpm, ctrl, xlnet, megatron_bert
+        if 'token_type_ids' in self.tokenizer.model_input_names:  # bert, cpm, ctrl, megatron_bert
             token_type_id = self.tokenizer.create_token_type_ids_from_sequences(src_ids, tgt_ids)
 
-        if self.tokenizer.padding_side == 'left':  # cpm, xlnet
+        if self.tokenizer.padding_side == 'left':  # cpm
             src_input_id = src_ids + self.eos_token_id
             tgt_input_id = tgt_ids + self.eos_token_id + self.bos_token_id
         else:
@@ -348,7 +342,7 @@ class Transformers(Seq2SeqGenerator):
 
     def _inputs_postprocess(self, input_ids, attention_mask, labels, token_type_ids):
         inputs_dict = {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
-        if 'token_type_ids' in self.tokenizer.model_input_names:  # bert, cpm, ctrl, xlnet, megatron_bert
+        if 'token_type_ids' in self.tokenizer.model_input_names:  # bert, cpm, ctrl, megatron_bert
             inputs_dict['token_type_ids'] = token_type_ids
 
         if self.model_name == 'transfo_xl':  # transfo_xl construct mask inside the model

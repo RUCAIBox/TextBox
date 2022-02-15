@@ -263,13 +263,10 @@ class Transformers(Seq2SeqGenerator):
         padding_side = self.tokenizer.padding_side
 
         for src, tgt in zip(source_text, target_text):
-            src_ids = self.tokenizer.encode(src, add_special_tokens=False)
-            tgt_ids = self.tokenizer.encode(tgt, add_special_tokens=False)
-
             if self.is_casual_model:
-                input_id, label, token_type_id = self._casual_model_encode(src_ids, tgt_ids)
+                input_id, label, token_type_id = self._casual_model_encode(src, tgt_text=tgt)
             else:
-                input_id, label, token_type_id = self._encoder_decoder_model_encode(src_ids, tgt_ids)
+                input_id, label, token_type_id = self._encoder_decoder_model_encode(src, tgt_text=tgt)
 
             input_ids.append(torch.tensor(input_id, dtype=torch.long))
             attn_masks.append(torch.ones(len(input_id), dtype=torch.long))
@@ -289,7 +286,7 @@ class Transformers(Seq2SeqGenerator):
         processed_inputs = self._inputs_postprocess(**inputs)
         return processed_inputs
 
-    def _encoder_decoder_model_encode(self, src_ids, tgt_ids):
+    def _encoder_decoder_model_encode(self, src_text, tgt_text=None, eval=False):
         """
         t5, mt5: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
         bart, led: [<s>, src, </s>], [<s>, tgt, </s>], decoder_start_token_id: </s>, forced_bos_token_id: <s>
@@ -302,10 +299,16 @@ class Transformers(Seq2SeqGenerator):
         mbart: [src, </s>, src_lang_id], [tgt, </s>, tgt_lang_id], decoder_start_token_id: tgt_lang_id
         prophet_net: [src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [SEP]
         """
+
+        src_ids = self.tokenizer.encode(src_text, add_special_tokens=False)
         src_ids = src_ids[:self.source_max_length - self.tokenizer.num_special_tokens_to_add()
                           - len(self.prefix_ids) - len(self.suffix_ids)]
-        tgt_ids = tgt_ids[:self.target_max_length - self.tokenizer.num_special_tokens_to_add()]
         input_id = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + src_ids + self.suffix_ids)
+        if eval:
+            return input_id
+
+        tgt_ids = self.tokenizer.encode(tgt_text, add_special_tokens=False)
+        tgt_ids = tgt_ids[:self.target_max_length - self.tokenizer.num_special_tokens_to_add()]
         if self.model_name in ['m2m100', 'mbart']:
             with self.tokenizer.as_target_tokenizer():
                 label = self.tokenizer.build_inputs_with_special_tokens(tgt_ids)
@@ -313,7 +316,7 @@ class Transformers(Seq2SeqGenerator):
             label = self.tokenizer.build_inputs_with_special_tokens(tgt_ids)
         return input_id, label, None  # To be compatible with the casual model
 
-    def _casual_model_encode(self, src_ids, tgt_ids):
+    def _casual_model_encode(self, src_text, tgt_text=None, eval=False):
         """
         gpt2, gpt_neo: [<|endoftext|>, src, <|endoftext|>, tgt, <|endoftext|>]
         big_bird, bert, megatron_bert: [[CLS], src, [SEP], tgt, [SEP]]
@@ -322,8 +325,9 @@ class Transformers(Seq2SeqGenerator):
         ctrl, gpt: [src, </s>, tgt, </s>]
         transfo_xl: [src, <eos>, tgt, <eos>]
         """
-        src_ids = src_ids[
-                  :self.source_max_length - len(self.prefix_ids) - len(self.suffix_ids) - 1 - len(self.bos_token_id)]
+        src_ids = self.tokenizer.encode(src_text, add_special_tokens=False)
+        tgt_ids = self.tokenizer.encode(tgt_text, add_special_tokens=False)
+        src_ids = src_ids[:self.source_max_length-len(self.prefix_ids)-len(self.suffix_ids)-1-len(self.bos_token_id)]
         tgt_ids = tgt_ids[:self.target_max_length - 1]
         src_ids = self.prefix_ids + src_ids + self.suffix_ids
 
@@ -386,27 +390,41 @@ class Transformers(Seq2SeqGenerator):
         loss = self._compute_loss(outputs, inputs['labels'])
         return loss
 
-    # def generate(self, batch_data, eval_data):
-    #     source_text = batch_data['source_text']
-    #
-    #     generate_corpus = []
-    #
-    #     for src in source_text:
-    #         src_ids = self.tokenizer.encode(src, add_special_tokens=False)
-    #
-    #         if self.model_type == 'gpt2':
-    #             input_id = src_ids + self.task_infix_ids
-    #             max_length = self.max_source_length + len(self.task_infix_ids) + self.max_target_length
-    #         else:
-    #             input_id = self.task_prefix_ids + src_ids
-    #             max_length = self.max_target_length
-    #
-    #         input_id = torch.tensor(input_id, dtype=torch.long, device=self.device).unsqueeze(1, -1)
-    #
-    #         outputs = self.model.generate(input_id, num_beams=5, max_length=max_length, early_stopping=True)
-    #
-    #         generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True).split()
-    #
-    #         generate_corpus.append(generated_text)
-    #
-    #     return generate_corpus
+    def generate(self, batch_data, eval_data):
+        source_text = batch_data['source_text']
+        
+        pad_token_id = self.tokenizer.pad_token_id
+        padding_side = self.tokenizer.padding_side
+        decode_params = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': False}
+        if self.is_enc_dec_model:
+            input_ids = [torch.tensor(self._encoder_decoder_model_encode(src, eval=True), dtype=torch.long) for src in source_text]
+            attn_masks = [torch.ones(len(inp), dtype=torch.long) for inp in input_ids]
+            input_ids = pad_sequence(input_ids, padding_value=pad_token_id, padding_side=padding_side).to(self.device)
+            attn_masks = pad_sequence(attn_masks, padding_value=0, padding_side=padding_side).to(self.device)
+
+            sample_outputs = self.model.generate(
+                input_ids, attention_mask=attn_masks, num_beams=1, max_length=self.target_max_length
+            )
+            generated_text = self.tokenizer.batch_decode(sample_outputs, **decode_params)
+            generate_corpus = [text.lower().split() for text in generated_text]
+            return generate_corpus
+
+        # for src in source_text:
+        #     src_ids = self.tokenizer.encode(src, add_special_tokens=False)
+        #
+        #     if self.model_type == 'gpt2':
+        #         input_id = src_ids + self.task_infix_ids
+        #         max_length = self.max_source_length + len(self.task_infix_ids) + self.max_target_length
+        #     else:
+        #         input_id = self.task_prefix_ids + src_ids
+        #         max_length = self.max_target_length
+        #
+        #     input_id = torch.tensor(input_id, dtype=torch.long, device=self.device).unsqueeze(1, -1)
+        #
+        #     outputs = self.model.generate(input_id, num_beams=5, max_length=max_length, early_stopping=True)
+        #
+        #     generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True).split()
+        #
+        #     generate_corpus.append(generated_text)
+        #
+        # return generate_corpus

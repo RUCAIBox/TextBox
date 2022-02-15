@@ -19,7 +19,7 @@ from textbox.config import Config
 from textbox.data import data_preparation
 
 
-def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=None, saved=True):
+def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=None, saved=False):
     r""" A fast running api, which includes the complete process of
     training and testing a model on a specified dataset
 

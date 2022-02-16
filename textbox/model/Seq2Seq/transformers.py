@@ -3,6 +3,7 @@ import warnings
 import torch.nn.functional as F
 from torch import Tensor
 from typing import List
+from nltk import word_tokenize
 
 from textbox.model.abstract_generator import Seq2SeqGenerator
 
@@ -207,7 +208,7 @@ class Transformers(Seq2SeqGenerator):
 
         # (3): tokenizer needs to modify build_inputs_with_special_tokens()
         if self.model_name in ['gpt2', 'transfo_xl', 'blender_bot_small', 'gpt_neo']:
-            self.tokenizer.build_inputs_with_special_tokens = lambda t0, t1: t0 + [self.tokenizer.eos_token_id]
+            self.tokenizer.build_inputs_with_special_tokens = lambda t0, t1=None: t0 + [self.tokenizer.eos_token_id]
 
         # (4): tokenizer needs to set src_lang, tgt_lang (used in translation task)
         if self.model_name in ['m2m100', 'mbart']:
@@ -392,21 +393,31 @@ class Transformers(Seq2SeqGenerator):
 
     def generate(self, batch_data, eval_data):
         source_text = batch_data['source_text']
-        
+
         pad_token_id = self.tokenizer.pad_token_id
         padding_side = self.tokenizer.padding_side
         decode_params = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': False}
+        generate_params = {'num_beams':4, 'max_length':self.target_max_length, 'do_sample':True, 'early_stopping':True}
+
         if self.is_enc_dec_model:
             input_ids = [torch.tensor(self._encoder_decoder_model_encode(src, eval=True), dtype=torch.long) for src in source_text]
             attn_masks = [torch.ones(len(inp), dtype=torch.long) for inp in input_ids]
             input_ids = pad_sequence(input_ids, padding_value=pad_token_id, padding_side=padding_side).to(self.device)
             attn_masks = pad_sequence(attn_masks, padding_value=0, padding_side=padding_side).to(self.device)
 
+            if self.model_name == 'mbart':
+                decoder_start_token_id = self.tokenizer.lang_code_to_id[self.tokenizer.tgt_lang]
+            else:
+                decoder_start_token_id = self.configuration.decoder_start_token_id
+
             sample_outputs = self.model.generate(
-                input_ids, attention_mask=attn_masks, num_beams=1, max_length=self.target_max_length
+                input_ids,
+                attention_mask=attn_masks,
+                decoder_start_token_id=decoder_start_token_id,
+                **generate_params
             )
             generated_text = self.tokenizer.batch_decode(sample_outputs, **decode_params)
-            generate_corpus = [text.lower().split() for text in generated_text]
+            generate_corpus = [word_tokenize(text.lower()) for text in generated_text]
             return generate_corpus
 
         # for src in source_text:

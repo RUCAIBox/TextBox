@@ -1,3 +1,37 @@
+# @Time   : 2021/2/26
+# @Author : Dai Wenxun
+# @Email  : wxdai@stu.xidian.edu.cn
+
+
+r"""
+################################################
+    Integration of Encoder-Decoder LM and Casual LM in transformers API
+
+    Summary of Related Papers:
+    gpt2: Language Models are Unsupervised Multitask Learners
+    gpt: Improving Language Understanding by Generative Pre-Training
+    big_bird, big_bird_pegasus: Big Bird: Transformers for Longer Sequences
+    bert: BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding
+    roberta: RoBERTa: A Robustly Optimized BERT Pretraining Approach
+    cpm: CPM: A Large-scale Generative Chinese Pre-trained Language Model
+    ctrl: CTRL: A Conditional Transformer Language Model for Controllable Generation
+    megatron_bert: Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism
+    transfo_xl: Transformer-XL: Attentive Language Models Beyond a Fixed-Length Context
+    gpt_neo: The Pile: An 800GB Dataset of Diverse Text for Language Modeling
+
+    t5: Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer
+    mt5: mT5: A massively multilingual pre-trained text-to-text transformer
+    bart: BART: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension
+    led: Longformer: The Long-Document Transformer
+    mbart: Multilingual Denoising Pre-training for Neural Machine Translation
+    bert2bert: Leveraging Pre-trained Checkpoints for Sequence Generation Tasks
+    pegasus: PEGASUS: Pre-training with Extracted Gap-sentences for Abstractive Summarization
+    blender_bot, blender_bot_small: Recipes for building an open-domain chatbot
+    m2m100: Beyond English-Centric Multilingual Machine Translation
+    prophet_net: ProphetNet: Predicting Future N-gram for Sequence-to-Sequence Pre-training
+"""
+
+
 import torch
 import warnings
 import torch.nn.functional as F
@@ -155,33 +189,9 @@ def pad_sequence(tensors: List[Tensor], padding_value: int, padding_side: str = 
 
 
 class Transformers(Seq2SeqGenerator):
-    r"""
-    Summary of Related Papers:
-    gpt2: Language Models are Unsupervised Multitask Learners
-    gpt: Improving Language Understanding by Generative Pre-Training
-    big_bird, big_bird_pegasus: Big Bird: Transformers for Longer Sequences
-    bert: BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding
-    roberta: RoBERTa: A Robustly Optimized BERT Pretraining Approach
-    cpm: CPM: A Large-scale Generative Chinese Pre-trained Language Model
-    ctrl: CTRL: A Conditional Transformer Language Model for Controllable Generation
-    megatron_bert: Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism
-    transfo_xl: Transformer-XL: Attentive Language Models Beyond a Fixed-Length Context
-    gpt_neo: The Pile: An 800GB Dataset of Diverse Text for Language Modeling
-
-    t5: Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer
-    mt5: mT5: A massively multilingual pre-trained text-to-text transformer
-    bart: BART: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension
-    led: Longformer: The Long-Document Transformer
-    mbart: Multilingual Denoising Pre-training for Neural Machine Translation
-    bert2bert: Leveraging Pre-trained Checkpoints for Sequence Generation Tasks
-    pegasus: PEGASUS: Pre-training with Extracted Gap-sentences for Abstractive Summarization
-    blender_bot, blender_bot_small: Recipes for building an open-domain chatbot
-    m2m100: Beyond English-Centric Multilingual Machine Translation
-    prophet_net: ProphetNet: Predicting Future N-gram for Sequence-to-Sequence Pre-training
-    """
-
     def __init__(self, config, dataset):
         super(Transformers, self).__init__(config, dataset)
+        self.config = config
 
         self.model_name_or_path = config['pretrained_model_path']
         self.model_name = config['model'].lower()
@@ -207,6 +217,7 @@ class Transformers(Seq2SeqGenerator):
             self._prepare_bos_eos_token_for_casual_model()
 
         self.label_smoothing = config['label_smoothing'] if config['label_smoothing'] else 0.
+        self.truncate = config['truncate'] or 'tail'
 
     def _process_prompt(self):
         r"""
@@ -321,8 +332,8 @@ class Transformers(Seq2SeqGenerator):
         """
 
         src_ids = self.tokenizer.encode(src_text, add_special_tokens=False)
-        src_ids = src_ids[:self.source_max_length - self.tokenizer.num_special_tokens_to_add()
-                          - len(self.prefix_ids) - len(self.suffix_ids)]
+        src_ids_num = self.source_max_length - self.tokenizer.num_special_tokens_to_add() - len(self.prefix_ids) - len(self.suffix_ids)
+        src_ids = src_ids[:src_ids_num] if self.truncate == 'tail' else src_ids[-src_ids_num:]
         input_id = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + src_ids + self.suffix_ids)
         if eval:
             return input_id
@@ -347,7 +358,8 @@ class Transformers(Seq2SeqGenerator):
         """
 
         src_ids = self.tokenizer.encode(src_text, add_special_tokens=False)
-        src_ids = src_ids[:self.source_max_length-len(self.prefix_ids)-len(self.suffix_ids)-1-len(self.bos_token_id)]
+        src_ids_num = self.source_max_length-len(self.prefix_ids)-len(self.suffix_ids)-1-len(self.bos_token_id)
+        src_ids = src_ids[:src_ids_num] if self.truncate == 'tail' else src_ids[-src_ids_num:]
         src_ids = self.prefix_ids + src_ids + self.suffix_ids
 
         if self.tokenizer.padding_side == 'left':  # cpm
@@ -418,18 +430,22 @@ class Transformers(Seq2SeqGenerator):
                            'early_stopping': True}
 
         if self.is_casual_model:
-            generate_corpus = []
+            input_ids = []
+            attn_masks = []
             for src in source_text:
-                input_ids = torch.tensor([self._casual_model_encode(src, eval=True)], dtype=torch.long).to(self.device)
-                attn_masks = torch.ones_like(input_ids, dtype=torch.long).to(self.device)
-                src_len = input_ids.shape[1]
-                generate_params['max_length'] += src_len
-                sample_outputs = self.model.generate(input_ids, attention_mask=attn_masks, **generate_params)
+                input_id = self._casual_model_encode(src, eval=True)
+                input_ids.append(torch.tensor(input_id, dtype=torch.long))
+                attn_masks.append(torch.ones(len(input_id), dtype=torch.long))
 
-                generated_text = self.tokenizer.decode(sample_outputs[0][src_len:], **decode_params).lower()
-                generate_corpus.append(word_tokenize(generated_text))
-
+            input_ids = pad_sequence(input_ids, padding_value=pad_token_id, padding_side='left').to(self.device)
+            attn_masks = pad_sequence(attn_masks, padding_value=0, padding_side='left').to(self.device)
+            input_id_len = input_ids.shape[1]
+            generate_params['max_length'] += input_id_len
+            sample_outputs = self.model.generate(input_ids, attention_mask=attn_masks, **generate_params)
+            generated_text = self.tokenizer.batch_decode(sample_outputs[:, input_id_len:], **decode_params)
+            generate_corpus = [word_tokenize(text.lower()) for text in generated_text]
             return generate_corpus
+
         else:
             input_ids = [torch.tensor(self._encoder_decoder_model_encode(src, eval=True), dtype=torch.long)
                          for src in source_text]

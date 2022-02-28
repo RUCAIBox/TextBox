@@ -132,7 +132,7 @@ For example, if you want to use T5 for summarization task like CNNDM, run:
 python run_textbox.py --model=t5 --dataset=CNNDM  --tokenize_strategy=none --pretrained_model_path='<model_name_or_path>'
 ```
 
-The list of the model names can be found in [enum_type.py](./utils/enum_type.py).
+The list of the model names can be found in [enum_type.py](https://github.com/RUCAIBox/TextBox/tree/main/textbox/utils/enum_type.py).
 
  If you want to add a task prefix or suffix, just add two additional parameters:
 

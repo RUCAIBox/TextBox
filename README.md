@@ -119,15 +119,45 @@ If you want to run different models, parameters or datasets, the operations are 
 
 ### **Use Pretrained Language Model**
 
-TextBox supports to apply part of pretrained language models (PLM) to conduct text generation. Take the GPT-2 for example, we will show you how to use PLMs to fine-tune.
-
-1. Download the GPT-2 model provided from Hugging Face (https://huggingface.co/gpt2/tree/main), including `config.json`, `merges.txt`, `pytorch_model.bin`, `tokenizer.json`and `vocab.json`. Then put them in a folder at the same level as `textbox`, such as `pretrained_model/gpt2`.
-
-2. After downloading, you just need to run the command:
+In most cases, only the following two parameters need to be passed in addition:
 
 ```bash
-python run_textbox.py --model=GPT2 --dataset=COCO \
-                      --pretrained_model_path=pretrained_model/gpt2
+ --tokenize_strategy=none
+ --pretrained_model_path='<model_name_or_path>'
+```
+
+For example, if you want to use T5 for summarization task like CNNDM, run:
+
+```bash
+python run_textbox.py --model=t5 --dataset=CNNDM  --tokenize_strategy=none --pretrained_model_path='<model_name_or_path>'
+```
+
+The list of the model names can be found in [enum_type.py](./utils/enum_type.py).
+
+ If you want to add a task prefix or suffix, just add two additional parameters:
+
+```bash
+--prefix_prompt='<prefix>'
+--suffix_prompt='<suffix>'
+```
+
+**Note**: the prompts will be added to the beginning and end of **source ids**.
+
+If you want to add label smoothing during training, add one additional parameter:
+
+```bash
+--label_smoothing=<smooth loss weight>
+```
+
+For some models used for translation task like m2m100, you need to specify source language and target language:
+
+```bash
+m2m100: en -> zh
+--src_lang='en'
+--tgt_lang='zh'
+mbart: en ->zh
+--src_lang='en_XX'
+--tgt_lang='zh_CN'
 ```
 
 ### **Train with Distributed Data Parallel (DDP)**

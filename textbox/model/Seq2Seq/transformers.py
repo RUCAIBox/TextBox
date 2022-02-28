@@ -216,10 +216,13 @@ class Transformers(Seq2SeqGenerator):
 
         self.label_smoothing = config['label_smoothing'] if config['label_smoothing'] else 0.
         self.truncate = config['truncate'] or 'tail'
+        self.num_beams = config['num_beams'] or 4
         self.src_ids_num = \
             self.source_max_length-len(self.prefix_ids)-len(self.suffix_ids)-1-len(self.bos_token_id) \
             if self.is_casual_model else \
             self.source_max_length-self.tokenizer.num_special_tokens_to_add()-len(self.prefix_ids)-len(self.suffix_ids)
+        self.tgt_ids_num = self.target_max_length - 1 \
+            if self.is_casual_model else self.target_max_length - self.tokenizer.num_special_tokens_to_add()
 
     def _process_prompt(self):
         r"""
@@ -340,7 +343,7 @@ class Transformers(Seq2SeqGenerator):
             return input_id
 
         tgt_ids = self.tokenizer.encode(tgt_text, add_special_tokens=False)
-        tgt_ids = tgt_ids[:self.target_max_length - self.tokenizer.num_special_tokens_to_add()]
+        tgt_ids = tgt_ids[:self.tgt_ids_num]
         if self.model_name in ['m2m100', 'mbart']:
             with self.tokenizer.as_target_tokenizer():
                 label = self.tokenizer.build_inputs_with_special_tokens(tgt_ids)
@@ -370,7 +373,7 @@ class Transformers(Seq2SeqGenerator):
             return src_input_id
 
         tgt_ids = self.tokenizer.encode(tgt_text, add_special_tokens=False)
-        tgt_ids = tgt_ids[:self.target_max_length - 1]
+        tgt_ids = tgt_ids[:self.tgt_ids_num]
         if self.tokenizer.padding_side == 'left':  # cpm
             tgt_input_id = tgt_ids + self.eos_token_id + self.bos_token_id
         else:
@@ -426,7 +429,7 @@ class Transformers(Seq2SeqGenerator):
         pad_token_id = self.tokenizer.pad_token_id
         padding_side = self.tokenizer.padding_side
         decode_params = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': False}
-        generate_params = {'num_beams': self.config['num_beams'] or 4, 'max_length': self.target_max_length,
+        generate_params = {'num_beams': self.num_beams, 'max_length': self.target_max_length,
                            'do_sample': True, 'early_stopping': True}
 
         if self.is_casual_model:

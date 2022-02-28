@@ -726,6 +726,8 @@ We expect all contributions discussed in the issue tracker and going through PRs
 
 We thank [@LucasTsui0725](https://github.com/LucasTsui0725/) for contributing HRED model and [@Richar-Du](https://github.com/Richar-Du/) for CVAE model.
 
+We thank [@wxDai](https://github.com/Dai-Wenxun) for contributing PointerNet and more than 20 language models in transformers API.
+
 ## Reference
 
 If you find TextBox useful for your research or development, please cite the following [paper](https://arxiv.org/abs/2101.02046):

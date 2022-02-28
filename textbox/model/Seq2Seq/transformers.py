@@ -37,7 +37,8 @@ import warnings
 import torch.nn.functional as F
 from torch import Tensor
 from typing import List
-from nltk import word_tokenize
+from torch.nn.utils.rnn import pad_sequence
+
 
 from textbox.model.abstract_generator import Seq2SeqGenerator
 
@@ -166,17 +167,14 @@ EncDecLM_MODELS = ['t5', 'mt5', 'bart', 'led', 'mbart', 'bert2bert', 'big_bird_p
                    'blender_bot_small', 'm2m100', 'prophet_net']
 
 
-def pad_sequence(tensors: List[Tensor], padding_value: int, padding_side: str = 'right'):
+def _pad_sequence(tensors: List[Tensor], padding_value: int, padding_side: str = 'right'):
     """
     Pad encoded inputs (on left/right and up to max length in the batch)
     """
     max_len = max(tensor.size()[0] for tensor in tensors)
     padded_tensors = []
     if padding_side == 'right':
-        for tensor in tensors:
-            padding_length = max_len - len(tensor)
-            padded_tensor = torch.cat([tensor, torch.full([padding_length], padding_value, dtype=tensor.dtype)], dim=-1)
-            padded_tensors.append(padded_tensor)
+        return pad_sequence(tensors, batch_first=True, padding_value=padding_value)
     elif padding_side == 'left':
         for tensor in tensors:
             padding_length = max_len - len(tensor)
@@ -218,6 +216,10 @@ class Transformers(Seq2SeqGenerator):
 
         self.label_smoothing = config['label_smoothing'] if config['label_smoothing'] else 0.
         self.truncate = config['truncate'] or 'tail'
+        self.src_ids_num = \
+            self.source_max_length-len(self.prefix_ids)-len(self.suffix_ids)-1-len(self.bos_token_id) \
+            if self.is_casual_model else \
+            self.source_max_length-self.tokenizer.num_special_tokens_to_add()-len(self.prefix_ids)-len(self.suffix_ids)
 
     def _process_prompt(self):
         r"""
@@ -308,9 +310,9 @@ class Transformers(Seq2SeqGenerator):
             attn_masks.append(torch.ones(len(input_id), dtype=torch.long))
             labels.append(torch.tensor(label, dtype=torch.long))
 
-        input_ids = pad_sequence(input_ids, padding_value=pad_token_id, padding_side=padding_side).to(self.device)
-        attn_masks = pad_sequence(attn_masks, padding_value=0, padding_side=padding_side).to(self.device)
-        labels = pad_sequence(labels, padding_value=-100, padding_side=padding_side).to(self.device)
+        input_ids = _pad_sequence(input_ids, padding_value=pad_token_id, padding_side=padding_side).to(self.device)
+        attn_masks = _pad_sequence(attn_masks, padding_value=0, padding_side=padding_side).to(self.device)
+        labels = _pad_sequence(labels, padding_value=-100, padding_side=padding_side).to(self.device)
 
         inputs = {'input_ids': input_ids, 'attention_mask': attn_masks, 'labels': labels}
 
@@ -332,8 +334,7 @@ class Transformers(Seq2SeqGenerator):
         """
 
         src_ids = self.tokenizer.encode(src_text, add_special_tokens=False)
-        src_ids_num = self.source_max_length - self.tokenizer.num_special_tokens_to_add() - len(self.prefix_ids) - len(self.suffix_ids)
-        src_ids = src_ids[:src_ids_num] if self.truncate == 'tail' else src_ids[-src_ids_num:]
+        src_ids = src_ids[:self.src_ids_num] if self.truncate == 'tail' else src_ids[-self.src_ids_num:]
         input_id = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + src_ids + self.suffix_ids)
         if eval:
             return input_id
@@ -358,8 +359,7 @@ class Transformers(Seq2SeqGenerator):
         """
 
         src_ids = self.tokenizer.encode(src_text, add_special_tokens=False)
-        src_ids_num = self.source_max_length-len(self.prefix_ids)-len(self.suffix_ids)-1-len(self.bos_token_id)
-        src_ids = src_ids[:src_ids_num] if self.truncate == 'tail' else src_ids[-src_ids_num:]
+        src_ids = src_ids[:self.src_ids_num] if self.truncate == 'tail' else src_ids[-self.src_ids_num:]
         src_ids = self.prefix_ids + src_ids + self.suffix_ids
 
         if self.tokenizer.padding_side == 'left':  # cpm
@@ -426,8 +426,8 @@ class Transformers(Seq2SeqGenerator):
         pad_token_id = self.tokenizer.pad_token_id
         padding_side = self.tokenizer.padding_side
         decode_params = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': False}
-        generate_params = {'num_beams': 4, 'max_length': self.target_max_length, 'do_sample': True,
-                           'early_stopping': True}
+        generate_params = {'num_beams': self.config['num_beams'] or 4, 'max_length': self.target_max_length,
+                           'do_sample': True, 'early_stopping': True}
 
         if self.is_casual_model:
             input_ids = []
@@ -437,21 +437,21 @@ class Transformers(Seq2SeqGenerator):
                 input_ids.append(torch.tensor(input_id, dtype=torch.long))
                 attn_masks.append(torch.ones(len(input_id), dtype=torch.long))
 
-            input_ids = pad_sequence(input_ids, padding_value=pad_token_id, padding_side='left').to(self.device)
-            attn_masks = pad_sequence(attn_masks, padding_value=0, padding_side='left').to(self.device)
+            input_ids = _pad_sequence(input_ids, padding_value=pad_token_id, padding_side='left').to(self.device)
+            attn_masks = _pad_sequence(attn_masks, padding_value=0, padding_side='left').to(self.device)
             input_id_len = input_ids.shape[1]
             generate_params['max_length'] += input_id_len
             sample_outputs = self.model.generate(input_ids, attention_mask=attn_masks, **generate_params)
             generated_text = self.tokenizer.batch_decode(sample_outputs[:, input_id_len:], **decode_params)
-            generate_corpus = [word_tokenize(text.lower()) for text in generated_text]
+            generate_corpus = [text.split() for text in generated_text]
             return generate_corpus
 
         else:
             input_ids = [torch.tensor(self._encoder_decoder_model_encode(src, eval=True), dtype=torch.long)
                          for src in source_text]
             attn_masks = [torch.ones(len(inp), dtype=torch.long) for inp in input_ids]
-            input_ids = pad_sequence(input_ids, padding_value=pad_token_id, padding_side=padding_side).to(self.device)
-            attn_masks = pad_sequence(attn_masks, padding_value=0, padding_side=padding_side).to(self.device)
+            input_ids = _pad_sequence(input_ids, padding_value=pad_token_id, padding_side=padding_side).to(self.device)
+            attn_masks = _pad_sequence(attn_masks, padding_value=0, padding_side=padding_side).to(self.device)
 
             if self.model_name == 'mbart':
                 decoder_start_token_id = self.tokenizer.lang_code_to_id[self.tokenizer.tgt_lang]
@@ -465,5 +465,5 @@ class Transformers(Seq2SeqGenerator):
                 **generate_params
             )
             generated_text = self.tokenizer.batch_decode(sample_outputs, **decode_params)
-            generate_corpus = [word_tokenize(text.lower()) for text in generated_text]
+            generate_corpus = [text.split() for text in generated_text]
             return generate_corpus

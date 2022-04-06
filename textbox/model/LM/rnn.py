@@ -56,7 +56,7 @@ class RNN(UnconditionalGenerator):
         batch_size = len(batch_data['target_text'])
 
         for _ in range(batch_size):
-            hidden_states = torch.zeros(self.num_dec_layers, 1, self.hidden_size).to(self.device)
+            hidden_states = None
             generate_tokens = []
             input_seq = torch.LongTensor([[self.sos_token_idx]]).to(self.device)
             for gen_idx in range(self.max_length):

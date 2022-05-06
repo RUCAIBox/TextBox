@@ -150,7 +150,7 @@ class Trainer(AbstractTrainer):
                 self.embedding_size, self.warmup_steps
             )
         elif self.learner.lower() == 'inverse':
-            optimizer = InverseSquareRootOptim(optim.AdamW(self.model.parameters()), self.learning_rate, 1e-7, 1000)
+            optimizer = InverseSquareRootOptim(optim.AdamW(self.model.parameters()), 1e-7, self.learning_rate, 1000)
         else:
             if self.is_logger:
                 self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')

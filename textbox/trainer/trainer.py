@@ -28,7 +28,7 @@ from time import time
 from logging import getLogger
 
 from textbox.module.Optimizer.optim import InverseSquareRootOptim, CosineOptim, LinearOptim, ConstantOptim
-from textbox.evaluator import BaseEvaluator, evaluator_list
+from textbox.evaluator import BaseEvaluator, evaluator_list, kb2text_evaluator
 from textbox.utils import ensure_dir, early_stopping
 
 

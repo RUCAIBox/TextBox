@@ -3,7 +3,7 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2022/05/06, 2021/10/11, 2021/4/12, 2020/12/2, 2020/11/27, 2020/12/3, 2020/12/26
+# @Time   : 2022/05/10, 2021/10/11, 2021/4/12, 2020/12/2, 2020/11/27, 2020/12/3, 2020/12/26
 # @Author : Hu Yiwen, Tang Tianyi, Lai Xu, Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang, Jinhao Jiang
 # @Email  : huyiwen@ruc.edu.cn, tsui_lai@163.com, jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
 
@@ -12,6 +12,7 @@ textbox.trainer.trainer
 ################################
 """
 
+import logging
 import os
 import torch
 import torch.optim as optim
@@ -23,16 +24,18 @@ import collections
 
 from tqdm import tqdm
 
+
 from torch.utils.data import DataLoader
 from time import time
 from logging import getLogger
 
 from textbox.module.Optimizer.optim import InverseSquareRootOptim, CosineOptim, LinearOptim, ConstantOptim
 from textbox.evaluator import BaseEvaluator, evaluator_list, kb2text_evaluator
-from textbox.utils import ensure_dir, early_stopping
+from textbox.utils import ensure_dir
+from textbox.utils.utils import Timer, greater, less
 
 
-class AbstractTrainer(object):
+class AbstractTrainer:
     r"""Trainer Class is used to manage the training and evaluation processes of text generation system models.
     AbstractTrainer is an abstract class in which the fit() and evaluate() method should be implemented according
     to different training and evaluation strategies.
@@ -41,18 +44,60 @@ class AbstractTrainer(object):
     def __init__(self, config, model):
         self.config = config
         self.model = model
+        self.logger = getLogger()
 
     def fit(self, train_data):
         r"""Train the model based on the train data.
         """
 
-        raise NotImplementedError('Method [next] should be implemented.')
+        raise NotImplementedError('Method fit() should be implemented.')
 
     def evaluate(self, eval_data):
         r"""Evaluate the model based on the eval data.
         """
 
-        raise NotImplementedError('Method [next] should be implemented.')
+        raise NotImplementedError('Method evaluate() should be implemented.')
+
+
+class LossTracker:
+
+    def __init__(self, DDP: bool, loss_type: str):
+        self.total_loss = 0.
+        self.step_loss = None
+        self.total_num = 0
+        self.DDP = DDP
+        self.loss_type = loss_type
+
+    def append(self, _loss):
+        _check_nan(_loss)
+        self.step_loss = _loss
+        self.total_loss = _loss.item() if self.total_loss is None else self.total_loss + _loss.item()
+        self.total_num += 1
+
+    def backward(self):
+        self.step_loss.backward()
+
+    @staticmethod
+    def reduce_loss(loss):
+        torch.distributed.all_reduce(loss, op=torch.distributed.ReduceOp.SUM)
+        loss /= torch.distributed.get_world_size()
+        return loss
+
+    @property
+    def ratio(self):
+        if self.DDP:
+            return self.reduce_loss(torch.tensor(self.total_loss / self.total_num).to("cuda")).item()
+        else:
+            return self.total_loss / self.total_num
+
+    @property
+    def perplexity(self):
+        return np.exp(self.ratio)
+
+
+def _check_nan(loss):
+    if torch.isnan(loss):
+        raise ValueError('Training loss is nan')
 
 
 class Trainer(AbstractTrainer):
@@ -73,7 +118,7 @@ class Trainer(AbstractTrainer):
         super(Trainer, self).__init__(config, model)
 
         self.DDP = config['DDP']
-        self.logger = getLogger()
+        self.filename = config['filename']
         self.learner = config['learner'].lower()
         self.schedule = config['schedule'].lower()
         self.init_lr = config['init_lr']
@@ -87,8 +132,9 @@ class Trainer(AbstractTrainer):
         self.device = config['device']
         self.embedding_size = config['embedding_size']
         self.warmup_steps = config['warmup_steps']
-        self.checkpoint_dir = config['checkpoint_dir']
         self.grad_clip = config['grad_clip']
+
+        self.checkpoint_dir = config['checkpoint_dir']
         ensure_dir(self.checkpoint_dir)
         saved_model_file = self.config['filename'] + '.pth'
         self.saved_model_file = os.path.join(self.checkpoint_dir, saved_model_file)
@@ -102,7 +148,7 @@ class Trainer(AbstractTrainer):
         self.cur_step = 0
         self.best_valid_score = 100000000
         self.best_valid_result = None
-        self.train_loss_dict = dict()
+        self.train_loss_list = list()
         self.optimizer = self._build_optimizer()
 
         self.metrics = config["metrics"]
@@ -115,23 +161,22 @@ class Trainer(AbstractTrainer):
         self.iid_field = config['ITEM_ID_FIELD']
 
     def _check_metrics(self):
-        r"""check the correct of the setting"""
-        if isinstance(self.metrics, (str, list)):
-            if isinstance(self.metrics, str):
-                if self.metrics[0] == '[':
-                    self.metrics = self.metrics[1:]
-                if self.metrics[-1] == ']':
-                    self.metrics = self.metrics[:-1]
-                self.metrics = self.metrics.strip().split(",")
-            self.metrics = [metric.lower() for metric in self.metrics]
-            for metric in self.metrics:
-                if metric not in evaluator_list:
-                    raise ValueError(
-                        "evaluator {} can't be found. ".format(metric) + "(evaluator should be in [" +
-                        ", ".join(evaluator_list) + "])"
-                    )
-        else:
-            raise TypeError('evaluator must be a string or list')
+        r"""check the correctness of the setting"""
+        if not isinstance(self.metrics, (str, list)):
+            raise TypeError('Evaluator must be a string or list.')
+        if isinstance(self.metrics, str):
+            if self.metrics[0] == '[' and self.metrics[-1] == ']':
+                self.metrics = self.metrics[1:-1]
+            self.metrics = self.metrics.split(",")
+
+        self.metrics = set(map(lambda x: x.strip().lower(), self.metrics))
+
+        if len(self.metrics - evaluator_list) != 0:
+            self.logger.warning(
+                "Evaluator(s) " + ", ".join(self.metrics - evaluator_list) +
+                " are ignored because not in supported evaluators list (" + ", ".join(evaluator_list) + ")."
+            )
+            self.metrics -= self.metrics - evaluator_list
 
     def _build_optimizer(self):
         r"""Init the Optimizer
@@ -189,29 +234,17 @@ class Trainer(AbstractTrainer):
             tuple which includes the sum of loss in each part.
         """
         self.model.train()
-        total_loss = None
+        loss_tracker = LossTracker(self.DDP, "Loss/train")
 
-        pbar = train_data
-        if self.is_logger:
-            pbar = tqdm(pbar)
-
-        for data in pbar:
+        for data in tqdm(train_data) if self.is_logger else train_data:
             self.optimizer.zero_grad()
-            losses = self.model(data, epoch_idx=epoch_idx)
-            if isinstance(losses, tuple):
-                loss = sum(losses)
-                loss_tuple = tuple(per_loss.item() for per_loss in losses)
-                total_loss = loss_tuple if total_loss is None else tuple(map(sum, zip(total_loss, loss_tuple)))
-            else:
-                loss = losses
-                total_loss = losses.item() if total_loss is None else total_loss + losses.item()
-
-            self._check_nan(loss)
-            loss.backward()
+            loss = self.model(data, epoch_idx=epoch_idx)
+            loss_tracker.append(loss)
+            loss_tracker.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
             self.optimizer.step()
-        train_loss = total_loss / len(train_data)
-        return train_loss
+
+        return loss_tracker.ratio
 
     def _valid_epoch(self, valid_data):
         r"""Valid the model with valid data
@@ -223,22 +256,15 @@ class Trainer(AbstractTrainer):
             float: valid score
             dict: valid result
         """
+        self.model.eval()
+        loss_tracker = LossTracker(self.DDP, "Loss/valid")
+
         with torch.no_grad():
-            self.model.eval()
-            total_loss = None
-            for batch_idx, data in enumerate(valid_data):
+            for data in tqdm(valid_data) if self.logger.level == logging.DEBUG else valid_data:
                 losses = self.model(data)
-                if isinstance(losses, tuple):
-                    loss = sum(losses)
-                    loss_tuple = tuple(per_loss.item() for per_loss in losses)
-                    total_loss = loss_tuple if total_loss is None else tuple(map(sum, zip(total_loss, loss_tuple)))
-                else:
-                    loss = losses
-                    total_loss = losses.item() if total_loss is None else total_loss + losses.item()
-                self._check_nan(loss)
-            valid_loss = total_loss / len(valid_data)
-            ppl = np.exp(valid_loss)
-        return valid_loss, ppl
+                loss_tracker.append(losses)
+
+        return loss_tracker.ratio, loss_tracker.perplexity
 
     def _save_checkpoint(self, epoch):
         r"""Store the model parameters information and training information.
@@ -247,29 +273,26 @@ class Trainer(AbstractTrainer):
             epoch (int): the current epoch id
 
         """
+        _state_dict = self.model.state_dict()
+        if self.DDP and torch.distributed.get_rank() == 0:
+            _new_dict = collections.OrderedDict()
+            for key, val in _state_dict["state_dict"].items():
+                changed_key = key[7:] if key[0:7] == 'module.' else key
+                _new_dict[changed_key] = val
+            _state_dict = _new_dict
+
         state = {
             'config': self.config,
             'epoch': epoch,
             'cur_step': self.cur_step,
             'best_valid_score': self.best_valid_score,
-            'state_dict': self.model.state_dict(),
+            'state_dict': _state_dict,
             'optimizer': self.optimizer.state_dict(),
         }
-        if self.DDP:
-            if (torch.distributed.get_rank() == 0):
-                saved_dict = collections.OrderedDict()
-                for key, val in state.items():
-                    if (key == 'state_dict'):
-                        for state_dict_key, state_dict_val in val.items():
-                            if (state_dict_key[0:7] == 'module.'):
-                                changed_key = state_dict_key[7:]
-                            else:
-                                changed_key = state_dict_key
-                            saved_dict[changed_key] = state_dict_val
-                        state[key] = saved_dict
-                torch.save(state, self.saved_model_file)
-        else:
-            torch.save(state, self.saved_model_file)
+
+        torch.save(state, self.saved_model_file)
+        self._saved_once = True
+        self.logger.info('Saving current: {}'.format(self.saved_model_file))
 
     def _save_generated_text(self, generated_corpus):
         r"""Store the generated text by our model.
@@ -277,9 +300,9 @@ class Trainer(AbstractTrainer):
         Args:
             corpus (list of string list):
         """
-        with open(self.saved_text_file, 'w') as fin:
+        with open(self.saved_text_file, 'w') as fout:
             for tokens in generated_corpus:
-                fin.write(' '.join(tokens) + '\n')
+                fout.write(' '.join(tokens) + '\n')
 
     def resume_checkpoint(self, resume_file):
         r"""Load the model parameters information and training information.
@@ -289,18 +312,23 @@ class Trainer(AbstractTrainer):
 
         """
         resume_file = str(resume_file)
-        checkpoint = torch.load(resume_file)
+        self.logger.info("Resuming checkpoint from {}...".format(resume_file))
+        if os.path.isfile(resume_file):
+            checkpoint = torch.load(resume_file)
+        else:
+            self.logger.warning('Checkpoint file "{}" not found. Resuming stopped.'.format(resume_file))
+            return
+
         self.start_epoch = checkpoint['epoch'] + 1
         self.cur_step = checkpoint['cur_step']
         self.best_valid_score = checkpoint['best_valid_score']
 
         # load architecture params from checkpoint
         if checkpoint['config']['model'].lower() != self.config['model'].lower():
-            if self.is_logger:
-                self.logger.warning(
-                    'Architecture configuration given in config file is different from that of checkpoint. '
-                    'This may yield an exception while state_dict is being loaded.'
-                )
+            self.logger.warning(
+                'Architecture configuration given in config file is different from that of checkpoint. '
+                'This may yield an exception while state_dict is being loaded.'
+            )
         if self.DDP:
             saved_dict = collections.OrderedDict()
             for state_dict_key, state_dict_val in checkpoint['state_dict'].items():
@@ -311,28 +339,15 @@ class Trainer(AbstractTrainer):
 
         # load optimizer state from checkpoint only when optimizer type is not changed
         self.optimizer.load_state_dict(checkpoint['optimizer'])
-        message_output = 'Checkpoint loaded. Resume training from epoch {}'.format(self.start_epoch)
-        if self.is_logger:
-            self.logger.info(message_output)
+        self.logger.info('Checkpoint loaded. Resume training from epoch {}'.format(self.start_epoch))
 
-    def _check_nan(self, loss):
-        if torch.isnan(loss):
-            raise ValueError('Training loss is nan')
-
-    def _generate_train_loss_output(self, epoch_idx, s_time, e_time, losses, train_info=""):
-        train_loss_output = "epoch %d %straining [time: %.2fs, " % (epoch_idx, train_info, e_time - s_time)
-        if isinstance(losses, tuple):
-            for idx, loss in enumerate(losses):
-                train_loss_output += 'train_loss%d: %.4f, ' % (idx + 1, loss)
-            train_loss_output = train_loss_output[:-2]
-        else:
-            train_loss_output += "train loss: %.4f" % losses
-        return train_loss_output + ']'
-
-    def reduce_loss(self, loss):
-        torch.distributed.all_reduce(loss, op=torch.distributed.ReduceOp.SUM)
-        loss /= torch.distributed.get_world_size()
-        return loss
+    def _output_loss(self, epoch_idx: int, time_duration: float, loss: float, loss_type: str, epoch_info="", ppl=None):
+        """Output loss with epoch and time information."""
+        output = f"Epoch {epoch_idx} {epoch_info} {loss_type} [time: {time_duration:.2f}s, {loss_type}_loss: {loss:.4f}"
+        if ppl:
+            output += ", {} ppl: {}".format(loss_type, ppl)
+        # flush
+        self.logger.info(output + ']')
 
     def fit(self, train_data, valid_data=None, verbose=True, saved=True):
         r"""Train the model based on the train data and the valid data.
@@ -345,77 +360,70 @@ class Trainer(AbstractTrainer):
             saved (bool, optional): whether to save the model parameters, default: True
 
         Returns:
-             (float, dict): best valid score and best valid result. If valid_data is None, it returns (-1, None)
+             (float, dict): the best valid score and best valid result. If valid_data is None, it returns (-1, None)
         """
-        if self.start_epoch >= self.epochs or self.epochs <= 0:
-            self._save_checkpoint(-1)
+        self._saved_once = False
+        best_epoch = -1
 
+        self.logger.info("====== Start training ======")
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
-            training_start_time = time()
-            train_loss = self._train_epoch(train_data, epoch_idx)
-            training_end_time = time()
-            train_loss = sum(train_loss) if isinstance(train_loss, tuple) else train_loss
-            if self.DDP:
-                train_loss = self.reduce_loss(torch.tensor(train_loss).to("cuda")).item()
-            self.train_loss_dict[epoch_idx] = train_loss
-            train_loss_output = \
-                self._generate_train_loss_output(epoch_idx, training_start_time, training_end_time, train_loss)
-            if verbose:
-                if self.is_logger:
-                    self.logger.info(train_loss_output)
+            with Timer() as train_timer:
+                train_loss = self._train_epoch(train_data, epoch_idx)
+            self.train_loss_list.append(train_loss)
+            self._output_loss(epoch_idx, train_timer.duration, train_loss, loss_type="training")
 
-            # eval
-            if self.eval_step <= 0 or not valid_data:
-                if saved:
-                    self._save_checkpoint(epoch_idx)
-                    update_output = 'Saving current: %s' % self.saved_model_file
-                    if verbose:
-                        if self.is_logger:
-                            self.logger.info(update_output)
+            # validation
+            if self.eval_step <= 0 or not valid_data or (epoch_idx + 1) % self.eval_step != 0:
                 continue
-            if (epoch_idx + 1) % self.eval_step == 0:
-                valid_start_time = time()
-                with torch.no_grad():
-                    valid_score, valid_result = self._valid_epoch(valid_data)
-                # valid_loss, ppl
-                if self.DDP:
-                    valid_score = self.reduce_loss(torch.tensor(valid_score).to("cuda")).item()
-                self.best_valid_score, self.cur_step, stop_flag, update_flag = early_stopping(
-                    valid_score, self.best_valid_score, self.cur_step, max_step=self.stopping_step, bigger=False
-                )
-                # better model are supposed to provide smaller perplexity and loss
-                valid_end_time = time()
-                valid_score_output = "epoch %d evaluating [time: %.2fs, valid_loss: %f]" % \
-                                     (epoch_idx, valid_end_time - valid_start_time, valid_score)
-                valid_result_output = 'valid ppl: {}'.format(valid_result)
-                if verbose:
-                    if self.is_logger:
-                        self.logger.info(valid_score_output)
-                        self.logger.info(valid_result_output)
-                if update_flag:
-                    if saved:
-                        self._save_checkpoint(epoch_idx)
-                        update_output = 'Saving current best: %s' % self.saved_model_file
-                        if verbose:
-                            if self.is_logger:
-                                self.logger.info(update_output)
-                    self.best_valid_result = valid_result
 
-                if stop_flag:
-                    stop_output = 'Finished training, best eval result in epoch %d' % \
-                                  (epoch_idx - self.cur_step * self.eval_step)
-                    if verbose:
-                        if self.is_logger:
-                            self.logger.info(stop_output)
-                    break
+            with torch.no_grad(), Timer() as valid_timer:
+                valid_loss, valid_ppl = self._valid_epoch(valid_data)
+            self._output_loss(epoch_idx, valid_timer.duration, valid_loss, loss_type="validating", ppl=valid_ppl)
+
+            # better model are supposed to provide smaller perplexity and loss
+            if self.early_stopping(valid_loss, valid_ppl, epoch_idx):
+                best_epoch = epoch_idx - self.cur_step * self.eval_step
+                break
+
+        if not self._saved_once and saved:
+            self._save_checkpoint(max(best_epoch, self.epochs - 1))
+        self.logger.info('====== Finished training, best eval result in epoch {} ======'.format(best_epoch))
         return self.best_valid_score, self.best_valid_result
+
+    def early_stopping(self, valid_loss, valid_ppl, saved_id, bigger=False):
+        r""" validation-based early stopping
+
+        Args:
+            valid_loss (float):
+            valid_ppl (float):
+            bigger (bool, optional): whether the bigger the better
+            saved_id (Optional[int]): epoch id if saved
+
+        Returns:
+            - bool,
+              whether to stop
+        """
+
+        stop_flag = False
+        compare = greater if bigger else less
+
+        if compare(valid_loss, self.best_valid_score):
+            self.cur_step = 0
+            self.best_valid_score = valid_loss
+            self.best_valid_result = valid_ppl
+            self._save_checkpoint(saved_id)
+        else:
+            self.cur_step += 1
+            stop_flag = self.cur_step > self.stopping_step
+
+        return stop_flag
 
     def _evaluate_nll_test(self, eval_data):
         r"""Calculate the negative log-likelihood of the eval_data.
 
         Args:
-            eval_data (DataLoader): the eval data.
+            eval_data (AbstractDataLoader): the eval data.
 
         Returns:
             Float: NLL_test of the eval data.
@@ -428,48 +436,48 @@ class Trainer(AbstractTrainer):
         return total_loss / len(eval_data)
 
     @torch.no_grad()
-    def evaluate(self, eval_data, load_best_model=True, model_file=None, eval=True):
+    def evaluate(self, eval_data, load_best_model=True, model_file=None, _eval=True):
         r"""Evaluate the model based on the eval data.
 
         Args:
-            eval_data (DataLoader): the eval data
+            eval_data (AbstractDataLoader): the eval data
             load_best_model (bool, optional): whether load the best model in the training process, default: True.
                                               It should be set True, if users want to test the model after training.
             model_file (str, optional): the saved model file, default: None. If users want to test the previously
                                         trained model file, they can set this parameter.
+            _eval (bool, optional): Whether to evaluate. Default is True. False to preview generation only.
 
         Returns:
             dict: eval result, key is the eval metric and value in the corresponding metric value
         """
         if load_best_model:
-            if model_file:
-                checkpoint_file = model_file
-            else:
-                checkpoint_file = self.saved_model_file
+            checkpoint_file = model_file or self.saved_model_file
+            if not os.path.isfile(checkpoint_file):
+                self.logger.error(f'Cannot evaluate model: "{checkpoint_file}" not found.')
+                return
+            self.logger.info('Loading model structure and parameters from {} ...'.format(checkpoint_file))
             checkpoint = torch.load(checkpoint_file)
             self.model.load_state_dict(checkpoint['state_dict'])
-            message_output = 'Loading model structure and parameters from {}'.format(checkpoint_file)
-            if self.is_logger:
-                self.logger.info(message_output)
 
         self.model.eval()
 
-        if not eval:
-            generate_sentence = self.model.generate(eval_data.__next__(), eval_data)
-            print(' '.join(generate_sentence[0]))
+        if not _eval:
+            generate_sentence = self.model.generate(next(eval_data), eval_data)
+            self.logger.info('Generation Preview: ' + ' '.join(generate_sentence[0]))
             return
 
         generate_corpus = []
-        with torch.no_grad():
-            for batch_data in tqdm(eval_data):
-                generated = self.model.generate(batch_data, eval_data)
-                assert len(generated) == len(batch_data['target_text'])
-                generate_corpus.extend(generated)
+        for batch_data in tqdm(eval_data) if self.is_logger else eval_data:
+            generated = self.model.generate(batch_data, eval_data)
+            assert len(generated) == len(batch_data['target_text']), "Generated corpus has a mismatched batch size!"
+            generate_corpus.extend(generated)
         self._save_generated_text(generate_corpus)
+
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
         if "nll_test" in self.metrics and self.config['task_type'].lower() == "unconditional":
             result['nll_test'] = self._evaluate_nll_test(eval_data)
+
         return result
 
     def plot_train_loss(self, show=True, save_path=None):
@@ -480,13 +488,12 @@ class Trainer(AbstractTrainer):
             save_path (str, optional): the data path to save the figure, default: None.
                                        If it's None, it will not be saved.
         """
-        epochs = list(self.train_loss_dict.keys())
-        epochs.sort()
-        values = [float(self.train_loss_dict[epoch]) for epoch in epochs]
-        plt.plot(epochs, values)
+        epochs = range(1, 1 + len(self.train_loss_list))
+        plt.plot(epochs, self.train_loss_list)
         plt.xticks(epochs)
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
+        plt.title(self.filename)
         if show:
             plt.show()
         if save_path:
@@ -559,7 +566,7 @@ class GANTrainer(Trainer):
         else:
             loss = losses
             total_loss = losses.item() if total_loss is None else total_loss + losses.item()
-        self._check_nan(loss)
+        _check_nan(loss)
 
         opt.zero_grad()
         loss.backward()
@@ -941,7 +948,7 @@ class MaskGANTrainer(GANTrainer):
         else:
             loss = losses
             total_loss = losses.item() if total_loss is None else total_loss + losses.item()
-        self._check_nan(loss)
+        _check_nan(loss)
 
         opt.zero_grad()
         loss.backward(retain_graph=retain_graph)
@@ -991,7 +998,6 @@ class MaskGANTrainer(GANTrainer):
             real_data = self._get_real_data(train_data)  # bs * self.max_len
             real_dataloader = DataLoader(real_data, batch_size=self.model.batch_size, shuffle=True, drop_last=True)
             for batch_idx, data in enumerate(real_dataloader):
-
                 loss = lm_forward(data)
                 total_loss = self._optimize_step(loss, total_loss, pre_train_lm, lm_opt)
 
@@ -1379,7 +1385,7 @@ class LeakGANTrainer(GANTrainer):
         else:
             loss = losses
             total_loss = losses.item() if total_loss is None else total_loss + losses.item()
-        self._check_nan(loss)
+        _check_nan(loss)
 
         if isinstance(losses, tuple):
             for i, (o, loss) in enumerate(zip(opt, losses)):

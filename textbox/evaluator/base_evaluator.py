@@ -29,10 +29,10 @@ from textbox.evaluator.unique_evaluator import UniqueEvaluator
 from textbox.evaluator.rouge_evaluator import RougeEvaluator
 from textbox.evaluator.kb2text_evaluator import Kb2TextEvaluator
 
-evaluator_list = [
+evaluator_list = {
     'bleu', 'self_bleu', 'rouge', 'distinct', 'nll_test', 'avg_len', 'cider', 'chrf++', 'meteor', 'unique',
     'bert_score', 'kb2text'
-]
+}
 
 
 class BaseEvaluator():

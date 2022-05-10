@@ -20,6 +20,29 @@ import random
 import torch
 import numpy as np
 from textbox.utils.enum_type import ModelType, PLM_MODELS
+import time
+
+
+class Timer:
+
+    def __enter__(self):
+        self.__stime = time.time()
+        return self
+
+    def __exit__(self, *exc_info):
+        self.__etime = time.time()
+
+    @property
+    def duration(self):
+        return self.__etime - self.__stime
+
+
+def greater(x, y):
+    return x > y
+
+
+def less(x, y):
+    return x < y
 
 
 def get_local_time():
@@ -41,8 +64,7 @@ def ensure_dir(dir_path):
         dir_path (str): directory path
 
     """
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
+    os.makedirs(dir_path, exist_ok=True)
 
 
 def get_model(model_name):
@@ -90,50 +112,6 @@ def get_trainer(model_type, model_name):
             return getattr(importlib.import_module('textbox.trainer'), 'Seq2SeqTrainer')
         else:
             return getattr(importlib.import_module('textbox.trainer'), 'Trainer')
-
-
-def early_stopping(value, best, cur_step, max_step, bigger=True):
-    r""" validation-based early stopping
-
-    Args:
-        value (float): current result
-        best (float): best result
-        cur_step (int): the number of consecutive steps that did not exceed the best result
-        max_step (int): threshold steps for stopping
-        bigger (bool, optional): whether the bigger the better
-
-    Returns:
-        tuple:
-        - float,
-          best result after this step
-        - int,
-          the number of consecutive steps that did not exceed the best result after this step
-        - bool,
-          whether to stop
-        - bool,
-          whether to update
-    """
-    stop_flag = False
-    update_flag = False
-    if bigger:
-        if value > best:
-            cur_step = 0
-            best = value
-            update_flag = True
-        else:
-            cur_step += 1
-            if cur_step > max_step:
-                stop_flag = True
-    else:
-        if value < best:
-            cur_step = 0
-            best = value
-            update_flag = True
-        else:
-            cur_step += 1
-            if cur_step > max_step:
-                stop_flag = True
-    return best, cur_step, stop_flag, update_flag
 
 
 def init_seed(seed, reproducibility):

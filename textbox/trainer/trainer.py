@@ -23,7 +23,7 @@ import math
 import collections
 
 from tqdm import tqdm
-
+from torch.utils.tensorboard import SummaryWriter
 
 from torch.utils.data import DataLoader
 from time import time
@@ -68,11 +68,20 @@ class LossTracker:
         self.DDP = DDP
         self.loss_type = loss_type
 
+    def __enter__(self):
+        self.writer = SummaryWriter(log_dir="./log/runs")
+        return self
+
+    def __exit__(self, *args):
+        self.writer.flush()
+        self.writer.close()
+
     def append(self, _loss):
         _check_nan(_loss)
         self.step_loss = _loss
         self.total_loss = _loss.item() if self.total_loss is None else self.total_loss + _loss.item()
         self.total_num += 1
+        self.writer.add_scalar(self.loss_type, _loss, self.total_num)
 
     def backward(self):
         self.step_loss.backward()
@@ -234,15 +243,14 @@ class Trainer(AbstractTrainer):
             tuple which includes the sum of loss in each part.
         """
         self.model.train()
-        loss_tracker = LossTracker(self.DDP, "Loss/train")
-
-        for data in tqdm(train_data) if self.is_logger else train_data:
-            self.optimizer.zero_grad()
-            loss = self.model(data, epoch_idx=epoch_idx)
-            loss_tracker.append(loss)
-            loss_tracker.backward()
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
-            self.optimizer.step()
+        with LossTracker(self.DDP, "Loss/train") as loss_tracker:
+            for data in tqdm(train_data) if self.is_logger else train_data:
+                self.optimizer.zero_grad()
+                loss = self.model(data, epoch_idx=epoch_idx)
+                loss_tracker.append(loss)
+                loss_tracker.backward()
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
+                self.optimizer.step()
 
         return loss_tracker.ratio
 
@@ -257,9 +265,7 @@ class Trainer(AbstractTrainer):
             dict: valid result
         """
         self.model.eval()
-        loss_tracker = LossTracker(self.DDP, "Loss/valid")
-
-        with torch.no_grad():
+        with torch.no_grad(), LossTracker(self.DDP, "Loss/valid") as loss_tracker:
             for data in tqdm(valid_data) if self.logger.level == logging.DEBUG else valid_data:
                 losses = self.model(data)
                 loss_tracker.append(losses)

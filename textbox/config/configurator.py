@@ -170,9 +170,6 @@ class Config(object):
             logger.warning('command line args [{}] will not be used in TextBox'.format(' '.join(unrecognized_args)))
         cmd_config_dict = self._convert_config_dict(cmd_config_dict)
 
-        if cmd_config_dict.get('load_experiment'):
-            cmd_config_dict['load_experiment'] = os.path.abspath(cmd_config_dict['load_experiment'])
-
         if 'task_type' in cmd_config_dict and cmd_config_dict['task_type'] not in [
             'unconditional', 'translation', 'summarization', 'attribute', 'multi_dialog', 'poem'
         ]:

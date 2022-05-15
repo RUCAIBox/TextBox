@@ -44,10 +44,9 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
 
     is_logger = (config['DDP'] and torch.distributed.get_rank() == 0) or not config['DDP']
 
-    if is_logger:
-        init_logger(config)
-        logger = getLogger()
-        logger.info(config)
+    init_logger(config, is_logger)
+    logger = getLogger()
+    logger.info(config)
 
     # dataset splitting
     train_data, valid_data, test_data = data_preparation(config)
@@ -66,8 +65,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     else:
         model = single_model
 
-    if is_logger:
-        logger.info(model)
+    logger.info(model)
 
     # trainer loading and initialization
     trainer = get_trainer(config['MODEL_TYPE'], config['model'])(config, model)
@@ -80,8 +78,8 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
             trainer.resume_checkpoint(resume_file=config['load_experiment'])
         # model training
         best_valid_score, best_valid_result = trainer.fit(train_data, valid_data, saved=saved)
-        if (config['DDP'] == True):
-            if (torch.distributed.get_rank() != 0):
+        if config['DDP']:
+            if torch.distributed.get_rank() != 0:
                 return
             config['DDP'] = False
             model = get_model(config['model'])(config, train_data).to(config['device'])

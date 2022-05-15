@@ -32,7 +32,8 @@ from logging import getLogger
 from textbox.module.Optimizer.optim import InverseSquareRootOptim, CosineOptim, LinearOptim, ConstantOptim
 from textbox.evaluator import BaseEvaluator, evaluator_list, kb2text_evaluator
 from textbox.utils import ensure_dir
-from textbox.utils.utils import Timer, greater, less
+from textbox.utils.utils import Timer
+from operator import lt as less, gt as greater
 
 
 class AbstractTrainer:
@@ -243,8 +244,9 @@ class Trainer(AbstractTrainer):
             tuple which includes the sum of loss in each part.
         """
         self.model.train()
+        train_data = tqdm(train_data) if self.is_logger else train_data
         with LossTracker(self.DDP, "Loss/train") as loss_tracker:
-            for data in tqdm(train_data) if self.is_logger else train_data:
+            for data in train_data:
                 self.optimizer.zero_grad()
                 loss = self.model(data, epoch_idx=epoch_idx)
                 loss_tracker.append(loss)
@@ -265,8 +267,9 @@ class Trainer(AbstractTrainer):
             dict: valid result
         """
         self.model.eval()
-        with torch.no_grad(), LossTracker(self.DDP, "Loss/valid") as loss_tracker:
-            for data in tqdm(valid_data) if self.logger.level == logging.DEBUG else valid_data:
+        valid_data = tqdm(valid_data) if self.is_logger else valid_data
+        with LossTracker(self.DDP, "Loss/valid") as loss_tracker:
+            for data in valid_data:
                 losses = self.model(data)
                 loss_tracker.append(losses)
 
@@ -459,7 +462,7 @@ class Trainer(AbstractTrainer):
         if load_best_model:
             checkpoint_file = model_file or self.saved_model_file
             if not os.path.isfile(checkpoint_file):
-                self.logger.error(f'Cannot evaluate model: "{checkpoint_file}" not found.')
+                self.logger.error(f'Failed to evaluate model: "{checkpoint_file}" not found.')
                 return
             self.logger.info('Loading model structure and parameters from {} ...'.format(checkpoint_file))
             checkpoint = torch.load(checkpoint_file)
@@ -473,7 +476,8 @@ class Trainer(AbstractTrainer):
             return
 
         generate_corpus = []
-        for batch_data in tqdm(eval_data) if self.is_logger else eval_data:
+        eval_data = tqdm(eval_data) if self.is_logger else eval_data
+        for batch_data in eval_data:
             generated = self.model.generate(batch_data, eval_data)
             assert len(generated) == len(batch_data['target_text']), "Generated corpus has a mismatched batch size!"
             generate_corpus.extend(generated)
@@ -895,9 +899,9 @@ class Seq2SeqTrainer(Trainer):
             return
 
         generate_corpus = []
-        with torch.no_grad():
-            for batch_data in tqdm(eval_data):
-                generate_corpus.extend(self.model.generate(batch_data, eval_data))
+        eval_data = tqdm(eval_data) if self.is_logger else eval_data
+        for batch_data in eval_data:
+            generate_corpus.extend(self.model.generate(batch_data, eval_data))
         self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)

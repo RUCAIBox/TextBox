@@ -37,14 +37,6 @@ class Timer:
         return self.__etime - self.__stime
 
 
-def greater(x, y):
-    return x > y
-
-
-def less(x, y):
-    return x < y
-
-
 def get_local_time():
     r"""Get current time
 

@@ -9,9 +9,17 @@ textbox.utils.logger
 
 import logging
 import os
+from textbox.utils.utils import ensure_dir
 
 
-def init_logger(config):
+log_dir = './log/'
+file_fmt = "%(asctime)-15s %(levelname)s %(message)s"
+file_date_fmt = "%a %d %b %Y %H:%M:%S"
+stream_fmt = "%(asctime)-15s %(levelname)s %(message)s"
+stream_date_fmt = "%d %b %H:%M"
+
+
+def init_logger(config, is_logger: bool):
     """
     A logger that can show a message on standard output and write it into the
     file named `filename` simultaneously.
@@ -19,46 +27,34 @@ def init_logger(config):
 
     Args:
         config (Config): An instance object of Config, used to record parameter information.
+        is_logger (bool): Whether to log
 
     Example:
-        >>> logger = logging.getLogger(config)
+        >>> logger = logging.getLogger()
         >>> logger.debug(train_state)
         >>> logger.info(train_result)
     """
-    LOGROOT = './log/'
-    dir_name = os.path.dirname(LOGROOT)
-    if not os.path.exists(dir_name):
-        os.makedirs(dir_name)
+    dir_name = os.path.dirname(log_dir)
+    ensure_dir(dir_name)
 
-    logfilename = config['filename'] + '.log'
+    log_filename = config['filename'] + '.log'
+    log_filepath = os.path.join(log_dir, log_filename)
 
-    logfilepath = os.path.join(LOGROOT, logfilename)
+    file_formatter = logging.Formatter(file_fmt, file_date_fmt)
+    stream_formatter = logging.Formatter(stream_fmt, stream_date_fmt)
 
-    filefmt = "%(asctime)-15s %(levelname)s %(message)s"
-    filedatefmt = "%a %d %b %Y %H:%M:%S"
-    fileformatter = logging.Formatter(filefmt, filedatefmt)
+    if config['state'] is None:
+        config['state'] = 'info'
+    if not is_logger:
+        config['state'] = 'critical'
+    level = getattr(logging, config['state'].upper(), None)
 
-    sfmt = "%(asctime)-15s %(levelname)s %(message)s"
-    sdatefmt = "%d %b %H:%M"
-    sformatter = logging.Formatter(sfmt, sdatefmt)
-    if config['state'] is None or config['state'].lower() == 'info':
-        level = logging.INFO
-    elif config['state'].lower() == 'debug':
-        level = logging.DEBUG
-    elif config['state'].lower() == 'error':
-        level = logging.ERROR
-    elif config['state'].lower() == 'warning':
-        level = logging.WARNING
-    elif config['state'].lower() == 'critical':
-        level = logging.CRITICAL
-    else:
-        level = logging.INFO
-    fh = logging.FileHandler(logfilepath)
-    fh.setLevel(level)
-    fh.setFormatter(fileformatter)
+    file_handler = logging.FileHandler(log_filepath)
+    file_handler.setLevel(level)
+    file_handler.setFormatter(file_formatter)
 
-    sh = logging.StreamHandler()
-    sh.setLevel(level)
-    sh.setFormatter(sformatter)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(level)
+    stream_handler.setFormatter(stream_formatter)
 
-    logging.basicConfig(level=level, handlers=[fh, sh])
+    logging.basicConfig(level=level, handlers=[file_handler, stream_handler])

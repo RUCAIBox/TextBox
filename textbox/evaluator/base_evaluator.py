@@ -31,29 +31,31 @@ from textbox.evaluator.kb2text_evaluator import Kb2TextEvaluator
 
 evaluator_list = {
     'bleu', 'self_bleu', 'rouge', 'distinct', 'nll_test', 'avg_len', 'cider', 'chrf++', 'meteor', 'unique',
-    'bert_score', 'kb2text'
+    'bert_score', 'kb2text', 'loss'
 }
 
 
-class BaseEvaluator():
+class BaseEvaluator:
 
     def __init__(self, config, metrics):
         self.config = config
         self.metrics = metrics
         # [1, 2, 3, 4]
 
-    def evaluate(self, generate_corpus, reference_corpus):
+    def evaluate(self, generate_corpus, reference_corpus, metrics=None):
         r"""get metrics result
 
         Args:
             generate_corpus: the generated corpus
             reference_corpus: the referenced corpus
-        
+            metrics: force specify metrics
+
         Returns:
             dict: such as ``{'bleu-1': xxx, 'bleu-1-avg': yyy}``
         """
         result_dict = {}
-        for metric in self.metrics:
+        metrics = (metrics or self.metrics)
+        for metric in metrics:
             if metric == 'bleu':
                 task_type = (self.config['task_type'].lower() == "unconditional")
                 evaluator = BleuEvaluator(task_type)
@@ -82,8 +84,10 @@ class BaseEvaluator():
                 evaluator = BertScoreEvaluator(model, num_layers)
             elif metric == 'unique':
                 evaluator = UniqueEvaluator()
-            elif metric == 'nll_test':
+            elif metric == 'nll_test' or metric == 'loss':
                 continue
+            else:
+                raise ValueError(f'Evaluator of "{metric}" unrecognized.')
             metric_result = evaluator.evaluate(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
             result_dict[metric] = metric_result
         return result_dict

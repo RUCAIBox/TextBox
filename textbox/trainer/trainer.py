@@ -23,7 +23,6 @@ import math
 import collections
 
 from tqdm import tqdm
-from torch.utils.tensorboard import SummaryWriter
 
 from torch.utils.data import DataLoader
 from time import time
@@ -31,9 +30,104 @@ from logging import getLogger
 
 from textbox.module.Optimizer.optim import InverseSquareRootOptim, CosineOptim, LinearOptim, ConstantOptim
 from textbox.evaluator import BaseEvaluator, evaluator_list, kb2text_evaluator
-from textbox.utils import ensure_dir
-from textbox.utils.utils import Timer
-from operator import lt as less, gt as greater
+from textbox.utils import ensure_dir, Timer, TensorboardWriter
+
+
+class EpochTracker:
+    """
+    Track validating metrics results and training/validating loss.
+    """
+    is_train = {True: "training", False: "validating"}
+
+    def __init__(self, config, epoch_idx: int, train: bool = True):
+        """
+        Args:
+            config: config
+            mode: Set the metrics tracker in training/validating mode
+        """
+        self._DDP = config['DDP']
+        self._metrics_factors = config['metrics_factors']
+        self._writer = TensorboardWriter.get_writer()
+        self._logger = getLogger()
+        self.epoch_idx = epoch_idx
+        self.mode_tag = self.is_train[train]
+
+        self._total_loss = 0.
+        self._total_num = 0
+        self._loss = None
+
+        self._metrics_results = None
+        self._score = None
+
+    def append_loss(self, loss: float):
+        _check_nan(loss)
+        self._total_loss += loss
+        self._total_num += 1
+        self._writer.add_scalar("Loss/" + self.mode_tag, loss)
+
+    def set_result(self, results: dict):
+        self._metrics_results = results
+        for metric, result in self._metrics_results.items():
+            self._writer.add_scalar("Metrics/" + metric, result)
+        self._metrics_results['loss'] = self.loss
+
+    def _calc_score(self) -> float:
+        score = 0.
+        for metric, result in self._metrics_results.items():
+            score += result * self._metrics_factors[metric]
+        self._writer.add_scalar("Metrics/mixed", score)
+        return score
+
+    @property
+    def score(self):
+        """get mixed score by calculating weighted sum of results"""
+        if self.mode_tag == self.is_train[True]:
+            self._logger.warning('Use "loss" to get training loss.')
+            return self.loss
+
+        if not self._score:
+            self._score = self._calc_score()
+        return self._score
+
+    def _calc_loss(self) -> float:
+        """Reduce loss if DDP enabled"""
+        _loss = self._total_loss / self._total_num
+        if self._DDP:
+            _loss = torch.tensor(_loss).to("cuda")
+            torch.distributed.all_reduce(_loss, op=torch.distributed.ReduceOp.SUM)
+            _loss /= torch.distributed.get_world_size()
+            _loss = _loss.item()
+        return _loss
+
+    @property
+    def loss(self):
+        """get total loss (loss will be reduced on the first call)
+        Returns:
+            float: loss
+        """
+
+        if not self._loss:
+            self._loss = self._calc_loss()
+        return self._loss
+
+    @property
+    def perplexity(self):
+        return np.exp(self.loss)
+
+    def info(self, time_duration: float, extra_info=""):
+        """Output loss with epoch and time information."""
+        output = f"Epoch {self.epoch_idx}, {extra_info} {self.mode_tag} "
+        output += f"[time: {time_duration:.2f}s, {self.mode_tag}_loss: {self.loss:.4f}"
+        if self.mode_tag == self.is_train[False]:
+            output += ", {} ppl: {}".format(self.mode_tag, self.perplexity)
+        output += "]"
+        # flush
+        self._logger.info(output)
+
+
+def _check_nan(loss):
+    if torch.isnan(loss):
+        raise ValueError('Training loss is nan')
 
 
 class AbstractTrainer:
@@ -58,56 +152,6 @@ class AbstractTrainer:
         """
 
         raise NotImplementedError('Method evaluate() should be implemented.')
-
-
-class LossTracker:
-
-    def __init__(self, DDP: bool, loss_type: str):
-        self.total_loss = 0.
-        self.step_loss = None
-        self.total_num = 0
-        self.DDP = DDP
-        self.loss_type = loss_type
-
-    def __enter__(self):
-        self.writer = SummaryWriter(log_dir="./log/runs")
-        return self
-
-    def __exit__(self, *args):
-        self.writer.flush()
-        self.writer.close()
-
-    def append(self, _loss):
-        _check_nan(_loss)
-        self.step_loss = _loss
-        self.total_loss = _loss.item() if self.total_loss is None else self.total_loss + _loss.item()
-        self.total_num += 1
-        self.writer.add_scalar(self.loss_type, _loss, self.total_num)
-
-    def backward(self):
-        self.step_loss.backward()
-
-    @staticmethod
-    def reduce_loss(loss):
-        torch.distributed.all_reduce(loss, op=torch.distributed.ReduceOp.SUM)
-        loss /= torch.distributed.get_world_size()
-        return loss
-
-    @property
-    def ratio(self):
-        if self.DDP:
-            return self.reduce_loss(torch.tensor(self.total_loss / self.total_num).to("cuda")).item()
-        else:
-            return self.total_loss / self.total_num
-
-    @property
-    def perplexity(self):
-        return np.exp(self.ratio)
-
-
-def _check_nan(loss):
-    if torch.isnan(loss):
-        raise ValueError('Training loss is nan')
 
 
 class Trainer(AbstractTrainer):
@@ -161,32 +205,15 @@ class Trainer(AbstractTrainer):
         self.train_loss_list = list()
         self.optimizer = self._build_optimizer()
 
-        self.metrics = config["metrics"]
-        self._check_metrics()
+        self.metrics = self._process_metrics("metrics")
+        self.valid_metrics_factors = config['valid_metrics_factors']
+        self.valid_metrics = self._process_metrics("valid_metrics")
         self.evaluator = BaseEvaluator(config, self.metrics)
 
         self.is_logger = (self.DDP and torch.distributed.get_rank() == 0) or not self.DDP
         self.item_tensor = None
         self.tot_item_num = None
         self.iid_field = config['ITEM_ID_FIELD']
-
-    def _check_metrics(self):
-        r"""check the correctness of the setting"""
-        if not isinstance(self.metrics, (str, list)):
-            raise TypeError('Evaluator must be a string or list.')
-        if isinstance(self.metrics, str):
-            if self.metrics[0] == '[' and self.metrics[-1] == ']':
-                self.metrics = self.metrics[1:-1]
-            self.metrics = self.metrics.split(",")
-
-        self.metrics = set(map(lambda x: x.strip().lower(), self.metrics))
-
-        if len(self.metrics - evaluator_list) != 0:
-            self.logger.warning(
-                "Evaluator(s) " + ", ".join(self.metrics - evaluator_list) +
-                " are ignored because not in supported evaluators list (" + ", ".join(evaluator_list) + ")."
-            )
-            self.metrics -= self.metrics - evaluator_list
 
     def _build_optimizer(self):
         r"""Init the Optimizer
@@ -223,13 +250,53 @@ class Trainer(AbstractTrainer):
             elif name == 'constant':
                 _optim = ConstantOptim(base_optim, self.init_lr, self.learning_rate, self.warmup_steps)
             else:
-                self.logger.info("Using none schedule")
+                self.logger.info("Learning rate scheduling disabled.")
                 _optim = base_optim
             return _optim
 
         optimizer = _get_base_optimizer(self.learner)
         optimizer = _get_schedule(self.schedule, optimizer)
         return optimizer
+
+    def _process_metrics(self, metrics_type: str) -> set:
+        r"""check the correctness of the setting"""
+        metrics = self.config[metrics_type]
+        if not isinstance(metrics, (str, list)):
+            raise TypeError(f'Evaluator(s) of {metrics_type} must be a string or list.')
+        if isinstance(metrics, str):
+            if metrics[0] == '[' and metrics[-1] == ']':
+                metrics = metrics[1:-1]
+            metrics = metrics.split(",")
+
+        metrics = map(lambda x: x.strip().lower(), metrics)
+
+        if metrics_type == 'valid_metrics':
+            metrics = list(metrics)
+            self.valid_metrics_factors = self.valid_metrics_factors or list()
+            if len(self.valid_metrics_factors) < len(metrics):
+                self.valid_metrics_factors += [1] * (len(metrics) - len(self.valid_metrics_factors))
+                self.logger.warning(
+                    '"valid_metrics" got a different size with its factors (valid_metrics_factors). Filled with 1s.'
+                )
+            self.valid_metrics_factors = dict(zip(metrics, self.valid_metrics_factors))
+            if self.valid_metrics_factors.get('loss') and self.valid_metrics_factors['loss'] > 0:
+                self.valid_metrics_factors['loss'] *= -1
+            self.config['metrics_factors'] = self.valid_metrics_factors
+
+            msg = "Validating with mixed metric: "
+            msg += " + ".join([f"({factor}) * {metric}" for metric, factor in self.valid_metrics_factors.items()])
+            self.logger.info(msg)
+
+        metrics = set(metrics)
+
+        if len(metrics - evaluator_list) != 0:
+            self.logger.warning(
+                f"Evaluator(s) of {metrics_type} " + ", ".join(metrics - evaluator_list) +
+                " are ignored because not in supported evaluators list (" + ", ".join(evaluator_list) + ")."
+            )
+            metrics -= metrics - evaluator_list
+
+        return metrics
 
     def _train_epoch(self, train_data, epoch_idx):
         r"""Train the model in an epoch
@@ -239,41 +306,41 @@ class Trainer(AbstractTrainer):
             epoch_idx (int): the current epoch id
 
         Returns:
-            float/tuple: The sum of loss returned by all batches in this epoch. If the loss in each batch contains
-            multiple parts and the model return these multiple parts loss instead of the sum of loss, It will return a
-            tuple which includes the sum of loss in each part.
+            !
         """
         self.model.train()
-        train_data = tqdm(train_data) if self.is_logger else train_data
-        with LossTracker(self.DDP, "Loss/train") as loss_tracker:
-            for data in train_data:
-                self.optimizer.zero_grad()
-                loss = self.model(data, epoch_idx=epoch_idx)
-                loss_tracker.append(loss)
-                loss_tracker.backward()
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
-                self.optimizer.step()
+        tracker = EpochTracker(self.config, epoch_idx, train=True)
+        train_tqdm = tqdm(train_data, desc="training") if self.is_logger else train_data
+        for data in train_tqdm:
+            self.optimizer.zero_grad()
+            loss = self.model(data, epoch_idx=epoch_idx)
+            tracker.append_loss(loss)
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
+            self.optimizer.step()
 
-        return loss_tracker.ratio
+        return tracker
 
-    def _valid_epoch(self, valid_data):
+    def _valid_epoch(self, valid_data, epoch_idx):
         r"""Valid the model with valid data
 
         Args:
             valid_data (DataLoader): the valid data
 
         Returns:
-            float: valid score
-            dict: valid result
+            !
         """
         self.model.eval()
-        valid_data = tqdm(valid_data) if self.is_logger else valid_data
-        with LossTracker(self.DDP, "Loss/valid") as loss_tracker:
-            for data in valid_data:
-                losses = self.model(data)
-                loss_tracker.append(losses)
+        tracker = EpochTracker(self.config, epoch_idx, train=False)
+        valid_tqdm = tqdm(valid_data, desc="validating") if self.is_logger else valid_data
+        for data in valid_tqdm:
+            losses = self.model(data)
+            tracker.append_loss(losses)
 
-        return loss_tracker.ratio, loss_tracker.perplexity
+        valid_results = self.evaluate(valid_data, load_best_model=False, metrics=self.valid_metrics)
+        tracker.set_result(valid_results)
+
+        return tracker
 
     def _save_checkpoint(self, epoch):
         r"""Store the model parameters information and training information.
@@ -350,14 +417,6 @@ class Trainer(AbstractTrainer):
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         self.logger.info('Checkpoint loaded. Resume training from epoch {}'.format(self.start_epoch))
 
-    def _output_loss(self, epoch_idx: int, time_duration: float, loss: float, loss_type: str, epoch_info="", ppl=None):
-        """Output loss with epoch and time information."""
-        output = f"Epoch {epoch_idx} {epoch_info} {loss_type} [time: {time_duration:.2f}s, {loss_type}_loss: {loss:.4f}"
-        if ppl:
-            output += ", {} ppl: {}".format(loss_type, ppl)
-        # flush
-        self.logger.info(output + ']')
-
     def fit(self, train_data, valid_data=None, verbose=True, saved=True):
         r"""Train the model based on the train data and the valid data.
 
@@ -375,52 +434,50 @@ class Trainer(AbstractTrainer):
         best_epoch = -1
 
         self.logger.info("====== Start training ======")
-        for epoch_idx in range(self.start_epoch, self.epochs):
-            # train
-            with Timer() as train_timer:
-                train_loss = self._train_epoch(train_data, epoch_idx)
-            self.train_loss_list.append(train_loss)
-            self._output_loss(epoch_idx, train_timer.duration, train_loss, loss_type="training")
+        with TensorboardWriter(self.config):
+            for epoch_idx in range(self.start_epoch, self.epochs):
+                # train
+                with Timer() as train_timer:
+                    train_tracker = self._train_epoch(train_data, epoch_idx)
+                self.train_loss_list.append(train_tracker.loss)
+                train_tracker.info(train_timer.duration)
 
-            # validation
-            if self.eval_step <= 0 or not valid_data or (epoch_idx + 1) % self.eval_step != 0:
-                continue
+                # validation
+                if self.eval_step <= 0 or not valid_data or (epoch_idx + 1) % self.eval_step != 0:
+                    continue
 
-            with torch.no_grad(), Timer() as valid_timer:
-                valid_loss, valid_ppl = self._valid_epoch(valid_data)
-            self._output_loss(epoch_idx, valid_timer.duration, valid_loss, loss_type="validating", ppl=valid_ppl)
+                with torch.no_grad(), Timer() as valid_timer:
+                    valid_tracker = self._valid_epoch(valid_data, epoch_idx)
+                valid_tracker.info(valid_timer.duration)
 
-            # better model are supposed to provide smaller perplexity and loss
-            if self.early_stopping(valid_loss, valid_ppl, epoch_idx):
-                best_epoch = epoch_idx - self.cur_step * self.eval_step
-                break
+                if self.early_stopping(valid_tracker, epoch_idx):
+                    best_epoch = epoch_idx - self.cur_step * self.eval_step
+                    break
 
         if not self._saved_once and saved:
             self._save_checkpoint(max(best_epoch, self.epochs - 1))
         self.logger.info('====== Finished training, best eval result in epoch {} ======'.format(best_epoch))
         return self.best_valid_score, self.best_valid_result
 
-    def early_stopping(self, valid_loss, valid_ppl, saved_id, bigger=False):
+    def early_stopping(self, valid_tracker, saved_id):
         r""" validation-based early stopping
 
         Args:
-            valid_loss (float):
-            valid_ppl (float):
-            bigger (bool, optional): whether the bigger the better
-            saved_id (Optional[int]): epoch id if saved
+            valid_tracker (EpochTracker): contain valid information (loss, perplexity and metrics score)
+            saved_id (int): epoch id if saved
 
         Returns:
-            - bool,
-              whether to stop
+            - bool: whether to stop
         """
 
         stop_flag = False
-        compare = greater if bigger else less
+        if self.best_valid_score == 100000000:
+            self.best_valid_score = 0
 
-        if compare(valid_loss, self.best_valid_score):
+        if valid_tracker.score > self.best_valid_score:
             self.cur_step = 0
-            self.best_valid_score = valid_loss
-            self.best_valid_result = valid_ppl
+            self.best_valid_score = valid_tracker.loss
+            self.best_valid_result = valid_tracker.perplexity
             self._save_checkpoint(saved_id)
         else:
             self.cur_step += 1
@@ -445,7 +502,7 @@ class Trainer(AbstractTrainer):
         return total_loss / len(eval_data)
 
     @torch.no_grad()
-    def evaluate(self, eval_data, load_best_model=True, model_file=None, _eval=True):
+    def evaluate(self, eval_data, load_best_model=True, model_file=None, _eval=True, metrics=None):
         r"""Evaluate the model based on the eval data.
 
         Args:
@@ -455,6 +512,7 @@ class Trainer(AbstractTrainer):
             model_file (str, optional): the saved model file, default: None. If users want to test the previously
                                         trained model file, they can set this parameter.
             _eval (bool, optional): Whether to evaluate. Default is True. False to preview generation only.
+            metrics: force specify metrics
 
         Returns:
             dict: eval result, key is the eval metric and value in the corresponding metric value
@@ -476,16 +534,16 @@ class Trainer(AbstractTrainer):
             return
 
         generate_corpus = []
-        eval_data = tqdm(eval_data) if self.is_logger else eval_data
-        for batch_data in eval_data:
+        eval_tqdm = tqdm(eval_data, desc="evaluation") if self.is_logger else eval_data
+        for batch_data in eval_tqdm:
             generated = self.model.generate(batch_data, eval_data)
             assert len(generated) == len(batch_data['target_text']), "Generated corpus has a mismatched batch size!"
             generate_corpus.extend(generated)
         self._save_generated_text(generate_corpus)
 
         reference_corpus = eval_data.get_reference()
-        result = self.evaluator.evaluate(generate_corpus, reference_corpus)
-        if "nll_test" in self.metrics and self.config['task_type'].lower() == "unconditional":
+        result = self.evaluator.evaluate(generate_corpus, reference_corpus, metrics=metrics)
+        if "nll_test" in (metrics or self.metrics) and self.config['task_type'].lower() == "unconditional":
             result['nll_test'] = self._evaluate_nll_test(eval_data)
 
         return result

@@ -8,6 +8,7 @@ reproducibility: True
 data_path: 'dataset/'
 checkpoint_dir: 'saved/'
 generated_text_dir: 'generated/'
+tensorboard_dir: 'log/runs'
 
 # training settings
 epochs: 50
@@ -17,6 +18,7 @@ learning_rate: 0.001
 eval_step: 1
 stopping_step: 2
 grad_clip: 0.1
+valid_metrics: ["loss"]
 
 # evaluation settings
 metrics: ["bleu"]

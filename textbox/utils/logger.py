@@ -10,6 +10,8 @@ textbox.utils.logger
 import logging
 import os
 from textbox.utils.utils import ensure_dir
+from torch.utils.tensorboard import SummaryWriter
+from typing import List
 
 
 log_dir = './log/'
@@ -17,6 +19,28 @@ file_fmt = "%(asctime)-15s %(levelname)s %(message)s"
 file_date_fmt = "%a %d %b %Y %H:%M:%S"
 stream_fmt = "%(asctime)-15s %(levelname)s %(message)s"
 stream_date_fmt = "%d %b %H:%M"
+
+
+class TensorboardWriter:
+    """Automatically initialize and destroy a tensorboard writer."""
+
+    writers: List[SummaryWriter] = []
+
+    def __init__(self, config):
+        self.dir = config['tensorboard_dir']
+
+    def __enter__(self):
+        self.writers.append(SummaryWriter(log_dir=self.dir))
+        return self
+
+    @classmethod
+    def get_writer(cls):
+        return cls.writers[-1]
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.writers[-1].flush()
+        self.writers[-1].close()
+        del self.writers[-1]
 
 
 def init_logger(config, is_logger: bool):

@@ -27,7 +27,7 @@ class TensorboardWriter:
     writers: List[SummaryWriter] = []
 
     def __init__(self, config):
-        self.dir = config['tensorboard_dir']
+        self.dir = os.path.join(config['tensorboard_dir'], config['filename'])
 
     def __enter__(self):
         self.writers.append(SummaryWriter(log_dir=self.dir))

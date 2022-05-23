@@ -37,7 +37,7 @@ class EpochTracker:
     """
     Track validating metrics results and training/validating loss.
     """
-    is_train = {True: "training", False: "validating"}
+    _is_train = {True: "training", False: "validating"}
 
     def __init__(self, config, epoch_idx: int, train: bool = True):
         """
@@ -46,14 +46,14 @@ class EpochTracker:
             mode: Set the metrics tracker in training/validating mode
         """
         self._DDP = config['DDP']
-        self._metrics_factors = config['metrics_factors']
+        self._metrics_factors = config['valid_metrics_factors']
         self._writer = TensorboardWriter.get_writer()
         self._logger = getLogger()
         self.epoch_idx = epoch_idx
-        self.mode_tag = self.is_train[train]
+        self.mode_tag = self._is_train[train]
 
         self._total_loss = 0.
-        self._total_num = 0
+        self._total_step = 0
         self._loss = None
 
         self._metrics_results = None
@@ -61,19 +61,25 @@ class EpochTracker:
 
     def append_loss(self, loss: float):
         _check_nan(loss)
+        self._writer.add_scalar("Loss/" + self.mode_tag, loss, global_step=self._total_step)
         self._total_loss += loss
-        self._total_num += 1
-        self._writer.add_scalar("Loss/" + self.mode_tag, loss)
+        self._total_step += 1
 
     def set_result(self, results: dict):
         self._metrics_results = results
         for metric, result in self._metrics_results.items():
-            self._writer.add_scalar("Metrics/" + metric, result)
+            if metric == 'bleu' and isinstance(result, dict):
+                for key, value in result.items():
+                    self._writer.add_scalar("Metrics/" + key, value)
+            else:
+                self._writer.add_scalar("Metrics/" + metric, result)
         self._metrics_results['loss'] = self.loss
 
     def _calc_score(self) -> float:
         score = 0.
         for metric, result in self._metrics_results.items():
+            if metric == 'bleu' and isinstance(result, dict):
+                result = sum(result.values()) / len(result)
             score += result * self._metrics_factors[metric]
         self._writer.add_scalar("Metrics/mixed", score)
         return score
@@ -81,7 +87,7 @@ class EpochTracker:
     @property
     def score(self):
         """get mixed score by calculating weighted sum of results"""
-        if self.mode_tag == self.is_train[True]:
+        if self.mode_tag == self._is_train[True]:
             self._logger.warning('Use "loss" to get training loss.')
             return self.loss
 
@@ -91,7 +97,7 @@ class EpochTracker:
 
     def _calc_loss(self) -> float:
         """Reduce loss if DDP enabled"""
-        _loss = self._total_loss / self._total_num
+        _loss = self._total_loss / self._total_step
         if self._DDP:
             _loss = torch.tensor(_loss).to("cuda")
             torch.distributed.all_reduce(_loss, op=torch.distributed.ReduceOp.SUM)
@@ -118,16 +124,20 @@ class EpochTracker:
         """Output loss with epoch and time information."""
         output = f"Epoch {self.epoch_idx}, {extra_info} {self.mode_tag} "
         output += f"[time: {time_duration:.2f}s, {self.mode_tag}_loss: {self.loss:.4f}"
-        if self.mode_tag == self.is_train[False]:
-            output += ", {} ppl: {}".format(self.mode_tag, self.perplexity)
+        if self.mode_tag == self._is_train[False]:
+            output += f", {self.mode_tag} ppl: {self.perplexity:.4f}"
+            for metric, result in self._metrics_results.items():
+                if metric != 'loss':
+                    output += f", {metric}: {result}"
         output += "]"
         # flush
         self._logger.info(output)
 
 
-def _check_nan(loss):
-    if torch.isnan(loss):
-        raise ValueError('Training loss is nan')
+def _check_nan(value):
+    if (isinstance(value, torch.Tensor) and torch.isnan(value)) \
+            or (isinstance(value, float) and math.isnan(value)):
+        raise ValueError('Value is nan.')
 
 
 class AbstractTrainer:
@@ -278,10 +288,14 @@ class Trainer(AbstractTrainer):
                 self.logger.warning(
                     '"valid_metrics" got a different size with its factors (valid_metrics_factors). Filled with 1s.'
                 )
+
             self.valid_metrics_factors = dict(zip(metrics, self.valid_metrics_factors))
-            if self.valid_metrics_factors.get('loss') and self.valid_metrics_factors['loss'] > 0:
-                self.valid_metrics_factors['loss'] *= -1
-            self.config['metrics_factors'] = self.valid_metrics_factors
+
+            if self.valid_metrics_factors.get('loss'):
+                self.valid_metrics_factors['loss'] = - abs(self.valid_metrics_factors['loss'])
+            else:
+                self.valid_metrics_factors['loss'] = 0
+            self.config['valid_metrics_factors'] = self.valid_metrics_factors
 
             msg = "Validating with mixed metric: "
             msg += " + ".join([f"({factor}) * {metric}" for metric, factor in self.valid_metrics_factors.items()])
@@ -310,7 +324,7 @@ class Trainer(AbstractTrainer):
         """
         self.model.train()
         tracker = EpochTracker(self.config, epoch_idx, train=True)
-        train_tqdm = tqdm(train_data, desc="training") if self.is_logger else train_data
+        train_tqdm = tqdm(train_data, desc=f"train {epoch_idx:4}") if self.is_logger else train_data
         for data in train_tqdm:
             self.optimizer.zero_grad()
             loss = self.model(data, epoch_idx=epoch_idx)
@@ -332,7 +346,7 @@ class Trainer(AbstractTrainer):
         """
         self.model.eval()
         tracker = EpochTracker(self.config, epoch_idx, train=False)
-        valid_tqdm = tqdm(valid_data, desc="validating") if self.is_logger else valid_data
+        valid_tqdm = tqdm(valid_data, desc=f"valid {epoch_idx:4}") if self.is_logger else valid_data
         for data in valid_tqdm:
             losses = self.model(data)
             tracker.append_loss(losses)
@@ -390,7 +404,7 @@ class Trainer(AbstractTrainer):
         resume_file = str(resume_file)
         self.logger.info("Resuming checkpoint from {}...".format(resume_file))
         if os.path.isfile(resume_file):
-            checkpoint = torch.load(resume_file)
+            checkpoint = torch.load(resume_file, map_location=self.device)
         else:
             self.logger.warning('Checkpoint file "{}" not found. Resuming stopped.'.format(resume_file))
             return
@@ -523,7 +537,7 @@ class Trainer(AbstractTrainer):
                 self.logger.error(f'Failed to evaluate model: "{checkpoint_file}" not found.')
                 return
             self.logger.info('Loading model structure and parameters from {} ...'.format(checkpoint_file))
-            checkpoint = torch.load(checkpoint_file)
+            checkpoint = torch.load(checkpoint_file, map_location=self.device)
             self.model.load_state_dict(checkpoint['state_dict'])
 
         self.model.eval()
@@ -534,7 +548,7 @@ class Trainer(AbstractTrainer):
             return
 
         generate_corpus = []
-        eval_tqdm = tqdm(eval_data, desc="evaluation") if self.is_logger else eval_data
+        eval_tqdm = tqdm(eval_data, desc="generating") if self.is_logger else eval_data
         for batch_data in eval_tqdm:
             generated = self.model.generate(batch_data, eval_data)
             assert len(generated) == len(batch_data['target_text']), "Generated corpus has a mismatched batch size!"
@@ -945,7 +959,7 @@ class Seq2SeqTrainer(Trainer):
                 checkpoint_file = model_file
             else:
                 checkpoint_file = self.saved_model_file
-            checkpoint = torch.load(checkpoint_file)
+            checkpoint = torch.load(checkpoint_file, map_location=self.device)
             self.model.load_state_dict(checkpoint['state_dict'])
             message_output = 'Loading model structure and parameters from {}'.format(checkpoint_file)
             self.logger.info(message_output)
@@ -957,8 +971,8 @@ class Seq2SeqTrainer(Trainer):
             return
 
         generate_corpus = []
-        eval_data = tqdm(eval_data) if self.is_logger else eval_data
-        for batch_data in eval_data:
+        eval_tqdm = tqdm(eval_data) if self.is_logger else eval_data
+        for batch_data in eval_tqdm:
             generate_corpus.extend(self.model.generate(batch_data, eval_data))
         self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()

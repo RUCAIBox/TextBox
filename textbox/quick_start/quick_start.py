@@ -72,6 +72,8 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
 
     if config['test_only']:
         logger.info('Test only')
+        if not config['load_experiment']:
+            logger.warning('Specific model file with "load_experiment" parameter.')
         test_result = trainer.evaluate(test_data, load_best_model=saved, model_file=config['load_experiment'])
     else:
         if config['load_experiment'] is not None and is_logger:

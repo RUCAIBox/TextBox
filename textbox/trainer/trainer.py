@@ -30,7 +30,7 @@ from logging import getLogger
 
 from textbox.module.Optimizer.optim import InverseSquareRootOptim, CosineOptim, LinearOptim, ConstantOptim
 from textbox.evaluator import BaseEvaluator, evaluator_list, kb2text_evaluator
-from textbox.utils import ensure_dir, Timer, TensorboardWriter
+from textbox.utils import ensure_dir, Timer, TensorboardWriter, ordinal
 
 
 class EpochTracker:
@@ -190,7 +190,7 @@ class Trainer(AbstractTrainer):
         self.max_steps = config['max_steps']
         self.learning_rate = config['learning_rate']
         self.epochs = config['epochs']
-        self.eval_step = min(config['eval_step'], self.epochs)
+        self._set_eval_mode(config)
         self.stopping_step = config['stopping_step']
         self.test_batch_size = config['eval_batch_size']
         self.device = config['device']
@@ -209,7 +209,10 @@ class Trainer(AbstractTrainer):
         self.saved_text_file = os.path.join(self.generated_text_dir, saved_text_file)
 
         self.start_epoch = 0
-        self.cur_step = 0
+        self.cur_count = 0
+        self._total_count = 0
+        self._saved_once = False
+        self.best_epoch = -1
         self.best_valid_score = 100000000
         self.best_valid_result = None
         self.train_loss_list = list()
@@ -224,6 +227,21 @@ class Trainer(AbstractTrainer):
         self.item_tensor = None
         self.tot_item_num = None
         self.iid_field = config['ITEM_ID_FIELD']
+
+    def _set_eval_mode(self, config):
+        eval_epoch = config['eval_epoch'] or 0
+        eval_step = config['eval_step'] or 0
+        if eval_epoch > 0 and eval_step > 0:
+            self.logger.warning(
+                '"eval_step" and "eval_epoch" are specified at the same time. "eval_step" has been ignored.'
+            )
+        if eval_epoch <= 0 and eval_step <= 0:
+            self.logger.warning(
+                '"eval_step" and "eval_epoch" are set to 0 at the same time. "eval_epoch" has been set to 1.'
+            )
+        self.eval_count = eval_epoch or eval_step
+        self.eval_mode = "epoch" if eval_epoch else "step"
+        self.logger.info(f"eval mode: validate every {self.eval_count} {self.eval_mode}")
 
     def _build_optimizer(self):
         r"""Init the Optimizer
@@ -312,15 +330,16 @@ class Trainer(AbstractTrainer):
 
         return metrics
 
-    def _train_epoch(self, train_data, epoch_idx):
+    def _train_epoch(self, train_data, epoch_idx, valid_data=None):
         r"""Train the model in an epoch
 
         Args:
             train_data (DataLoader): the train data
             epoch_idx (int): the current epoch id
+            valid_data (Optional[DataLoader]): the valid data
 
         Returns:
-            !
+            EpochTracker: includes epoch information
         """
         self.model.train()
         tracker = EpochTracker(self.config, epoch_idx, train=True)
@@ -332,6 +351,8 @@ class Trainer(AbstractTrainer):
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
             self.optimizer.step()
+            if self._valid(valid_data, epoch_idx, 'step'):
+                break
 
         return tracker
 
@@ -342,7 +363,7 @@ class Trainer(AbstractTrainer):
             valid_data (DataLoader): the valid data
 
         Returns:
-            !
+            EpochTracker: includes epoch information
         """
         self.model.eval()
         tracker = EpochTracker(self.config, epoch_idx, train=False)
@@ -355,6 +376,29 @@ class Trainer(AbstractTrainer):
         tracker.set_result(valid_results)
 
         return tracker
+
+    def _valid(self, valid_data, epoch_idx, eval_mode, early_stopping=True):
+        """
+        Validate if needed.
+        Args:
+            valid_data (AbstractDataLoader):
+            epoch_idx (int): epoch index
+            eval_mode (str): "epoch" or "step"
+
+        Returns:
+            bool: whether early stop or not.
+        """
+        if eval_mode != self.eval_mode:
+            return False
+        self._total_count += 1
+        if self.eval_count <= 0 or not valid_data or self._total_count % self.eval_count != 0:
+            return False
+
+        with torch.no_grad(), Timer() as valid_timer:
+            valid_tracker = self._valid_epoch(valid_data, epoch_idx)
+        valid_tracker.info(valid_timer.duration, extra_info=ordinal(self._total_count // self.eval_count))
+
+        return early_stopping and self.early_stopping(valid_tracker, epoch_idx)
 
     def _save_checkpoint(self, epoch):
         r"""Store the model parameters information and training information.
@@ -374,7 +418,7 @@ class Trainer(AbstractTrainer):
         state = {
             'config': self.config,
             'epoch': epoch,
-            'cur_step': self.cur_step,
+            'current': self.cur_count,
             'best_valid_score': self.best_valid_score,
             'state_dict': _state_dict,
             'optimizer': self.optimizer.state_dict(),
@@ -410,7 +454,7 @@ class Trainer(AbstractTrainer):
             return
 
         self.start_epoch = checkpoint['epoch'] + 1
-        self.cur_step = checkpoint['cur_step']
+        self.cur_count = checkpoint['cur_count'] or checkpoint['cur_step']
         self.best_valid_score = checkpoint['best_valid_score']
 
         # load architecture params from checkpoint
@@ -444,41 +488,30 @@ class Trainer(AbstractTrainer):
         Returns:
              (float, dict): the best valid score and best valid result. If valid_data is None, it returns (-1, None)
         """
-        self._saved_once = False
-        best_epoch = -1
-
         self.logger.info("====== Start training ======")
         with TensorboardWriter(self.config):
             for epoch_idx in range(self.start_epoch, self.epochs):
                 # train
                 with Timer() as train_timer:
-                    train_tracker = self._train_epoch(train_data, epoch_idx)
+                    train_tracker = self._train_epoch(train_data, epoch_idx, valid_data)
                 self.train_loss_list.append(train_tracker.loss)
                 train_tracker.info(train_timer.duration)
 
-                # validation
-                if self.eval_step <= 0 or not valid_data or (epoch_idx + 1) % self.eval_step != 0:
-                    continue
-
-                with torch.no_grad(), Timer() as valid_timer:
-                    valid_tracker = self._valid_epoch(valid_data, epoch_idx)
-                valid_tracker.info(valid_timer.duration)
-
-                if self.early_stopping(valid_tracker, epoch_idx):
-                    best_epoch = epoch_idx - self.cur_step * self.eval_step
+                # valid
+                if self._valid(valid_data, epoch_idx, 'epoch'):
                     break
 
         if not self._saved_once and saved:
-            self._save_checkpoint(max(best_epoch, self.epochs - 1))
-        self.logger.info('====== Finished training, best eval result in epoch {} ======'.format(best_epoch))
+            self._save_checkpoint(self.epochs - 1)
+        self.logger.info('====== Finished training, best eval result in epoch {} ======'.format(self.best_epoch))
         return self.best_valid_score, self.best_valid_result
 
-    def early_stopping(self, valid_tracker, saved_id):
+    def early_stopping(self, valid_tracker, epoch_idx):
         r""" validation-based early stopping
 
         Args:
             valid_tracker (EpochTracker): contain valid information (loss, perplexity and metrics score)
-            saved_id (int): epoch id if saved
+            epoch_idx (int): epoch id if saved
 
         Returns:
             - bool: whether to stop
@@ -489,13 +522,14 @@ class Trainer(AbstractTrainer):
             self.best_valid_score = 0
 
         if valid_tracker.score > self.best_valid_score:
-            self.cur_step = 0
+            self.cur_count = 0
             self.best_valid_score = valid_tracker.loss
             self.best_valid_result = valid_tracker.perplexity
-            self._save_checkpoint(saved_id)
+            self.best_epoch = epoch_idx
+            self._save_checkpoint(epoch_idx)
         else:
-            self.cur_step += 1
-            stop_flag = self.cur_step > self.stopping_step
+            self.cur_count += 1
+            stop_flag = self.cur_count > self.stopping_step
 
         return stop_flag
 
@@ -660,7 +694,7 @@ class GANTrainer(Trainer):
         state = {
             'config': self.config,
             'epoch': epoch,
-            'cur_step': self.cur_step,
+            'cur_count': self.cur_count,
             'best_valid_score': self.best_valid_score,
             'state_dict': self.model.state_dict()
         }
@@ -941,15 +975,17 @@ class Seq2SeqTrainer(Trainer):
         super(Seq2SeqTrainer, self).__init__(config, model)
 
     @torch.no_grad()
-    def evaluate(self, eval_data, load_best_model=True, model_file=None, eval=True):
+    def evaluate(self, eval_data, load_best_model=True, model_file=None, _eval=True, metrics=None):
         r"""Evaluate the model based on the eval data.
 
         Args:
-            eval_data (DataLoader): the eval data
+            eval_data (AbstractDataLoader): the eval data
             load_best_model (bool, optional): whether load the best model in the training process, default: True.
                                               It should be set True, if users want to test the model after training.
             model_file (str, optional): the saved model file, default: None. If users want to test the previously
                                         trained model file, they can set this parameter.
+            _eval (bool, optional): Whether to evaluate. Default is True. False to preview generation only.
+            metrics: force specify metrics
 
         Returns:
             dict: eval result, key is the eval metric and value in the corresponding metric value
@@ -966,8 +1002,8 @@ class Seq2SeqTrainer(Trainer):
 
         self.model.eval()
 
-        if not eval:
-            print(self.model.generate(eval_data.__next__(), eval_data))
+        if not _eval:
+            print(self.model.generate(next(eval_data), eval_data))
             return
 
         generate_corpus = []
@@ -976,7 +1012,7 @@ class Seq2SeqTrainer(Trainer):
             generate_corpus.extend(self.model.generate(batch_data, eval_data))
         self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.get_reference()
-        result = self.evaluator.evaluate(generate_corpus, reference_corpus)
+        result = self.evaluator.evaluate(generate_corpus, reference_corpus, metrics=metrics)
 
         return result
 
@@ -1235,7 +1271,7 @@ class MaskGANTrainer(GANTrainer):
         state = {
             'config': self.config,
             'epoch': epoch,
-            'cur_step': self.cur_step,
+            'cur_count': self.cur_count,
             'best_valid_score': self.best_valid_score,
             'state_dict': self.model.state_dict(),
             'g_opt': self.g_optimizer.state_dict(),
@@ -1572,7 +1608,7 @@ class LeakGANTrainer(GANTrainer):
 
         idx = 0
         for real_data, fake_data in zip(real_dataloader, fake_dataloader):
-            # self.model.discriminator.eval() # pretraining not use dropout
+            # self.model.discriminator._eval() # pretraining not use dropout
             if idx == self.d_sample_training_epochs:
                 break
             losses, acc = self.model.calculate_d_train_loss(real_data, fake_data, epoch_idx=epoch_idx)

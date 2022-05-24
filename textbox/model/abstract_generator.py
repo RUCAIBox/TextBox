@@ -140,7 +140,7 @@ class GenerativeAdversarialNet(UnconditionalGenerator):
             eval_data (Corpus): Corpus class of the batch.
 
         Returns:
-            torch.FloatTensor: NLL_test of eval data
+            torch.FloatTensor: NLL_test of _eval data
         """
         raise NotImplementedError
 

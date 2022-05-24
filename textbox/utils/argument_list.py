@@ -7,7 +7,7 @@ general_arguments = [
 ]
 
 training_arguments = [
-    'epochs', 'train_batch_size', 'learner', 'learning_rate', 'eval_step', 'stopping_step', 'grad_clip',
+    'epochs', 'train_batch_size', 'learner', 'learning_rate', 'eval_step', 'eval_epoch', 'stopping_step', 'grad_clip',
     'g_pretraining_epochs', 'd_pretraining_epochs', 'd_sample_num', 'd_sample_training_epochs',
     'adversarail_training_epochs', 'adversarail_g_epochs', 'adversarail_d_epochs', 'schedule', 'init_lr',
     'warmup_steps', 'max_steps', 'valid_metrics', 'valid_metrics_factors'

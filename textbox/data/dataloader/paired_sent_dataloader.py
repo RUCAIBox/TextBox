@@ -49,3 +49,46 @@ class PairedSentenceDataLoader(AbstractDataLoader):
             return batch_data
         else:
             return {'source_text': source_text}
+
+
+class CopyPairedSentenceDataLoader(PairedSentenceDataLoader):
+    def __init__(self, config, dataset, batch_size=1, shuffle=False, drop_last=True, DDP=False):
+        super().__init__(config, dataset, batch_size, shuffle, drop_last, DDP)
+
+    def _next_source_patch(self):
+        batch_data = super()._next_source_patch()  # source_text & source_idx & source_length
+        if self.config['is_pgen']:
+            source_extended_idx = self.source_extended_idx[self.pr:self.pr + self.step]
+            source_extended_idx, _, _ = pad_sequence(
+                source_extended_idx, batch_data['source_length'].cpu(), self.padding_token_idx)
+            source_oovs = self.source_oovs[self.pr:self.pr + self.step]
+            extra_zeros = self.get_extra_zeros(source_oovs)
+
+            batch_data['source_extended_idx'] = source_extended_idx.to(self.device)
+            batch_data['source_oovs'] = source_oovs
+            batch_data['extra_zeros'] = extra_zeros.to(self.device)
+
+        return batch_data
+
+    def _next_target_patch(self):
+        batch_data = super()._next_target_patch()  # target_text
+        target_input_idx = self.target_input_idx[self.pr:self.pr + self.step]
+        target_output_idx = self.target_output_idx[self.pr:self.pr + self.step]
+        target_length = self.target_length[self.pr:self.pr + self.step]
+
+        target_input_idx, target_length, _ = pad_sequence(target_input_idx, target_length, self.padding_token_idx)
+        target_output_idx, _, _ = pad_sequence(target_output_idx, target_length, self.padding_token_idx)
+
+        batch_data['target_input_idx'] = target_input_idx.to(self.device)
+        batch_data['target_output_idx'] = target_output_idx.to(self.device)
+        batch_data['target_length'] = target_length.to(self.device)
+
+        return batch_data
+
+    @staticmethod
+    def get_extra_zeros(oovs):
+        import torch
+        max_oovs_num = max([len(_) for _ in oovs])
+        extra_zeros = torch.zeros(len(oovs), max_oovs_num)
+        return extra_zeros
+

@@ -8,3 +8,6 @@ transformers>=4.0.1
 pyyaml>=5.3.1
 bert_score>=0.3.9
 sentencepiece>=0.1.95
+setuptools>=52.0.0
+pycocoevalcap>=1.2
+dgl-cu110==0.6.1

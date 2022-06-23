@@ -26,11 +26,15 @@ class LuongAttention(torch.nn.Module):
         https://arxiv.org/abs/1508.04025
     """
 
-    def __init__(self, source_size, target_size, alignment_method='concat'):
+    def __init__(self, source_size, target_size, alignment_method='concat', is_coverage=False):
         super(LuongAttention, self).__init__()
         self.source_size = source_size
         self.target_size = target_size
         self.alignment_method = alignment_method
+
+        self.is_coverage = is_coverage
+        if self.is_coverage:
+            self.coverage_linear = nn.Linear(1, target_size, bias=False)
 
         if self.alignment_method == 'general':
             self.energy_linear = nn.Linear(target_size, source_size, bias=False)
@@ -42,7 +46,7 @@ class LuongAttention(torch.nn.Module):
         else:
             raise ValueError("The alignment method for Luong Attention must be in ['general', 'concat', 'dot'].")
 
-    def score(self, hidden_states, encoder_outputs):
+    def score(self, hidden_states, encoder_outputs, coverages=None):
         r"""Calculate the attention scores between encoder outputs and decoder states."""
         tgt_len = hidden_states.size(1)
         src_len = encoder_outputs.size(1)
@@ -55,7 +59,11 @@ class LuongAttention(torch.nn.Module):
         elif self.alignment_method == 'concat':
             hidden_states = hidden_states.unsqueeze(2).repeat(1, 1, src_len, 1)  # B * tgt_len * src_len * target_size
             encoder_outputs = encoder_outputs.unsqueeze(1).repeat(1, tgt_len, 1, 1)
-            energy = torch.tanh(self.energy_linear(torch.cat((hidden_states, encoder_outputs), dim=-1)))
+            energy = self.energy_linear(torch.cat((hidden_states, encoder_outputs), dim=-1))
+            if self.is_coverage:
+                coverages = self.coverage_linear(coverages.unsqueeze(3))
+                energy = energy + coverages
+            energy = torch.tanh(energy)
             energy = self.v.mul(energy).sum(dim=-1)
             return energy
         elif self.alignment_method == 'dot':
@@ -67,7 +75,7 @@ class LuongAttention(torch.nn.Module):
                 "No such alignment method {} for computing Luong scores.".format(self.alignment_method)
             )
 
-    def forward(self, hidden_states, encoder_outputs, encoder_masks):
+    def forward(self, hidden_states, encoder_outputs, encoder_masks, coverages=None):
         r"""
         Luong attention
 
@@ -79,14 +87,19 @@ class LuongAttention(torch.nn.Module):
         Return:
             tuple:
                 - context: shape: [batch_size, tgt_len, source_size]
-                - sprobs: shape: [batch_size, tgt_len, src_len]
+                - probs: shape: [batch_size, tgt_len, src_len]
         """
         tgt_len = hidden_states.size(1)
-        energy = self.score(hidden_states, encoder_outputs)
+        energy = self.score(hidden_states, encoder_outputs, coverages=coverages)
         probs = F.softmax(energy, dim=-1) * encoder_masks.unsqueeze(1).repeat(1, tgt_len, 1)
         normalization_factor = probs.sum(-1, keepdim=True) + 1e-12
         probs = probs / normalization_factor
         context = probs.bmm(encoder_outputs)
+
+        if self.is_coverage:
+            coverages = probs + coverages
+            return context, probs, coverages
+
         return context, probs
 
 
@@ -280,7 +293,7 @@ class MultiHeadAttention(torch.nn.Module):
         https://arxiv.org/abs/1706.03762
     """
 
-    def __init__(self, embedding_size, num_heads, attn_weight_dropout_ratio=0.0):
+    def __init__(self, embedding_size, num_heads, attn_weight_dropout_ratio=0.0, return_distribute=False):
         super(MultiHeadAttention, self).__init__()
         self.embedding_size = embedding_size
         self.num_heads = num_heads
@@ -297,6 +310,7 @@ class MultiHeadAttention(torch.nn.Module):
         self.out_proj = nn.Linear(embedding_size, embedding_size)
 
         self.weight_dropout = nn.Dropout(attn_weight_dropout_ratio)
+        self.return_distribute = return_distribute
 
         self.reset_parameters()
 
@@ -346,6 +360,7 @@ class MultiHeadAttention(torch.nn.Module):
         if key_padding_mask is not None:
             attn_weights.masked_fill_(key_padding_mask.unsqueeze(1).unsqueeze(2), float('-inf'))
 
+        attn_weights_ = torch.log_softmax(attn_weights, -1)
         attn_weights = self.weight_dropout(F.softmax(attn_weights, dim=-1))
         attn_repre = torch.matmul(attn_weights, v)
 
@@ -357,7 +372,10 @@ class MultiHeadAttention(torch.nn.Module):
         # maximum attention weight over heads
         attn_weights, _ = attn_weights.max(dim=1)
 
-        return attn_repre, attn_weights
+        if self.return_distribute:
+            return attn_repre, attn_weights, attn_weights_
+        else:
+            return attn_repre, attn_weights
 
 
 class SelfAttentionMask(torch.nn.Module):

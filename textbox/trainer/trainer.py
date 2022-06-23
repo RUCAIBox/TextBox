@@ -3,10 +3,9 @@
 # @Email  : lijunyi@ruc.edu.cn
 
 # UPDATE:
-# @Time   : 2021/10/11, 2021/4/12, 2020/12/2, 2020/11/27, 2020/12/3, 2020/12/26
-# @Author : Tang Tianyi, Lai Xu, Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang, Jinhao Jiang
-# @Email  : tsui_lai@163.com, jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
-
+# @Time   : 2022/05/06, 2021/10/11, 2021/4/12, 2020/12/2, 2020/11/27, 2020/12/3, 2020/12/26
+# @Author : Hu Yiwen, Tang Tianyi, Lai Xu, Jinhao Jiang, Xiaoxuan Hu, Tianyi Tang, Jinhao Jiang
+# @Email  : huyiwen@ruc.edu.cn, tsui_lai@163.com, jiangjinhao@std.uestc.edu.cn, huxiaoxuan@ruc.edu.cn, steventang@ruc.edu.cn, jiangjinhao@std.uestc.edu.cn
 
 r"""
 textbox.trainer.trainer
@@ -28,8 +27,8 @@ from torch.utils.data import DataLoader
 from time import time
 from logging import getLogger
 
-from textbox.module.Optimizer.optim import ScheduledOptim, InverseSquareRootOptim
-from textbox.evaluator import BaseEvaluator, evaluator_list
+from textbox.module.Optimizer.optim import InverseSquareRootOptim, CosineOptim, LinearOptim, ConstantOptim
+from textbox.evaluator import BaseEvaluator, evaluator_list, kb2text_evaluator
 from textbox.utils import ensure_dir, early_stopping
 
 
@@ -75,7 +74,11 @@ class Trainer(AbstractTrainer):
 
         self.DDP = config['DDP']
         self.logger = getLogger()
-        self.learner = config['learner']
+        self.learner = config['learner'].lower()
+        self.schedule = config['schedule'].lower()
+        self.init_lr = config['init_lr']
+        self.warmup_steps = config['warmup_steps']
+        self.max_steps = config['max_steps']
         self.learning_rate = config['learning_rate']
         self.epochs = config['epochs']
         self.eval_step = min(config['eval_step'], self.epochs)
@@ -136,25 +139,41 @@ class Trainer(AbstractTrainer):
         Returns:
             torch.optim: the optimizer
         """
-        if self.learner.lower() == 'adam':
-            optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
-        elif self.learner.lower() == 'sgd':
-            optimizer = optim.SGD(self.model.parameters(), lr=self.learning_rate)
-        elif self.learner.lower() == 'adagrad':
-            optimizer = optim.Adagrad(self.model.parameters(), lr=self.learning_rate)
-        elif self.learner.lower() == 'rmsprop':
-            optimizer = optim.RMSprop(self.model.parameters(), lr=self.learning_rate)
-        elif self.learner.lower() == 'schedule':
-            optimizer = ScheduledOptim(
-                optim.Adam(self.model.parameters(), betas=(0.9, 0.98), eps=1e-09), self.learning_rate,
-                self.embedding_size, self.warmup_steps
-            )
-        elif self.learner.lower() == 'inverse':
-            optimizer = InverseSquareRootOptim(optim.AdamW(self.model.parameters()), self.learning_rate, 1e-7, 1000)
-        else:
-            if self.is_logger:
+
+        def _get_base_optimizer(name: str):
+            if name == 'adam':
+                _optim = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+            elif name == 'sgd':
+                _optim = optim.SGD(self.model.parameters(), lr=self.learning_rate)
+            elif name == 'adagrad':
+                _optim = optim.Adagrad(self.model.parameters(), lr=self.learning_rate)
+            elif name == 'rmsprop':
+                _optim = optim.RMSprop(self.model.parameters(), lr=self.learning_rate)
+            else:
                 self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
-            optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+                _optim = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+            return _optim
+
+        def _get_schedule(name: str, base_optim):
+            assert isinstance(self.init_lr, float), "Specify initial learning rate (init_lr)"
+            assert isinstance(self.warmup_steps, int), "Specify warmup steps (warmup_steps)"
+            if name == 'inverse':
+                _optim = InverseSquareRootOptim(base_optim, self.init_lr, self.learning_rate, self.warmup_steps)
+            elif name == 'cosine':
+                assert isinstance(self.max_steps, int), "Specify max steps (max_steps)"
+                _optim = CosineOptim(base_optim, self.init_lr, self.learning_rate, self.warmup_steps, self.max_steps)
+            elif name == 'linear':
+                assert isinstance(self.max_steps, int), "Specify max steps (max_steps)"
+                _optim = LinearOptim(base_optim, self.init_lr, self.learning_rate, self.warmup_steps, self.max_steps)
+            elif name == 'constant':
+                _optim = ConstantOptim(base_optim, self.init_lr, self.learning_rate, self.warmup_steps)
+            else:
+                self.logger.info("Using none schedule")
+                _optim = base_optim
+            return _optim
+
+        optimizer = _get_base_optimizer(self.learner)
+        optimizer = _get_schedule(self.schedule, optimizer)
         return optimizer
 
     def _train_epoch(self, train_data, epoch_idx):

@@ -743,6 +743,7 @@ BLEU and distinct metrics on test dataset using beam search (with `beam_size=5`)
 
 | Releases |    Date    |   Features    |
 | :------: | :--------: | :-----------: |
+|  v1.0.0  | 30/06/2022 |    Test       |
 |  v0.2.1  | 15/04/2021 |    TextBox    |
 |  v0.1.5  | 01/11/2021 | Basic TextBox |
 

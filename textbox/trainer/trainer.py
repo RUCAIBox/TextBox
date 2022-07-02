@@ -186,7 +186,6 @@ class Trainer(AbstractTrainer):
             else:
                 loss = losses
                 total_loss = losses.item() if total_loss is None else total_loss + losses.item()
-            print(loss)
             self._check_nan(loss)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)

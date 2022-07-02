@@ -1,0 +1,9 @@
+src_len: 1024
+tgt_len: 64
+task_type: "translation"
+metrics: ['squad']
+train_batch_size: 4
+update_freq: 48
+eval_batch_size: 16
+prefix: 'Generate the question based on the answer: '
+eval_metrics: ['Bleu_4', 'METEOR', 'ROUGE_L']

@@ -1,25 +1,6 @@
-# @Time   : 2020/11/14
-# @Author : Gaole He
-# @Email  : hegaole@ruc.edu.cn
-
-# UPDATE:
-# @Time   : 2020/12/3
-# @Author : Tianyi Tang
-# @Email  : steventang@ruc.edu.cn
-
-# UPDATE
-# @Time   : 2021/4/12
-# @Author : Lai Xu
-# @Email  : tsui_lai@163.com
-
-"""
-textbox.evaluator.bleu_evaluator
-#######################################
-"""
-
 import numpy as np
 from fast_bleu import BLEU
-from textbox.evaluator.sentence_bleu import sentence_bleu, SmoothingFunction
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from textbox.evaluator.abstract_evaluator import AbstractEvaluator
 
 

@@ -1,4 +1,0 @@
-vocab_size: 30000
-seq_len: 100
-tokenize_strategy: "nltk"
-task_type: "unconditional"

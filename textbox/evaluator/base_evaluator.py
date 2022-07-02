@@ -1,22 +1,3 @@
-# @Time   : 2020/11/14
-# @Author : Gaole He
-# @Email  : hegaole@ruc.edu.cn
-
-# UPDATE:
-# @Time   : 2020/12/3
-# @Author : Tianyi Tang
-# @Email  : steventang@ruc.edu.cn
-
-# UPDATE
-# @Time   : 2021/4/12
-# @Author : Lai Xu
-# @Email  : tsui_lai@163.com
-
-"""
-textbox.evaluator.base_evaluator
-#######################################
-"""
-
 from textbox.evaluator.bleu_evaluator import BleuEvaluator
 from textbox.evaluator.distinct_evaluator import DistinctEvaluator
 from textbox.evaluator.selfbleu_evaluator import SelfBleuEvaluator
@@ -27,11 +8,10 @@ from textbox.evaluator.meteor_evaluator import MeteorEvaluator
 from textbox.evaluator.bertscore_evaluator import BertScoreEvaluator
 from textbox.evaluator.unique_evaluator import UniqueEvaluator
 from textbox.evaluator.rouge_evaluator import RougeEvaluator
-from textbox.evaluator.kb2text_evaluator import Kb2TextEvaluator
 
 evaluator_list = [
     'bleu', 'self_bleu', 'rouge', 'distinct', 'nll_test', 'avg_len', 'cider', 'chrf++', 'meteor', 'unique',
-    'bert_score', 'kb2text'
+    'bert_score'
 ]
 
 
@@ -57,8 +37,6 @@ class BaseEvaluator():
             if metric == 'bleu':
                 task_type = (self.config['task_type'].lower() == "unconditional")
                 evaluator = BleuEvaluator(task_type)
-            elif metric == 'kb2text':
-                evaluator = Kb2TextEvaluator()
             elif metric == 'self_bleu':
                 if self.config['task_type'].lower() == "unconditional":
                     evaluator = SelfBleuEvaluator()

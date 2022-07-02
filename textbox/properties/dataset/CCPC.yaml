@@ -1,7 +1,0 @@
-vocab_size: 30000
-seq_len: 30
-tgt_len: 7
-tgt_num: 4
-tgt_multi_sent: True
-task_type: "translation"
-share_vocab: True

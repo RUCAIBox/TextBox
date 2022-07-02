@@ -2,11 +2,11 @@
 
 ## Overall
 - [ ] Perfectly reproduce and recover, save and load random seed state. Work with dataloader and trainer checkpoint
-- [ ] Resume training? Loading existing parameters? (how to judge?) Work with trainer checkpoint
-- [ ] Only generation and only evaluation. How to solve?
-- [ ] Quick test the whole pipeline (and `max_length`). Work with dataloader.
+- [ ] Resume training (default) Loading existing parameters? (add an options) Work with trainer checkpoint
+- [ ] Only generation and only evaluation. (`--do_train --do_test --do_eval`)
+- [ ] Quick test the whole pipeline (and `max_length`). Work with dataloader. (`--quick_test` with lazy load using `fseek`)
 - [ ] Logger with DDP
-- [ ] Reminder through email
+- [ ] Reminder through email (wandb)
 - [ ] Hyper-parameter tuning (e.g. batch-size 16, 32, 64) (https://github.com/RUCAIBox/RecBole/blob/master/run_hyper.py, https://recbole.io/docs/user_guide/usage/parameter_tuning.html) (without saving model)
 - [ ] Run on several random seeds and average their results (without saving model)
 - [ ] Model deployment (https://clip-as-service.jina.ai/)
@@ -16,18 +16,18 @@
 - **Do not use `import *`**
 
 ## Config
-- [ ] Argparse? config?
-- [ ] Config check? (How to deal with wrong config?)
+- [ ] Argparse & config?
+- [ ] Config check (user should add their own config in a file, eg `argument_list`)
 - [ ] Print all the config and command line (is `argument_list.py` necessary?) (maybe 3 classes `general`, `model` and `dataset`)
 - [ ] Simplify `init_logger`, remove `is_logger` and support user-defined filename
 - [ ] Case of model class, model file and model yaml (same for dataset)
 
 ## Dataset / Dataloader
 ### Overall
-- [ ] Use `dataset` and `dataloader` from PyTorch, only with `source_id`, `source_text`, `target_id`, `target_text`. Does test set need dataloader? (just source side?)
-- [ ] Load tokenizer and tokenize text here
+- [ ] Use `dataset` and `dataloader` from PyTorch, only with `source_id`, `source_text`, `target_id`, `target_text`. (optional `target_id`, `target_text`)
+- [ ] Load tokenizer and tokenize text here (support tokenize and token2idx seprately)
 - [ ] Download and process dataset automatically
-- [ ] Save processed files. How to check is config or file changed?
+- [ ] Save processed files. How to check is config or file changed? (maybe with md5 of config and files)
 - [ ] *Max-token?
 - [ ] `eval` and `repr`
 ### Pre-training tasks (construct new `target_id` and `source_id` according to old `source_id`)
@@ -55,13 +55,13 @@ see HF how to solve it:
 https://github.com/huggingface/transformers/blob/main/examples/pytorch/summarization/run_summarization.py)
 https://github.com/huggingface/transformers/blob/main/examples/pytorch/summarization/run_summarization_no_trainer.py
 ```
-- [ ] Fast generation (with https://github.com/microsoft/fastseq)
+- [ ] Fast generation (with https://github.com/microsoft/fastseq or https://github.com/bytedance/lightseq/tree/master/lightseq/training )
 - [ ] Multi-GPU generation (divide data to multiple GPUs for generation.) Is it possible? Under DDP?
-- [ ] FP16 (maybe with HF?)
+- [ ] *FP16 (HF? or Pytorch?)
 ### Useful features
-- [ ] Tensorboard to record loss and metric
+- [ ] WanDB to record loss and metric
 - [ ] Support train and valid for several steps
-- [ ] Support generation and evaluation during generation
+- [ ] Support generation and evaluation during validation
 ### Save checkpoint
 - [ ] Checkpoint format? (following HF?)
 ```

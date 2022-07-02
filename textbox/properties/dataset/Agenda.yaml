@@ -1,6 +1,0 @@
-src_len: 50
-tgt_len: 200
-task_type: "kg2text"
-tgt_vocab_size: 20000
-relation_vocab: "dataset/Agenda/relation.vocab"
-type_vocab: "dataset/Agenda/type.vocab"

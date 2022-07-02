@@ -1,6 +1,0 @@
-generator_embedding_size: 32
-discriminator_embedding_size: 64
-hidden_size: 32
-num_dis_layers: 2
-dropout_rate: 0.25
-rollout_num: 16

@@ -1,6 +1,0 @@
-vocab_size: 30000
-seq_len: 50
-src_num: 20
-src_multi_sent: True
-task_type: "translation"
-share_vocab: True

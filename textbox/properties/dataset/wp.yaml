@@ -1,0 +1,8 @@
+src_len: 1024
+tgt_len: 1024
+task_type: "translation"
+metrics: ['bleu', 'distinct']
+
+train_batch_size: 20
+update_freq: 10
+eval_batch_size: 64

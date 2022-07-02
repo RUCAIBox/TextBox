@@ -12,8 +12,8 @@ generated_text_dir: 'generated/'
 # training settings
 epochs: 50
 train_batch_size: 64
-learner: adam
-learning_rate: 0.001
+optimizer: adam
+learning_rate: 1e-5
 eval_step: 1
 stopping_step: 2
 grad_clip: 0.1

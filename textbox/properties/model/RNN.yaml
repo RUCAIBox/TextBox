@@ -1,5 +1,0 @@
-embedding_size: 64
-hidden_size: 128
-num_dec_layers: 2
-dropout_ratio: 0.2
-rnn_type: "gru"

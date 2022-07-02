@@ -1,0 +1,11 @@
+src_len: 1024
+tgt_len: 64
+truncate: head
+task_type: "translation"
+metrics: ['da']
+eval_metrics: ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4", 'METEOR', 'ROUGE_L', 'CIDEr']
+
+train_batch_size: 6
+update_freq: 32
+eval_batch_size: 16
+prefix: 'Given the dialog: '

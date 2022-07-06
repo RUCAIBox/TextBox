@@ -9,7 +9,6 @@ class AbstractModel(nn.Module):
         # load parameters info
         super(AbstractModel, self).__init__()
         self.device = config['device']
-        self.batch_size = config['train_batch_size']
         self.dataset = dataset
 
     def __getattr__(self, name):

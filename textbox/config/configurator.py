@@ -1,3 +1,17 @@
+# @Time   : 2020/11/14
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
+
+# UPDATE:
+# @Time   : 2021/1/19
+# @Author : Tianyi Tang
+# @Email  : steventang@ruc.edu.cn
+
+"""
+textbox.config.configurator
+################################
+"""
+
 import re
 import os
 import sys
@@ -5,8 +19,8 @@ import yaml
 import torch
 from logging import getLogger
 
-from textbox.utils import general_arguments, training_arguments, \
-    evaluation_arguments, get_local_time
+from textbox.utils import get_model, Enum, general_arguments, training_arguments, \
+    evaluation_arguments, get_local_time, ModelType
 
 
 class Config(object):
@@ -59,8 +73,8 @@ class Config(object):
         self._merge_external_config_dict()
 
         self._init_device()
-        self.model, self.dataset = self._get_model_and_dataset(model, dataset)
-        self._load_internal_config_dict(self.model, self.dataset)
+        self.model, self.model_class, self.dataset = self._get_model_and_dataset(model, dataset)
+        self._load_internal_config_dict(self.model, self.model_class, self.dataset)
         self.final_config_dict = self._get_final_config_dict()
         self._set_default_parameters()
 
@@ -98,7 +112,7 @@ class Config(object):
                 continue
             try:
                 value = eval(param)
-                if not isinstance(value, (str, int, float, list, tuple, dict, bool)):
+                if not isinstance(value, (str, int, float, list, tuple, dict, bool, Enum)):
                     value = param
             except (NameError, SyntaxError, TypeError):
                 if isinstance(param, str):
@@ -180,6 +194,7 @@ class Config(object):
                 )
 
         final_model = model
+        final_model_class = get_model(final_model)
 
         if dataset is None:
             try:
@@ -192,7 +207,7 @@ class Config(object):
         else:
             final_dataset = dataset
 
-        return final_model, final_dataset
+        return final_model, final_model_class, final_dataset
 
     def _update_internal_config_dict(self, file):
         with open(file, 'r', encoding='utf-8') as f:
@@ -201,16 +216,19 @@ class Config(object):
                 self.internal_config_dict.update(config_dict)
         return config_dict
 
-    def _load_internal_config_dict(self, model, dataset):
+    def _load_internal_config_dict(self, model, model_class, dataset):
         current_path = os.path.dirname(os.path.realpath(__file__))
         model_init_file = os.path.join(current_path, '../properties/model/' + model + '.yaml')
+        model_class_init_file = ""
         dataset_init_file = os.path.join(current_path, '../properties/dataset/' + dataset + '.yaml')
         if not os.path.exists(dataset_init_file):
             raise NotImplementedError("dataset {} can't be found".format(dataset))
+        if model_class.type == ModelType.GAN:
+            model_class_init_file = os.path.join(current_path, '../properties/model_class/GAN.yaml')
 
         self.internal_config_dict = self.overall_config_dict
 
-        for file in [dataset_init_file, model_init_file]:
+        for file in [dataset_init_file, model_class_init_file, model_init_file]:
             if os.path.isfile(file):
                 config_dict = self._update_internal_config_dict(file)
                 if file == model_init_file:
@@ -223,6 +241,8 @@ class Config(object):
                     self.parameters['Dataset'] += [
                         key for key in config_dict.keys() if key not in self.parameters['Dataset']
                     ]
+
+        self.internal_config_dict['MODEL_TYPE'] = model_class.type
 
     def _get_final_config_dict(self):
         final_config_dict = dict()

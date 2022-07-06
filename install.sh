@@ -1,4 +1,4 @@
-conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+#!/bin/bash
 pip install -r requirements.txt 
 
 pip install -U git+https://github.com/pltrdy/pyrouge

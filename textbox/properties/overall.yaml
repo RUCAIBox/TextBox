@@ -11,15 +11,22 @@ generated_text_dir: 'generated/'
 
 # training settings
 epochs: 50
-train_batch_size: 64
-learner: adam
-learning_rate: 0.001
+train_batch_size: 16
+optimizer: adam
+learning_rate: 1e-5
 eval_step: 1
 stopping_step: 2
 grad_clip: 0.1
+tokenize_strategy: none
 
 # evaluation settings
 metrics: ["bleu"]
 n_grams: [1,2,3,4,5]
 eval_batch_size: 64
 
+# Pretrained model settings
+tokenize_strategy: none
+config_kwargs: {}
+tokenizer_kwargs: {'use_fast': True, 'additional_special_tokens': []}
+tokenizer_path: {}
+generation_kwargs: {'num_beams': 5, 'early_stopping': True}

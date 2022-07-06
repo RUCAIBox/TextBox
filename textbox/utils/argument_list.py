@@ -1,7 +1,3 @@
-# @Time   : 2020/11/14
-# @Author : Junyi Li, Gaole He
-# @Email  : lijunyi@ruc.edu.cn
-
 general_arguments = [
     'gpu_id', 'use_gpu', 'DDP', 'seed', 'reproducibility', 'state', 'data_path', 'checkpoint_dir', 'generated_text_dir'
 ]

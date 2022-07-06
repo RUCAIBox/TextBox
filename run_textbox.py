@@ -1,15 +1,10 @@
-# @Time   : 2020/11/5
-# @Author : Gaole He
-# @Email  : hegaole@ruc.edu.cn
-
 import argparse
-
-from textbox.quick_start import run_textbox
+from textbox import run_textbox
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', '-m', type=str, default='RNN', help='name of models')
-    parser.add_argument('--dataset', '-d', type=str, default='COCO', help='name of datasets')
+    parser.add_argument('--model', '-m', type=str, default='BART', help='name of models')
+    parser.add_argument('--dataset', '-d', type=str, default='samsum', help='name of datasets')
     parser.add_argument('--config_files', type=str, default=None, help='config files')
 
     args, _ = parser.parse_known_args()

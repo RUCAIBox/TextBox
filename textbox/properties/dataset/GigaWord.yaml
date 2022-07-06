@@ -1,5 +1,0 @@
-vocab_size: 30000
-src_len: 200
-tgt_len: 50
-share_vocab: True
-task_type: "summarization"

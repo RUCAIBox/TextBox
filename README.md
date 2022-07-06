@@ -1,779 +1,151 @@
-![TextBox Logo](asset/logo.png)
+# TextBox 1.0.0    Go! Go! Go!
 
-------
+## Overall
+- [ ] Perfectly reproduce and recover, save and load random seed state. Work with dataloader and trainer checkpoint
+- [ ] Resume training (default) Loading existing parameters? (add an options) Work with trainer checkpoint
+- [ ] Only generation and only evaluation. (`--do_train --do_test --do_eval`)
+- [ ] Quick test the whole pipeline (and `max_length`). Work with dataloader. (`--quick_test` with lazy load using `fseek`)
+- [ ] Logger with DDP
+- [ ] Reminder through email (wandb)
+- [ ] Hyper-parameter tuning (e.g. batch-size 16, 32, 64) (https://github.com/RUCAIBox/RecBole/blob/master/run_hyper.py, https://recbole.io/docs/user_guide/usage/parameter_tuning.html) (without saving model)
+- [ ] Run on several random seeds and average their results (without saving model)
+- [ ] Model deployment (https://clip-as-service.jina.ai/)
+- [ ] Check `print` and `logger.info`
+- [ ] Check `get_model`, `get_trainer`, `get_dataset` and `get_dataloader`
+- **Simplfy import relation, add useful module in `__init__.py`** (for example `PLM_MODELS`)
+- **Do not use `import *`**
 
-# TextBox (妙笔)
+## Config
+- [ ] Argparse & config?
+- [ ] Config check (user should add their own config in a file, eg `argument_list`)
+- [ ] Print all the config and command line (is `argument_list.py` necessary?) (maybe 3 classes `general`, `model` and `dataset`)
+- [ ] Simplify `init_logger`, remove `is_logger` and support user-defined filename
+- [ ] Case of model class, model file and model yaml (same for dataset)
 
-*“李太白少时，梦所用之笔头上生花后天才赡逸，名闻天下。”——王仁裕《开元天宝遗事·梦笔头生花》*
+## Dataset / Dataloader
+### Overall
+- [ ] Use `dataset` and `dataloader` from PyTorch, only with `source_id`, `source_text`, `target_id`, `target_text`. (optional `target_id`, `target_text`)
+- [ ] Load tokenizer and tokenize text here (support tokenize and token2idx seprately)
+- [ ] Download and process dataset automatically
+- [ ] Save processed files. How to check is config or file changed? (maybe with md5 of config and files)
+- [ ] *Max-token?
+- [ ] `eval` and `repr`
+### Pre-training tasks (construct new `target_id` and `source_id` according to old `source_id`)
+- [ ] DAE (like BART)
+- [ ] Masked Seq2Seq (like MASS)
+- [ ] Masked span prediction (like T5)
+- [ ] LM (like GPT-2) Decoder? Encoder-decoder?
+- [ ] *PLM (like MPNet) one-tower?
+### *Others
+- [ ] Support weighted sampling (change `sampler`?) (Note randomness!! https://pytorch.org/docs/stable/notes/randomness#dataloader)
+- [ ] Support local reading (especially for pre-training, change `collate_fn`?)
 
-[![PyPi Latest Release](https://img.shields.io/pypi/v/textbox)](https://pypi.org/project/textbox/)
-[![Release](https://img.shields.io/github/v/release/rucaibox/textbox.svg)](https://github.com/rucaibox/textbox/releases)
-[![Documentation Status](https://readthedocs.org/projects/textbox/badge/?version=latest)](https://textbox.readthedocs.io/en/latest/?badge=latest)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-
-[Docs] | [Model] | [Dataset] | [Paper] | [中文版]
-
-[Docs]: https://textbox.readthedocs.io/en/latest/
-[Model]: #Model
-[Dataset]: #Dataset
-[Paper]: https://arxiv.org/abs/2101.02046
-[中文版]: README_CN.md
-
-
-TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 21 text generation algorithms, covering two major tasks:
-
-+ Unconditional (input-free) Generation
-+ Conditional (Seq2Seq) Generation, including Machine Translation, Text Summarization, Attribute-to-Text, and Dialogue Systems
-
-We provide the support for 9 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team. 
-
-<p align="center">
-  <img src="asset/framework.png" alt="TextBox v0.2 architecture">
-  <br>
-  <b>Figure</b>: The Overall Architecture of TextBox
-</p>
-
-## Feature
-
-- **Unified and modularized framework.** TextBox is built upon PyTorch and designed to be highly modularized, by decoupling diverse models into a set of highly reusable modules.
-- **Comprehensive models, benchmark datasets and standardized evaluations.** TextBox also contains a wide range of text generation models, covering the categories of VAE, GAN, RNN or Transformer based models, and pre-trained language models (PLM).
-- **Extensible and flexible framework.** TextBox provides convenient interfaces of various common functions or modules in text generation models, RNN encoder-decoder, Transformer encoder-decoder and pre-trained language model.
-- **Easy and convenient to get started.** TextBox provides flexible configuration files, which allows green hands to run experiments without modifying source code, and allows researchers to conduct qualitative analysis by modifying few configurations.
-
-## Installation
-
-TextBox requires:
-
-- `Python >= 3.6.2`
-
-- `torch >= 1.6.0`. Please follow the [official instructions](https://pytorch.org/get-started/locally/) to install the appropriate version according to your CUDA version and NVIDIA driver version.
-
-- `GCC >= 5.1.0`
-
-### Install from pip
-
-```bash
-pip install textbox
+## Trainer
+### Efficiency
+- [ ] Multi-GPU with `accelerate`? Need to research! (PyTorch or accelerate)
+    - [ ] check `find_unused_parameters`
 ```
+data parallel (model can fit in one GPU)
+single node or several nodes
+e.g. fine-tune or pre-train BART-large on a large dataset (16GB)
+can save and load model and optimizer correctly
+print log only once
 
-If you face a problem when installing `fast_bleu`, for Linux, please ensure `GCC >= 5.1.0`. For Windows, you can use the wheels in [fast_bleu_wheel4windows](https://github.com/RUCAIBox/TextBox/tree/main/fast_bleu_wheel4windows) for installation. For MacOS, you can install with the following command:
-
-```bash
-pip install fast-bleu --install-option="--CC=<path-to-gcc>" --install-option="--CXX=<path-to-g++>"
+see HF how to solve it:
+https://github.com/huggingface/transformers/blob/main/examples/pytorch/summarization/run_summarization.py)
+https://github.com/huggingface/transformers/blob/main/examples/pytorch/summarization/run_summarization_no_trainer.py
 ```
-
-After installing `fast_bleu` successfully, just reinstall `textbox`.
-
-### Install from source
-
-```bash
-git clone https://github.com/RUCAIBox/TextBox.git && cd TextBox
-pip install -e . --verbose
+- [ ] Fast generation (with https://github.com/microsoft/fastseq or https://github.com/bytedance/lightseq/tree/master/lightseq/training )
+- [ ] Multi-GPU generation (divide data to multiple GPUs for generation.) Is it possible? Under DDP?
+- [ ] *FP16 (HF? or Pytorch?)
+### Useful features
+- [ ] WanDB to record loss and metric
+- [ ] Support train and valid for several steps
+- [ ] Support generation and evaluation during validation
+### Save checkpoint
+- [ ] Checkpoint format? (following HF?)
 ```
-
-## Quick-Start
-
-### Start from source
-
-With the source code, you can use the provided script for initial usage of our library:
-
-```bash
-python run_textbox.py
+        model parameters (all) (to `cpu`)
+        optimizer (trained)
+        random state
+        config
+        valid results
 ```
-
-This script will run the RNN model on the COCO dataset to conduct unconditional generation. Typically, this example takes a few minutes. We will obtain the output log like [example.log](asset/example.log).
-
-If you want to change the parameters, such as `rnn_type`, `max_vocab_size`, just set the additional command parameters as you need:
-
-```bash
-python run_textbox.py --rnn_type=lstm --max_vocab_size=4000
-```
-
-We also support to modify YAML configuration files in corresponding dataset and model [`properties`](https://github.com/RUCAIBox/TextBox/tree/main/textbox/properties) folders and include it in the command line.
-
-If you want to change the model, the dataset or the task type, just run the script by modifying corresponding command parameters: 
-
-```bash
-python run_textbox.py --model=[model_name] --dataset=[dataset_name]
-```
-
-`model_name` is the model to be run, such as RNN and BART. Models we implemented can be found in [Model](#Model).
-
-If you want to change the datasets, please refer to [Dataset](#Dataset).
-
-### Start from API
-
-If TextBox is installed from pip, you can create a new python file, download the dataset, and write and run the following code:
-
-```python
-from textbox.quick_start import run_textbox
-
-run_textbox(config_dict={'model': 'RNN',
-                         'dataset': 'COCO',
-                         'data_path': './dataset'})
-```
-
-This will perform the training and test of the RNN model on the COCO dataset.
-
-If you want to run different models, parameters or datasets, the operations are same with [Start from source](#Start-from-source).
-
-### **Use Pretrained Language Model**
-
-In most cases, only the following two parameters need to be passed in addition:
-
-```bash
- --tokenize_strategy=none
- --pretrained_model_path='<model_name_or_path>'
-```
-
-For example, if you want to use T5 for summarization task like CNNDM, run:
-
-```bash
-python run_textbox.py --model=t5 --dataset=CNNDM  --tokenize_strategy=none --pretrained_model_path='<model_name_or_path>'
-```
-
-The list of the model names can be found in [enum_type.py](https://github.com/RUCAIBox/TextBox/tree/main/textbox/utils/enum_type.py).
-
- If you want to add a task prefix or suffix, just add two additional parameters:
-
-```bash
---prefix_prompt='<prefix>'
---suffix_prompt='<suffix>'
-```
-
-**Note**: the prompts will be added to the beginning and end of **source ids**.
-
-If you want to add label smoothing during training, add one additional parameter:
-
-```bash
---label_smoothing=<smooth loss weight>
-```
-
-For some models used for translation task like m2m100, you need to specify source language and target language:
-
-```bash
-m2m100: en -> zh
---src_lang='en'
---tgt_lang='zh'
-mbart: en ->zh
---src_lang='en_XX'
---tgt_lang='zh_CN'
-```
-
-### **Train with Distributed Data Parallel (DDP)**
-
-TextBox supports to train models with multiple GPUs conveniently. You don't need to modify the model, just run the following command:
-
-```bash
-python -m torch.distributed.launch --nproc_per_node=[gpu_num] \
-       run_textbox.py --model=[model_name] \
-       --dataset=[dataset_name] --gpu_id=[gpu_ids] --DDP=True
-```
-
-`gpu_num` is the number of GPUs you want to train with (such as 4), and `gpu_ids` is the usable GPU id list (such as 0,1,2,3).
-
-Notice that: we only support DDP for end-to-end model. We will add support for non-end-to-end models, such as GAN, in the future.
-
-## Architecture
-
-The above [Figure](#textbox-妙笔) presents the overall architecture of our library. The running procedure relies on some experimental configuration, obtained from the files, command line or parameter dictionaries. The dataset and model are prepared and initialized according to the configured settings, and the execution module is responsible for training and evaluating models. The details of interfaces can be obtained in our [document](https://textbox.readthedocs.io/en/latest/).
-
-### Model
-
-We implement 21 text generation models, covering unconditional generation and sequence-to-sequence generation, in the following table:
-
-<table align="center">
-<thead>
-<tr>
-<th align="center">Category</th>
-<th align="center">Model</th>
-<th align="center">Reference</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center" rowspan="4"><strong>VAE</strong></td>
-<td align="center">LSTMVAE</td>
-<td align="center"><a href="https://arxiv.org/abs/1511.06349">(Bowman et al., 2016)</a></td>
-</tr>
-<tr>
-<td align="center">CNNVAE</td>
-<td align="center"><a href="https://arxiv.org/abs/1702.08139">(Yang et al., 2017)</a></td>
-</tr>
-<tr>
-<td align="center">HybridVAE</td>
-<td align="center"><a href="https://arxiv.org/abs/1702.02390">(Semeniuta et al., 2017)</a></td>
-</tr>
-<tr>
-<td align="center">CVAE</td>
-<td align="center"><a href="https://www.aclweb.org/anthology/D18-1423.pdf">(Li et al., 2018)</a></td>
-</tr>
-<tr>
-<td align="center" rowspan="6"><strong>GAN</strong></td>
-<td align="center">SeqGAN</td>
-<td align="center"><a href="https://arxiv.org/abs/1609.05473">(Yu et al., 2017)</a></td>
-</tr>
-<tr>
-<td align="center">TextGAN</td>
-<td align="center"><a href="https://arxiv.org/abs/1706.03850">(Zhang et al., 2017)</a></td>
-</tr>
-<tr>
-<td align="center">RankGAN</td>
-<td align="center"><a href="https://arxiv.org/abs/1705.11001">(Lin et al., 2017)</a></td>
-</tr>
-<tr>
-<td align="center">MaliGAN</td>
-<td align="center"><a href="https://arxiv.org/abs/1702.07983">(Che et al., 2017)</a></td>
-</tr>
-<tr>
-<td align="center">LeakGAN</td>
-<td align="center"><a href="https://arxiv.org/abs/1709.08624">(Guo et al., 2018)</a></td>
-</tr>
-<tr>
-<td align="center">MaskGAN</td>
-<td align="center"><a href="https://arxiv.org/abs/1801.07736">(Fedus et al., 2018)</a></td>
-</tr>
-<tr>
-<td align="center" rowspan="6"><strong>PLM</strong></td>
-<td align="center">GPT-2</td>
-<td align="center"><a href="https://d4mucfpksywv.cloudfront.net/better-language-models/language-models.pdf">(Radford et al., 2019)</a></td>
-</tr>
-<tr>
-<td align="center">XLNet</td>
-<td align="center"><a href="https://arxiv.org/abs/1906.08237">(Yang et al., 2019)</a></td>
-</tr>
-<tr>
-<td align="center">BERT2BERT</td>
-<td align="center"><a href="https://arxiv.org/abs/1907.12461">(Rothe et al., 2020)</a></td>
-</tr>
-<tr>
-<td align="center">BART</td>
-<td align="center"><a href="https://arxiv.org/abs/1910.13461">(Lewis et al., 2020)</a></td>
-</tr>
-<tr>
-<td align="center">T5</td>
-<td align="center"><a href="https://arxiv.org/abs/1910.10683">(Raffel et al., 2020)</a></td>
-</tr>
-<tr>
-<td align="center">ProphetNet</td>
-<td align="center"><a href="https://arxiv.org/abs/2001.04063">(Qi et al., 2020)</a></td>
-</tr>
-<td align="center" rowspan="5"><strong>Seq2Seq</strong></td>
-<td align="center">RNN</td>
-<td align="center"><a href="https://arxiv.org/abs/1409.3215">(Sutskever et al., 2014)</a></td>
-</tr>
-<tr>
-<td align="center">Transformer</td>
-<td align="center"><a href="https://arxiv.org/abs/1706.03762">(Vaswani et al., 2017b)</a></td>
-</tr>
-<tr>
-<td align="center">Context2Seq</td>
-<td align="center"><a href="https://arxiv.org/abs/1611.09900">(Tang et al., 2016)</a></td>
-</tr>
-<tr>
-<td align="center">Attr2Seq</td>
-<td align="center"><a href="https://www.aclweb.org/anthology/E17-1059/">(Dong et al., 2017)</a></td>
-</tr>
-<tr>
-<td align="center">HRED</td>
-<td align="center"><a href="https://arxiv.org/abs/1507.04808">(Serban et al., 2016)</a></td>
-</tr>
-</tbody></table>
-
-### Dataset
-
-We have also collected 9 datasets that are commonly used for six tasks, which can be downloaded from [Google Drive](https://drive.google.com/drive/folders/1iNRErGM3YRDF3hjY8DMpWaQo-prmUtNX?usp=sharing) and [Baidu Wangpan](https://pan.baidu.com/s/1upHl8SXGNjZ2LCfV-L164Q) (Password: lwy6), including raw data and processed data. 
-
-We list the 9 datasets in the following table:
-
-<table align="center">
-<thead>
-<tr>
-<th align="center">Task</th>
-<th align="center">Dataset</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center" rowspan="3"><strong>Unconditional</strong></td>
-<td align="center">Image COCO Caption</td>
-</tr>
-<tr>
-<td align="center">EMNLP2017 WMT News</td>
-</tr>
-<tr>
-<td align="center">IMDB Movie Review</td>
-</tr>
-<tr>
-<td align="center" rowspan="2"><strong>Translation</strong></td>
-<td align="center">IWSLT2014 German-English</td>
-</tr>
-<tr>
-<td align="center">WMT2014 English-German</td>
-</tr>
-<tr>
-<td align="center"><strong>Summarization</strong></td>
-<td align="center">GigaWord</td>
-</tr>
-<tr>
-<td align="center"><strong>Dialog</strong></td>
-<td align="center">Persona Chat</td>
-</tr>
-<tr>
-<td align="center"><strong>Attribute to Text</strong></td>
-<td align="center">Amazon Electronic</td>
-</tr>
-<tr>
-<td align="center"><strong>Poem Generation</strong></td>
-<td align="center">Chinese Classical Poetry Corpus</td>
-</tr>
-</tbody>
-</table>
-The downloaded dataset should be placed in the `dataset` folder, just as our main branch.
-
-We also support you to run our model using your own dataset. Just follow the three steps:
-
-1. Create a new folder under the `dataset` folder to put your own corpus file which includes a sequence per line, e.g. `dataset/YOUR_DATASET`;
-
-2. Write a YAML configuration file using the same file name to set the hyper-parameters of your dataset, e.g. `textbox/properties/dataset/YOUR_DATASET.yaml`. 
-
-   If you want to splitted the dataset, please set `split_strategy: "load_split"` in the yaml, just as the [COCO yaml](/textbox/properties/dataset/COCO.yaml) or [IWSLT14_DE_EN yaml](/textbox/properties/dataset/IWSLT14_DE_EN.yaml).
-
-   If you want to split the dataset by ratio automaticly, please set `split_strategy: "by_ratio"` and your desired `split_ratio` in the yaml, just as the [IMDB yaml](/textbox/properties/dataset/IMDB.yaml).
-
-3. For unconditional generation, name the corpus file `corpus.txt` if you set`"by_ratio"`, name the corpus files `train.txt, valid.txt, dev.txt` if you set `"load_split"`.
-
-   For sequence-to-sequence generation, please name the corpus files `train.[xx/yy], valid.[xx/yy], dev.[xx/yy]`, and the `xx` or `yy` is the suffix of the source or target file which should be consistent with `source_suffix` and `target_suffix` in the YAML.
-
-## Experiment Results
-
-We have implemented various text generation models, and compared their performance on unconditional and conditional text generation tasks. We also show a few generated examples, and more examples can be found in [generated_examples](https://github.com/RUCAIBox/TextBox/tree/main/generated_examples).
-
-*The following results were obtained from our TextBox in preliminary experiments. However, these algorithms were implemented and tuned based on our understanding and experiences, which may not achieve their optimal performance. If you could yield a better result for some specific algorithm, please kindly let us know. We will update this table after the results are verified.*
-
-### Uncondition Generation
-
-#### Image COCO Caption
-
-Negative Log-Likelihood (NLL), BLEU and Self-BLEU (SBLEU) on test dataset:
-
-|     Model     |  NLL  | BLEU-2 | BLEU-3 | BLEU-4 | BLEU-5 | SBLEU-2 | SBLEU-3 | SBLEU-4 | SBLEU-5 |
-| :-----------: | :---: | :----: | :----: | :----: | :----: | :-----: | :-----: | :-----: | :-----: |
-|  **RNNVAE**   | 33.02 | 80.46  |  51.5  | 25.89  | 11.55  |  89.18  |  61.58  |  32.69  |  14.03  |
-|  **CNNVAE**   | 36.61 |  0.63  |  0.27  |  0.28  |  0.29  |  3.10   |  0.28   |  0.29   |  0.30   |
-| **HybridVAE** | 56.44 | 31.96  |  3.75  |  1.61  |  1.76  |  77.79  |  26.77  |  5.71   |  2.49   |
-|  **SeqGAN**   | 30.56 | 80.15  | 49.88  | 24.95  | 11.10  |  84.45  |  54.26  |  27.42  |  11.87  |
-|  **TextGAN**  | 32.46 | 77.47  | 45.74  | 21.57  |  9.18  |  82.93  |  51.34  |  24.41  |  10.01  |
-|  **RankGAN**  | 31.07 | 77.36  | 45.05  | 21.46  |  9.41  |  83.13  |  50.62  |  23.79  |  10.08  |
-|  **MaliGAN**  | 31.50 | 80.08  | 49.52  | 24.03  | 10.36  |  84.85  |  55.32  |  28.28  |  12.09  |
-|  **LeakGAN**  | 25.11 | 93.49  | 82.03  | 62.59  | 42.06  |  89.73  |  64.57  |  35.60  |  14.98  |
-|  **MaskGAN**  | 95.93 | 58.07  | 21.22  |  5.07  |  1.88  |  76.10  |  43.41  |  20.06  |  9.37   |
-|   **GPT-2**   | 26.82 | 75.51  | 58.87  | 38.22  | 21.66  |  92.78  |  75.47  |  51.74  |  32.39  |
-
-Part of generated examples:
-
-<table align="center">
-<thead>
-<tr>
-<th align="center">Model</th>
-<th align="center">Examples</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center"><strong>RNNVAE</strong></td>
-<td>people playing polo to eat in the woods .</td>
-</tr>
-<tr>
-<td align="center"><strong>LeakGAN</strong></td>
-<td>a man is standing near a horse on a lush green grassy field .</td>
-</tr>
-<tr>
-<td align="center"><strong>GPT-2</strong></td>
-<td>cit a large zebra lays down on the ground.</td>
-</tr>
-</tbody></table>
-
-#### EMNLP2017 WMT News
-
-NLL, BLEU and SBLEU on test dataset:
-
-|     Model     |  NLL   | BLEU-2 | BLEU-3 | BLEU-4 | BLEU-5 | SBLEU-2 | SBLEU-3 | SBLEU-4 | SBLEU-5 |
-| :-----------: | :----: | :----: | :----: | :----: | :----: | :-----: | :-----: | :-----: | :-----: |
-|  **RNNVAE**   | 142.23 | 58.81  | 19.70  |  5.57  |  2.01  |  72.79  |  27.04  |  7.85   |  2.73   |
-|  **CNNVAE**   | 164.79 |  0.82  |  0.17  |  0.18  |  0.18  |  2.78   |  0.19   |  0.19   |  0.20   |
-| **HybridVAE** | 177.75 | 29.58  |  1.62  |  0.47  |  0.49  |  59.85  |  10.3   |  1.43   |  1.10   |
-|  **SeqGAN**   | 142.22 | 63.90  | 20.89  |  5.64  |  1.81  |  70.97  |  25.56  |  7.05   |  2.18   |
-|  **TextGAN**  | 140.90 | 60.37  | 18.86  |  4.82  |  1.52  |  68.32  |  23.24  |  6.10   |  1.84   |
-|  **RankGAN**  | 142.27 | 61.28  | 19.81  |  5.58  |  1.82  |  67.71  |  23.15  |  6.63   |  2.09   |
-|  **MaliGAN**  | 149.93 | 45.00  | 12.69  |  3.16  |  1.17  |  65.10  |  20.55  |  5.41   |  1.91   |
-|  **LeakGAN**  | 162.70 | 76.61  | 39.14  | 15.84  |  6.08  |  85.04  |  54.70  |  29.35  |  14.63  |
-|  **MaskGAN**  | 303.00 | 63.08  | 21.14  |  5.40  |  1.80  |  83.92  |  47.79  |  19.96  |  7.51   |
-|   **GPT-2**   | 88.01  | 55.88  | 21.65  |  5.34  |  1.40  |  75.67  |  36.71  |  12.67  |  3.88   |
-
-Part of generated examples:
-
-<table align="center">
-<thead>
-<tr>
-<th align="center">Model</th>
-<th align="center">Examples</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center"><strong>RNNVAE</strong></td>
-<td>lewis holds us in total because they have had a fighting opportunity to hold any bodies when companies on his assault .</td>
-</tr>
-<tr>
-<td align="center"><strong>LeakGAN</strong></td>
-<td>we &#39; re a frustration of area , then we do coming out and play stuff so that we can be able to be ready to find a team in a game , but I know how we &#39; re going to say it was a problem .</td>
-</tr>
-<tr>
-<td align="center"><strong>GPT-2</strong></td>
-<td>russ i&#39;m trying to build a house that my kids can live in, too, and it&#39;s going to be a beautiful house.</td>
-</tr>
-</tbody></table>
-
-#### IMDB Movie Review
-
-NLL, BLEU and SBLEU on test dataset:
-
-|     Model     |  NLL   | BLEU-2 | BLEU-3 | BLEU-4 | BLEU-5 | SBLEU-2 | SBLEU-3 | SBLEU-4 | SBLEU-5 |
-| :-----------: | :----: | :----: | :----: | :----: | :----: | :-----: | :-----: | :-----: | :-----: |
-|  **RNNVAE**   | 445.55 | 29.14  | 13.73  |  4.81  |  1.85  |  38.77  |  14.39  |  6.61   |  5.16   |
-|  **CNNVAE**   | 552.09 |  1.88  |  0.11  |  0.11  |  0.11  |  3.08   |  0.13   |  0.13   |  0.13   |
-| **HybridVAE** | 318.46 | 38.65  |  2.53  |  0.34  |  0.31  |  70.05  |  17.27  |  1.57   |  0.59   |
-|  **SeqGAN**   | 547.09 | 66.33  | 26.89  |  6.80  |  1.79  |  72.48  |  35.48  |  11.60  |  3.31   |
-|  **TextGAN**  | 488.37 | 63.95  | 25.82  |  6.81  |  1.51  |  72.11  |  30.56  |  8.20   |  1.96   |
-|  **RankGAN**  | 518.10 | 58.08  | 23.71  |  6.84  |  1.67  |  69.93  |  31.68  |  11.12  |  3.78   |
-|  **MaliGAN**  | 552.45 | 44.50  | 15.01  |  3.69  |  1.23  |  57.25  |  22.04  |  7.36   |  3.26   |
-|  **LeakGAN**  | 499.57 | 78.93  | 58.96  | 32.58  | 12.65  |  92.91  |  79.21  |  60.10  |  39.79  |
-|  **MaskGAN**  | 509.58 | 56.61  | 21.41  |  4.49  |  0.86  |  92.09  |  77.88  |  59.62  |  42.36  |
-|   **GPT-2**   | 348.67 | 72.52  | 41.75  | 15.40  |  4.22  |  86.21  |  58.26  |  30.03  |  12.56  |
-
-Part of generated examples (with `max_length=100`):
-
-<table align="center">
-<thead>
-<tr>
-<th align="center">Model</th>
-<th align="center">Examples</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center"><strong>RNNVAE</strong></td>
-<td>best brilliant known plot , sound movie , although unfortunately but it also like . the almost five minutes i will have done its bad numbers . so not yet i found the difference from with</td>
-</tr>
-<tr>
-<td align="center"><strong>LeakGAN</strong></td>
-<td>i saw this film shortly when I storms of a few concentration one before it all time . It doesn t understand the fact that it is a very good example of a modern day , in the &lt;|unk|&gt; , I saw it . It is so bad it s a &lt;|unk|&gt; . the cast , the stars , who are given a little</td>
-</tr>
-<tr>
-<td align="center"><strong>GPT-2</strong></td>
-<td>be a very bad, low budget horror flick that is not worth watching and, in my humble opinion, not worth watching any time. the acting is atrocious, there are scenes that you could laugh at and the story, if you can call it that, was completely lacking in logic and</td>
-</tr>
-</tbody></table>
-
-### Sequence-to-Sequence Generation
-
-#### GigaWord (Summarization)
-
-ROUGE metric on test dataset using beam search (with `beam_size=5`):
-
-<table align="center">
-<thead>
-<tr>
-<th align="center">Model</th>
-<th align="center">ROUGE-1</th>
-<th align="center">ROUGE-2</th>
-<th align="center">ROUGE-L</th>
-<th align="center">ROUGE-W</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center"><strong>RNN with Attention</strong></td>
-<td align="center">36.32</td>
-<td align="center">17.63</td>
-<td align="center">38.36</td>
-<td align="center">25.08</td>
-</tr>
-<tr>
-<td align="center"><strong>Transformer</strong></td>
-<td align="center">36.21</td>
-<td align="center">17.64</td>
-<td align="center">38.10</td>
-<td align="center">24.89</td>
-</tr>
-<tr>
-<td align="center"><strong>BART</strong></td>
-<td align="center">39.34</td>
-<td align="center">20.07</td>
-<td align="center">41.25</td>
-<td align="center">27.13</td>
-</tr>
-<tr>
-<td align="center"><strong>BERT2BERT</strong></td>
-<td align="center">38.16</td>
-<td align="center">18.89</td>
-<td align="center">40.06</td>
-<td align="center">26.21</td>
-</tr>
-<td align="center"><strong>ProphetNet</strong></td>
-<td align="center">38.49</td>
-<td align="center">18.41</td>
-<td align="center">39.84</td>
-<td align="center">26.12</td>
-</tr>
-<td align="center"><strong>T5</strong></td>
-<td align="center">38.83</td>
-<td align="center">19.68</td>
-<td align="center">40.76</td>
-<td align="center">26.73</td>
-</tr>
-</tbody></table>
-Part of generated examples:
-
-<table align="center">
-<tbody><tr>
-<td align="center"><b>Article</b></td>
-<td>japan 's nec corp. and computer corp. of the united states said wednesday they had agreed to join forces in supercomputer sales .
-</td>
-</tr>
-<tr>
-<td align="center"><b>Gold Summary</b></td>
-<td>nec in computer sales tie-up</td>
-</tr>
-<tr>
-<td align="center"><b>RNN with Attention</b></td>
-<td>nec computer corp .</td>
-</tr>
-<tr>
-<td align="center"><b>Transformer</b></td>
-<td>nec computer to join forces in chip sales</td>
-</tr>
-<td align="center"><b>BART</b></td>
-<td>nec computer corp.</td>
-</tr>
-<td align="center"><b>BERT2BERT</b></td>
-<td>nec computer form alliance for supercomputer sales</td>
-</tr>
-<td align="center"><b>ProphetNet</b></td>
-<td>nec computer to join forces in supercomputer sales</td>
-</tr>
-<td align="center"><b>T5</b></td>
-<td>nec computer to join forces in supercomputer sales</td>
-</tr>
-</tbody></table>
-
-#### IWSLT2014 German-English (Translation)
-
-BLEU metric on test dataset with three decoding strategies: top-k sampling, greedy search and beam search (with `beam_size=5`):
-
-<table align="center">
-<thead>
-<tr>
-<th align="center">Model</th>
-<th align="center">Strategy</th>
-<th align="center">BLEU-2</th>
-<th align="center">BLEU-3</th>
-<th align="center">BLEU-4</th>
-<th align="center">BLEU</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center" rowspan="3"><b>RNN with Attention</b></td>
-<td align="center">Top-k sampling</td>
-<td align="center">26.68</td>
-<td align="center">16.95</td>
-<td align="center">10.85</td>
-<td align="center">19.66</td>
-</tr>
-<tr>
-<td align="center">Greedy search</td>
-<td align="center">33.74</td>
-<td align="center">23.03</td>
-<td align="center">15.79</td>
-<td align="center">26.23</td>
-</tr>
-<tr>
-<td align="center">Beam search</td>
-<td align="center">35.68</td>
-<td align="center">24.94</td>
-<td align="center">17.42</td>
-<td align="center">28.23</td>
-</tr>
-<tr>
-<td align="center" rowspan="3"><b>Transformer</b></td>
-<td align="center">Top-k sampling</td>
-<td align="center">30.96</td>
-<td align="center">20.83</td>
-<td align="center">14.16</td>
-<td align="center">23.91</td>
-</tr>
-<tr>
-<td align="center">Greedy search</td>
-<td align="center">35.48</td>
-<td align="center">24.76</td>
-<td align="center">17.41</td>
-<td align="center">28.10</td>
-</tr>
-<tr>
-<td align="center">Beam search</td>
-<td align="center">36.88</td>
-<td align="center">26.10</td>
-<td align="center">18.54</td>
-<td align="center">29.49</td>
-</tr>
-<tr>
-<td align="center"><b>BART</b></td>
-<td align="center">Beam search</td>
-<td align="center">29.02</td>
-<td align="center">19.58</td>
-<td align="center">13.48</td>
-<td align="center">22.42</td>
-</tr>
-<td align="center"><b>BERT2BERT</b></td>
-<td align="center">Beam search</td>
-<td align="center">27.61</td>
-<td align="center">18.41</td>
-<td align="center">12.46</td>
-<td align="center">21.07</td>
-</tr>
-</tbody></table>
-Part of generated examples:
-
-<table align="center">
-<tbody><tr>
-<td align="center"><b>Source (Germany)</b></td>
-<td>wissen sie , eines der großen &lt; unk &gt; beim reisen und eine der freuden bei der &lt; unk &gt; forschung ist , gemeinsam mit den menschen zu leben , die sich noch an die alten tage erinnern können . die ihre vergangenheit noch immer im wind spüren , sie auf vom regen &lt; unk &gt; steinen berühren , sie in den bitteren blättern der pflanzen schmecken .</td>
-</tr>
-<tr>
-<td align="center"><b>Gold Target (English)</b></td>
-<td>you know , one of the intense pleasures of travel and one of the delights of &lt; unk &gt; research is the opportunity to live amongst those who have not forgotten the old ways , who still feel their past in the wind , touch it in stones &lt; unk &gt; by rain , taste it in the bitter leaves of plants .</td>
-</tr>
-<tr>
-<td align="center"><b>RNN with Attention</b></td>
-<td>you know , one of the great &lt; unk &gt; trips is a travel and one of the friends in the world &amp; apos ; s investigation is located on the old days that you can remember the past day , you &amp; apos ; re &lt; unk &gt; to the rain in the &lt; unk &gt; chamber of plants .</td>
-</tr>
-<tr>
-<td align="center"><b>Transformer</b></td>
-<td>you know , one of the great &lt; unk &gt; about travel , and one of the pleasure in the &lt; unk &gt; research is to live with people who remember the old days , and they still remember the wind in the wind , but they &amp; apos ; re touching the &lt; unk &gt; .</td>
-</tr>
-</tbody></table>
-
-#### Persona Chat (Dialogue)
-
-BLEU and distinct metrics on test dataset using beam search (with `beam_size=5`):
-
-<table align="center">
-<thead>
-<tr>
-<th align="center">Model</th>
-<th align="center">Distinct-1</th>
-<th align="center">Distinct-2</th>
-<th align="center">BLEU-1</th>
-<th align="center">BLEU-2</th>
-<th align="center">BLEU-3</th>
-<th align="center">BLEU-4</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center"><strong>RNN with Attention</strong></td>
-<td align="center">0.24</td>
-<td align="center">0.72</td>
-<td align="center">17.51</td>
-<td align="center">4.65</td>
-<td align="center">2.11</td>
-<td align="center">1.47</td>
-</tr>
-<tr>
-<td align="center"><strong>Transformer</strong></td>
-<td align="center">0.38</td>
-<td align="center">2.28</td>
-<td align="center">17.29</td>
-<td align="center">4.85</td>
-<td align="center">2.32</td>
-<td align="center">1.65</td>
-</tr>
-<tr>
-<td align="center"><strong>HRED</strong></td>
-<td align="center">0.22</td>
-<td align="center">0.63</td>
-<td align="center">17.29</td>
-<td align="center">4.72</td>
-<td align="center">2.20</td>
-<td align="center">1.60</td>
-</tr>
-</tbody></table>
-
-#### Amazon Electronic (Attribute to text)
-
-BLEU and distinct metrics on test dataset using beam search (with `beam_size=5`):
-
-<table align="center">
-<thead>
-<tr>
-<th align="center">Model</th>
-<th align="center">Distinct-1</th>
-<th align="center">Distinct-2</th>
-<th align="center">BLEU-1</th>
-<th align="center">BLEU-2</th>
-<th align="center">BLEU-3</th>
-<th align="center">BLEU-4</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center"><strong>Context2Seq</strong></td>
-<td align="center">0.07</td>
-<td align="center">0.39</td>
-<td align="center">17.21</td>
-<td align="center">2.80</td>
-<td align="center">0.83</td>
-<td align="center">0.43</td>
-</tr>
-<tr>
-<td align="center"><strong>Attr2Seq</strong></td>
-<td align="center">0.14</td>
-<td align="center">2.81</td>
-<td align="center">17.14</td>
-<td align="center">2.81</td>
-<td align="center">0.87</td>
-<td align="center">0.48</td>
-</tr>
-</tbody></table>
-
-## Releases
-
-| Releases |    Date    |   Features    |
-| :------: | :--------: | :-----------: |
-|  v0.2.1  | 15/04/2021 |    TextBox    |
-|  v0.1.5  | 01/11/2021 | Basic TextBox |
-
-## Contributing
-
-Please let us know if you encounter a bug or have any suggestions by [filing an issue](https://github.com/RUCAIBox/TextBox/issues).
-
-We welcome all contributions from bug fixes to new features and extensions.
-
-We expect all contributions discussed in the issue tracker and going through PRs.
-
-We thank [@LucasTsui0725](https://github.com/LucasTsui0725/) for contributing HRED model and [@Richar-Du](https://github.com/Richar-Du/) for CVAE model.
-
-We thank [@wxDai](https://github.com/Dai-Wenxun) for contributing PointerNet and more than 20 language models in transformers API.
-
-## Reference
-
-If you find TextBox useful for your research or development, please cite the following [paper](https://arxiv.org/abs/2101.02046):
-
-```
-@article{textbox,
-    title={TextBox: A Unified, Modularized, and Extensible Framework for Text Generation},
-    author={Junyi Li, Tianyi Tang, Gaole He, Jinhao Jiang, Xiaoxuan Hu, Puzhao Xie, Wayne Xin Zhao, Ji-Rong Wen},
-    year={2021},
-    journal={arXiv preprint arXiv:2101.02046}
-}
-```
-
-## The Team
-
-TextBox is developed and maintained by [AI Box](http://aibox.ruc.edu.cn/).
-
-## License
-TextBox uses [MIT License](./LICENSE).
+- [ ] Save checkpoint and generated text every validation
+### Others
+- [ ] Check `_check_metrics`
+- [ ] Add optimizer `AdamW` and `Adafactor` (for T5)
+- [ ] Hyper-parameter for optimizer
+- [ ] Only pass tuned parameters (`requires_grad=True`) to optimizer
+- [ ] Simplify useless code
+- [ ] `tqdm` with loss (metric) and `dynamic_ncols=True`
+- [ ] Check `torch.no_grad()`, `model.train()` and `model.eval()`
+- [ ] Move `optimizer` to `trainer` and change name to `scheduler`
+
+## Model
+### Overall
+- [ ] Automaticly detect model name (case-insensitive)
+- [ ] Simplify code using AutoModel and AutoTokenizer, following HF example
+- [ ] Model without pre-trained weights
+- [ ] Support `model_name`, `--tokenizer_name` and `--config_name`
+- [ ] Check `__getattr__` in `abstract_model.py`
+### Models in HF
+- [ ] Add OPT
+### Models not in HF
+- [ ] Add UniLM (reproduce results on SQuAD)
+- [ ] Add MASS (reproduce results on SQuAD)
+- [ ] Add CPT and chinese BART (Add one Chinese dataset and reproduce results)
+### Translation
+- [ ] Add XLM (Add one translation dataset and reproduce results)
+- [ ] Add MarianMT (the same)
+- [ ] Test mBART, mT5 using the tranlastion dataset
+### Non-pretrained models
+- [ ] Refactor RNN Seq2Seq (merge `Attention`)
+- [ ] Refactor Copied Seq2Seq
+- [ ] Add basic Transformer
+- [ ] Model initilazation (for PLM?)
+### Prompting
+- [ ] Add prompt tuning
+- [ ] Add prefix tuning for GPT-2, BART, T5
+- [ ] Add P-tuningv2 for GPT-2, BART, T5
+- [ ] Add adapter for GPT-2, BART, T5
+- [ ] Add LoRA for GPT-2, BART, T5
+- [ ] Add bias tuning for GPT-2, BART, T5
+### *Other models
+- [ ] Add CTRL
+- [ ] Add PPLM
+- [ ] Add non-autoregressive models
+
+
+## Evaluator
+- [ ] Unify `base_evaluator`
+- [ ] Support evaluation for different datasets and task. (how to specify the evaluation method?)
+    - [ ] Text summarization: CNN/Daily Mail (cnndm), XSum (xsum), SAMSum (samsum), and WLE (wle).
+    - [ ] Open-ended dialogue system: PersonaChat (pc), DailyDialog (dd), DSTC7-AVSD (da), and SGD (sgd).
+    - [ ] Data-to-text generation: WebNLG v2.1 (webnlg), WebNLG v3.0 (webnlg2), WikiBio (wikibio), E2E (e2e), DART (dart), and ToTTo (totto).
+    - [ ] Question generation: SQuAD (squadqg) and CoQA (coqaqg).
+    - [ ] Story generation: ROCStories (roc) and WritingPrompts (wp).
+    - [ ] Question answering: SQuAD (squad) and CoQA (coqa).
+    - [ ] Task-oriented dialogue system: MultiWOZ 2.0 (multiwoz).
+    - [ ] Commonsense generation: CommonGen (cg).
+    - [ ] Text simplification: WikiAuto + Turk/ASSET (wia).
+    - [ ] Paraphrase generation: Quora (comming soon).
+    - [ ] Text style transfer: GYAFC-E&M and F&R (comming soon).
+
+
+## Leaderboard
+- [ ] Construct leaderboard for each datasets at GitHub page, including common models, paper link, metric results, and generated files (theirs (official link) or our reproduced (provide config)).
+    - [ ] Text summarization: CNN/Daily Mail (cnndm), XSum (xsum), SAMSum (samsum), and WLE (wle).
+    - [ ] Open-ended dialogue system: PersonaChat (pc), DailyDialog (dd), DSTC7-AVSD (da), and SGD (sgd).
+    - [ ] Data-to-text generation: WebNLG v2.1 (webnlg), WebNLG v3.0 (webnlg2), WikiBio (wikibio), E2E (e2e), DART (dart), and ToTTo (totto).
+    - [ ] Question generation: SQuAD (squadqg) and CoQA (coqaqg).
+    - [ ] Story generation: ROCStories (roc) and WritingPrompts (wp).
+    - [ ] Question answering: SQuAD (squad) and CoQA (coqa).
+    - [ ] Task-oriented dialogue system: MultiWOZ 2.0 (multiwoz).
+    - [ ] Commonsense generation: CommonGen (cg).
+    - [ ] Text simplification: WikiAuto + Turk/ASSET (wia).
+    - [ ] Paraphrase generation: Quora (comming soon).
+    - [ ] Text style transfer: GYAFC-E&M and F&R (comming soon).
+
+## Data statistics
+- [ ] Further research

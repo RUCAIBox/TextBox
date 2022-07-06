@@ -1,9 +1,0 @@
-embedding_size: 512
-hidden_size: 512
-num_dec_layers: 2
-dropout_ratio: 0.2
-beam_size: 5
-decoding_strategy: 'beam_search'
-rnn_type: lstm
-attention_type: LuongAttention
-alignment_method: concat

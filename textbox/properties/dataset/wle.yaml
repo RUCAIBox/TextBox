@@ -1,0 +1,10 @@
+src_len: 1024
+tgt_len: 128
+task_type: "translation"
+metrics: ['gem']
+eval_metrics: ['bleu', 'rouge', 'meteor']
+
+train_batch_size: 4
+update_freq: 48
+eval_batch_size: 16
+prefix: 'Summarize: '

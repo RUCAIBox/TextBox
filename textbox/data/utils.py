@@ -8,6 +8,8 @@ import shutil
 from logging import getLogger
 from textbox import SpecialTokens
 
+from typing import Any
+
 
 def get_dataset(config):
     """Create dataset according to :attr:`config['model']` and :attr:`config['MODEL_TYPE']`.
@@ -62,7 +64,7 @@ def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False, dro
     )
 
 
-def construct_quick_test_dataset(dataset_path):
+def construct_quick_test_dataset(dataset_path: str, num: int = 10):
     files = listdir(dataset_path)
     for file in files:
         filename = os.path.join(dataset_path, file)
@@ -74,7 +76,7 @@ def construct_quick_test_dataset(dataset_path):
         filename = os.path.join(dataset_path, file)
         if not filename.endswith('.bin'):
             with open(filename + '.tmp', 'r') as fin, open(filename, 'w') as fout:
-                for line in fin.readlines()[:10]:
+                for line in fin.readlines()[:num]:
                     fout.write(line)
 
 
@@ -103,7 +105,10 @@ def data_preparation(config, save=False):
             - test_data (AbstractDataLoader): The dataloader for testing.
     """
     if config['quick_test']:
-        construct_quick_test_dataset(config['data_path'])
+        if isinstance(config['quick_test'], int):
+            construct_quick_test_dataset(config['data_path'], num=config['quick_test'])
+        else:
+            construct_quick_test_dataset(config['data_path'])
     dataset = get_dataset(config)(config)
     if config['quick_test']:
         deconstruct_quick_test_dataset(config['data_path'])
@@ -181,7 +186,7 @@ def load_data(dataset_path, tokenize_strategy, max_length, language):
         List[List[str]]: the text list loaded from dataset path.
     """
     if not os.path.isfile(dataset_path):
-        raise ValueError('File {} not exist'.format(dataset_path))
+        raise ValueError('File {} not exist'.format(os.path.abspath(dataset_path)))
 
     text = []
     with open(dataset_path, "r") as fin:

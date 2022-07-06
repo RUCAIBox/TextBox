@@ -1,55 +1,67 @@
+# @Time   : 2020/11/14
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
+
+"""
+textbox.utils.logger
+###############################
+"""
+
 import logging
 import os
+from textbox.utils.utils import ensure_dir
+
+from typing import Optional
 
 
-def init_logger(config):
+FILE_FMT = "%(asctime)-15s %(levelname)s %(message)s"
+FILE_DATE_FMT = "%a %d %b %Y %H:%M:%S"
+STREAM_FMT = "%(asctime)-15s %(levelname)s %(message)s"
+STREAM_DATE_FMT = "%d %b %H:%M"
+
+
+def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, logdir: str = './log/'):
     """
     A logger that can show a message on standard output and write it into the
     file named `filename` simultaneously.
     All the message that you want to log MUST be str.
 
     Args:
-        config (Config): An instance object of Config, used to record parameter information.
+        filename: The filename of current experiment.
+        log_level: Log level of loggers in `logging` module.
+        enabled: (Default = True) False to throttle logging output down.
+        logdir: (Default = './log/') Directory of log files.
 
     Example:
-        >>> logger = logging.getLogger(config)
-        >>> logger.debug(train_state)
-        >>> logger.info(train_result)
+        >>> init_logger("filename", "warning", disabled=True)
+        >>> logger = logging.getLogger()
+        >>> logger.debug("train_state")
+        >>> logger.info("train_result")
+        >>> logger.warning("Warning!")
+        Warning!
     """
-    LOGROOT = './log/'
-    dir_name = os.path.dirname(LOGROOT)
-    if not os.path.exists(dir_name):
-        os.makedirs(dir_name)
+    dir_name = os.path.dirname(logdir)
+    ensure_dir(dir_name)
 
-    logfilename = config['filename'] + '.log'
+    log_filename = filename + '.log'
+    log_filepath = os.path.join(logdir, log_filename)
 
-    logfilepath = os.path.join(LOGROOT, logfilename)
+    file_formatter = logging.Formatter(FILE_FMT, FILE_DATE_FMT)
+    stream_formatter = logging.Formatter(STREAM_FMT, STREAM_DATE_FMT)
 
-    filefmt = "%(asctime)-15s %(levelname)s %(message)s"
-    filedatefmt = "%a %d %b %Y %H:%M:%S"
-    fileformatter = logging.Formatter(filefmt, filedatefmt)
+    if log_level is None:
+        log_level = "warning"
+    level = getattr(logging, log_level.upper(), None)
 
-    sfmt = "%(asctime)-15s %(levelname)s %(message)s"
-    sdatefmt = "%d %b %H:%M"
-    sformatter = logging.Formatter(sfmt, sdatefmt)
-    if config['state'] is None or config['state'].lower() == 'info':
-        level = logging.INFO
-    elif config['state'].lower() == 'debug':
-        level = logging.DEBUG
-    elif config['state'].lower() == 'error':
-        level = logging.ERROR
-    elif config['state'].lower() == 'warning':
-        level = logging.WARNING
-    elif config['state'].lower() == 'critical':
-        level = logging.CRITICAL
-    else:
-        level = logging.INFO
-    fh = logging.FileHandler(logfilepath)
-    fh.setLevel(level)
-    fh.setFormatter(fileformatter)
+    if not enabled:
+        logging.disable(logging.CRITICAL)
 
-    sh = logging.StreamHandler()
-    sh.setLevel(level)
-    sh.setFormatter(sformatter)
+    file_handler = logging.FileHandler(log_filepath)
+    file_handler.setLevel(level)
+    file_handler.setFormatter(file_formatter)
 
-    logging.basicConfig(level=level, handlers=[fh, sh])
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(level)
+    stream_handler.setFormatter(stream_formatter)
+
+    logging.basicConfig(level=level, handlers=[file_handler, stream_handler])

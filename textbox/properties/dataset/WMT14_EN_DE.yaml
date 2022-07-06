@@ -1,0 +1,4 @@
+vocab_size: 50000
+src_len: 250
+tgt_len: 250
+task_type: "translation"

@@ -1,0 +1,11 @@
+# model settings
+embedding_size: 128
+hidden_size: 256
+latent_size: 64
+rnn_type: "lstm"
+num_dec_layers: 2
+alpha_aux: 0.4
+
+# training settings
+learning_rate: 0.0005
+dropout_ratio: 0.2

@@ -1,3 +1,12 @@
+# @Time   : 2020/11/14
+# @Author : Junyi Li, Gaole He
+# @Email  : lijunyi@ruc.edu.cn
+
+"""
+textbox.model.init
+########################
+"""
+
 import torch.nn as nn
 from torch.nn.init import xavier_normal_, xavier_uniform_, constant_
 

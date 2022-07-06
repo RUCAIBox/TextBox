@@ -1,0 +1,3 @@
+vocab_size: 6000
+seq_len: 60
+task_type: "unconditional"

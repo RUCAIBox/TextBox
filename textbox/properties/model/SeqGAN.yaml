@@ -1,0 +1,8 @@
+generator_embedding_size: 32
+discriminator_embedding_size: 64
+hidden_size: 32
+dropout_rate: 0.25
+l2_reg_lambda: 0.2
+filter_sizes: [2, 3, 4]
+filter_nums: [200, 200, 200]
+Monte_Carlo_num: 16

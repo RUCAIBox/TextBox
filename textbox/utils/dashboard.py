@@ -8,8 +8,6 @@ import os
 from torch.utils.tensorboard import SummaryWriter
 from logging import getLogger
 
-import textbox
-
 try:
     import wandb
 
@@ -18,7 +16,7 @@ except (ImportError, AssertionError):
     wandb = None
     getLogger().info('Failed when importing wandb module.')
 
-from typing import Optional, Any, Type, Union, Iterable, Callable, Mapping
+from typing import Optional, Any, Type, Union, Iterable, Callable, Mapping, Dict
 from textbox.config.configurator import Config
 ScalarType = (float, int)
 TextType = str
@@ -31,6 +29,14 @@ class AbstractDashboard:
 
     def step(self):
         self.global_step += 1
+
+    def __enter__(self):
+
+        raise NotImplementedError
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+
+        raise NotImplementedError
 
     def add_scalar(self, tag: str, scalar_value: Union[ScalarType], **kwargs):
         r"""Add scalar data to summary.
@@ -87,8 +93,14 @@ class AbstractDashboard:
 
 class NilWriter(AbstractDashboard):
 
-    def __init__(self, logdir: str = "", filename: str = ""):
-        super().__init__(logdir, filename)
+    def __init__(self):
+        super().__init__()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
 
     def add_scalar(self, tag: str, scalar_value: Union[ScalarType], **kwargs):
         r"""Dummy method."""
@@ -113,13 +125,13 @@ class TensorboardWriter(AbstractDashboard):
         >>>         ...
     """
 
-    def __init__(self, logdir: str, filename: str, comment: str = ""):
+    def __init__(self, logdir: str, filename: str):
         logdir = os.path.join(logdir, "tensorboard")
         log_subdir = os.path.join(logdir, filename)
 
         super(TensorboardWriter, self).__init__()
 
-        self.dashboard = SummaryWriter(log_dir=log_subdir, comment=comment)
+        self.dashboard = SummaryWriter(log_dir=log_subdir)
 
         print(
             f'Open dashboard with following command:\n\n  '
@@ -142,30 +154,38 @@ class TensorboardWriter(AbstractDashboard):
 
 class WandBWriter(AbstractDashboard):
 
-    def __init__(self, filename: str):
+    def __init__(self, **kwargs):
         super().__init__()
-        print('Login to wandb with following command:\n\n  wandb login\n')
+        self.run = wandb.init(**kwargs)
+        self.tables: Dict[str, wandb.data_types.Table] = dict()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        wandb.log(self.tables)
+        self.run.finish()
 
     def add_text(self, tag: str, text_string: Union[TextType], **kwargs):
-        pass
+        if tag not in self.tables:
+            self.tables[tag] = wandb.Table(columns=[tag])
+        self.tables[tag].add_data(text_string)
 
     def add_scalar(self, tag: str, scalar_value: Union[ScalarType], **kwargs):
-        pass
+        wandb.log({tag: scalar_value})
 
 
 def get_dashboard(
         dashboard: Optional[str],
-        project: str,
-        logdir: str = "",
-        config: Optional[Mapping] = None
+        logdir: str,
+        config: Config,
 ) -> Union[Callable[[], WandBWriter], Callable[[], TensorboardWriter], Type[NilWriter]]:
     r"""Get the dashboard class.
 
     Args:
-        dashboard
-        project
-        logdir
-        config
+        dashboard:
+        logdir:
+        config:
 
     Examples:
 
@@ -180,11 +200,11 @@ def get_dashboard(
     if dashboard == "wandb":
         if wandb is not None:
 
-            wandb.login()
-            wandb.init(project=project)
+            project = f"{config['model']}-{config['dataset']}"
+            name = config['filename'][len(project):]
 
             def _get_wandb():
-                return WandBWriter(project)
+                return WandBWriter(dir=logdir, project=project, name=name)
 
             return _get_wandb
         else:
@@ -193,7 +213,7 @@ def get_dashboard(
     if dashboard is None or dashboard == "tensorboard":
 
         def _get_tensorboard():
-            return TensorboardWriter(logdir, project)
+            return TensorboardWriter(logdir=logdir, filename=config['filename'])
 
         return _get_tensorboard
     else:

@@ -260,9 +260,9 @@ class Trainer(AbstractTrainer):
         self.item_tensor = None
         self.tot_item_num = None
         self.iid_field = config['ITEM_ID_FIELD']
-        self._DashboardClass = get_dashboard(config['dashboard'])
-        self._dashboard: Optional[AbstractDashboard] = None
         self.logdir = './log/'
+        self._DashboardClass = get_dashboard(config['dashboard'], self.logdir, config)
+        self._dashboard = None
 
     def _set_eval_mode(self) -> Tuple[int, Literal["epoch", "step"]]:
         r"""Check evaluation mode. Default = (1, "epoch") (If both `eval_epoch` and `eval_step` are specified,
@@ -583,7 +583,7 @@ class Trainer(AbstractTrainer):
             * Modify the return value.
         """
         self.logger.info("====== Start training ======")
-        with self._DashboardClass(self.logdir, self.filename) as dashboard:
+        with self._DashboardClass() as dashboard:
             self._dashboard = dashboard
             for epoch_idx in range(self.start_epoch, self.epochs):
                 self.epoch_idx = epoch_idx

@@ -5,10 +5,10 @@ import yaml
 import torch
 from logging import getLogger
 
-from typing import Set, Dict, Optional
+from typing import List, Dict, Optional
 
-from textbox.utils import get_local_time
-from textbox.utils.argument_list import general_arguments, training_arguments, evaluation_arguments, model_arguments
+from textbox.utils.utils import get_local_time
+from textbox.utils.argument_list import general_arguments, training_arguments, evaluation_arguments
 
 
 class Config(object):
@@ -69,12 +69,12 @@ class Config(object):
         self._set_default_parameters()
 
     def _init_parameters_category(self):
-        self.parameters: Dict[str, Set[str]] = dict()
+        self.parameters: Dict[str, List[str]] = dict()
         self.parameters['General'] = general_arguments
         self.parameters['Training'] = training_arguments
         self.parameters['Evaluation'] = evaluation_arguments
-        self.parameters['Model']: Set[str] = model_arguments
-        self.parameters['Dataset']: Set[str] = set()
+        self.parameters['Model']: List[str] = []
+        self.parameters['Dataset']: List[str] = []
 
     def _build_yaml_loader(self):
         loader = yaml.FullLoader
@@ -223,15 +223,15 @@ class Config(object):
             if os.path.isfile(file):
                 config_dict = self._update_internal_config_dict(file)
                 if file == model_init_file:
-                    self.parameters['Model'] = {
+                    self.parameters['Model'] = [
                         key for key in config_dict.keys()
                         if key not in self.parameters['General'] and key not in self.parameters['Training']
                            and key not in self.parameters['Evaluation'] and key not in self.parameters['Dataset']
-                    }
+                    ]
                 elif file == dataset_init_file:
-                    self.parameters['Dataset'].update({
+                    self.parameters['Dataset'] += [
                         key for key in config_dict.keys() if key not in self.parameters['Dataset']
-                    })
+                    ]
                 self.internal_sources.append(os.path.abspath(file))
 
     def _get_final_config_dict(self):

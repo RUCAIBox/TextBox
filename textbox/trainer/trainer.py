@@ -69,7 +69,7 @@ class EpochTracker:
         self._DDP: bool = DDP
         self.mode_tag = self._is_train[train]
 
-        self._dashboard: AbstractDashboard = dashboard or NilWriter("")
+        self._dashboard: AbstractDashboard = dashboard or NilWriter()
 
     def append_loss(self, loss: float):
         r"""Append loss of current step to tracker and update current step."""
@@ -583,7 +583,7 @@ class Trainer(AbstractTrainer):
             * Modify the return value.
         """
         self.logger.info("====== Start training ======")
-        with self._DashboardClass(self.logdir) as dashboard:
+        with self._DashboardClass(self.logdir, self.filename) as dashboard:
             self._dashboard = dashboard
             for epoch_idx in range(self.start_epoch, self.epochs):
                 self.epoch_idx = epoch_idx
@@ -602,6 +602,7 @@ class Trainer(AbstractTrainer):
         if not self._saved_once and saved:
             self._save_checkpoint()
         self.logger.info('====== Finished training, best eval result in epoch {} ======'.format(self.best_epoch))
+
         result = {"best_valid_score": self.best_valid_score,
                   "best_valid_loss": self.best_valid_loss,
                   "best_valid_ppl": self.best_valid_ppl}

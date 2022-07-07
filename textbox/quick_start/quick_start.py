@@ -1,11 +1,12 @@
 import torch
 from logging import getLogger
-from textbox.utils import init_logger, get_model, get_trainer, init_seed
-from textbox.config import Config
-from textbox.data import data_preparation
+from textbox.utils.logger import init_logger
+from textbox.utils.utils import get_model, get_trainer, init_seed
+from textbox.config.configurator import Config
+from textbox.data.utils import data_preparation
 
 
-def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=None, saved=True):
+def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=None):
     r""" A fast running api, which includes the complete process of
     training and testing a model on a specified dataset
 
@@ -14,7 +15,6 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
         dataset (str): dataset name
         config_file_list (list): config files used to modify experiment parameters
         config_dict (dict): parameters dictionary used to modify experiment parameters
-        saved (bool): whether to save the model
     """
 
     # configurations initialization
@@ -61,12 +61,12 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
         logger.info('Test only')
         if not config['load_experiment']:
             logger.warning('Specific path to model file with `load_experiment`.')
-        test_result = trainer.evaluate(test_data, load_best_model=saved, model_file=config['load_experiment'])
+        test_result = trainer.evaluate(test_data, model_file=config['load_experiment'])
     else:
         if config['load_experiment'] is not None and is_logger:
             trainer.resume_checkpoint(resume_file=config['load_experiment'])
         # model training
-        result = trainer.fit(train_data, valid_data, saved=saved)
+        result = trainer.fit(train_data, valid_data)
         # model evaluating
         if config['DDP']:
             if torch.distributed.get_rank() != 0:
@@ -76,6 +76,6 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
             trainer = get_trainer(config['MODEL_TYPE'], config['model'])(config, model)
         for key, value in result.items():
             logger.info(f"{key}: {value}")
-        test_result = trainer.evaluate(test_data, load_best_model=saved)
+        test_result = trainer.evaluate(test_data)
 
     logger.info('test result: {}'.format(test_result))

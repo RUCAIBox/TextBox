@@ -38,7 +38,7 @@ class EpochTracker:
             Implementation of visualization toolkit.
 
     Example:
-        >>> tbw = TensorboardWriter("log/dir")
+        >>> tbw = TensorboardWriter("log/dir", "filename")
         >>> for epoch in range(10):
         >>>     valid_tracker = EpochTracker(epoch, DDP=False, train=False, dashboard=tbw)
         >>>     for step in range(10):
@@ -47,7 +47,7 @@ class EpochTracker:
         >>>     valid_tracker.info(time_duration=10.0)
         Epoch 0,  validating [time: 10.00s, validating_loss: 1.0000, ppl: 2.71]
     """
-    _is_train: Dict[bool, Literal["training", "validating"]] = {True: "training", False: "validating"}
+    _is_train: Dict[bool, Literal["train", "valid"]] = {True: "train", False: "valid"}
 
     def __init__(
             self,
@@ -62,7 +62,7 @@ class EpochTracker:
         self._accumulate_step: int = 0
         self._loss: Optional[float] = None
 
-        self._metrics_results: Optional[MetricsDict] = None
+        self._metrics_results: MetricsDict = dict()
         self._score: Optional[float] = None
 
         self._logger: Logger = getLogger()
@@ -70,12 +70,13 @@ class EpochTracker:
         self.mode_tag = self._is_train[train]
 
         self._dashboard: AbstractDashboard = dashboard or NilWriter()
+        self._dashboard.update_axes(self.mode_tag + "/epoch")
 
     def append_loss(self, loss: float):
         r"""Append loss of current step to tracker and update current step."""
         _check_nan(loss)
-        self._dashboard.add_scalar("Loss/" + self.mode_tag, loss)
-        self._dashboard.step()
+        self._dashboard.add_scalar("loss/" + self.mode_tag, loss)
+        self._dashboard.update_axes(self.mode_tag + "/step")
 
         self._accumulate_loss += loss
         self._accumulate_step += 1
@@ -83,15 +84,15 @@ class EpochTracker:
     def set_result(self, results: dict):
         r"""Record the metrics results."""
         for metric, result in results.items():
-            self._dashboard.add_any("Metrics/" + metric, result)
-        self._metrics_results = results
+            self._dashboard.add_any("metrics/" + metric, result)
+        self._metrics_results.update(results)
 
     def _calc_score(self) -> Optional[float]:
         r"""Ensure the score will only be calculated and recorded once."""
         if self._metrics_results is None:
             return None
 
-        score = 0.
+        score: Optional[float] = None
         for metric, result in self._metrics_results.items():
             if isinstance(result, dict):
                 float_list = list(filter(lambda x: isinstance(x, float), result.values()))
@@ -103,8 +104,11 @@ class EpochTracker:
                 self._logger.warning(f"Failed when working out score of metric {metric}.")
                 continue
             if len(float_list) != 0:
+                if score is None:
+                    score = 0.
                 score += sum(float_list) / len(float_list)
-        self._dashboard.add_scalar("Metrics/score", score)
+        if score is not None:
+            self._dashboard.add_scalar("metrics/score", score)
 
         return score
 
@@ -404,7 +408,7 @@ class Trainer(AbstractTrainer):
         """
         self.model.train()
         tracker = EpochTracker(epoch_idx, self.DDP, train=True, dashboard=self._dashboard)
-        train_tqdm = tqdm(train_data, desc=f"train {epoch_idx:4}", ncols=80) if process_bar and self._is_logger \
+        train_tqdm = tqdm(train_data, desc=f"train {epoch_idx:4}", ncols=100) if process_bar and self._is_logger \
             else train_data
 
         for data in train_tqdm:
@@ -441,7 +445,7 @@ class Trainer(AbstractTrainer):
         """
         self.model.eval()
         tracker = EpochTracker(epoch_idx, self.DDP, train=False, dashboard=self._dashboard)
-        valid_tqdm= tqdm(valid_data, desc=f"train {epoch_idx:4}", ncols=80) if process_bar and self._is_logger \
+        valid_tqdm= tqdm(valid_data, desc=f"train {epoch_idx:4}", ncols=100) if process_bar and self._is_logger \
             else valid_data
 
         for data in valid_tqdm:
@@ -702,7 +706,7 @@ class Trainer(AbstractTrainer):
 
         # generate
         generate_corpus = []
-        eval_tqdm = tqdm(eval_data, desc="generating", ncols=80) if self._is_logger else eval_data
+        eval_tqdm = tqdm(eval_data, desc="generating", ncols=100) if self._is_logger else eval_data
         for batch_data in eval_tqdm:
             generated = self.model.generate(batch_data, eval_data)
             assert len(generated) == len(batch_data['target_text']), "Generated corpus has a mismatched batch size!"

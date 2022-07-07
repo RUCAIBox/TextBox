@@ -1,7 +1,7 @@
 """Provides several APIs for dashboard including :py:mod:`torch.utils.tensorboard`
 
 Todo:
-    * Implement WandBWriter
+    * WandBWriter with distributed training
 """
 
 import os
@@ -16,7 +16,7 @@ except (ImportError, AssertionError):
     wandb = None
     getLogger().info('Failed when importing wandb module.')
 
-from typing import Optional, Any, Type, Union, Iterable, Callable, Mapping, Dict
+from typing import Optional, Any, Type, Union, Iterable, Callable, Dict
 from textbox.config.configurator import Config
 ScalarType = (float, int)
 TextType = str
@@ -25,10 +25,16 @@ TextType = str
 class AbstractDashboard:
 
     def __init__(self):
-        self.global_step: int = 0
+        self._axes_label = ['train/step', 'train/epoch', 'valid/step', 'valid/epoch']
+        self._axes = dict.fromkeys(self._axes_label, 0)
 
-    def step(self):
-        self.global_step += 1
+    def update_axes(self, *args: str):
+
+        for axe in args:
+            if axe not in self._axes:
+                getLogger().warning(f'Failed when updating axe {axe}.')
+            else:
+                self._axes[axe] += 1
 
     def __enter__(self):
 
@@ -100,6 +106,7 @@ class NilWriter(AbstractDashboard):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        r"""Dummy method."""
         pass
 
     def add_scalar(self, tag: str, scalar_value: Union[ScalarType], **kwargs):
@@ -121,7 +128,7 @@ class TensorboardWriter(AbstractDashboard):
         >>>         ...
         >>>         tbw.add_scalar("Tag", 1)
         >>>         tbw.add_scalar("Another/Tag", 2)
-        >>>         tbw.step()
+        >>>         tbw.update_axes("train/step")
         >>>         ...
     """
 
@@ -146,17 +153,25 @@ class TensorboardWriter(AbstractDashboard):
         self.dashboard.close()
 
     def add_scalar(self, tag, scalar_value, **kwargs):
-        self.dashboard.add_scalar(tag, scalar_value, global_step=self.global_step, **kwargs)
+        self.dashboard.add_scalar(tag, scalar_value, global_step=self._axes['train/step'], **kwargs)
 
     def add_text(self, tag, text_string, **kwargs):
-        self.dashboard.add_text(tag, text_string, global_step=self.global_step, **kwargs)
+        self.dashboard.add_text(tag, text_string, global_step=self._axes['train/step'], **kwargs)
 
 
 class WandBWriter(AbstractDashboard):
 
-    def __init__(self, **kwargs):
+    def __init__(self, email=True, **kwargs):
         super().__init__()
+        self.email = email
         self.run = wandb.init(**kwargs)
+        wandb.define_metric("train/epoch")
+        wandb.define_metric("valid/epoch")
+        wandb.define_metric('train/step')
+        wandb.define_metric('valid/step')
+        wandb.define_metric("loss/train", step_metric="train/step")
+        wandb.define_metric("loss/valid", step_metric="train/step")
+        wandb.define_metric("metrics/*", step_metric="train/step")
         self.tables: Dict[str, wandb.data_types.Table] = dict()
 
     def __enter__(self):
@@ -164,6 +179,8 @@ class WandBWriter(AbstractDashboard):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         wandb.log(self.tables)
+        if self.email:
+            wandb.alert(title="Training Finished", text="The training is finished.")
         self.run.finish()
 
     def add_text(self, tag: str, text_string: Union[TextType], **kwargs):
@@ -172,7 +189,9 @@ class WandBWriter(AbstractDashboard):
         self.tables[tag].add_data(text_string)
 
     def add_scalar(self, tag: str, scalar_value: Union[ScalarType], **kwargs):
-        wandb.log({tag: scalar_value})
+        info = {tag: scalar_value}
+        info.update(self._axes)
+        wandb.log(info, step=self._axes['train/step'])
 
 
 def get_dashboard(
@@ -183,28 +202,29 @@ def get_dashboard(
     r"""Get the dashboard class.
 
     Args:
-        dashboard:
-        logdir:
-        config:
+        dashboard: Name of dashboard (`tensorboard`, `wandb` or None).
+        logdir: Directory of log files. Subdirectories of dashboards will be created.
+        config: Configuration.
 
     Examples:
-
-        Tensorboard
-
-        >>> TB = get_dashboard("tensorboard", project="filename", logdir="log/dir")
-        >>> with TB() as writer:
-        >>>     writer.add_scalar("tag", 1)
-        >>>     writer.step()
+        >>> TB = get_dashboard("tensorboard", logdir="log/dir", config=config)
+        >>> with TB() as tbw:
+        >>>     for epoch in range(10):
+        >>>         ...
+        >>>         tbw.add_scalar("Tag", 1)
+        >>>         tbw.add_scalar("Another/Tag", 2)
+        >>>         tbw.update_axes("train/step")
+        >>>         ...
 
     """
     if dashboard == "wandb":
         if wandb is not None:
 
             project = f"{config['model']}-{config['dataset']}"
-            name = config['filename'][len(project):]
+            name = config['filename'][len(project)+1:]
 
             def _get_wandb():
-                return WandBWriter(dir=logdir, project=project, name=name)
+                return WandBWriter(dir=logdir, project=project, name=name, config=config.final_config_dict)
 
             return _get_wandb
         else:

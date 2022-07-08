@@ -6,6 +6,8 @@ import math
 import collections
 
 from time import time
+
+from torch.nn import Parameter
 from tqdm import tqdm
 from logging import getLogger
 
@@ -16,7 +18,7 @@ from textbox.evaluator import BaseEvaluator, evaluator_list
 from textbox.utils import ensure_dir, get_local_time, init_seed
 from textbox.utils.dashboard import get_dashboard, AbstractDashboard, TensorboardWriter, NilWriter
 
-from typing import Dict, Optional, Union, Set, Collection, Literal, List, Tuple
+from typing import Dict, Optional, Union, Set, Collection, Literal, List, Tuple, Iterator
 from textbox.model.abstract_model import AbstractModel
 from textbox.data.abstract_dataloader import AbstractDataLoader
 from textbox import Config
@@ -235,6 +237,7 @@ class Trainer(AbstractTrainer):
         self.learning_rate: float = config['learning_rate']
         self.grad_clip: bool = config['grad_clip']
         self.optimizer = self._build_optimizer(config['optimizer'], config['scheduler'])
+        self._trainable_parameters: Iterator[Parameter] = filter(lambda x: x.requires_grad, self.model.parameters())
 
         ensure_dir(config['checkpoint_dir'])
         self.saved_model_filename: str = os.path.join(config['checkpoint_dir'], self.filename)
@@ -311,16 +314,16 @@ class Trainer(AbstractTrainer):
             name = name.lower()
 
             if name == 'adam':
-                _optim = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+                _optim = optim.Adam(self._trainable_parameters, lr=self.learning_rate)
             elif name == 'sgd':
-                _optim = optim.SGD(self.model.parameters(), lr=self.learning_rate)
+                _optim = optim.SGD(self._trainable_parameters, lr=self.learning_rate)
             elif name == 'adagrad':
-                _optim = optim.Adagrad(self.model.parameters(), lr=self.learning_rate)
+                _optim = optim.Adagrad(self._trainable_parameters, lr=self.learning_rate)
             elif name == 'rmsprop':
-                _optim = optim.RMSprop(self.model.parameters(), lr=self.learning_rate)
+                _optim = optim.RMSprop(self._trainable_parameters, lr=self.learning_rate)
             else:
                 self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
-                _optim = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+                _optim = optim.Adam(self._trainable_parameters, lr=self.learning_rate)
 
             return _optim
 

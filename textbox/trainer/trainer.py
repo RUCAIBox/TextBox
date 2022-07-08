@@ -18,7 +18,7 @@ from textbox.utils.dashboard import get_dashboard, AbstractDashboard, Tensorboar
 
 from typing import Dict, Optional, Union, Set, Collection, Literal, List, Tuple
 from textbox.model.abstract_model import AbstractModel
-from textbox.data import AbstractDataLoader
+from textbox.data.abstract_dataloader import AbstractDataLoader
 from textbox import Config
 from logging import Logger
 MetricsDict = Dict[str, Union[float, Dict[str, float], Collection[float]]]
@@ -58,9 +58,9 @@ class EpochTracker:
     ):
         self.epoch_idx: int = epoch_idx
 
-        self._accumulate_loss: float = 0.
+        self._avg_loss: float = 0.
         self._accumulate_step: int = 0
-        self._loss: Optional[float] = None
+        self._reduced_loss: Optional[float] = None
 
         self.metrics_results: MetricsDict = dict()
         self._score: Optional[float] = None
@@ -79,7 +79,9 @@ class EpochTracker:
         self._dashboard.add_scalar("loss/" + self.mode_tag, loss)
         self._dashboard.update_axes(self.mode_tag + "/step")
 
-        self._accumulate_loss += loss
+        # update average loss in this way in order to avoid float overflow
+        self._avg_loss *= self._accumulate_step / (self._accumulate_step + 1)
+        self._avg_loss += loss / (self._accumulate_step + 1)
         self._accumulate_step += 1
 
     def set_result(self, results: dict):
@@ -127,25 +129,27 @@ class EpochTracker:
             self._score = self._calc_score()
         return self._score
 
-    def _calc_loss(self) -> float:
-        r"""Ensure the loss will only be calculated and reduced once if DDP is enabled."""
-        if self._accumulate_step == 0:
-            self._logger.warning("Trying to access epoch average loss before append any.")
-            return math.inf
-        _loss = self._accumulate_loss / self._accumulate_step
+    def loss_all_reduce(self):
         if self._DDP:
-            _loss = torch.tensor(_loss).to("cuda")
+            _loss = torch.tensor(self.loss, device="cuda")
             torch.distributed.all_reduce(_loss, op=torch.distributed.ReduceOp.SUM)
             _loss /= torch.distributed.get_world_size()
-            _loss = _loss.item()
-        return _loss
+            self._reduced_loss = _loss.item()
 
     @property
     def loss(self) -> float:
-        r"""Get total loss (loss will be reduced on the first call)."""
-        if not self._loss:
-            self._loss = self._calc_loss()
-        return self._loss
+        r"""Loss of this epoch. Average loss will be calculated and returned.
+
+        Notes:
+            If DDP is enabled and `loss_all_reduce()` has been called, average loss of all machines will be returned.
+        """
+        if self._accumulate_step == 0:
+            self._logger.warning("Trying to access epoch average loss before append any.")
+            return math.inf
+        if self._reduced_loss is not None:
+            return self._reduced_loss
+        else:
+            return self._avg_loss
 
     def as_dict(self) -> dict:
         return dict(
@@ -249,7 +253,7 @@ class Trainer(AbstractTrainer):
 
         self.best_epoch = -1
         self.best_valid_score = -math.inf
-        self.eval_interval, self.eval_mode = self._set_eval_mode()
+        self.eval_interval, self.eval_strategy = self._set_eval_mode()
         self._eval_count = 0
         self.train_loss_list: List[float] = list()
         self.result_list: List[dict] = list()
@@ -283,15 +287,15 @@ class Trainer(AbstractTrainer):
             eval_step = 0
         elif eval_epoch <= 0 and eval_step <= 0:
             self.logger.warning(
-                '"eval_step" and "eval_epoch" are set to 0 at the same time. "eval_epoch" has been set to 1.'
+                '"eval_step" and "eval_epoch" are set to 0 at the same time. "eval_epoch" has been changed to 1.'
             )
             eval_epoch = 1
 
         if eval_epoch > 0:
-            self.logger.info(f"eval mode: validate every {eval_epoch} epoch")
+            self.logger.info(f"eval strategy: validate every {eval_epoch} epoch")
             return eval_epoch, "epoch"
         else:
-            self.logger.info(f"eval mode: validate every {eval_step} step")
+            self.logger.info(f"eval strategy: validate every {eval_step} step")
         return eval_step, "step"
 
     def _build_optimizer(self, optimizer: Optional[str], scheduler: Optional[str])\
@@ -397,13 +401,18 @@ class Trainer(AbstractTrainer):
         """
         self.model.train()
         tracker = EpochTracker(epoch_idx, self.DDP, train=True, dashboard=self._dashboard)
-        train_tqdm = tqdm(train_data, desc=f"train {epoch_idx:4}", ncols=100) if not self.disable_tqdm else train_data
+        if not self.disable_tqdm:
+            train_tqdm = tqdm(train_data, desc=f"train {epoch_idx:4}", ncols=100).set_postfix(loss=None)
+        else:
+            train_tqdm = train_data
 
         for data in train_tqdm:
             self.optimizer.zero_grad()
 
             loss = self.model(data, epoch_idx=epoch_idx)
             tracker.append_loss(loss)
+            if not self.disable_tqdm:
+                train_tqdm.set_postfix(loss=tracker.loss)
 
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
@@ -413,6 +422,8 @@ class Trainer(AbstractTrainer):
                 self.stopped &= self._valid(valid_data, epoch_idx, 'step')
                 if self.stopped:
                     break
+
+        tracker.loss_all_reduce()
 
         return tracker
 
@@ -430,14 +441,24 @@ class Trainer(AbstractTrainer):
 
         Returns:
             EpochTracker: :class:`EpochTracker` that includes epoch information.
+
+        Todo:
+            * perform either loss or evaluation according to 'eval_metrics'
         """
         self.model.eval()
         tracker = EpochTracker(epoch_idx, self.DDP, train=False, dashboard=self._dashboard)
-        valid_tqdm = tqdm(valid_data, desc=f"train {epoch_idx:4}", ncols=100) if not self.disable_tqdm else valid_data
+        if not self.disable_tqdm:
+            valid_tqdm = tqdm(valid_data, desc=f"train {epoch_idx:4}", ncols=100).set_postfix(loss=None)
+        else:
+            valid_tqdm = valid_data
 
         for data in valid_tqdm:
-            losses = self.model(data)
-            tracker.append_loss(losses)
+            loss = self.model(data)
+            tracker.append_loss(loss)
+            if not self.disable_tqdm:
+                valid_tqdm.set_postfix(loss=tracker.loss)
+
+        tracker.loss_all_reduce()
 
         valid_results = self.evaluate(valid_data, load_best_model=False, is_valid=True)
         tracker.set_result(valid_results)
@@ -448,23 +469,23 @@ class Trainer(AbstractTrainer):
             self,
             valid_data: AbstractDataLoader,
             epoch_idx: int,
-            position: Literal["epoch", "step"],
+            eval_strategy: Literal["epoch", "step"],
     ) -> bool:
-        """Validate every `self.eval_interval` step or epoch if invoke position matches attribute `self.eval_mode`.
-        Specifically, if `self.eval_interval` is set to `0`, validation will be skipped.
+        """Validate every `self.eval_interval` step or epoch if evaluation strategy matches attribute
+        `self.eval_strategy`. Specifically, if `self.eval_interval` is set to `0`, validation will be skipped.
 
         Early stopping will also be checked if `self.stopping_step` is positive integer.
 
         Args:
             valid_data: The dataloader of validation set.
             epoch_idx: The current epoch index.
-            position: Invoke position of method ("epoch" or "step").
+            eval_strategy: The evaluation strategy of current call ("epoch" or "step").
 
         Returns:
             bool: Early stopping. Return true if `self.stopping_step` is positive integer and `self._early_stopping()`
             is True.
         """
-        if (position != self.eval_mode) or (self.eval_interval <= 0):
+        if (eval_strategy != self.eval_strategy) or (self.eval_interval <= 0):
             return False
 
         self._eval_count += 1
@@ -493,7 +514,7 @@ class Trainer(AbstractTrainer):
         'Model-Dataset-Time.pth' pointing to best epoch will be created.
 
         Todo:
-            * Large checkpoint
+            * Checkpoint save which files?
         """
         if len(self.result_list) == 0:
             self.logger.warning('Save checkpoint failed. No validation has been performed.')
@@ -516,7 +537,7 @@ class Trainer(AbstractTrainer):
             'best_valid_score': self.best_valid_score,
             'epoch': self.epoch_idx,
             'config': self.config,
-            'summary': self.result_list[-1],
+            'summary': self.result_list[-1],  #todo add text
         }
 
         self.logger.debug(checkpoint)
@@ -679,7 +700,7 @@ class Trainer(AbstractTrainer):
             dict: eval result, key is the eval metric and value in the corresponding metric value
 
         Todo:
-            *
+            * perform either loss or evaluation according to 'eval_metrics'
         """
         if is_valid:
             _evaluator = self.valid_evaluator

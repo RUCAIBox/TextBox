@@ -5,18 +5,12 @@ class AbstractModel(nn.Module):
     r"""Base class for all models
     """
 
-    def __init__(self, config, dataset):
+    def __init__(self, config, tokenizer):
         # load parameters info
         super(AbstractModel, self).__init__()
         self.device = config['device']
-        self.dataset = dataset
-
-    def __getattr__(self, name):
-        if hasattr(self.dataset, name):
-            value = getattr(self.dataset, name)
-            if value is not None:
-                return value
-        return super().__getattr__(name)
+        self.config = config
+        self.tokenizer = tokenizer
 
     def generate(self, batch_data, eval_data):
         r"""Predict the texts conditioned on a noise or sequence.

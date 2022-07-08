@@ -518,11 +518,11 @@ class Trainer(AbstractTrainer):
         self._saved_once = True
         self.logger.info('Saving current: {}'.format(self.saved_model_file))
 
-    def _save_generated_text(self, generated_corpus: List[List[str]]):
+    def _save_generated_text(self, generated_corpus: List[str]):
         r"""Store the generated text by our model into `self.saved_text_file`."""
         with open(self.saved_text_file, 'w') as fout:
-            for tokens in generated_corpus:
-                fout.write(' '.join(tokens) + '\n')
+            for text in generated_corpus:
+                fout.write(text + '\n')
 
     def resume_checkpoint(self, resume_file: str):
         r"""Load the model parameters information and training information.
@@ -708,12 +708,8 @@ class Trainer(AbstractTrainer):
             assert len(generated) == len(batch_data['target_text']), "Generated corpus has a mismatched batch size!"
             generate_corpus.extend(generated)
         self._save_generated_text(generate_corpus)
-
-        # evaluation
-        reference_corpus = eval_data.get_reference()
-        result = _evaluator.evaluate(generate_corpus, reference_corpus)
-        if "nll_test" in _metrics and self.config['task_type'].lower() == "unconditional":
-            result['nll_test'] = self._evaluate_nll_test(eval_data)
+        reference_corpus = eval_data.dataset.target_text
+        result = self.evaluator.evaluate(generate_corpus, reference_corpus)
 
         return result
 

@@ -14,7 +14,7 @@ epochs: 50
 train_batch_size: 16
 optimizer: adam
 learning_rate: 1e-5
-eval_step: 1
+eval_epoch: 1
 stopping_step: 2
 grad_clip: 0.1
 tokenize_strategy: none

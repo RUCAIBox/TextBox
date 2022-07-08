@@ -632,22 +632,6 @@ class Trainer(AbstractTrainer):
 
         return stop_flag
 
-    def _evaluate_nll_test(self, eval_data: AbstractDataLoader) -> float:
-        r"""Calculate the negative log-likelihood of the eval_data.
-
-        Args:
-            eval_data (AbstractDataLoader): the eval data.
-
-        Returns:
-            float: NLL_test of the eval data.
-        """
-
-        total_loss = 0
-        for epoch_idx, eval_batch in enumerate(eval_data):
-            nll_test = self.model.calculate_nll_test(eval_batch, epoch_idx)
-            total_loss += float(nll_test)
-        return total_loss / len(eval_data)
-
     @torch.no_grad()
     def evaluate(
             self,
@@ -705,7 +689,6 @@ class Trainer(AbstractTrainer):
         eval_tqdm = tqdm(eval_data, desc="generating", ncols=80) if self._is_logger else eval_data
         for batch_data in eval_tqdm:
             generated = self.model.generate(batch_data, eval_data)
-            assert len(generated) == len(batch_data['target_text']), "Generated corpus has a mismatched batch size!"
             generate_corpus.extend(generated)
         self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.dataset.target_text

@@ -5,8 +5,10 @@ import yaml
 import torch
 from logging import getLogger
 
-from textbox.utils import general_arguments, training_arguments, \
-    evaluation_arguments, get_local_time
+from typing import List, Dict, Optional
+
+from textbox.utils.utils import get_local_time
+from textbox.utils.argument_list import general_arguments, training_arguments, evaluation_arguments
 
 
 class Config(object):
@@ -53,24 +55,26 @@ class Config(object):
         self._init_parameters_category()
         self.yaml_loader = self._build_yaml_loader()
         self._load_overall_config()
+        self.external_sources = list()
         self.file_config_dict = self._load_config_files(config_file_list)
         self.variable_config_dict = self._load_variable_config_dict(config_dict)
         self.cmd_config_dict = self._load_cmd_line()
         self._merge_external_config_dict()
 
         self._init_device()
+        self.internal_sources = list()
         self.model, self.dataset = self._get_model_and_dataset(model, dataset)
         self._load_internal_config_dict(self.model, self.dataset)
         self.final_config_dict = self._get_final_config_dict()
         self._set_default_parameters()
 
     def _init_parameters_category(self):
-        self.parameters = dict()
+        self.parameters: Dict[str, List[str]] = dict()
         self.parameters['General'] = general_arguments
         self.parameters['Training'] = training_arguments
         self.parameters['Evaluation'] = evaluation_arguments
-        self.parameters['Model'] = []
-        self.parameters['Dataset'] = []
+        self.parameters['Model']: List[str] = []
+        self.parameters['Dataset']: List[str] = []
 
     def _build_yaml_loader(self):
         loader = yaml.FullLoader
@@ -88,7 +92,7 @@ class Config(object):
         )
         return loader
 
-    def _convert_config_dict(self, config_dict):
+    def _convert_config_dict(self, config_dict: dict) -> dict:
         r"""This function convert the str parameters to their original type.
 
         """
@@ -127,13 +131,18 @@ class Config(object):
             for file in file_list:
                 with open(file, 'r', encoding='utf-8') as f:
                     file_config_dict.update(yaml.load(f.read(), Loader=self.yaml_loader))
+                self.external_sources.append(os.path.abspath(file))
         return file_config_dict
 
-    def _load_variable_config_dict(self, config_dict):
+    def _load_variable_config_dict(self, config_dict) -> dict:
         # HyperTuning may set the parameters such as mlp_hidden_size in NeuMF in the format of ['[]', '[]']
         # then config_dict will receive a str '[]', but indeed it's a list []
         # temporarily use _convert_config_dict to solve this problem
-        return self._convert_config_dict(config_dict) if config_dict else dict()
+        if config_dict:
+            self.external_sources.append('variables')
+            return self._convert_config_dict(config_dict)
+        else:
+            return dict()
 
     def _load_cmd_line(self):
         r""" Read parameters from command line and convert it to str.
@@ -159,7 +168,9 @@ class Config(object):
         if 'task_type' in cmd_config_dict and cmd_config_dict['task_type'] not in [
             'unconditional', 'translation', 'summarization', 'attribute', 'multi_dialog', 'poem'
         ]:
-            raise NotImplementedError("task_type {} can't be found".format(cmd_config_dict['task_type']))
+            raise ValueError("task_type {} can't be found".format(cmd_config_dict['task_type']))
+        if len(cmd_config_dict) > 0:
+            self.external_sources.append('cmd')
         return cmd_config_dict
 
     def _merge_external_config_dict(self):
@@ -169,26 +180,24 @@ class Config(object):
         external_config_dict.update(self.cmd_config_dict)
         self.external_config_dict = external_config_dict
 
-    def _get_model_and_dataset(self, model, dataset):
+    def _get_model_and_dataset(self, model: Optional[str], dataset: Optional[str]):
         if model is None:
-            try:
-                model = self.external_config_dict['model']
-            except KeyError:
+            if 'model' not in self.external_config_dict:
                 raise KeyError(
                     'model need to be specified in at least one of the these ways: '
                     '[model variable, config file, config dict, command line] '
                 )
-
-        final_model = model
+            final_model = self.external_config_dict['model']
+        else:
+            final_model = model
 
         if dataset is None:
-            try:
-                final_dataset = self.external_config_dict['dataset']
-            except KeyError:
+            if 'dataset' not in self.external_config_dict:
                 raise KeyError(
                     'dataset need to be specified in at least one of the these ways: '
                     '[dataset variable, config file, config dict, command line] '
                 )
+            final_dataset = self.external_config_dict['dataset']
         else:
             final_dataset = dataset
 
@@ -206,7 +215,7 @@ class Config(object):
         model_init_file = os.path.join(current_path, '../properties/model/' + model + '.yaml')
         dataset_init_file = os.path.join(current_path, '../properties/dataset/' + dataset + '.yaml')
         if not os.path.exists(dataset_init_file):
-            raise NotImplementedError("dataset {} can't be found".format(dataset))
+            raise ValueError("dataset {} can't be found".format(dataset))
 
         self.internal_config_dict = self.overall_config_dict
 
@@ -217,12 +226,13 @@ class Config(object):
                     self.parameters['Model'] = [
                         key for key in config_dict.keys()
                         if key not in self.parameters['General'] and key not in self.parameters['Training']
-                        and key not in self.parameters['Evaluation'] and key not in self.parameters['Dataset']
+                           and key not in self.parameters['Evaluation'] and key not in self.parameters['Dataset']
                     ]
                 elif file == dataset_init_file:
                     self.parameters['Dataset'] += [
                         key for key in config_dict.keys() if key not in self.parameters['Dataset']
                     ]
+                self.internal_sources.append(os.path.abspath(file))
 
     def _get_final_config_dict(self):
         final_config_dict = dict()
@@ -282,14 +292,29 @@ class Config(object):
         return key in self.final_config_dict
 
     def __str__(self):
-        args_info = '\n'
+        args_info = f'{len(self.final_config_dict)} parameters found.\n'
+        args_info += 'external_config_source: ' + ', '.join(self.external_sources) + '\n'
+        args_info += 'internal_config_source: ' + ', '.join(self.internal_sources) + '\n'
+        args_info += '=' * 80 + '\n'
+        all_params = set()
         for category in self.parameters:
             args_info += category + ' Hyper Parameters: \n'
             args_info += '\n'.join([
-                "{}={}".format(arg, value) for arg, value in self.final_config_dict.items()
+                '    {} = {} ({} {})'.format(arg, value, self.external_config_dict.get(arg),
+                                             self.internal_config_dict.get(arg)) for arg, value in
+                self.final_config_dict.items()
                 if arg in self.parameters[category]
             ])
             args_info += '\n\n'
+            all_params.update(self.parameters[category])
+
+        unrecognized = set(self.final_config_dict.keys()) - all_params
+        if len(unrecognized) > 0:
+            args_info += 'Unrecognized Parameters: \n    '
+            args_info += '\n    '.join(unrecognized)
+            args_info += '\n'
+
+        args_info += '=' * 80 + '\n'
         return args_info
 
     def __repr__(self):

@@ -14,22 +14,28 @@ Optimizer
 
 import numpy as np
 
-from torch.optim import Optimizer as torch_optim
+from torch.optim import Optimizer
+
+from typing import Tuple
+
+SchedulerState = Tuple[dict, int]
 
 
-class AbstractOptim:
-
-    def __init__(self, base_optimizer: torch_optim, init_lr: float):
+class AbstractScheduler:
+    r"""Abstract Base Class of Scheduler. To modify your new scheduler, simply inherit
+    this class and implement `__init__()` and `lr()` with ``@property`` decorator.
+    """
+    def __init__(self, base_optimizer: Optimizer, init_lr: float):
         self.optimizer = base_optimizer
         self.init_lr = init_lr
-        self.n_steps = 0
+        self.n_steps: int = 0
 
     def step(self):
         self._update_learning_rate()
         self.optimizer.step()
 
     def _update_learning_rate(self):
-        """Update learning rate. One just need to implement `lr` property."""
+        r"""Update learning rate. One just need to implement `lr` property."""
         self.n_steps += 1
         lr = self.lr
 
@@ -38,26 +44,26 @@ class AbstractOptim:
 
     @property
     def lr(self):
-        """Get learning rate for current step."""
+        r"""Get learning rate for current step."""
         raise NotImplementedError
 
-    def state_dict(self):
+    def state_dict(self) -> SchedulerState:
         return self.optimizer.state_dict(), self.n_steps
 
-    def load_state_dict(self, state_dict: tuple):
+    def load_state_dict(self, state_dict: SchedulerState):
         opt, self.n_steps = state_dict
         self.optimizer.load_state_dict(opt)
 
     def __getattr__(self, item: str):
-        """Pass method calls e.g. `zero_grad()`.
+        r"""Pass method calls e.g. `zero_grad()`.
         One can override these methods by simply implementing new methods.
         """
         return getattr(self.optimizer, item)
 
 
-class InverseSquareRootOptim(AbstractOptim):
+class InverseSquareRootScheduler(AbstractScheduler):
 
-    def __init__(self, base_optimizer: torch_optim, init_lr: float, max_lr: float, n_warmup_steps: int):
+    def __init__(self, base_optimizer: Optimizer, init_lr: float, max_lr: float, n_warmup_steps: int):
         super().__init__(base_optimizer, init_lr)
         self.n_warmup_steps = n_warmup_steps
 
@@ -72,9 +78,9 @@ class InverseSquareRootOptim(AbstractOptim):
             return self.decay_k * self.n_steps ** -0.5
 
 
-class CosineOptim(AbstractOptim):
+class CosineScheduler(AbstractScheduler):
 
-    def __init__(self, base_optimizer: torch_optim, init_lr: float, max_lr: float, n_warmup_steps: int, max_steps: int):
+    def __init__(self, base_optimizer: Optimizer, init_lr: float, max_lr: float, n_warmup_steps: int, max_steps: int):
         super().__init__(base_optimizer, init_lr)
         self.n_warmup_steps = n_warmup_steps
         self.half_delta = (max_lr - init_lr) / 2
@@ -90,9 +96,9 @@ class CosineOptim(AbstractOptim):
             return self.init_lr + self.half_delta * (1. + np.cos(self.decay_k * (self.n_steps - self.n_warmup_steps)))
 
 
-class LinearOptim(AbstractOptim):
+class LinearScheduler(AbstractScheduler):
 
-    def __init__(self, base_optimizer: torch_optim, init_lr: float, max_lr: float, n_warmup_steps: int, max_steps: int):
+    def __init__(self, base_optimizer: Optimizer, init_lr: float, max_lr: float, n_warmup_steps: int, max_steps: int):
         super().__init__(base_optimizer, init_lr)
         self.n_warmup_steps = n_warmup_steps
         self.init_lr = init_lr
@@ -109,9 +115,9 @@ class LinearOptim(AbstractOptim):
             return self.max_lr - self.decay_k * (self.n_steps - self.n_warmup_steps)
 
 
-class ConstantOptim(AbstractOptim):
+class ConstantScheduler(AbstractScheduler):
 
-    def __init__(self, base_optimizer: torch_optim, init_lr: float, max_lr: float, n_warmup_steps: int):
+    def __init__(self, base_optimizer: Optimizer, init_lr: float, max_lr: float, n_warmup_steps: int):
         super().__init__(base_optimizer, init_lr)
         self.n_warmup_steps = n_warmup_steps
         self.max_lr = max_lr

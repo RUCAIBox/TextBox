@@ -406,8 +406,8 @@ class Trainer(AbstractTrainer):
             tracker.append_loss(loss)
 
             loss.backward()
-            self.optimizer.step()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
+            self.optimizer.step()
 
             if valid_data:
                 self.stopped &= self._valid(valid_data, epoch_idx, 'step')

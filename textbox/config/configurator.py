@@ -233,6 +233,7 @@ class Config(object):
     def _set_default_parameters(self):
         self.final_config_dict['dataset'] = self.dataset
         self.final_config_dict['model'] = self.model
+        self.final_config_dict['model_name'] = self.model.lower()
         self.final_config_dict['data_path'] = os.path.join(self.final_config_dict['data_path'], self.dataset)
         self.final_config_dict['filename'] = '{}-{}-{}'.format(
             self.final_config_dict['model'], self.final_config_dict['dataset'], get_local_time()

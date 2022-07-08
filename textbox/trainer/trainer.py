@@ -258,8 +258,8 @@ class Trainer(AbstractTrainer):
             corpus (list of string list):
         """
         with open(self.saved_text_file, 'w') as fin:
-            for tokens in generated_corpus:
-                fin.write(' '.join(tokens) + '\n')
+            for text in generated_corpus:
+                fin.write(text + '\n')
 
     def resume_checkpoint(self, resume_file):
         r"""Load the model parameters information and training information.
@@ -427,7 +427,7 @@ class Trainer(AbstractTrainer):
             for batch_data in tqdm(eval_data):
                 generate_corpus.extend(self.model.generate(batch_data, eval_data))
         self._save_generated_text(generate_corpus)
-        reference_corpus = eval_data.get_reference()
+        reference_corpus = eval_data.dataset.target_text
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
 
         return result

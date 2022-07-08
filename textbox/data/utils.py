@@ -1,187 +1,139 @@
 import os
-from posix import listdir
-import nltk
-import collections
+from numpy import pad
 import torch
-import copy
-import shutil
-from logging import getLogger
-from textbox import SpecialTokens
+from torch import Tensor
+from typing import List
+from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import DataLoader, Dataset
+from textbox import CLM_MODELS
 
 
-def get_dataset(config):
-    """Create dataset according to :attr:`config['model']` and :attr:`config['MODEL_TYPE']`.
-
-    Args:
-        config (Config): An instance object of Config, used to record parameter information.
-
-    Returns:
-        Dataset: Constructed dataset.
-    """
-    from .paired_sent_dataset import PairedSentenceDataset
-    return PairedSentenceDataset
-
-
-def get_dataloader(config):
-    """Return a dataloader class according to :attr:`config` and :attr:`split_strategy`.
-
-    Args:
-        config (Config): An instance object of Config, used to record parameter information.
-
-    Returns:
-        type: The dataloader class that meets the requirements in :attr:`config` and :attr:`split_strategy`.
-    """
-    from .paired_sent_dataloader import PairedSentenceDataLoader
-    return PairedSentenceDataLoader
-
-
-def dataloader_construct(name, config, dataset, batch_size=1, shuffle=False, drop_last=True, DDP=False):
-    """Get a correct dataloader class by calling :func:`get_dataloader` to construct dataloader.
-
-    Args:
-        name (str): The stage of dataloader. It can only take two values: 'train' or 'evaluation'.
-        config (Config): An instance object of Config, used to record parameter information.
-        dataset (Dataset or list of Dataset): The split dataset for constructing dataloader.
-        batch_size (int, optional): The batch_size of dataloader. Defaults to ``1``.
-        shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
-        drop_last (bool, optional): Whether the dataloader will drop the last batch. Defaults to ``True``.
-        DDP (bool, optional): Whether the dataloader will distribute in different GPU. Defaults to ``False``.
-
-    Returns:
-        AbstractDataLoader or list of AbstractDataLoader: Constructed dataloader in split dataset.
-    """
-
-    logger = getLogger()
-    logger.info('Build DataLoader for [{}]'.format(name))
-    logger.info('batch_size = [{}], shuffle = [{}], drop_last = [{}]\n'.format(batch_size, shuffle, drop_last))
-
-    DataLoader = get_dataloader(config)
-
-    return DataLoader(
-        config=config, dataset=dataset, batch_size=batch_size, shuffle=shuffle, drop_last=drop_last, DDP=DDP
-    )
-
-
-def construct_quick_test_dataset(dataset_path):
-    files = listdir(dataset_path)
-    for file in files:
-        filename = os.path.join(dataset_path, file)
-        if filename.endswith('.bin'):
-            os.remove(filename)
-        else:
-            shutil.copy(filename, filename + '.tmp')
-    for file in files:
-        filename = os.path.join(dataset_path, file)
-        if not filename.endswith('.bin'):
-            with open(filename + '.tmp', 'r') as fin, open(filename, 'w') as fout:
-                for line in fin.readlines()[:10]:
-                    fout.write(line)
-
-
-def deconstruct_quick_test_dataset(dataset_path):
-    files = listdir(dataset_path)
-    for file in files:
-        filename = os.path.join(dataset_path, file)
-        if filename.endswith('.bin'):
-            os.remove(filename)
-        elif not filename.endswith('.tmp'):
-            shutil.move(filename + '.tmp', filename)
-
-
-def data_preparation(config, save=False):
-    """call :func:`dataloader_construct` to create corresponding dataloader.
-
-    Args:
-        config (Config): An instance object of Config, used to record parameter information.
-        save (bool, optional): If ``True``, it will call :func:`save_datasets` to save split dataset.
-            Defaults to ``False``.
-
-    Returns:
-        tuple:
-            - train_data (AbstractDataLoader): The dataloader for training.
-            - valid_data (AbstractDataLoader): The dataloader for validation.
-            - test_data (AbstractDataLoader): The dataloader for testing.
-    """
-    if config['quick_test']:
-        construct_quick_test_dataset(config['data_path'])
-    dataset = get_dataset(config)(config)
-    if config['quick_test']:
-        deconstruct_quick_test_dataset(config['data_path'])
-
-    train_dataset = copy.copy(dataset)
-    valid_dataset = copy.copy(dataset)
-    test_dataset = copy.copy(dataset)
-    for prefix in ['train', 'valid', 'test']:
-        dataset = locals()[f'{prefix}_dataset']
-        content = getattr(dataset, f'{prefix}_data')
-        for key, value in content.items():
-            setattr(dataset, key, value)
-
-    train_data = dataloader_construct(
-        name='train',
-        config=config,
-        dataset=train_dataset,
-        batch_size=config['train_batch_size'],
-        shuffle=True,
-        DDP=True
-    )
-
-    valid_data = dataloader_construct(
-        name='valid',
-        config=config,
-        dataset=valid_dataset,
-        batch_size=config['train_batch_size'],
-        shuffle=True,
-        DDP=True
-    )
-
-    test_data = dataloader_construct(
-        name='test',
-        config=config,
-        dataset=test_dataset,
-        batch_size=config['eval_batch_size'],
-        drop_last=False,
-    )
-
-    return train_data, valid_data, test_data
-
-
-def tokenize(text, tokenize_strategy, language):
-    """Tokenize text data.
-
-    Args:
-        text (str): text data.
-        tokenize_strategy (str): strategy of tokenizer.
-        language (str): language of text.
+class AbstractDataset(Dataset):
+    def __init__(self, config, set):
+        super().__init__()
+        self.config = config
+        self.set = set
+        source_filename = os.path.join(config['data_path'], f'{set}.src')
+        target_filename = os.path.join(config['data_path'], f'{set}.tgt')
+        self.source_text = load_data(source_filename)
+        self.target_text = load_data(target_filename)
+        if set != 'test':
+            assert len(self.source_text) == len(self.target_text)
     
-    Returns:
-        List[str]: the tokenized text data.
-    """
-    text.replace('\t', ' ')
-    if tokenize_strategy == 'none':
-        words = text
-    elif tokenize_strategy == 'by_space':
-        words = text.split()
-    elif tokenize_strategy == 'nltk':
-        words = nltk.word_tokenize(text, language=language)
-    return words
+    def __len__(self):
+        return len(self.source_text)
+    
+    def __getitem__(self, idx):
+        sample = {
+            "source_text": self.source_text[idx], 
+            "source_ids": self.source_ids[idx],
+            "target_text": self.target_text[idx], 
+        }
+        if self.set != 'test':
+            sample.update({
+                "target_ids": self.target_ids[idx],
+            })
+        return sample
+    
+    def _process_prompt(self):
+        prefix = self.config['prefix_prompt'] or ''
+        suffix = self.config['suffix_prompt'] or ''
+
+        self.prefix_ids = self.tokenizer.encode(prefix, add_special_tokens=False)
+        self.suffix_ids = self.tokenizer.encode(suffix, add_special_tokens=False)
+
+        self.source_max_length = self.config['src_len'] - self.tokenizer.num_special_tokens_to_add() - len(self.prefix_ids) - len(self.suffix_ids)
+        self.target_max_length = self.config['tgt_len'] - self.tokenizer.num_special_tokens_to_add()
+
+        if self.config['model_name'] in ['bert2bert', 'opt']:
+            self.target_max_length += 1
+
+    def tokenize(self, tokenizer):
+        self.tokenizer = tokenizer
+        self._process_prompt()
+        self.source_ids = []
+        for text in self.source_text:
+            ids = tokenizer.encode(text, add_special_tokens=False)
+            ids = ids[:self.source_max_length] if self.config['truncate'] == 'tail' else ids[-self.source_max_length:]
+            ids = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + ids + self.suffix_ids)
+            self.source_ids.append(torch.tensor(ids, dtype=torch.long))
+        if self.set != 'test':
+            self.target_ids = []
+            with tokenizer.as_target_tokenizer():
+                for text in self.target_text:
+                    ids = tokenizer.encode(text, add_special_tokens=False)
+                    ids = ids[:self.target_max_length] if self.config['truncate'] == 'tail' else ids[-self.target_max_length:]
+                    ids = self.tokenizer.build_inputs_with_special_tokens(ids)
+                    if self.config['model_name'] in ['bert2bert', 'opt']:
+                        ids = ids[1:]
+                    self.target_ids.append(torch.tensor(ids, dtype=torch.long))
 
 
-def load_data(dataset_path, tokenize_strategy, max_length, language):
+class AbstractCollate:
+    def __init__(self, config, tokenizer, set):
+        self.config = config
+        self.tokenizer = tokenizer
+        self.set = set
+        self.is_casual_model = bool(config['model_name'] in CLM_MODELS)
+    
+    def __call__(self, samples):
+        batch = {}
+        source_text = []
+        source_ids = []
+        source_mask = []
+        source_length = []
+        target_text = []
+        source_padding_side = 'left' if self.set == 'test' and self.is_casual_model else self.tokenizer.padding_side
+        
+        for sample in samples:
+            source_text.append(sample['source_text'])
+            src_id = torch.cat([sample['source_ids'], sample['target_ids']]) if self.set != 'test' and self.is_casual_model else sample['source_ids']
+            source_ids.append(src_id)
+            source_mask.append(torch.ones(len(src_id), dtype=torch.long))
+            source_length.append(len(src_id))
+            target_text.append(sample['target_text'])
+        
+        batch['source_text'] = source_text
+        batch['source_ids'] = _pad_sequence(source_ids, self.tokenizer.pad_token_id, source_padding_side)
+        batch['source_mask'] = _pad_sequence(source_mask, 0, source_padding_side)
+        batch['source_length'] = torch.tensor(source_length, dtype=torch.long)
+        batch['target_text'] = target_text
+        
+        if self.set != 'test':
+            target_ids = []
+            for sample in samples:
+                tgt_id = torch.cat([torch.full([len(sample['source_ids'])], -100, dtype=torch.long), sample['target_ids']]) if self.is_casual_model else sample['target_ids']
+                target_ids.append(tgt_id)
+            batch['target_ids'] = _pad_sequence(target_ids, -100, self.tokenizer.padding_side)
+        return batch
+
+
+def data_preparation(config, tokenizer):
+    train_dataset = AbstractDataset(config, 'train')
+    valid_dataset = AbstractDataset(config, 'valid')
+    test_dataset = AbstractDataset(config, 'test')
+
+    train_dataset.tokenize(tokenizer)
+    valid_dataset.tokenize(tokenizer)
+    test_dataset.tokenize(tokenizer)
+
+    train_dataloader = DataLoader(train_dataset, batch_size=config['train_batch_size'], shuffle=True, collate_fn=AbstractCollate(config, tokenizer, 'train'))
+    valid_dataloader = DataLoader(valid_dataset, batch_size=config['eval_batch_size'], shuffle=False, collate_fn=AbstractCollate(config, tokenizer, 'valid'))
+    test_dataloader = DataLoader(test_dataset, batch_size=config['eval_batch_size'], shuffle=False, collate_fn=AbstractCollate(config, tokenizer, 'test'))
+    return train_dataloader, valid_dataloader, test_dataloader
+
+def load_data(dataset_path):
     """Load dataset from split (train, valid, test).
     This is designed for single sentence format.
 
     Args:
         dataset_path (str): path of dataset dir.
-        tokenize_strategy (str): strategy of tokenizer.
-        max_length (int): max length of sequence.
-        language (str): language of text.
     
     Returns:
         List[List[str]]: the text list loaded from dataset path.
     """
     if not os.path.isfile(dataset_path):
-        raise ValueError('File {} not exist'.format(dataset_path))
+        raise ValueError('File {} not exist'.format(os.path.abspath(dataset_path)))
 
     text = []
     with open(dataset_path, "r") as fin:
@@ -192,95 +144,21 @@ def load_data(dataset_path, tokenize_strategy, max_length, language):
                     line = str(eval(line))
                 except:
                     pass
-            words = tokenize(line, tokenize_strategy, language)
-            if isinstance(words, str):  # no split
-                text.append(words)
-            else: # single sentence
-                text.append(words[:max_length])
+            text.append(line)
     return text
 
-
-def build_vocab(text, max_vocab_size, special_token_list):
-    """Build vocabulary of list of text data.
-
-    Args:
-        text (List[List[List[str]]]): list of text data, consisting of multiple groups.
-        max_vocab_size (int): max size of vocabulary.
-        special_token_list (List[str]): list of special tokens.
-    
-    Returns:
-        tuple:
-            - idx2token (dict): map index to token.
-            - token2idx (dict): map token to index.
-            - max_vocab_size (int): updated max size of vocabulary.
+def _pad_sequence(tensors: List[Tensor], padding_value: int, padding_side: str = 'right'):
     """
-
-    word_list = list()
-    for group in text:  # train, valid, test
-        for doc in group:
-            word_list.extend(doc)
-
-    token_count = [(count, token) for token, count in collections.Counter(word_list).items()]
-    token_count.sort(reverse=True)
-    tokens = [word for count, word in token_count]
-    tokens = special_token_list + tokens
-    tokens = tokens[:max_vocab_size]
-
-    max_vocab_size = len(tokens)
-    idx2token = dict(zip(range(max_vocab_size), tokens))
-    token2idx = dict(zip(tokens, range(max_vocab_size)))
-
-    return idx2token, token2idx, max_vocab_size
-
-def text2idx(text, token2idx, tokenize_strategy):
-    r"""transform text to id and add sos and eos token index.
-
-    Args:
-        text (List[List[List[str]]]): list of text data, consisting of multiple groups.
-        token2idx (dict): map token to index
-        tokenize_strategy (str): strategy of tokenizer.
-    
-    Returns:
-        idx (List[List[List[int]]]): word index
-        length (List[List[int]]): sequence length
+    Pad encoded inputs (on left/right and up to max length in the batch)
     """
-    new_idx = []
-    new_length = []
-    requires_start_end = tokenize_strategy != 'none'
-    sos_idx = token2idx[SpecialTokens.BOS]
-    eos_idx = token2idx[SpecialTokens.EOS]
-    unknown_idx = token2idx[SpecialTokens.UNK]
-
-    for group in text:
-        idx = []
-        length = []
-        for sent in group:
-            sent_idx = [token2idx.get(word, unknown_idx) for word in sent]
-            if requires_start_end:
-                sent_idx = [sos_idx] + sent_idx + [eos_idx]
-            idx.append(sent_idx)
-            length.append(len(sent_idx))
-        new_idx.append(idx)
-        new_length.append(length)
-    return new_idx, new_length
-
-
-def pad_sequence(idx, length, padding_idx):
-    r"""padding a batch of word index data, to make them have equivalent length
-
-    Args:
-        idx (List[List[int]]): word index
-        length (List[int]): sequence length
-        padding_idx (int): the index of padding token
-    
-    Returns:
-        idx (List[List[int]]): word index
-        length (List[int]): sequence length
-    """
-    max_length = max(length)
-    new_idx = []
-    for sent_idx, sent_length in zip(idx, length):
-        new_idx.append(sent_idx + [padding_idx] * (max_length - sent_length))
-    new_idx = torch.LongTensor(new_idx)
-    length = torch.LongTensor(length)
-    return new_idx, length
+    max_len = max(tensor.size(0) for tensor in tensors)
+    padded_tensors = []
+    if padding_side == 'right':
+        return pad_sequence(tensors, batch_first=True, padding_value=padding_value)
+    elif padding_side == 'left':
+        for tensor in tensors:
+            padding_length = max_len - len(tensor)
+            padded_tensor = torch.cat([torch.full([padding_length], padding_value, dtype=tensor.dtype), tensor], dim=-1)
+            padded_tensors.append(padded_tensor)
+    padded_tensors = torch.stack(padded_tensors, dim=0)
+    return padded_tensors

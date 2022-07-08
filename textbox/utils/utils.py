@@ -4,7 +4,8 @@ import importlib
 import random
 import torch
 import numpy as np
-from textbox.utils.enum_type import PLM_MODELS
+from transformers import AutoTokenizer
+from .enum_type import PLM_MODELS
 
 
 def get_local_time():
@@ -64,6 +65,41 @@ def get_trainer(model_name):
     except AttributeError:
         return getattr(importlib.import_module('textbox.trainer.trainer'), 'Trainer')
 
+def get_tokenizer(config):
+    model_name = config['model_name']
+    if model_name in PLM_MODELS:
+        tokenizer_kwargs = config['tokenizer_kwargs'] or {}
+        tokenizer_path = config['tokenizer_path'] or config['model_path']
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
+
+        # (1): tokenizer needs to add eos token
+        if model_name in ['ctrl', 'openai-gpt']:
+            tokenizer.add_special_tokens(({'eos_token': '</s>'}))
+
+        # (2): tokenizer needs to add pad token
+        if model_name in ['ctrl', 'gpt2', 'gpt_neo', 'openai-gpt']:
+            tokenizer.pad_token = tokenizer.eos_token
+        
+        # (3): tokenizer needs to change replace eos token with sep token
+        if model_name in ['cpm']:
+            tokenizer.eos_token = tokenizer.sep_token
+
+        # (4): tokenizer needs to modify `build_inputs_with_special_tokens()` and `num_special_tokens_to_add()`
+        if model_name in ['blenderbot-small', 'cpm', 'ctrl', 'gpt2', 'gpt_neo', 'openai-gpt']:
+            tokenizer.build_inputs_with_special_tokens = lambda t0, t1=None: t0 + [tokenizer.eos_token_id]
+            tokenizer.num_special_tokens_to_add = lambda : 1
+        elif model_name in ['opt']:
+            tokenizer.build_inputs_with_special_tokens = lambda t0, t1=None: [tokenizer.bos_token_id] + t0 + [tokenizer.eos_token_id]
+            tokenizer.num_special_tokens_to_add = lambda : 2
+
+        # (5): tokenizer needs to set src_lang, tgt_lang (used in translation task)
+        if model_name in ['m2m_100', 'mbart']:
+            assert config['src_lang'] and config['tgt_lang'], \
+                model_name + ' needs to specify source language and target language with `--src_lang=xx` and `--tgt_lang=xx`'
+            tokenizer.src_lang = config['src_lang']
+            tokenizer.tgt_lang = config['tgt_lang']
+    
+    return tokenizer
 
 def early_stopping(value, best, cur_step, max_step, bigger=True):
     r""" validation-based early stopping

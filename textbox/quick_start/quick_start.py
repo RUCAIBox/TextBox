@@ -1,8 +1,9 @@
 import torch
-import logging
 from logging import getLogger
-from textbox import Config, data_preparation
-from textbox.utils import init_logger, get_tokenizer, get_model, get_trainer, init_seed
+from textbox.utils.logger import init_logger
+from textbox.utils.utils import get_model, get_tokenizer, get_trainer, init_seed
+from textbox.config.configurator import Config
+from textbox.data.utils import data_preparation
 
 
 def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=None):
@@ -19,21 +20,20 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     # configurations initialization
     config = Config(model=model, dataset=dataset, config_file_list=config_file_list, config_dict=config_dict)
 
+    local_rank = None
     if config['DDP']:
         local_rank = torch.distributed.get_rank()
         torch.cuda.set_device(local_rank)
         config['device'] = torch.device("cuda", local_rank)
 
     init_seed(config['seed'], config['reproducibility'])
-    
+
     # logger initialization
     is_logger = (config['DDP'] and torch.distributed.get_rank() == 0) or not config['DDP']
 
-    if is_logger:
-        init_logger(config)
-        logger = getLogger()
-        logger.info(config)
-        logger.setLevel(logging.INFO)
+    init_logger(config['filename'], config['state'], is_logger)
+    logger = getLogger()
+    logger.info(config)
 
     tokenizer = get_tokenizer(config)
     # dataset splitting
@@ -53,27 +53,30 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     else:
         model = single_model
 
-    if is_logger:
-        logger.info(model)
+    logger.info(model)
 
     # trainer loading and initialization
     trainer = get_trainer(config['model'])(config, model)
 
     if config['test_only']:
         logger.info('Test only')
+        if not config['load_experiment']:
+            logger.warning('Specific path to model file with `load_experiment`.')
         test_result = trainer.evaluate(test_data, model_file=config['load_experiment'])
     else:
         if config['load_experiment'] is not None and is_logger:
             trainer.resume_checkpoint(resume_file=config['load_experiment'])
         # model training
-        best_valid_score, best_valid_result = trainer.fit(train_data, valid_data)
-        if (config['DDP'] == True):
-            if (torch.distributed.get_rank() != 0):
+        result = trainer.fit(train_data, valid_data)
+        # model evaluating
+        if config['DDP']:
+            if torch.distributed.get_rank() != 0:
                 return
             config['DDP'] = False
             model = get_model(config['model'])(config, train_data).to(config['device'])
             trainer = get_trainer(config['MODEL_TYPE'], config['model'])(config, model)
-        logger.info('best valid loss: {}, best valid ppl: {}'.format(best_valid_score, best_valid_result))
+        for key, value in result.items():
+            logger.info(f"{key}: {value}")
         test_result = trainer.evaluate(test_data)
 
     logger.info('test result: {}'.format(test_result))

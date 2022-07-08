@@ -1,6 +1,6 @@
 numpy
 matplotlib
-fast_bleu
+fast-bleu
 transformers
 tqdm
 nltk==3.5
@@ -10,3 +10,6 @@ pycocoevalcap
 rouge-score
 logzero
 sacrebleu
+torch
+bert_score
+tensorboard

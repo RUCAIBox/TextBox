@@ -9,15 +9,18 @@ from textbox.evaluator.bertscore_evaluator import BertScoreEvaluator
 from textbox.evaluator.unique_evaluator import UniqueEvaluator
 from textbox.evaluator.rouge_evaluator import RougeEvaluator
 
-evaluator_list = [
+from typing import Set
+
+
+evaluator_list = {
     'bleu', 'self_bleu', 'rouge', 'distinct', 'nll_test', 'avg_len', 'cider', 'chrf++', 'meteor', 'unique',
     'bert_score'
-]
+}
 
 
-class BaseEvaluator():
+class BaseEvaluator:
 
-    def __init__(self, config, metrics):
+    def __init__(self, config, metrics: Set[str]):
         self.config = config
         self.metrics = metrics
         # [1, 2, 3, 4]

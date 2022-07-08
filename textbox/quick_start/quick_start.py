@@ -73,7 +73,8 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
                 return
             config['DDP'] = False
             model = get_model(config['model'])(config, train_data).to(config['device'])
-            trainer = get_trainer(config['MODEL_TYPE'], config['model'])(config, model)
+            trainer = get_trainer(config['model'])(config, model)
+            #todo: check necessity of get model and get trainer
         for key, value in result.items():
             logger.info(f"{key}: {value}")
         test_result = trainer.evaluate(test_data)

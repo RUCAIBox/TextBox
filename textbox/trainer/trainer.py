@@ -5,22 +5,21 @@ import numpy as np
 import math
 import collections
 
+from time import time
 from tqdm import tqdm
-
 from logging import getLogger
 
-from textbox.module.scheduler import (
+from textbox.trainer.scheduler import (
     AbstractScheduler, InverseSquareRootScheduler, CosineScheduler, LinearScheduler, ConstantScheduler
 )
 from textbox.evaluator import BaseEvaluator, evaluator_list
-from textbox.utils.utils import ensure_dir, Timer, ordinal, get_local_time, init_seed
+from textbox.utils import ensure_dir, get_local_time, init_seed
 from textbox.utils.dashboard import get_dashboard, AbstractDashboard, TensorboardWriter, NilWriter
 
-from typing import Dict, Optional, Union, Set, Collection, Literal, List, Tuple, Iterable
-from collections import namedtuple
+from typing import Dict, Optional, Union, Set, Collection, Literal, List, Tuple
 from textbox.model.abstract_model import AbstractModel
-from textbox.data.abstract_dataloader import AbstractDataLoader
-from textbox.config.configurator import Config
+from textbox.data import AbstractDataLoader
+from textbox import Config
 from logging import Logger
 MetricsDict = Dict[str, Union[float, Dict[str, float], Collection[float]]]
 
@@ -46,7 +45,7 @@ class EpochTracker:
         >>>         valid_tracker.append_loss(1.0)
         >>>     valid_tracker.set_result({"metric1": 1.0})
         >>>     valid_tracker.info(time_duration=10.0)
-        Epoch 0,  validating [time: 10.00s, validating_loss: 1.0000, ppl: 2.71]
+        Epoch 0,  validating [time: 10.00s, validating_loss: 1.0000]
     """
     _is_train: Dict[bool, Literal["train", "valid"]] = {True: "train", False: "valid"}
 
@@ -75,7 +74,8 @@ class EpochTracker:
 
     def append_loss(self, loss: float):
         r"""Append loss of current step to tracker and update current step."""
-        _check_nan(loss)
+        if math.isnan(loss):
+            raise ValueError('Value is nan.')
         self._dashboard.add_scalar("loss/" + self.mode_tag, loss)
         self._dashboard.update_axes(self.mode_tag + "/step")
 
@@ -147,17 +147,11 @@ class EpochTracker:
             self._loss = self._calc_loss()
         return self._loss
 
-    @property
-    def perplexity(self) -> float:
-        r"""Get exponent of total loss."""
-        return np.exp(self.loss)
-
     def as_dict(self) -> dict:
         return dict(
             epoch_idx=self.epoch_idx,
             metrics_results=self.metrics_results,
             loss=self.loss,
-            perplexity=self.perplexity
         )
 
     def info(self, time_duration: float, extra_info: str = ""):
@@ -166,7 +160,6 @@ class EpochTracker:
                  f"[time: {time_duration:.2f}s, {self.mode_tag}_loss: {self.loss:.4f}"
 
         if self.mode_tag == "validating":
-            output += f", ppl: {self.perplexity:.4f}"
             for metric, result in self.metrics_results.items():
                 if metric != 'loss':
                     output += f", {metric}: {result}"
@@ -227,7 +220,6 @@ class Trainer(AbstractTrainer):
 
         self.DDP: bool = config['DDP']
         self.device: torch.device = config['device']
-        self.embedding_size: int = config['embedding_size']
         self.filename = self.config['filename']
 
         self.stopping_step: Optional[int] = config['stopping_step']
@@ -241,13 +233,11 @@ class Trainer(AbstractTrainer):
         self.optimizer = self._build_optimizer(config['optimizer'], config['scheduler'])
 
         ensure_dir(config['checkpoint_dir'])
-        _saved_model_file: str = self.filename + '.pth'
-        self.saved_model_file: str = os.path.join(config['checkpoint_dir'], _saved_model_file)
+        self.saved_model_filename: str = os.path.join(config['checkpoint_dir'], self.filename)
         r"""Path to saved checkpoint file, which can be loaded with `load_experiment`."""
 
         ensure_dir(config['generated_text_dir'])
-        _saved_text_file: str = self.filename + '.txt'
-        self.saved_text_file: str = os.path.join(config['generated_text_dir'], _saved_text_file)
+        self.saved_text_filename: str = os.path.join(config['generated_text_dir'], self.filename)
 
         self.start_epoch = 0
         r"""Start epoch index. That is, `epoch_idx` iterates through `range(self.start_epoch, self.epochs)`"""
@@ -261,7 +251,6 @@ class Trainer(AbstractTrainer):
         self.best_valid_score = -math.inf
         self.eval_interval, self.eval_mode = self._set_eval_mode()
         self._eval_count = 0
-        self.test_batch_size: int = config['eval_batch_size']
         self.train_loss_list: List[float] = list()
         self.result_list: List[dict] = list()
 
@@ -270,10 +259,7 @@ class Trainer(AbstractTrainer):
         self.valid_metrics = self._process_metrics("valid_metrics")
         self.valid_evaluator = BaseEvaluator(config, self.valid_metrics)
 
-        self._is_logger = (self.DDP and torch.distributed.get_rank() == 0) or not self.DDP
-        self.item_tensor = None
-        self.tot_item_num = None
-        self.iid_field = config['ITEM_ID_FIELD']
+        self.disable_tqdm = self.DDP and torch.distributed.get_rank() != 0
         self.logdir = './log/'
         self._DashboardClass = get_dashboard(config['dashboard'], self.logdir, config)
         self._dashboard = None
@@ -341,16 +327,11 @@ class Trainer(AbstractTrainer):
 
             name = name.lower()
 
-            assert isinstance(self.init_lr, float), "Specify initial learning rate (`init_lr`)"
-            assert isinstance(self.warmup_steps, int), "Specify warmup steps (`warmup_steps`)"
-
             if name == 'inverse':
                 _optim = InverseSquareRootScheduler(_optim, self.init_lr, self.learning_rate, self.warmup_steps)
             elif name == 'cosine':
-                assert isinstance(self.max_steps, int), "Specify max steps (`max_steps`)"
                 _optim = CosineScheduler(_optim, self.init_lr, self.learning_rate, self.warmup_steps, self.max_steps)
             elif name == 'linear':
-                assert isinstance(self.max_steps, int), "Specify max steps (`max_steps`)"
                 _optim = LinearScheduler(_optim, self.init_lr, self.learning_rate, self.warmup_steps, self.max_steps)
             elif name == 'constant':
                 _optim = ConstantScheduler(_optim, self.init_lr, self.learning_rate, self.warmup_steps)
@@ -403,7 +384,6 @@ class Trainer(AbstractTrainer):
             train_data: AbstractDataLoader,
             epoch_idx: int,
             valid_data: Optional[AbstractDataLoader] = None,
-            process_bar: bool = True,
     ) -> EpochTracker:
         r"""Train the model in an epoch
 
@@ -411,15 +391,13 @@ class Trainer(AbstractTrainer):
             train_data:
             epoch_idx: the current epoch index.
             valid_data: Optional (default = None) the dataloader of validation set
-            process_bar: Optional (default = True) True to show process bar.
 
         Returns:
             EpochTracker: :class:`EpochTracker` that includes epoch information.
         """
         self.model.train()
         tracker = EpochTracker(epoch_idx, self.DDP, train=True, dashboard=self._dashboard)
-        train_tqdm = tqdm(train_data, desc=f"train {epoch_idx:4}", ncols=100) if process_bar and self._is_logger \
-            else train_data
+        train_tqdm = tqdm(train_data, desc=f"train {epoch_idx:4}", ncols=100) if not self.disable_tqdm else train_data
 
         for data in train_tqdm:
             self.optimizer.zero_grad()
@@ -438,11 +416,11 @@ class Trainer(AbstractTrainer):
 
         return tracker
 
+    @torch.no_grad()
     def _valid_epoch(
             self,
             valid_data: AbstractDataLoader,
             epoch_idx: int,
-            process_bar: bool = True,
     ) -> EpochTracker:
         r"""Valid the model with `valid_data`
 
@@ -455,8 +433,7 @@ class Trainer(AbstractTrainer):
         """
         self.model.eval()
         tracker = EpochTracker(epoch_idx, self.DDP, train=False, dashboard=self._dashboard)
-        valid_tqdm = tqdm(valid_data, desc=f"train {epoch_idx:4}", ncols=100) if process_bar and self._is_logger \
-            else valid_data
+        valid_tqdm = tqdm(valid_data, desc=f"train {epoch_idx:4}", ncols=100) if not self.disable_tqdm else valid_data
 
         for data in valid_tqdm:
             losses = self.model(data)
@@ -494,9 +471,10 @@ class Trainer(AbstractTrainer):
         if self._eval_count % self.eval_interval != 0:
             return False
 
-        with torch.no_grad(), Timer() as valid_timer:
-            valid_tracker = self._valid_epoch(valid_data, epoch_idx)
-        valid_tracker.info(valid_timer.duration, extra_info=ordinal(self._eval_count // self.eval_interval))
+        start_time = time()
+        valid_tracker = self._valid_epoch(valid_data, epoch_idx)
+        end_time = time()
+        valid_tracker.info(end_time - start_time, extra_info=str(self._eval_count // self.eval_interval))
         self.result_list.append(valid_tracker.as_dict())
 
         stopped = bool(self.stopping_step) and self._early_stopping(valid_tracker, epoch_idx)
@@ -546,7 +524,7 @@ class Trainer(AbstractTrainer):
         # deal with naming
         if tag is None:
             tag = '_epoch-' + str(self.epoch_idx)
-        path_to_save = self.saved_model_file[:-4] + tag
+        path_to_save = os.path.abspath(self.saved_model_filename + tag)
         if os.path.exists(path_to_save):
             if overwrite:
                 os.remove(path_to_save)  # behavior of torch.save is not clearly defined.
@@ -559,13 +537,14 @@ class Trainer(AbstractTrainer):
 
         # create soft link to best model
         if self.best_epoch == self.epoch_idx:
-            if os.path.exists(self.saved_model_file):
-                os.remove(self.saved_model_file)
-            os.symlink(os.path.abspath(path_to_save), os.path.abspath(self.saved_model_file))
+            path_to_best = os.path.abspath(self.saved_model_filename + '.pth')
+            if os.path.exists(path_to_best):
+                os.remove(path_to_best)
+            os.symlink(path_to_save, path_to_best)
 
     def _save_generated_text(self, generated_corpus: List[List[str]]):
-        r"""Store the generated text by our model into `self.saved_text_file`."""
-        with open(self.saved_text_file, 'w') as fout:
+        r"""Store the generated text by our model into `self.saved_text_filename`."""
+        with open(self.saved_text_filename + '.txt', 'w') as fout:  #todo: deal with naming
             for tokens in generated_corpus:
                 fout.write(' '.join(tokens) + '\n')
 
@@ -638,10 +617,11 @@ class Trainer(AbstractTrainer):
             for epoch_idx in range(self.start_epoch, self.epochs):
                 self.epoch_idx = epoch_idx
                 # train
-                with Timer() as train_timer:
-                    train_tracker = self._train_epoch(train_data, epoch_idx, valid_data)
+                start_time = time()
+                train_tracker = self._train_epoch(train_data, epoch_idx, valid_data)
                 self.train_loss_list.append(train_tracker.loss)
-                train_tracker.info(train_timer.duration)
+                end_time = time()
+                train_tracker.info(end_time - start_time)
 
                 # valid
                 if valid_data:
@@ -657,7 +637,7 @@ class Trainer(AbstractTrainer):
         r""" Return True if valid score has been lower than best score for `stopping_step` steps.
 
         Args:
-            valid_tracker: contain valid information (loss, perplexity and metrics score)
+            valid_tracker: contain valid information (loss and metrics score)
 
         Todo:
             * Abstract results.
@@ -713,6 +693,9 @@ class Trainer(AbstractTrainer):
 
         Returns:
             dict: eval result, key is the eval metric and value in the corresponding metric value
+
+        Todo:
+            *
         """
         if is_valid:
             _evaluator = self.valid_evaluator
@@ -726,7 +709,7 @@ class Trainer(AbstractTrainer):
             _metrics = self.metrics
 
         if load_best_model:
-            checkpoint_file = model_file or self.saved_model_file
+            checkpoint_file = model_file or self.saved_model_filename
             if not os.path.isfile(checkpoint_file):
                 self.logger.error(f'Failed to evaluate model: "{checkpoint_file}" not found.')
                 return None
@@ -745,7 +728,7 @@ class Trainer(AbstractTrainer):
 
         # generate
         generate_corpus = []
-        eval_tqdm = tqdm(eval_data, desc="generating", ncols=100) if self._is_logger else eval_data
+        eval_tqdm = tqdm(eval_data, desc="generating", ncols=100) if self.disable_tqdm else eval_data
         for batch_data in eval_tqdm:
             generated = self.model.generate(batch_data, eval_data)
             assert len(generated) == len(batch_data['target_text']), "Generated corpus has a mismatched batch size!"
@@ -759,14 +742,3 @@ class Trainer(AbstractTrainer):
             result['nll_test'] = self._evaluate_nll_test(eval_data)
 
         return result
-
-
-def _check_nan(value: Union[torch.Tensor, float]):
-    r"""Not-a-number check
-
-    Raises:
-        ValueError: If `value` is nan.
-    """
-    if (isinstance(value, torch.Tensor) and torch.isnan(value)) \
-            or (isinstance(value, float) and math.isnan(value)):
-        raise ValueError('Value is nan.')

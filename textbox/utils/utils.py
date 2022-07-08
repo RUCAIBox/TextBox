@@ -6,22 +6,6 @@ import torch
 import numpy as np
 
 from textbox.utils.enum_type import PLM_MODELS
-import time
-from typing import Union
-
-
-class Timer:
-
-    def __enter__(self):
-        self.__stime = time.time()
-        return self
-
-    def __exit__(self, *exc_info):
-        self.__etime = time.time()
-
-    @property
-    def duration(self) -> float:
-        return self.__etime - self.__stime
 
 
 def get_local_time() -> str:
@@ -44,16 +28,6 @@ def ensure_dir(dir_path: str):
 
     """
     os.makedirs(dir_path, exist_ok=True)
-
-
-def ordinal(n: Union[str, int]) -> str:
-    """convert into ordinal number string"""
-    n = int(n)
-    if 11 <= (n % 100) <= 13:
-        suffix = 'th'
-    else:
-        suffix = ['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]
-    return str(n) + suffix
 
 
 def get_model(model_name):

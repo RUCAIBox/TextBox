@@ -165,10 +165,6 @@ class Config(object):
             logger.warning('command line args [{}] will not be used in TextBox'.format(' '.join(unrecognized_args)))
         cmd_config_dict = self._convert_config_dict(cmd_config_dict)
 
-        if 'task_type' in cmd_config_dict and cmd_config_dict['task_type'] not in [
-            'unconditional', 'translation', 'summarization', 'attribute', 'multi_dialog', 'poem'
-        ]:
-            raise ValueError("task_type {} can't be found".format(cmd_config_dict['task_type']))
         if len(cmd_config_dict) > 0:
             self.external_sources.append('cmd')
         return cmd_config_dict
@@ -243,6 +239,7 @@ class Config(object):
     def _set_default_parameters(self):
         self.final_config_dict['dataset'] = self.dataset
         self.final_config_dict['model'] = self.model
+        self.final_config_dict['model_name'] = self.model.lower()
         self.final_config_dict['data_path'] = os.path.join(self.final_config_dict['data_path'], self.dataset)
         self.final_config_dict['filename'] = '{}-{}-{}'.format(
             self.final_config_dict['model'], self.final_config_dict['dataset'], get_local_time()

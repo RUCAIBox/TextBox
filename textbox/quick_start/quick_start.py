@@ -1,7 +1,7 @@
 import torch
 from logging import getLogger
 from textbox.utils.logger import init_logger
-from textbox.utils.utils import get_model, get_trainer, init_seed
+from textbox.utils.utils import get_model, get_tokenizer, get_trainer, init_seed
 from textbox.config.configurator import Config
 from textbox.data.utils import data_preparation
 
@@ -35,11 +35,12 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     logger = getLogger()
     logger.info(config)
 
+    tokenizer = get_tokenizer(config)
     # dataset splitting
-    train_data, valid_data, test_data = data_preparation(config)
+    train_data, valid_data, test_data = data_preparation(config, tokenizer)
 
     # model loading and initialization
-    single_model = get_model(config['model'])(config, train_data).to(config['device'])
+    single_model = get_model(config['model'])(config, tokenizer).to(config['device'])
     if config['DDP']:
         if config['find_unused_parameters']:
             model = torch.nn.parallel.DistributedDataParallel(

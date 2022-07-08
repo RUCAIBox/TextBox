@@ -542,11 +542,11 @@ class Trainer(AbstractTrainer):
                 os.remove(path_to_best)
             os.symlink(path_to_save, path_to_best)
 
-    def _save_generated_text(self, generated_corpus: List[List[str]]):
-        r"""Store the generated text by our model into `self.saved_text_filename`."""
-        with open(self.saved_text_filename + '.txt', 'w') as fout:  #todo: deal with naming
-            for tokens in generated_corpus:
-                fout.write(' '.join(tokens) + '\n')
+    def _save_generated_text(self, generated_corpus: List[str]):
+        r"""Store the generated text by our model into `self.saved_text_file`."""
+        with open(self.saved_text_file + '.txt', 'w') as fout:
+            for text in generated_corpus:
+                fout.write(text + '\n')
 
     def resume_checkpoint(self, resume_file: str):
         r"""Load the model parameters information and training information.
@@ -655,22 +655,6 @@ class Trainer(AbstractTrainer):
 
         return stop_flag
 
-    def _evaluate_nll_test(self, eval_data: AbstractDataLoader) -> float:
-        r"""Calculate the negative log-likelihood of the eval_data.
-
-        Args:
-            eval_data (AbstractDataLoader): the eval data.
-
-        Returns:
-            float: NLL_test of the eval data.
-        """
-
-        total_loss = 0
-        for epoch_idx, eval_batch in enumerate(eval_data):
-            nll_test = self.model.calculate_nll_test(eval_batch, epoch_idx)
-            total_loss += float(nll_test)
-        return total_loss / len(eval_data)
-
     @torch.no_grad()
     def evaluate(
             self,
@@ -731,14 +715,9 @@ class Trainer(AbstractTrainer):
         eval_tqdm = tqdm(eval_data, desc="generating", ncols=100) if self.disable_tqdm else eval_data
         for batch_data in eval_tqdm:
             generated = self.model.generate(batch_data, eval_data)
-            assert len(generated) == len(batch_data['target_text']), "Generated corpus has a mismatched batch size!"
             generate_corpus.extend(generated)
         self._save_generated_text(generate_corpus)
-
-        # evaluation
-        reference_corpus = eval_data.get_reference()
-        result = _evaluator.evaluate(generate_corpus, reference_corpus)
-        if "nll_test" in _metrics and self.config['task_type'].lower() == "unconditional":
-            result['nll_test'] = self._evaluate_nll_test(eval_data)
+        reference_corpus = eval_data.dataset.target_text
+        result = self.evaluator.evaluate(generate_corpus, reference_corpus)
 
         return result

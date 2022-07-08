@@ -2,6 +2,7 @@
 
 Todo:
     * WandBWriter with distributed training
+    * wandb: resume?
 """
 
 import os
@@ -224,7 +225,13 @@ def get_dashboard(
             name = config['filename'][len(project)+1:]
 
             def _get_wandb():
-                return WandBWriter(dir=logdir, project=project, name=name, config=config.final_config_dict)
+                return WandBWriter(
+                    email=config['email'],
+                    dir=logdir,
+                    project=project,
+                    name=name,
+                    config=config.final_config_dict
+                )
 
             return _get_wandb
         else:

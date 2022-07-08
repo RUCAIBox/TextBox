@@ -13,10 +13,11 @@ from textbox.module.scheduler import (
     AbstractScheduler, InverseSquareRootScheduler, CosineScheduler, LinearScheduler, ConstantScheduler
 )
 from textbox.evaluator import BaseEvaluator, evaluator_list
-from textbox.utils.utils import ensure_dir, Timer, ordinal
+from textbox.utils.utils import ensure_dir, Timer, ordinal, get_local_time, init_seed
 from textbox.utils.dashboard import get_dashboard, AbstractDashboard, TensorboardWriter, NilWriter
 
 from typing import Dict, Optional, Union, Set, Collection, Literal, List, Tuple, Iterable
+from collections import namedtuple
 from textbox.model.abstract_model import AbstractModel
 from textbox.data.abstract_dataloader import AbstractDataLoader
 from textbox.config.configurator import Config
@@ -62,7 +63,7 @@ class EpochTracker:
         self._accumulate_step: int = 0
         self._loss: Optional[float] = None
 
-        self._metrics_results: MetricsDict = dict()
+        self.metrics_results: MetricsDict = dict()
         self._score: Optional[float] = None
 
         self._logger: Logger = getLogger()
@@ -85,15 +86,16 @@ class EpochTracker:
         r"""Record the metrics results."""
         for metric, result in results.items():
             self._dashboard.add_any("metrics/" + metric, result)
-        self._metrics_results.update(results)
+        self.metrics_results.update(results)
 
     def _calc_score(self) -> Optional[float]:
         r"""Ensure the score will only be calculated and recorded once."""
-        if self._metrics_results is None:
+        if self.metrics_results is None:
             return None
 
+        # calculate the total score of valid metrics for early stopping.
         score: Optional[float] = None
-        for metric, result in self._metrics_results.items():
+        for metric, result in self.metrics_results.items():
             if isinstance(result, dict):
                 float_list = list(filter(lambda x: isinstance(x, float), result.values()))
             elif isinstance(result, Collection):
@@ -109,6 +111,8 @@ class EpochTracker:
                 score += sum(float_list) / len(float_list)
         if score is not None:
             self._dashboard.add_scalar("metrics/score", score)
+        else:
+            score = -self.loss  # If no valid metric is given, negative loss will be used in early stopping.
 
         return score
 
@@ -148,6 +152,14 @@ class EpochTracker:
         r"""Get exponent of total loss."""
         return np.exp(self.loss)
 
+    def as_dict(self) -> dict:
+        return dict(
+            epoch_idx=self.epoch_idx,
+            metrics_results=self.metrics_results,
+            loss=self.loss,
+            perplexity=self.perplexity
+        )
+
     def info(self, time_duration: float, extra_info: str = ""):
         r"""Output loss with epoch and time information."""
         output = f"Epoch {self.epoch_idx}, {extra_info} {self.mode_tag} "\
@@ -155,7 +167,7 @@ class EpochTracker:
 
         if self.mode_tag == "validating":
             output += f", ppl: {self.perplexity:.4f}"
-            for metric, result in self._metrics_results.items():
+            for metric, result in self.metrics_results.items():
                 if metric != 'loss':
                     output += f", {metric}: {result}"
         output += "]"
@@ -164,10 +176,10 @@ class EpochTracker:
         self._logger.info(output)
 
     def __getitem__(self, item: str) -> Optional[float]:
-        if self._metrics_results is None:
+        if self.metrics_results is None:
             self._logger.warning("Please set result first.")
             return None
-        return self._metrics_results[item]
+        return self.metrics_results[item]
 
 
 class AbstractTrainer:
@@ -247,13 +259,11 @@ class Trainer(AbstractTrainer):
 
         self.best_epoch = -1
         self.best_valid_score = -math.inf
-        self.best_valid_loss = math.inf
-        self.best_valid_ppl = math.inf
-        self._saved_once = False
         self.eval_interval, self.eval_mode = self._set_eval_mode()
         self._eval_count = 0
         self.test_batch_size: int = config['eval_batch_size']
-        self.train_loss_list = list()
+        self.train_loss_list: List[float] = list()
+        self.result_list: List[dict] = list()
 
         self.metrics = self._process_metrics("metrics")
         self.evaluator = BaseEvaluator(config, self.metrics)
@@ -445,7 +455,7 @@ class Trainer(AbstractTrainer):
         """
         self.model.eval()
         tracker = EpochTracker(epoch_idx, self.DDP, train=False, dashboard=self._dashboard)
-        valid_tqdm= tqdm(valid_data, desc=f"train {epoch_idx:4}", ncols=100) if process_bar and self._is_logger \
+        valid_tqdm = tqdm(valid_data, desc=f"train {epoch_idx:4}", ncols=100) if process_bar and self._is_logger \
             else valid_data
 
         for data in valid_tqdm:
@@ -487,40 +497,71 @@ class Trainer(AbstractTrainer):
         with torch.no_grad(), Timer() as valid_timer:
             valid_tracker = self._valid_epoch(valid_data, epoch_idx)
         valid_tracker.info(valid_timer.duration, extra_info=ordinal(self._eval_count // self.eval_interval))
+        self.result_list.append(valid_tracker.as_dict())
 
         stopped = bool(self.stopping_step) and self._early_stopping(valid_tracker, epoch_idx)
+        self.save_checkpoint()
 
         return stopped
 
-    def _save_checkpoint(self):
-        r"""Store the model parameters information into `self.saved_model_file` and training information.
+    @property
+    def best_result(self) -> dict:
+        return self.result_list[self.best_epoch]
+
+    def save_checkpoint(self, tag: Optional[str] = None, overwrite: bool = True):
+        r"""Store the model parameters information and training information.
+
+        Save checkpoint every validation as the formate of 'Model-Dataset-Time_epoch-?.pth'. A soft link named
+        'Model-Dataset-Time.pth' pointing to best epoch will be created.
 
         Todo:
-            * Update checkpoint format
+            * Large checkpoint
         """
-        if not self.saved_model_file:
+        if len(self.result_list) == 0:
+            self.logger.warning('Save checkpoint failed. No validation has been performed.')
             return
 
+        # construct state_dict and parameters
         _state_dict = self.model.state_dict()
         if self.DDP and torch.distributed.get_rank() == 0:
-            _new_dict = collections.OrderedDict()
+            _new_dict = dict()
             for key, val in _state_dict["state_dict"].items():
-                changed_key = key[7:] if key[0:7] == 'module.' else key
+                changed_key = key[7:] if key.startswith('module.') else key
                 _new_dict[changed_key] = val
             _state_dict = _new_dict
 
-        state = {
-            'config': self.config,
-            'epoch': self.epoch_idx,
-            'current': self.stopping_count,
-            'best_valid_score': self.best_valid_score,
+        # get optimizer, config and validation summary
+        checkpoint = {
             'state_dict': _state_dict,
             'optimizer': self.optimizer.state_dict(),
+            'stopping_count': self.stopping_count,
+            'best_valid_score': self.best_valid_score,
+            'epoch': self.epoch_idx,
+            'config': self.config,
+            'summary': self.result_list[-1],
         }
 
-        torch.save(state, self.saved_model_file)
-        self._saved_once = True
-        self.logger.info('Saving current: {}'.format(self.saved_model_file))
+        self.logger.debug(checkpoint)
+
+        # deal with naming
+        if tag is None:
+            tag = '_epoch-' + str(self.epoch_idx)
+        path_to_save = self.saved_model_file[:-4] + tag
+        if os.path.exists(path_to_save):
+            if overwrite:
+                os.remove(path_to_save)  # behavior of torch.save is not clearly defined.
+            else:
+                path_to_save += get_local_time()
+        path_to_save += '.pth'
+
+        torch.save(checkpoint, path_to_save)
+        self.logger.info('Saving current: {}'.format(path_to_save))
+
+        # create soft link to best model
+        if self.best_epoch == self.epoch_idx:
+            if os.path.exists(self.saved_model_file):
+                os.remove(self.saved_model_file)
+            os.symlink(os.path.abspath(path_to_save), os.path.abspath(self.saved_model_file))
 
     def _save_generated_text(self, generated_corpus: List[List[str]]):
         r"""Store the generated text by our model into `self.saved_text_file`."""
@@ -533,10 +574,8 @@ class Trainer(AbstractTrainer):
 
         Args:
             resume_file: the checkpoint file (specific by `load_experiment`).
-
-        Todo:
-            * Update checkpoint format
         """
+        # check
         self.logger.info("Resuming checkpoint from {}...".format(resume_file))
         if os.path.isfile(resume_file):
             checkpoint = torch.load(resume_file, map_location=self.device)
@@ -544,9 +583,13 @@ class Trainer(AbstractTrainer):
             self.logger.warning('Checkpoint file "{}" not found. Resuming stopped.'.format(resume_file))
             return
 
+        # load start epoch and early stopping
         self.start_epoch = checkpoint['epoch'] + 1
         self.stopping_count = checkpoint['stopping_count'] or checkpoint['cur_step']
         self.best_valid_score = checkpoint['best_valid_score']
+
+        if checkpoint['config']['seed']:
+            init_seed(checkpoint['config']['seed'], checkpoint['config']['reproducibility'])
 
         # load architecture params from checkpoint
         if checkpoint['config']['model'].lower() != self.config['model'].lower():
@@ -563,6 +606,11 @@ class Trainer(AbstractTrainer):
         self.model.load_state_dict(checkpoint['state_dict'])
 
         # load optimizer state from checkpoint only when optimizer type is not changed
+        if checkpoint['config']['optimizer'].lower() != self.config['optimizer'].lower():
+            self.logger.warning(
+                'Optimizer configuration given in config file is different from that of checkpoint. '
+                'This may yield an exception while state_dict is being loaded.'
+            )
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         self.logger.info('Checkpoint loaded. Resume training from epoch {}'.format(self.start_epoch))
 
@@ -570,14 +618,12 @@ class Trainer(AbstractTrainer):
             self,
             train_data: AbstractDataLoader,
             valid_data: Optional[AbstractDataLoader] = None,
-            saved: bool = True
     ) -> dict:
         r"""Train the model based on the train data and the valid data.
 
         Args:
             train_data: The dataloader of training set.
             valid_data: (default = None) The dataloader of training set.
-            saved: (default = True) True if checkpoints of best epochs are about to be saved.
 
         Returns:
              dict: the best valid score and best valid result.
@@ -603,14 +649,9 @@ class Trainer(AbstractTrainer):
                     if self.stopped:
                         break
 
-        if not self._saved_once and saved:
-            self._save_checkpoint()
         self.logger.info('====== Finished training, best eval result in epoch {} ======'.format(self.best_epoch))
 
-        result = {"best_valid_score": self.best_valid_score,
-                  "best_valid_loss": self.best_valid_loss,
-                  "best_valid_ppl": self.best_valid_ppl}
-        return result
+        return self.best_result
 
     def _early_stopping(self, valid_tracker: EpochTracker, epoch_idx: int) -> bool:
         r""" Return True if valid score has been lower than best score for `stopping_step` steps.
@@ -625,11 +666,9 @@ class Trainer(AbstractTrainer):
         stop_flag = False
 
         if valid_tracker.score > self.best_valid_score:
-            self.stopping_count = 0
             self.best_valid_score = valid_tracker.score
-            self.best_valid_ppl = valid_tracker.perplexity
+            self.stopping_count = 0
             self.best_epoch = epoch_idx
-            self._save_checkpoint()
         else:
             self.stopping_count += 1
             stop_flag = self.stopping_count > self.stopping_step

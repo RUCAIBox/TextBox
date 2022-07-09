@@ -238,6 +238,10 @@ class Config(object):
         final_config_dict.update(self.external_config_dict)
         return final_config_dict
 
+    def _simplify_parameter(self, key: str):
+        if isinstance(self.final_config_dict[key], str):
+            self.final_config_dict[key] = self.file_config_dict[key].lower()
+
     def _set_default_parameters(self):
         self.final_config_dict['dataset'] = self.dataset
         self.final_config_dict['model'] = self.model
@@ -246,6 +250,11 @@ class Config(object):
         self.final_config_dict['filename'] = '{}-{}-{}'.format(
             self.final_config_dict['model'], self.final_config_dict['dataset'], get_local_time()
         )
+        self._simplify_parameter('optimizer')
+        self._simplify_parameter('scheduler')
+        self._simplify_parameter('src_lang')
+        self._simplify_parameter('tgt_lang')
+        self._simplify_parameter('task_type')
 
     def _init_device(self):
         if 'use_gpu' not in self.external_config_dict:

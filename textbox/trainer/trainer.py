@@ -307,8 +307,6 @@ class Trainer(AbstractTrainer):
 
         def _get_base_optimizer(name: str) -> optim.Optimizer:
 
-            name = name.lower()
-
             defaults: Dict[str, Any] = dict(
                 params=self._trainable_parameters,
                 lr=self.learning_rate,
@@ -343,8 +341,6 @@ class Trainer(AbstractTrainer):
 
             if name is None:
                 return _optim
-
-            name = name.lower()
 
             defaults = dict(
                 base_optimizer=_optim,
@@ -585,7 +581,7 @@ class Trainer(AbstractTrainer):
             init_seed(checkpoint['config']['seed'], checkpoint['config']['reproducibility'])
 
         # load architecture params from checkpoint
-        if checkpoint['config']['model'].lower() != self.config['model'].lower():
+        if checkpoint['config']['model_name'] != self.config['model_name']:
             self.logger.warning(
                 'Architecture configuration given in config file is different from that of checkpoint. '
                 'This may yield an exception while state_dict is being loaded.'
@@ -599,7 +595,7 @@ class Trainer(AbstractTrainer):
         self.model.load_state_dict(checkpoint['state_dict'])
 
         # load optimizer state from checkpoint only when optimizer type is not changed
-        if checkpoint['config']['optimizer'].lower() != self.config['optimizer'].lower():
+        if checkpoint['config']['optimizer'].lower() != self.config['optimizer']:
             self.logger.warning(
                 'Optimizer configuration given in config file is different from that of checkpoint. '
                 'This may yield an exception while state_dict is being loaded.'

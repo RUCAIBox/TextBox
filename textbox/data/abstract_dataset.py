@@ -16,8 +16,8 @@ class AbstractDataset(object):
     def __init__(self, config):
         self.config = config
         self.dataset_path = config['data_path']
-        self.source_language = (config['src_lang'] or 'english').lower()
-        self.target_language = (config['tgt_lang'] or 'english').lower()
+        self.source_language = config['src_lang'] or 'english'
+        self.target_language = config['tgt_lang'] or 'english'
         self.source_vocab_size = int(config['src_vocab_size'] or config['vocab_size'] or 1e8)
         self.target_vocab_size = int(config['tgt_vocab_size'] or config['vocab_size'] or 1e8)
         self.source_max_length = int(config['src_len'] or config['seq_len'] or 1e4)

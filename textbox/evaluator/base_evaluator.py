@@ -38,10 +38,10 @@ class BaseEvaluator:
         for metric in self.metrics:
             evaluator = None
             if metric == 'bleu':
-                task_type = (self.config['task_type'].lower() == "unconditional")
+                task_type = (self.config['task_type'] == "unconditional")
                 evaluator = BleuEvaluator(task_type)
             elif metric == 'self_bleu':
-                if self.config['task_type'].lower() == "unconditional":
+                if self.config['task_type'] == "unconditional":
                     evaluator = SelfBleuEvaluator()
                 else:
                     raise ValueError("task_type should be 'unconditional' for self-bleu")

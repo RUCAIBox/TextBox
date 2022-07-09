@@ -35,26 +35,32 @@ def ensure_dir(dir_path: str):
 def get_model(model_name):
     r"""Automatically select model class based on model name
 
+    Notes:
+        model_name should be lowercase!
+
     Args:
         model_name (str): model name
 
     Returns:
         Generator: model class
     """
-    try:
-        model_name = 'Pretrained_Models' if model_name.lower() in PLM_MODELS else model_name
-        model_file_name = model_name.lower()
-        module_path = '.'.join(['...model', model_file_name])
-        if importlib.util.find_spec(module_path, __name__):
-            model_module = importlib.import_module(module_path, __name__)
+    model_name = model_name.lower()
+    if model_name in PLM_MODELS:
+        model_name = 'pretrained_models'
+    module_path = '.'.join(['...model', model_name])
+    if importlib.util.find_spec(module_path, __name__):
+        model_module = importlib.import_module(module_path, __name__)
         model_class = getattr(model_module, model_name)
-    except:
-        raise NotImplementedError("{} can't be found".format(model_name))
+    else:
+        raise ValueError("{} can't be found".format(model_name))
     return model_class
 
 
 def get_trainer(model_name):
     r"""Automatically select trainer class based on model type and model name
+
+    Notes:
+        model_name should be original string (typically is upper case) like "BART"
 
     Args:
         model_name (str): model name

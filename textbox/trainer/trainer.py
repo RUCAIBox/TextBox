@@ -673,7 +673,8 @@ class Trainer(AbstractTrainer):
             load_best_model: bool = True,
             model_file: Optional[str] = None,
             _eval: bool = True,
-            is_valid: bool = False
+            is_valid: bool = False,
+            dashboard: Optional[AbstractDashboard] = None
     ) -> Optional[dict]:
         r"""Evaluate the model based on the `eval_data`.
 
@@ -723,6 +724,8 @@ class Trainer(AbstractTrainer):
             generate_corpus.extend(generated)
         if not is_valid:
             self._save_generated_text(generate_corpus)
+        if dashboard:
+            dashboard.add_corpus(generate_corpus)
         reference_corpus = eval_data.dataset.target_text
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
 

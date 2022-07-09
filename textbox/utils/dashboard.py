@@ -6,6 +6,8 @@ Todo:
 """
 
 import os
+
+import pandas as pd
 from torch.utils.tensorboard import SummaryWriter
 from logging import getLogger
 
@@ -192,6 +194,10 @@ class WandBWriter(AbstractDashboard):
         info = {tag: scalar_value}
         info.update(self._axes)
         wandb.log(info, step=self._axes['train/step'])
+
+    def add_corpus(self, corpus: Iterable[str], tag: str = 'corpus'):
+        corpus = wandb.Table(columns=[tag], data=pd.DataFrame(corpus))
+        wandb.log(corpus)
 
 
 def get_dashboard(

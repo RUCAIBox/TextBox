@@ -1,7 +1,6 @@
 import os
 import torch
 import torch.optim as optim
-import numpy as np
 import math
 import collections
 
@@ -11,16 +10,17 @@ from torch.nn import Parameter
 from tqdm import tqdm
 from logging import getLogger
 
-from textbox.trainer.scheduler import (
+from .scheduler import (
     AbstractScheduler, InverseSquareRootScheduler, CosineScheduler, LinearScheduler, ConstantScheduler
 )
-from textbox.evaluator import BaseEvaluator, evaluator_list
-from textbox.utils import ensure_dir, get_local_time, init_seed
+import transformers
+from ..evaluator import BaseEvaluator, evaluator_list
+from ..utils import ensure_dir, get_local_time, init_seed
 from textbox.utils.dashboard import get_dashboard, AbstractDashboard, TensorboardWriter, NilWriter
 
 from typing import Dict, Optional, Union, Set, Collection, Literal, List, Tuple, Iterator
-from textbox.model.abstract_model import AbstractModel
-from textbox.data.abstract_dataloader import AbstractDataLoader
+from ..model.abstract_model import AbstractModel
+from ..data.abstract_dataloader import AbstractDataLoader
 from textbox import Config
 from logging import Logger
 MetricsDict = Dict[str, Union[float, Dict[str, float], Collection[float]]]
@@ -314,13 +314,17 @@ class Trainer(AbstractTrainer):
             name = name.lower()
 
             if name == 'adam':
-                _optim = optim.Adam(self._trainable_parameters, lr=self.learning_rate)
+                _optim = optim.Adam(self._trainable_parameters, lr=self.learning_rate, )
             elif name == 'sgd':
                 _optim = optim.SGD(self._trainable_parameters, lr=self.learning_rate)
             elif name == 'adagrad':
                 _optim = optim.Adagrad(self._trainable_parameters, lr=self.learning_rate)
             elif name == 'rmsprop':
                 _optim = optim.RMSprop(self._trainable_parameters, lr=self.learning_rate)
+            elif name == 'adamw':
+                _optim = optim.AdamW(self._trainable_parameters, lr=self.learning_rate)
+            elif name == 'adafactor':
+                _optim = transformers.Adafactor(self._trainable_parameters, lr=self.learning_rate)
             else:
                 self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
                 _optim = optim.Adam(self._trainable_parameters, lr=self.learning_rate)
@@ -405,7 +409,7 @@ class Trainer(AbstractTrainer):
         self.model.train()
         tracker = EpochTracker(epoch_idx, self.DDP, train=True, dashboard=self._dashboard)
         if not self.disable_tqdm:
-            train_tqdm = tqdm(train_data, desc=f"train {epoch_idx:4}", ncols=100).set_postfix(loss=None)
+            train_tqdm = tqdm(train_data, desc=f"train {epoch_idx:4}", dynamic_ncols=True).set_postfix(loss=None)
         else:
             train_tqdm = train_data
 
@@ -451,7 +455,7 @@ class Trainer(AbstractTrainer):
         self.model.eval()
         tracker = EpochTracker(epoch_idx, self.DDP, train=False, dashboard=self._dashboard)
         if not self.disable_tqdm:
-            valid_tqdm = tqdm(valid_data, desc=f"train {epoch_idx:4}", ncols=100).set_postfix(loss=None)
+            valid_tqdm = tqdm(valid_data, desc=f"train {epoch_idx:4}", dynamic_ncols=True).set_postfix(loss=None)
         else:
             valid_tqdm = valid_data
 
@@ -736,7 +740,7 @@ class Trainer(AbstractTrainer):
 
         # generate
         generate_corpus = []
-        eval_tqdm = tqdm(eval_data, desc="generating", ncols=100) if self.disable_tqdm else eval_data
+        eval_tqdm = tqdm(eval_data, desc="generating", dynamic_ncols=True) if self.disable_tqdm else eval_data
         for batch_data in eval_tqdm:
             generated = self.model.generate(batch_data, eval_data)
             generate_corpus.extend(generated)

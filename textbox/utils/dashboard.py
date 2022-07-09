@@ -26,7 +26,7 @@ TextType = str
 class AbstractDashboard:
 
     def __init__(self):
-        self._axes_label = ['train/step', 'train/epoch', 'valid/step', 'valid/epoch']
+        self._axes_label = ['train/step', 'train/epoch', 'valid_step']
         self._axes = dict.fromkeys(self._axes_label, 0)
 
     def update_axes(self, *args: str):
@@ -167,9 +167,8 @@ class WandBWriter(AbstractDashboard):
         self.email = email
         self.run = wandb.init(**kwargs)
         wandb.define_metric("train/epoch")
-        wandb.define_metric("valid/epoch")
+        wandb.define_metric("valid_step")
         wandb.define_metric('train/step')
-        wandb.define_metric('valid/step')
         wandb.define_metric("loss/train", step_metric="train/step")
         wandb.define_metric("loss/valid", step_metric="train/step")
         wandb.define_metric("metrics/*", step_metric="train/step")

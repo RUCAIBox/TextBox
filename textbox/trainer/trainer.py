@@ -18,7 +18,7 @@ from ..evaluator import BaseEvaluator, evaluator_list
 from ..utils import ensure_dir, get_local_time, init_seed
 from textbox.utils.dashboard import get_dashboard, AbstractDashboard, TensorboardWriter, NilWriter
 
-from typing import Dict, Optional, Union, Set, Collection, Literal, List, Tuple, Iterator, Any
+from typing import Dict, Optional, Union, Iterable, Collection, Literal, List, Tuple, Iterator, Any
 from ..model.abstract_model import AbstractModel
 from ..data.abstract_dataloader import AbstractDataLoader
 from textbox import Config
@@ -49,7 +49,7 @@ class EpochTracker:
         >>>     valid_tracker.info(time_duration=10.0)
         Epoch 0,  validating [time: 10.00s, validating_loss: 1.0000]
     """
-    _is_train: Dict[bool, Literal["train", "valid"]] = {True: "train", False: "valid"}
+    _get_mode_tag: Dict[bool, Literal["train", "valid"]] = {True: "train", False: "valid"}
 
     def __init__(
             self,
@@ -69,17 +69,24 @@ class EpochTracker:
 
         self._logger: Logger = getLogger()
         self._DDP: bool = DDP
-        self.mode_tag = self._is_train[train]
+        self.mode_tag = self._get_mode_tag[train]
+        self._is_train = train
 
         self._dashboard: AbstractDashboard = dashboard or NilWriter()
-        self._dashboard.update_axes(self.mode_tag + "/epoch")
+        if train:
+            self._dashboard.update_axes("train/epoch")
+        else:
+            self._dashboard.update_axes("valid_step")
 
-    def append_loss(self, loss: float):
+    def append_loss(self, loss: Union[float, torch.Tensor]):
         r"""Append loss of current step to tracker and update current step."""
+        if isinstance(loss, torch.Tensor):
+            loss = loss.item()
         if math.isnan(loss):
             raise ValueError('Value is nan.')
         self._dashboard.add_scalar("loss/" + self.mode_tag, loss)
-        self._dashboard.update_axes(self.mode_tag + "/step")
+        if self._is_train:
+            self._dashboard.update_axes(self.mode_tag + "/step")
 
         # update average loss in this way in order to avoid float overflow
         self._avg_loss *= self._accumulate_step / (self._accumulate_step + 1)
@@ -92,10 +99,9 @@ class EpochTracker:
             self._dashboard.add_any("metrics/" + metric, result)
         self.metrics_results.update(results)
 
-    def _calc_score(self) -> Optional[float]:
-        r"""Ensure the score will only be calculated and recorded once."""
-        if self.metrics_results is None:
-            return None
+    def calc_score(self, keys: Iterable[str]) -> Optional[float]:
+
+        #todo: how to calculate the score?
 
         # calculate the total score of valid metrics for early stopping.
         score: Optional[float] = None
@@ -119,17 +125,6 @@ class EpochTracker:
             score = -self.loss  # If no valid metric is given, negative loss will be used in early stopping.
 
         return score
-
-    @property
-    def score(self) -> Optional[float]:
-        r"""Get the total sum score of metric results in evaluating epochs."""
-        if self.mode_tag == self._is_train[True]:
-            self._logger.warning('`score` is unavailable training epochs.')
-            return None
-
-        if not self._score:
-            self._score = self._calc_score()
-        return self._score
 
     def loss_all_reduce(self):
         if self._DDP:
@@ -175,10 +170,7 @@ class EpochTracker:
         self._logger.info(output)
 
     def __getitem__(self, item: str) -> Optional[float]:
-        if self.metrics_results is None:
-            self._logger.warning("Please set result first.")
-            return None
-        return self.metrics_results[item]
+        return self.metrics_results.get(item)
 
 
 class AbstractTrainer:
@@ -232,7 +224,6 @@ class Trainer(AbstractTrainer):
         self.stopped = False
         self.stopping_count = 0
 
-        self.optimizer = self._build_optimizer(config['optimizer'], config['scheduler'])
         self.learning_rate: float = config['learning_rate']
         self.weight_decay: float = config['weight_decay']
         self.adam_beta1: Optional[float] = config['adam_beta1']  # default values set in config yaml?
@@ -243,10 +234,11 @@ class Trainer(AbstractTrainer):
         self.warmup_steps: Optional[int] = config['warmup_steps']
         self.grad_clip: bool = config['grad_clip']
         self._trainable_parameters: Iterator[Parameter] = filter(lambda x: x.requires_grad, self.model.parameters())
+        self.optimizer = self._build_optimizer(config['optimizer'], config['scheduler'])
 
         ensure_dir(config['checkpoint_dir'])
         self.saved_model_filename: str = os.path.join(config['checkpoint_dir'], self.filename)
-        r"""Path to saved checkpoint file, which can be loaded with `load_experiment`."""
+        r"""Path to saved checkpoint file (without suffix!), which can be loaded with `load_experiment`."""
 
         ensure_dir(config['generated_text_dir'])
         self.saved_text_filename: str = os.path.join(config['generated_text_dir'], self.filename)
@@ -266,15 +258,14 @@ class Trainer(AbstractTrainer):
         self.train_loss_list: List[float] = list()
         self.result_list: List[dict] = list()
 
-        self.metrics = self._process_metrics("metrics")
+        self.metrics: List[str] = self.config["metrics"]
+        self.metrics_key: List[str] = self.config["metrics_key"]  # todo: how to access metrics scores? (nested dict)
         self.evaluator = BaseEvaluator(config, self.metrics)
-        self.valid_metrics = self._process_metrics("valid_metrics")
-        self.valid_evaluator = BaseEvaluator(config, self.valid_metrics)
 
         self.disable_tqdm = self.DDP and torch.distributed.get_rank() != 0
         self.logdir = './log/'
         self._DashboardClass = get_dashboard(config['dashboard'], self.logdir, config)
-        self._dashboard = None
+        self._dashboard: Optional[AbstractDashboard] = None
 
     def _set_eval_mode(self) -> Tuple[int, Literal["epoch", "step"]]:
         r"""Check evaluation mode. Default = (1, "epoch") (If both `eval_epoch` and `eval_step` are specified,
@@ -319,7 +310,7 @@ class Trainer(AbstractTrainer):
             name = name.lower()
 
             defaults: Dict[str, Any] = dict(
-                paams=self._trainable_parameters,
+                params=self._trainable_parameters,
                 lr=self.learning_rate,
                 weight_decay=self.weight_decay
             )
@@ -382,41 +373,6 @@ class Trainer(AbstractTrainer):
         optimizer = _get_scheduler(scheduler, optimizer)
         return optimizer
 
-    def _process_metrics(self, metrics_type: Literal["metrics", "valid_metrics"]) -> Set[str]:
-        r"""Get and check the user-specific metrics. The function get metrics from config, checks if it's a string or
-        a list, and then checks if the metrics are in the supported list.
-
-        Args:
-            metrics_type: "metrics" or "valid_metrics"
-
-        Returns:
-            Set[str]: A set of metrics. An empty set will be returned if none metric is specified.
-
-        Raises:
-            TypeError: If the `self.config[metrics_type]` is not a string or a list.
-        """
-        # Type check and pre-process
-        metrics = self.config[metrics_type]
-        if not metrics:
-            return set()
-        if not isinstance(metrics, (str, list)):
-            raise TypeError(f'Evaluator(s) of {metrics_type} must be a string or list, not {type(metrics)}')
-        if isinstance(metrics, str):
-            if metrics[0] == '[' and metrics[-1] == ']':
-                metrics = metrics[1:-1]
-            metrics = metrics.split(",")
-        metrics = set(map(lambda x: x.strip().lower(), metrics))
-
-        # Implementation Check
-        if len(metrics - evaluator_list) != 0:
-            self.logger.warning(
-                f"Evaluator(s) of {metrics_type} " + ", ".join(metrics - evaluator_list) +
-                " are ignored because are not in supported evaluators list (" + ", ".join(evaluator_list) + ")."
-            )
-            metrics -= metrics - evaluator_list
-
-        return metrics
-
     def _train_epoch(
             self,
             train_data: AbstractDataLoader,
@@ -436,7 +392,7 @@ class Trainer(AbstractTrainer):
         self.model.train()
         tracker = EpochTracker(epoch_idx, self.DDP, train=True, dashboard=self._dashboard)
         if not self.disable_tqdm:
-            train_tqdm = tqdm(train_data, desc=f"train {epoch_idx:4}", dynamic_ncols=True).set_postfix(loss=None)
+            train_tqdm = tqdm(train_data, desc=f"train {epoch_idx:4}", dynamic_ncols=True, postfix={'loss': None})
         else:
             train_tqdm = train_data
 
@@ -465,13 +421,13 @@ class Trainer(AbstractTrainer):
     def _valid_epoch(
             self,
             valid_data: AbstractDataLoader,
-            epoch_idx: int,
+            idx: int,
     ) -> EpochTracker:
         r"""Valid the model with `valid_data`
 
         Args:
             valid_data: the dataloader of validation set
-            epoch_idx: the current epoch index.
+            idx: the current epoch index.
 
         Returns:
             EpochTracker: :class:`EpochTracker` that includes epoch information.
@@ -479,23 +435,23 @@ class Trainer(AbstractTrainer):
         Todo:
             * perform either loss or evaluation according to 'eval_metrics'
         """
-        self.model.eval()
-        tracker = EpochTracker(epoch_idx, self.DDP, train=False, dashboard=self._dashboard)
-        if not self.disable_tqdm:
-            valid_tqdm = tqdm(valid_data, desc=f"train {epoch_idx:4}", dynamic_ncols=True).set_postfix(loss=None)
-        else:
-            valid_tqdm = valid_data
+        tracker = EpochTracker(idx, self.DDP, train=False, dashboard=self._dashboard)
 
-        for data in valid_tqdm:
-            loss = self.model(data)
-            tracker.append_loss(loss)
+        if 'loss' in self.metrics:
+            self.model.eval()
             if not self.disable_tqdm:
-                valid_tqdm.set_postfix(loss=tracker.loss)
-
-        tracker.loss_all_reduce()
-
-        valid_results = self.evaluate(valid_data, load_best_model=False, is_valid=True)
-        tracker.set_result(valid_results)
+                valid_tqdm = tqdm(valid_data, desc=f"valid {idx:4}", dynamic_ncols=True, postfix={'loss': None})
+            else:
+                valid_tqdm = valid_data
+            for data in valid_tqdm:
+                loss = self.model(data)
+                tracker.append_loss(loss)
+                if not self.disable_tqdm:
+                    valid_tqdm.set_postfix(loss=tracker.loss)
+            tracker.loss_all_reduce()
+        else:
+            valid_results = self.evaluate(valid_data, load_best_model=False, is_valid=True)
+            tracker.set_result(valid_results)
 
         return tracker
 
@@ -518,6 +474,9 @@ class Trainer(AbstractTrainer):
         Returns:
             bool: Early stopping. Return true if `self.stopping_step` is positive integer and `self._early_stopping()`
             is True.
+
+        Todo:
+            * Update docstring: valid method 'loss' or 'metrics'
         """
         if (eval_strategy != self.eval_strategy) or (self.eval_interval <= 0):
             return False
@@ -527,7 +486,7 @@ class Trainer(AbstractTrainer):
             return False
 
         start_time = time()
-        valid_tracker = self._valid_epoch(valid_data, epoch_idx)
+        valid_tracker = self._valid_epoch(valid_data, self._eval_count // self.eval_interval)
         end_time = time()
         valid_tracker.info(end_time - start_time, extra_info=str(self._eval_count // self.eval_interval))
         self.result_list.append(valid_tracker.as_dict())
@@ -598,8 +557,8 @@ class Trainer(AbstractTrainer):
             os.symlink(path_to_save, path_to_best)
 
     def _save_generated_text(self, generated_corpus: List[str]):
-        r"""Store the generated text by our model into `self.saved_text_file`."""
-        with open(self.saved_text_file + '.txt', 'w') as fout:
+        r"""Store the generated text by our model into `self.saved_text_filename`."""
+        with open(self.saved_text_filename + '.txt', 'w') as fout:
             for text in generated_corpus:
                 fout.write(text + '\n')
 
@@ -700,10 +659,11 @@ class Trainer(AbstractTrainer):
 
         stop_flag = False
 
-        if valid_tracker.score > self._best_valid_score:
-            self._best_valid_score = valid_tracker.score
+        score = valid_tracker.calc_score(self.metrics_key)
+        if score > self._best_valid_score:
+            self._best_valid_score = score
             self.stopping_count = 0
-            self.best_epoch = epoch_idx
+            self.best_epoch = epoch_idx  # get best results with index
         else:
             self.stopping_count += 1
             stop_flag = self.stopping_count > self.stopping_step
@@ -736,19 +696,13 @@ class Trainer(AbstractTrainer):
         Todo:
             * perform either loss or evaluation according to 'eval_metrics'
         """
-        if is_valid:
-            _evaluator = self.valid_evaluator
-            _metrics = self.valid_metrics
-            if load_best_model:
-                load_best_model = False
-                self.logger.warning('Evaluation should not load best model during validation. `load_best_model` has'
-                                    'set to False temporarily.')
-        else:
-            _evaluator = self.evaluator
-            _metrics = self.metrics
+        if is_valid and load_best_model:
+            load_best_model = False
+            self.logger.warning('Evaluation should not load best model during validation. `load_best_model` has'
+                                'set to False temporarily.')
 
         if load_best_model:
-            checkpoint_file = model_file or self.saved_model_filename
+            checkpoint_file = model_file or self.saved_model_filename + '.pth'
             if not os.path.isfile(checkpoint_file):
                 self.logger.error(f'Failed to evaluate model: "{checkpoint_file}" not found.')
                 return None
@@ -759,7 +713,7 @@ class Trainer(AbstractTrainer):
         self.model.eval()
 
         # preview only
-        if not _eval or len(_metrics) == 0:
+        if not _eval or len(self.metrics) == 0:
             generate_sentence = self.model.generate(next(eval_data), eval_data)
             generate_sentence = ' '.join(generate_sentence[0])
             self.logger.info('Generation Preview: ' + generate_sentence)
@@ -767,11 +721,12 @@ class Trainer(AbstractTrainer):
 
         # generate
         generate_corpus = []
-        eval_tqdm = tqdm(eval_data, desc="generating", dynamic_ncols=True) if self.disable_tqdm else eval_data
+        eval_tqdm = tqdm(eval_data, desc="generating", dynamic_ncols=True) if not self.disable_tqdm else eval_data
         for batch_data in eval_tqdm:
             generated = self.model.generate(batch_data, eval_data)
             generate_corpus.extend(generated)
-        self._save_generated_text(generate_corpus)
+        if not is_valid:
+            self._save_generated_text(generate_corpus)
         reference_corpus = eval_data.dataset.target_text
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
 

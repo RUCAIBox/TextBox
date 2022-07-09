@@ -18,7 +18,7 @@ from ..evaluator import BaseEvaluator, evaluator_list
 from ..utils import ensure_dir, get_local_time, init_seed
 from textbox.utils.dashboard import get_dashboard, AbstractDashboard, TensorboardWriter, NilWriter
 
-from typing import Dict, Optional, Union, Set, Collection, Literal, List, Tuple, Iterator
+from typing import Dict, Optional, Union, Set, Collection, Literal, List, Tuple, Iterator, Any
 from ..model.abstract_model import AbstractModel
 from ..data.abstract_dataloader import AbstractDataLoader
 from textbox import Config
@@ -231,12 +231,17 @@ class Trainer(AbstractTrainer):
         self.stopping_step: Optional[int] = config['stopping_step']
         self.stopped = False
         self.stopping_count = 0
+
+        self.optimizer = self._build_optimizer(config['optimizer'], config['scheduler'])
+        self.learning_rate: float = config['learning_rate']
+        self.weight_decay: float = config['weight_decay']
+        self.adam_beta1: Optional[float] = config['adam_beta1']  # default values set in config yaml?
+        self.adam_beta2: Optional[float] = config['adam_beta2']
+        self.epsilon: Optional[float] = config['epsilon']
+        self.max_steps: Optional[int] = config['max_steps']
         self.init_lr: Optional[float] = config['init_lr']
         self.warmup_steps: Optional[int] = config['warmup_steps']
-        self.max_steps: Optional[int] = config['max_steps']
-        self.learning_rate: float = config['learning_rate']
         self.grad_clip: bool = config['grad_clip']
-        self.optimizer = self._build_optimizer(config['optimizer'], config['scheduler'])
         self._trainable_parameters: Iterator[Parameter] = filter(lambda x: x.requires_grad, self.model.parameters())
 
         ensure_dir(config['checkpoint_dir'])
@@ -255,7 +260,7 @@ class Trainer(AbstractTrainer):
         r"""current epoch index"""
 
         self.best_epoch = -1
-        self.best_valid_score = -math.inf
+        self._best_valid_score = -math.inf
         self.eval_interval, self.eval_strategy = self._set_eval_mode()
         self._eval_count = 0
         self.train_loss_list: List[float] = list()
@@ -313,23 +318,35 @@ class Trainer(AbstractTrainer):
 
             name = name.lower()
 
+            defaults: Dict[str, Any] = dict(
+                paams=self._trainable_parameters,
+                lr=self.learning_rate,
+                weight_decay=self.weight_decay
+            )
+
             if name == 'adam':
-                _optim = optim.Adam(self._trainable_parameters, lr=self.learning_rate, )
+                _optim = optim.Adam
+                defaults.update(betas=(self.adam_beta1, self.adam_beta2), eps=self.epsilon)
             elif name == 'sgd':
-                _optim = optim.SGD(self._trainable_parameters, lr=self.learning_rate)
+                _optim = optim.SGD
             elif name == 'adagrad':
-                _optim = optim.Adagrad(self._trainable_parameters, lr=self.learning_rate)
+                _optim = optim.Adagrad
+                defaults.update(eps=self.epsilon)
             elif name == 'rmsprop':
-                _optim = optim.RMSprop(self._trainable_parameters, lr=self.learning_rate)
+                _optim = optim.RMSprop
+                defaults.update(eps=self.epsilon)
             elif name == 'adamw':
-                _optim = optim.AdamW(self._trainable_parameters, lr=self.learning_rate)
+                _optim = optim.AdamW
+                defaults.update(betas=(self.adam_beta1, self.adam_beta2), eps=self.epsilon)
             elif name == 'adafactor':
-                _optim = transformers.Adafactor(self._trainable_parameters, lr=self.learning_rate)
+                _optim = transformers.Adafactor
+                defaults.update(eps=self.epsilon, beta1=self.adam_beta1)
             else:
                 self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
-                _optim = optim.Adam(self._trainable_parameters, lr=self.learning_rate)
+                _optim = optim.Adam
+                defaults.update(betas=(self.adam_beta1, self.adam_beta2), eps=self.epsilon)
 
-            return _optim
+            return _optim(**defaults)
 
         def _get_scheduler(name: Optional[str], _optim: optim.Optimizer) -> Union[optim.Optimizer, AbstractScheduler]:
 
@@ -338,18 +355,28 @@ class Trainer(AbstractTrainer):
 
             name = name.lower()
 
+            defaults = dict(
+                base_optimizer=_optim,
+                init_lr=self.init_lr,
+                max_lr=self.learning_rate,
+                n_warmup_steps=self.warmup_steps
+            )
+
             if name == 'inverse':
-                _optim = InverseSquareRootScheduler(_optim, self.init_lr, self.learning_rate, self.warmup_steps)
+                _scheduler = InverseSquareRootScheduler
             elif name == 'cosine':
-                _optim = CosineScheduler(_optim, self.init_lr, self.learning_rate, self.warmup_steps, self.max_steps)
+                _scheduler = CosineScheduler
+                defaults.update(max_steps=self.max_steps)
             elif name == 'linear':
-                _optim = LinearScheduler(_optim, self.init_lr, self.learning_rate, self.warmup_steps, self.max_steps)
+                _scheduler = LinearScheduler
+                defaults.update(max_steps=self.max_steps)
             elif name == 'constant':
-                _optim = ConstantScheduler(_optim, self.init_lr, self.learning_rate, self.warmup_steps)
+                _scheduler = ConstantScheduler
             else:
                 self.logger.info("Learning rate scheduling disabled.")
+                return _optim
 
-            return _optim
+            return _scheduler(**defaults)
 
         optimizer = _get_base_optimizer(optimizer)
         optimizer = _get_scheduler(scheduler, optimizer)
@@ -541,7 +568,7 @@ class Trainer(AbstractTrainer):
             'state_dict': _state_dict,
             'optimizer': self.optimizer.state_dict(),
             'stopping_count': self.stopping_count,
-            'best_valid_score': self.best_valid_score,
+            'best_valid_score': self._best_valid_score,
             'epoch': self.epoch_idx,
             'config': self.config,
             'summary': self.result_list[-1],  #todo add text
@@ -593,7 +620,7 @@ class Trainer(AbstractTrainer):
         # load start epoch and early stopping
         self.start_epoch = checkpoint['epoch'] + 1
         self.stopping_count = checkpoint['stopping_count'] or checkpoint['cur_step']
-        self.best_valid_score = checkpoint['best_valid_score']
+        self._best_valid_score = checkpoint['_best_valid_score']
 
         if checkpoint['config']['seed']:
             init_seed(checkpoint['config']['seed'], checkpoint['config']['reproducibility'])
@@ -673,8 +700,8 @@ class Trainer(AbstractTrainer):
 
         stop_flag = False
 
-        if valid_tracker.score > self.best_valid_score:
-            self.best_valid_score = valid_tracker.score
+        if valid_tracker.score > self._best_valid_score:
+            self._best_valid_score = valid_tracker.score
             self.stopping_count = 0
             self.best_epoch = epoch_idx
         else:

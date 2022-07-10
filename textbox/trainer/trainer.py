@@ -14,15 +14,14 @@ from .scheduler import (
     AbstractScheduler, InverseSquareRootScheduler, CosineScheduler, LinearScheduler, ConstantScheduler
 )
 import transformers
-from ..evaluator import BaseEvaluator, evaluator_list
+from ..evaluator import BaseEvaluator
 from ..utils import ensure_dir, get_local_time, init_seed
 from textbox.utils.dashboard import SummaryTracker, get_dashboard
 
-from typing import Dict, Optional, Union, Iterable, Collection, Literal, List, Tuple, Iterator, Any
+from typing import Dict, Optional, Union, List, Tuple, Iterator, Any
 from ..model.abstract_model import AbstractModel
 from ..data.abstract_dataloader import AbstractDataLoader
 from textbox import Config
-from logging import Logger
 
 
 class AbstractTrainer:
@@ -119,7 +118,7 @@ class Trainer(AbstractTrainer):
         self._dashboard_getter = get_dashboard(self.logdir, config)
         self._summary_tracker: Optional[SummaryTracker] = None
 
-    def _set_eval_mode(self) -> Tuple[int, Literal["epoch", "step"]]:
+    def _set_eval_mode(self) -> Tuple[int, str]:
         r"""Check evaluation mode. Default = (1, "epoch") (If both `eval_epoch` and `eval_step` are specified,
         `eval_step` is ignored. If both are set to 0, `eval_epoch` is set to 1.)
 
@@ -309,7 +308,7 @@ class Trainer(AbstractTrainer):
             self,
             valid_data: AbstractDataLoader,
             epoch_idx: int,
-            eval_strategy: Literal["epoch", "step"],
+            eval_strategy: str,
     ) -> bool:
         """Validate every `self.eval_interval` step or epoch if evaluation strategy matches attribute
         `self.eval_strategy`. Specifically, if `self.eval_interval` is set to `0`, validation will be skipped.

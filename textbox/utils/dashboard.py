@@ -12,7 +12,7 @@ import torch
 from logging import getLogger, Logger
 import wandb
 
-from typing import Optional, List, Union, Iterable, Callable, Dict, Literal, Collection
+from typing import Optional, List, Union, Iterable, Callable, Dict, Collection
 from textbox.config.configurator import Config
 
 train_step = 'train/step'
@@ -22,8 +22,6 @@ valid_epoch = 'valid/epoch'
 axes_label = (train_step, train_epoch, valid_step, valid_epoch)
 
 MetricsDict = Dict[str, Union[float, Dict[str, float], Collection[float]]]
-AxeType = Literal['train/step', 'train/epoch', 'valid/step', 'valid/epoch']
-ModeType = Literal['train', 'valid']
 
 
 class SummaryTracker:
@@ -48,9 +46,9 @@ class SummaryTracker:
         self._tables: Dict[str, wandb.data_types.Table] = dict()
 
         self.current_epoch: Optional[EpochTracker] = None
-        self.current_mode: Optional[ModeType] = None
+        self.current_mode: Optional[str] = None
 
-    def new_epoch(self, mode: ModeType):
+    def new_epoch(self, mode: str):
         self.current_mode = mode
         axe = mode + '/epoch'
         self.update_axe(axe)
@@ -91,7 +89,7 @@ class SummaryTracker:
     def epoch_dict(self) -> dict:
         return self.current_epoch.as_dict()
 
-    def update_axe(self, axe: AxeType):
+    def update_axe(self, axe: str):
         if axe not in self._axes:
             getLogger().warning(f'Failed when updating axe {axe}.')
         else:
@@ -153,7 +151,7 @@ class EpochTracker:
         Epoch 0,  validating [time: 10.00s, validating_loss: 1.0000]
     """
 
-    def __init__(self, DDP: bool, mode: ModeType, epoch_idx: int):
+    def __init__(self, DDP: bool, mode: str, epoch_idx: int):
 
         # loss
         self._avg_loss: float = 0.

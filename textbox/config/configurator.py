@@ -239,8 +239,8 @@ class Config(object):
         return final_config_dict
 
     def _simplify_parameter(self, key: str):
-        if isinstance(self.final_config_dict[key], str):
-            self.final_config_dict[key] = self.file_config_dict[key].lower()
+        if key in self.final_config_dict and isinstance(self.final_config_dict[key], str):
+            self.final_config_dict[key] = self.final_config_dict[key].lower()
 
     def _set_default_parameters(self):
         self.final_config_dict['dataset'] = self.dataset
@@ -314,8 +314,10 @@ class Config(object):
 
         unrecognized = set(self.final_config_dict.keys()) - self.all_parameters
         if len(unrecognized) > 0:
-            args_info += 'Unrecognized Parameters: \n    '
-            args_info += '\n    '.join(unrecognized)
+            args_info += 'Unrecognized Parameters: \n'
+            args_info += '\n'.join([
+                f'    {arg} = {self.final_config_dict[arg]}' for arg in unrecognized if arg in self.final_config_dict
+            ])
             args_info += '\n'
 
         args_info += '=' * 80 + '\n'

@@ -44,10 +44,9 @@ def get_model(model_name):
     Returns:
         Generator: model class
     """
-    model_name = model_name.lower()
-    if model_name in PLM_MODELS:
-        model_name = 'pretrained_models'
-    module_path = '.'.join(['...model', model_name])
+    if model_name.lower() in PLM_MODELS:
+        model_name = 'Pretrained_Models'
+    module_path = '.'.join(['...model', model_name.lower()])
     if importlib.util.find_spec(module_path, __name__):
         model_module = importlib.import_module(module_path, __name__)
         model_class = getattr(model_module, model_name)

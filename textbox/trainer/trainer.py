@@ -16,161 +16,13 @@ from .scheduler import (
 import transformers
 from ..evaluator import BaseEvaluator, evaluator_list
 from ..utils import ensure_dir, get_local_time, init_seed
-from textbox.utils.dashboard import get_dashboard, AbstractDashboard, TensorboardWriter, NilWriter
+from textbox.utils.dashboard import SummaryTracker, get_dashboard
 
 from typing import Dict, Optional, Union, Iterable, Collection, Literal, List, Tuple, Iterator, Any
 from ..model.abstract_model import AbstractModel
 from ..data.abstract_dataloader import AbstractDataLoader
 from textbox import Config
 from logging import Logger
-MetricsDict = Dict[str, Union[float, Dict[str, float], Collection[float]]]
-
-
-class EpochTracker:
-    r"""
-    Track and visualize validating metrics results and training / validating loss.
-    Dashboard now supports :class:`textbox.utils.TensorboardWriter`.
-
-    Args:
-        epoch_idx: Current epoch index.
-        DDP: Whether the Pytorch DDP is enabled.
-        train: Optional (default = True)
-            Train or eval mode.
-        dashboard: Optional (default = None)
-            Implementation of visualization toolkit.
-
-    Example:
-        >>> tbw = TensorboardWriter("log/dir", "filename")
-        >>> for epoch in range(10):
-        >>>     valid_tracker = EpochTracker(epoch, DDP=False, train=False, dashboard=tbw)
-        >>>     for step in range(10):
-        >>>         valid_tracker.append_loss(1.0)
-        >>>     valid_tracker.set_result({"metric1": 1.0})
-        >>>     valid_tracker.info(time_duration=10.0)
-        Epoch 0,  validating [time: 10.00s, validating_loss: 1.0000]
-    """
-    _get_mode_tag: Dict[bool, Literal["train", "valid"]] = {True: "train", False: "valid"}
-
-    def __init__(
-            self,
-            epoch_idx: int,
-            DDP: bool,
-            train: bool = True,
-            dashboard: Optional[AbstractDashboard] = None
-    ):
-        self.epoch_idx: int = epoch_idx
-
-        self._avg_loss: float = 0.
-        self._accumulate_step: int = 0
-        self._reduced_loss: Optional[float] = None
-
-        self.metrics_results: MetricsDict = dict()
-        self._score: Optional[float] = None
-
-        self._logger: Logger = getLogger()
-        self._DDP: bool = DDP
-        self.mode_tag = self._get_mode_tag[train]
-        self._is_train = train
-
-        self._dashboard: AbstractDashboard = dashboard or NilWriter()
-        if train:
-            self._dashboard.update_axes("train/epoch")
-        else:
-            self._dashboard.update_axes("valid_step")
-
-    def append_loss(self, loss: Union[float, torch.Tensor]):
-        r"""Append loss of current step to tracker and update current step."""
-        if isinstance(loss, torch.Tensor):
-            loss = loss.item()
-        if math.isnan(loss):
-            raise ValueError('Value is nan.')
-        self._dashboard.add_scalar("loss/" + self.mode_tag, loss)
-        if self._is_train:
-            self._dashboard.update_axes(self.mode_tag + "/step")
-
-        # update average loss in this way in order to avoid float overflow
-        self._avg_loss *= self._accumulate_step / (self._accumulate_step + 1)
-        self._avg_loss += loss / (self._accumulate_step + 1)
-        self._accumulate_step += 1
-
-    def set_result(self, results: dict):
-        r"""Record the metrics results."""
-        for metric, result in results.items():
-            self._dashboard.add_any("metrics/" + metric, result)
-        self.metrics_results.update(results)
-
-    def calc_score(self, keys: Iterable[str]) -> Optional[float]:
-
-        #todo: how to calculate the score?
-
-        # calculate the total score of valid metrics for early stopping.
-        score: Optional[float] = None
-        for metric, result in self.metrics_results.items():
-            if isinstance(result, dict):
-                float_list = list(filter(lambda x: isinstance(x, float), result.values()))
-            elif isinstance(result, Collection):
-                float_list = list(filter(lambda x: isinstance(x, float), result))
-            elif isinstance(result, float):
-                float_list = [result]
-            else:
-                self._logger.warning(f"Failed when working out score of metric {metric}.")
-                continue
-            if len(float_list) != 0:
-                if score is None:
-                    score = 0.
-                score += sum(float_list) / len(float_list)
-        if score is not None:
-            self._dashboard.add_scalar("metrics/score", score)
-        else:
-            score = -self.loss  # If no valid metric is given, negative loss will be used in early stopping.
-
-        return score
-
-    def loss_all_reduce(self):
-        if self._DDP:
-            _loss = torch.tensor(self.loss, device="cuda")
-            torch.distributed.all_reduce(_loss, op=torch.distributed.ReduceOp.SUM)
-            _loss /= torch.distributed.get_world_size()
-            self._reduced_loss = _loss.item()
-
-    @property
-    def loss(self) -> float:
-        r"""Loss of this epoch. Average loss will be calculated and returned.
-
-        Notes:
-            If DDP is enabled and `loss_all_reduce()` has been called, average loss of all machines will be returned.
-        """
-        if self._accumulate_step == 0:
-            self._logger.warning("Trying to access epoch average loss before append any.")
-            return math.inf
-        if self._reduced_loss is not None:
-            return self._reduced_loss
-        else:
-            return self._avg_loss
-
-    def as_dict(self) -> dict:
-        return dict(
-            epoch_idx=self.epoch_idx,
-            metrics_results=self.metrics_results,
-            loss=self.loss,
-        )
-
-    def info(self, time_duration: float, extra_info: str = ""):
-        r"""Output loss with epoch and time information."""
-        output = f"Epoch {self.epoch_idx}, {extra_info} {self.mode_tag} "\
-                 f"[time: {time_duration:.2f}s, {self.mode_tag}_loss: {self.loss:.4f}"
-
-        if self.mode_tag == "validating":
-            for metric, result in self.metrics_results.items():
-                if metric != 'loss':
-                    output += f", {metric}: {result}"
-        output += "]"
-
-        # flush
-        self._logger.info(output)
-
-    def __getitem__(self, item: str) -> Optional[float]:
-        return self.metrics_results.get(item)
 
 
 class AbstractTrainer:
@@ -256,7 +108,7 @@ class Trainer(AbstractTrainer):
         self.eval_interval, self.eval_strategy = self._set_eval_mode()
         self._eval_count = 0
         self.train_loss_list: List[float] = list()
-        self.result_list: List[dict] = list()
+        self.valid_result_list: List[dict] = list()
 
         self.metrics: List[str] = self.config["metrics"]
         self.metrics_key: List[str] = self.config["metrics_key"]  # todo: how to access metrics scores? (nested dict)
@@ -264,8 +116,8 @@ class Trainer(AbstractTrainer):
 
         self.disable_tqdm = self.DDP and torch.distributed.get_rank() != 0
         self.logdir = './log/'
-        self._DashboardClass = get_dashboard(config['dashboard'], self.logdir, config)
-        self._dashboard: Optional[AbstractDashboard] = None
+        self._dashboard_getter = get_dashboard(self.logdir, config)
+        self._summary_tracker: Optional[SummaryTracker] = None
 
     def _set_eval_mode(self) -> Tuple[int, Literal["epoch", "step"]]:
         r"""Check evaluation mode. Default = (1, "epoch") (If both `eval_epoch` and `eval_step` are specified,
@@ -374,7 +226,7 @@ class Trainer(AbstractTrainer):
             train_data: AbstractDataLoader,
             epoch_idx: int,
             valid_data: Optional[AbstractDataLoader] = None,
-    ) -> EpochTracker:
+    ) -> dict:
         r"""Train the model in an epoch
 
         Args:
@@ -386,7 +238,7 @@ class Trainer(AbstractTrainer):
             EpochTracker: :class:`EpochTracker` that includes epoch information.
         """
         self.model.train()
-        tracker = EpochTracker(epoch_idx, self.DDP, train=True, dashboard=self._dashboard)
+        self._summary_tracker.new_epoch("train")
         if not self.disable_tqdm:
             train_tqdm = tqdm(train_data, desc=f"train {epoch_idx:4}", dynamic_ncols=True, postfix={'loss': None})
         else:
@@ -396,9 +248,9 @@ class Trainer(AbstractTrainer):
             self.optimizer.zero_grad()
 
             loss = self.model(data, epoch_idx=epoch_idx)
-            tracker.append_loss(loss)
+            self._summary_tracker.append_loss(loss)
             if not self.disable_tqdm:
-                train_tqdm.set_postfix(loss=tracker.loss)
+                train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
 
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
@@ -409,16 +261,16 @@ class Trainer(AbstractTrainer):
                 if self.stopped:
                     break
 
-        tracker.loss_all_reduce()
+        self._summary_tracker.on_epoch_end()
 
-        return tracker
+        return self._summary_tracker.epoch_dict()
 
     @torch.no_grad()
     def _valid_epoch(
             self,
             valid_data: AbstractDataLoader,
             idx: int,
-    ) -> EpochTracker:
+    ) -> dict:
         r"""Valid the model with `valid_data`
 
         Args:
@@ -431,7 +283,8 @@ class Trainer(AbstractTrainer):
         Todo:
             * perform either loss or evaluation according to 'eval_metrics'
         """
-        tracker = EpochTracker(idx, self.DDP, train=False, dashboard=self._dashboard)
+
+        self._summary_tracker.new_epoch('valid')
 
         if 'loss' in self.metrics:
             self.model.eval()
@@ -441,15 +294,16 @@ class Trainer(AbstractTrainer):
                 valid_tqdm = valid_data
             for data in valid_tqdm:
                 loss = self.model(data)
-                tracker.append_loss(loss)
+                self._summary_tracker.append_loss(loss)
                 if not self.disable_tqdm:
-                    valid_tqdm.set_postfix(loss=tracker.loss)
-            tracker.loss_all_reduce()
+                    valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
         else:
             valid_results = self.evaluate(valid_data, load_best_model=False, is_valid=True)
-            tracker.set_result(valid_results)
+            self._summary_tracker.set_metrics_results(valid_results)
 
-        return tracker
+        self._summary_tracker.on_epoch_end()
+
+        return self._summary_tracker.epoch_dict()
 
     def _valid(
             self,
@@ -481,20 +335,17 @@ class Trainer(AbstractTrainer):
         if self._eval_count % self.eval_interval != 0:
             return False
 
-        start_time = time()
-        valid_tracker = self._valid_epoch(valid_data, self._eval_count // self.eval_interval)
-        end_time = time()
-        valid_tracker.info(end_time - start_time, extra_info=str(self._eval_count // self.eval_interval))
-        self.result_list.append(valid_tracker.as_dict())
+        self._valid_epoch(valid_data, self._eval_count // self.eval_interval)
+        self.valid_result_list.append(self._summary_tracker.epoch_dict())
 
-        stopped = bool(self.stopping_step) and self._early_stopping(valid_tracker, epoch_idx)
+        stopped = bool(self.stopping_step) and self._early_stopping(self._summary_tracker.epoch_score, epoch_idx)
         self.save_checkpoint()
 
         return stopped
 
     @property
     def best_result(self) -> dict:
-        return self.result_list[self.best_epoch]
+        return self.valid_result_list[self.best_epoch]
 
     def save_checkpoint(self, tag: Optional[str] = None, overwrite: bool = True):
         r"""Store the model parameters information and training information.
@@ -505,7 +356,7 @@ class Trainer(AbstractTrainer):
         Todo:
             * Checkpoint save which files?
         """
-        if len(self.result_list) == 0:
+        if len(self.valid_result_list) == 0:
             self.logger.warning('Save checkpoint failed. No validation has been performed.')
             return
 
@@ -526,7 +377,7 @@ class Trainer(AbstractTrainer):
             'best_valid_score': self._best_valid_score,
             'epoch': self.epoch_idx,
             'config': self.config,
-            'summary': self.result_list[-1],  #todo add text
+            'summary': self.valid_result_list[-1],  #todo add text
         }
 
         self.logger.debug(checkpoint)
@@ -622,16 +473,13 @@ class Trainer(AbstractTrainer):
             * Modify the return value.
         """
         self.logger.info("====== Start training ======")
-        with self._DashboardClass() as dashboard:
-            self._dashboard = dashboard
+        with self._dashboard_getter() as summary_tracker:
+            self._summary_tracker = summary_tracker
             for epoch_idx in range(self.start_epoch, self.epochs):
                 self.epoch_idx = epoch_idx
                 # train
-                start_time = time()
-                train_tracker = self._train_epoch(train_data, epoch_idx, valid_data)
-                self.train_loss_list.append(train_tracker.loss)
-                end_time = time()
-                train_tracker.info(end_time - start_time)
+                self._train_epoch(train_data, epoch_idx, valid_data)
+                self.train_loss_list.append(summary_tracker.epoch_loss)
 
                 # valid
                 if valid_data:
@@ -643,7 +491,7 @@ class Trainer(AbstractTrainer):
 
         return self.best_result
 
-    def _early_stopping(self, valid_tracker: EpochTracker, epoch_idx: int) -> bool:
+    def _early_stopping(self, score: float, epoch_idx: int) -> bool:
         r""" Return True if valid score has been lower than best score for `stopping_step` steps.
 
         Args:
@@ -655,7 +503,6 @@ class Trainer(AbstractTrainer):
 
         stop_flag = False
 
-        score = valid_tracker.calc_score(self.metrics_key)
         if score > self._best_valid_score:
             self._best_valid_score = score
             self.stopping_count = 0
@@ -674,7 +521,6 @@ class Trainer(AbstractTrainer):
             model_file: Optional[str] = None,
             _eval: bool = True,
             is_valid: bool = False,
-            dashboard: Optional[AbstractDashboard] = None
     ) -> Optional[dict]:
         r"""Evaluate the model based on the `eval_data`.
 
@@ -724,8 +570,8 @@ class Trainer(AbstractTrainer):
             generate_corpus.extend(generated)
         if not is_valid:
             self._save_generated_text(generate_corpus)
-        if dashboard:
-            dashboard.add_corpus(generate_corpus)
+        if not self._summary_tracker.tracker_finished:
+            self._summary_tracker.add_corpus('corpus', generate_corpus)
         reference_corpus = eval_data.dataset.target_text
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
 

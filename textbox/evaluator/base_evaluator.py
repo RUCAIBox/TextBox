@@ -9,17 +9,15 @@ from textbox.evaluator.bertscore_evaluator import BertScoreEvaluator
 from textbox.evaluator.unique_evaluator import UniqueEvaluator
 from textbox.evaluator.rouge_evaluator import RougeEvaluator
 
-from typing import Iterable
-
-evaluator_list = {
+evaluator_list = [
     'bleu', 'self_bleu', 'rouge', 'distinct', 'nll_test', 'avg_len', 'cider', 'chrf++', 'meteor', 'unique',
     'bert_score'
-}
+]
 
 
-class BaseEvaluator:
+class BaseEvaluator():
 
-    def __init__(self, config, metrics: Iterable[str]):
+    def __init__(self, config, metrics):
         self.config = config
         self.metrics = metrics
         # [1, 2, 3, 4]
@@ -36,12 +34,11 @@ class BaseEvaluator:
         """
         result_dict = {}
         for metric in self.metrics:
-            evaluator = None
             if metric == 'bleu':
-                task_type = (self.config['task_type'] == "unconditional")
+                task_type = (self.config['task_type'].lower() == "unconditional")
                 evaluator = BleuEvaluator(task_type)
             elif metric == 'self_bleu':
-                if self.config['task_type'] == "unconditional":
+                if self.config['task_type'].lower() == "unconditional":
                     evaluator = SelfBleuEvaluator()
                 else:
                     raise ValueError("task_type should be 'unconditional' for self-bleu")
@@ -65,8 +62,6 @@ class BaseEvaluator:
                 evaluator = UniqueEvaluator()
             elif metric == 'nll_test':
                 continue
-            if evaluator is None:
-                return dict()
             metric_result = evaluator.evaluate(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
             result_dict[metric] = metric_result
         return result_dict

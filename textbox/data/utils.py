@@ -122,7 +122,6 @@ def data_preparation(config, tokenizer):
     test_dataloader = DataLoader(test_dataset, batch_size=config['eval_batch_size'], shuffle=False, collate_fn=AbstractCollate(config, tokenizer, 'test'))
     return train_dataloader, valid_dataloader, test_dataloader
 
-
 def load_data(dataset_path):
     """Load dataset from split (train, valid, test).
     This is designed for single sentence format.
@@ -147,7 +146,6 @@ def load_data(dataset_path):
                     pass
             text.append(line)
     return text
-
 
 def _pad_sequence(tensors: List[Tensor], padding_value: int, padding_side: str = 'right'):
     """

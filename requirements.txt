@@ -3,7 +3,7 @@ matplotlib
 fast-bleu
 transformers
 tqdm
-nltk==3.5
+nltk
 pyyaml
 sentencepiece
 pycocoevalcap
@@ -13,3 +13,8 @@ sacrebleu
 torch
 bert_score
 tensorboard
+typing
+pandas
+wandb
+setuptools
+six

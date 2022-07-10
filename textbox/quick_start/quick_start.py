@@ -40,7 +40,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     train_data, valid_data, test_data = data_preparation(config, tokenizer)
 
     # model loading and initialization
-    single_model = get_model(config['model'])(config, tokenizer).to(config['device'])
+    single_model = get_model(config['model_name'])(config, tokenizer).to(config['device'])
     if config['DDP']:
         if config['find_unused_parameters']:
             model = torch.nn.parallel.DistributedDataParallel(
@@ -73,8 +73,9 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
             if torch.distributed.get_rank() != 0:
                 return
             config['DDP'] = False
-            model = get_model(config['model'])(config, train_data).to(config['device'])
-            trainer = get_trainer(config['MODEL_TYPE'], config['model'])(config, model)
+            model = get_model(config['model_name'])(config, train_data).to(config['device'])
+            trainer = get_trainer(config['model'])(config, model)
+            #todo: check necessity of get model and get trainer
         for key, value in result.items():
             logger.info(f"{key}: {value}")
         test_result = trainer.evaluate(test_data)

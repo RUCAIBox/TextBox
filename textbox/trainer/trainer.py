@@ -9,6 +9,7 @@ from time import time
 from torch.nn import Parameter
 from tqdm import tqdm
 from logging import getLogger
+from accelerate import Accelerator
 
 from .scheduler import (
     AbstractScheduler, InverseSquareRootScheduler, CosineScheduler, LinearScheduler, ConstantScheduler
@@ -30,9 +31,10 @@ class AbstractTrainer:
     to different training and evaluation strategies.
     """
 
-    def __init__(self, config: Config, model: AbstractModel):
+    def __init__(self, config: Config, model: AbstractModel, accelerator: Accelerator):
         self.config = config
         self.model = model
+        self.accelerator = accelerator
         self.logger = getLogger()
 
     def fit(self, train_data: AbstractDataLoader):
@@ -64,8 +66,8 @@ class Trainer(AbstractTrainer):
     More information can be found in [placeholder]. `model` is the instantiated object of a Model Class.
     """
 
-    def __init__(self, config: Config, model: AbstractModel):
-        super(Trainer, self).__init__(config, model)
+    def __init__(self, config: Config, model: AbstractModel, accelerator: Accelerator):
+        super(Trainer, self).__init__(config, model, accelerator)
 
         self.DDP: bool = config['DDP']
         self.device: torch.device = config['device']
@@ -77,6 +79,7 @@ class Trainer(AbstractTrainer):
 
         self.learning_rate: float = config['learning_rate']
         self.weight_decay: float = config['weight_decay']
+        # I think default paras about adam can set in config yaml.
         self.adam_beta1: Optional[float] = config['adam_beta1']  # default values set in config yaml?
         self.adam_beta2: Optional[float] = config['adam_beta2']
         self.epsilon: Optional[float] = config['epsilon']
@@ -114,6 +117,7 @@ class Trainer(AbstractTrainer):
         self.evaluator = BaseEvaluator(config, self.metrics)
 
         self.disable_tqdm = self.DDP and torch.distributed.get_rank() != 0
+        self.disable_tqdm = not self.accelerator.is_local_main_process
         self.logdir = './log/'
         self._dashboard_getter = get_dashboard(self.logdir, config)
         self._summary_tracker: Optional[SummaryTracker] = None
@@ -251,7 +255,8 @@ class Trainer(AbstractTrainer):
             if not self.disable_tqdm:
                 train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
 
-            loss.backward()
+            # loss.backward()
+            self.accelerator.backward(loss)
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
             self.optimizer.step()
 
@@ -471,6 +476,11 @@ class Trainer(AbstractTrainer):
             * Complete the docstring.
             * Modify the return value.
         """
+
+        self.model, self.optimizer, train_data, valid_data = self.accelerator.prepare(
+            self.model, self.optimizer, train_data, valid_data
+        )
+
         self.logger.info("====== Start training ======")
         with self._dashboard_getter() as summary_tracker:
             self._summary_tracker = summary_tracker
@@ -565,7 +575,7 @@ class Trainer(AbstractTrainer):
         generate_corpus = []
         eval_tqdm = tqdm(eval_data, desc="generating", dynamic_ncols=True) if not self.disable_tqdm else eval_data
         for batch_data in eval_tqdm:
-            generated = self.model.generate(batch_data, eval_data)
+            generated = self.model.generate(batch_data, eval_data, self.accelerator)
             generate_corpus.extend(generated)
         if not is_valid:
             self._save_generated_text(generate_corpus)

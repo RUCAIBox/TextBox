@@ -1,5 +1,6 @@
 import torch
 from logging import getLogger
+from accelerate import Accelerator
 from textbox.utils.logger import init_logger
 from textbox.utils.utils import get_model, get_tokenizer, get_trainer, init_seed
 from textbox.config.configurator import Config
@@ -20,6 +21,9 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     # configurations initialization
     config = Config(model=model, dataset=dataset, config_file_list=config_file_list, config_dict=config_dict)
 
+    accelerator = Accelerator()
+    config['device'] = accelerator.device
+
     local_rank = None
     if config['DDP']:
         local_rank = torch.distributed.get_rank()
@@ -29,7 +33,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     init_seed(config['seed'], config['reproducibility'])
 
     # logger initialization
-    is_logger = (config['DDP'] and torch.distributed.get_rank() == 0) or not config['DDP']
+    is_logger = accelerator.is_local_main_process
 
     init_logger(config['filename'], config['state'], is_logger)
     logger = getLogger()
@@ -56,7 +60,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     logger.info(model)
 
     # trainer loading and initialization
-    trainer = get_trainer(config['model'])(config, model)
+    trainer = get_trainer(config['model'])(config, model, accelerator)
 
     if config['test_only']:
         logger.info('Test only')

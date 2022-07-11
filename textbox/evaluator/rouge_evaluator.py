@@ -96,8 +96,6 @@ class RougeEvaluator(AbstractEvaluator):
         return rouge_dict
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus):
-        generate_corpus = [self._preprocess(generate_sentence) for generate_sentence in generate_corpus]
-        reference_corpus = [self._preprocess(reference_sentence) for reference_sentence in reference_corpus]
         with tempfile.TemporaryDirectory() as path:
             generate_path = os.path.join(path, 'generate_corpus.txt')
             reference_path = os.path.join(path, 'reference_corpus.txt')

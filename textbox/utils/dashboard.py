@@ -30,6 +30,7 @@ class SummaryTracker:
             self,
             DDP: bool,
             kwargs: dict,
+            metrics_for_best_model: Union[str, List[str]],
             email: bool = True,
     ):
         self._axes = dict.fromkeys(axes_label, 0)
@@ -37,6 +38,9 @@ class SummaryTracker:
         self._run = wandb.init(**kwargs)
         self._DDP = DDP
         self.tracker_finished = False
+        if isinstance(metrics_for_best_model, str):
+            metrics_for_best_model = [metrics_for_best_model]
+        self.metrics_for_best_model: List[str] = metrics_for_best_model
 
         for axe in axes_label:
             wandb.define_metric(axe)
@@ -84,7 +88,7 @@ class SummaryTracker:
 
     @property
     def epoch_score(self) -> float:
-        return self.current_epoch.calc_score()
+        return self.current_epoch.calc_score(self.metrics_for_best_model)
 
     def epoch_dict(self) -> dict:
         return self.current_epoch.as_dict()
@@ -206,29 +210,32 @@ class EpochTracker:
         else:
             return {'loss': self.avg_loss}
 
-    def calc_score(self, keys: Iterable[str] = []) -> float:
+    def calc_score(self, keys: Iterable[str]) -> float:
+        """calculate the total score of valid metrics for early stopping.
 
-        # todo: how to calculate the score?
+        If `loss` is in `keys`, the negative of average loss will be returned.
+        Else, the sum of metrics results indexed by keys will be returned.
+        """
 
-        # calculate the total score of valid metrics for early stopping.
-        score: Optional[float] = None
+        keys = set(keys)
+
+        if 'loss' in keys:
+            return -self.avg_loss
+
+        score = 0.
+        float_list = []
         for metric, result in self._valid_metrics_results.items():
             if isinstance(result, dict):
-                float_list = list(filter(lambda x: isinstance(x, float), result.values()))
-            elif isinstance(result, Collection):
-                float_list = list(filter(lambda x: isinstance(x, float), result))
-            elif isinstance(result, float):
-                float_list = [result]
-            else:
-                self._logger.warning(f"Failed when working out score of metric {metric}.")
-                continue
-            if len(float_list) != 0:
-                if score is None:
-                    score = 0.
-                score += sum(float_list) / len(float_list)
+                float_list = [v for k, v in result.items() if k in keys and isinstance(v, float)]
+            elif metric in keys:
+                if isinstance(result, Collection):
+                    float_list = list(filter(lambda x: isinstance(x, float), result))
+                elif isinstance(result, float):
+                    float_list = [result]
 
-        if score is None:
-            score = -self.avg_loss  # If no valid metric is given, negative loss will be used in early stopping.
+            if len(float_list) != 0:
+                score += sum(float_list) / len(float_list)
+                float_list = []
 
         return score
 
@@ -283,6 +290,7 @@ def get_dashboard(
         return SummaryTracker(
             DDP=config['DDP'],
             email=config['email'],
+            metrics_for_best_model=config['metrics_for_best_model'],
             kwargs=dict(
                 dir=logdir,
                 project=project,

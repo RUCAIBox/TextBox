@@ -4,8 +4,6 @@ import torch.optim as optim
 import math
 import collections
 
-from time import time
-
 from torch.nn import Parameter
 from tqdm import tqdm
 from logging import getLogger
@@ -18,7 +16,7 @@ from ..evaluator import BaseEvaluator
 from ..utils import ensure_dir, get_local_time, init_seed
 from textbox.utils.dashboard import SummaryTracker, get_dashboard
 
-from typing import Dict, Optional, Union, List, Tuple, Iterator, Any
+from typing import Dict, Optional, Union, List, Tuple, Iterator, Any, Iterable, Set
 from ..model.abstract_model import AbstractModel
 from ..data.abstract_dataloader import AbstractDataLoader
 from textbox import Config
@@ -109,8 +107,8 @@ class Trainer(AbstractTrainer):
         self.train_loss_list: List[float] = list()
         self.valid_result_list: List[dict] = list()
 
-        self.metrics: List[str] = self.config["metrics"]
-        self.metrics_key: List[str] = self.config["metrics_key"]  # todo: how to access metrics scores? (nested dict)
+        self.metrics = _process_metrics(self.config["metrics"])
+        self.metrics_for_best_model = _process_metrics(self.config["metrics_for_best_model"])
         self.evaluator = BaseEvaluator(config, self.metrics)
 
         self.disable_tqdm = self.DDP and torch.distributed.get_rank() != 0
@@ -285,7 +283,7 @@ class Trainer(AbstractTrainer):
 
         self._summary_tracker.new_epoch('valid')
 
-        if 'loss' in self.metrics:
+        if 'loss' in self.metrics_for_best_model:
             self.model.eval()
             if not self.disable_tqdm:
                 valid_tqdm = tqdm(valid_data, desc=f"valid {idx:4}", dynamic_ncols=True, postfix={'loss': None})
@@ -575,3 +573,10 @@ class Trainer(AbstractTrainer):
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
 
         return result
+
+
+def _process_metrics(metrics: Union[str, List[str]]) -> Set[str]:
+    if isinstance(metrics, str):
+        metrics = (metrics, )
+    return set(metrics)
+

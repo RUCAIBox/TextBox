@@ -1,6 +1,7 @@
 import torch
 from logging import getLogger
 from accelerate import Accelerator
+from accelerate.utils import set_seed
 from textbox.utils.logger import init_logger
 from textbox.utils.utils import get_model, get_tokenizer, get_trainer, init_seed
 from textbox.config.configurator import Config
@@ -23,6 +24,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
 
     accelerator = Accelerator()
     config['device'] = accelerator.device
+    config['is_local_main_process'] = accelerator.is_local_main_process
 
     local_rank = None
     if config['DDP']:
@@ -31,6 +33,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
         config['device'] = torch.device("cuda", local_rank)
 
     init_seed(config['seed'], config['reproducibility'])
+    set_seed(config['seed'])
 
     # logger initialization
     is_logger = accelerator.is_local_main_process
@@ -42,6 +45,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     tokenizer = get_tokenizer(config)
     # dataset splitting
     train_data, valid_data, test_data = data_preparation(config, tokenizer)
+    train_data, valid_data, test_data = accelerator.prepare(train_data, valid_data, test_data)
 
     # model loading and initialization
     single_model = get_model(config['model_name'])(config, tokenizer).to(config['device'])
@@ -68,7 +72,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
             logger.warning('Specific path to model file with `load_experiment`.')
         test_result = trainer.evaluate(test_data, model_file=config['load_experiment'])
     else:
-        if config['load_experiment'] is not None and is_logger:
+        if config['load_experiment'] is not None:
             trainer.resume_checkpoint(resume_file=config['load_experiment'])
         # model training
         result = trainer.fit(train_data, valid_data)

@@ -151,7 +151,7 @@ class Pretrained_Models(AbstractModel):
         else:
             return outputs.loss
 
-    def generate(self, batch, eval_data, accelerate):
+    def generate(self, batch, eval_data, accelerator):
         inputs = {
             'input_ids': batch['source_ids'].to(self.device),
             'attention_mask': batch['source_mask'].to(self.device),
@@ -164,7 +164,7 @@ class Pretrained_Models(AbstractModel):
         # sample_outputs = self.model.generate(**inputs, **self.generation_kwargs)
         sample_outputs = accelerator.unwrap_model(self.model).generate(**inputs, **self.generation_kwargs)
         sample_outputs = accelerator.pad_across_processes(
-            sample_outputs, dim=1, pad_index=tokenizer.pad_token_id
+            sample_outputs, dim=1, pad_index=self.tokenizer.pad_token_id
         )
         sample_outputs = accelerator.gather((sample_outputs))
         

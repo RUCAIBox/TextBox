@@ -12,7 +12,7 @@ import torch
 from logging import getLogger, Logger
 import wandb
 
-from typing import Optional, List, Union, Iterable, Callable, Dict, Collection
+from typing import Optional, List, Union, Iterable, Callable, Dict, Collection, Set
 from textbox.config.configurator import Config
 
 train_step = 'train/step'
@@ -30,6 +30,7 @@ class SummaryTracker:
             self,
             DDP: bool,
             kwargs: dict,
+            metrics_for_best_model: Set[str],
             email: bool = True,
     ):
         self._axes = dict.fromkeys(axes_label, 0)
@@ -37,6 +38,7 @@ class SummaryTracker:
         self._run = wandb.init(**kwargs)
         self._DDP = DDP
         self.tracker_finished = False
+        self.metrics_for_best_model: Set[str] = metrics_for_best_model
 
         for axe in axes_label:
             wandb.define_metric(axe)
@@ -52,7 +54,7 @@ class SummaryTracker:
         self.current_mode = mode
         axe = mode + '/epoch'
         self.update_axe(axe)
-        self.current_epoch = EpochTracker(self._DDP, mode, self._axes[axe])
+        self.current_epoch = EpochTracker(self._DDP, mode, self._axes[axe], self.metrics_for_best_model)
         self.current_epoch.on_epoch_start()
 
     def append_loss(self, loss: Union[float, torch.Tensor]):
@@ -151,7 +153,7 @@ class EpochTracker:
         Epoch 0,  validating [time: 10.00s, validating_loss: 1.0000]
     """
 
-    def __init__(self, DDP: bool, mode: str, epoch_idx: int):
+    def __init__(self, DDP: bool, mode: str, epoch_idx: int, metrics_for_best_model: Set[str]):
 
         # loss
         self._avg_loss: float = 0.
@@ -170,6 +172,7 @@ class EpochTracker:
         self._end_time: Optional[float] = None
         self.mode_tag = mode
         self.epoch_idx = epoch_idx
+        self.metrics_for_best_model = metrics_for_best_model
 
     def on_epoch_start(self):
         self._start_time = time()
@@ -201,34 +204,35 @@ class EpochTracker:
         self._valid_metrics_results.update(kwargs)
 
     def as_dict(self) -> dict:
+        results = {'loss': self.avg_loss}
         if self._valid_metrics_results:
-            return self._valid_metrics_results
-        else:
-            return {'loss': self.avg_loss}
+            results.update(self._valid_metrics_results)
+        return results
 
-    def calc_score(self, keys: Iterable[str] = []) -> float:
+    def calc_score(self) -> float:
+        """calculate the total score of valid metrics for early stopping.
 
-        # todo: how to calculate the score?
+        If `loss` is in `keys`, the negative of average loss will be returned.
+        Else, the sum of metrics results indexed by keys will be returned.
+        """
 
-        # calculate the total score of valid metrics for early stopping.
-        score: Optional[float] = None
+        if 'loss' in self.metrics_for_best_model:
+            return -self.avg_loss
+
+        score = 0.
+        float_list = []
         for metric, result in self._valid_metrics_results.items():
             if isinstance(result, dict):
-                float_list = list(filter(lambda x: isinstance(x, float), result.values()))
-            elif isinstance(result, Collection):
-                float_list = list(filter(lambda x: isinstance(x, float), result))
-            elif isinstance(result, float):
-                float_list = [result]
-            else:
-                self._logger.warning(f"Failed when working out score of metric {metric}.")
-                continue
-            if len(float_list) != 0:
-                if score is None:
-                    score = 0.
-                score += sum(float_list) / len(float_list)
+                float_list = [v for k, v in result.items() if k in self.metrics_for_best_model and isinstance(v, float)]
+            elif metric in self.metrics_for_best_model:
+                if isinstance(result, Collection):
+                    float_list = list(filter(lambda x: isinstance(x, float), result))
+                elif isinstance(result, float):
+                    float_list = [result]
 
-        if score is None:
-            score = -self.avg_loss  # If no valid metric is given, negative loss will be used in early stopping.
+            if len(float_list) != 0:
+                score += sum(float_list) / len(float_list)
+                float_list = []
 
         return score
 
@@ -241,13 +245,26 @@ class EpochTracker:
 
     def _epoch_info(self, time_duration):
         r"""Output loss with epoch and time information."""
-        output = "Epoch {}, {} [time: {:.2f}s, ".format(self.epoch_idx, self.mode_tag, time_duration)
+        def add_metric(_k, _v):
+            _o = ', '
+            if _k in self.metrics_for_best_model:
+                _o += '<'
+            if isinstance(_v, str):
+                _o += f'{_k}: "{_v[:15]}..."'
+            elif isinstance(_v, float):
+                _o += f'{_k}: {_v:.4f}'
+            if _k in self.metrics_for_best_model:
+                _o += '>'
+            return _o
+
+        output = "Epoch {}, {} [time: {:.2f}s".format(self.epoch_idx, self.mode_tag, time_duration)
 
         for metric, result in self.as_dict().items():
-            if isinstance(result, str):
-                output += f', {metric}: "{result[:15]}..."'
-            elif isinstance(result, float):
-                output += f', {metric}: {result:.4f}'
+            if isinstance(result, dict):
+                for key, value in result.items():
+                    output += add_metric(key, value)
+            else:
+                output += add_metric(metric, result)
 
         output += "]"
 
@@ -283,6 +300,7 @@ def get_dashboard(
         return SummaryTracker(
             DDP=config['DDP'],
             email=config['email'],
+            metrics_for_best_model=config['metrics_for_best_model'],
             kwargs=dict(
                 dir=logdir,
                 project=project,

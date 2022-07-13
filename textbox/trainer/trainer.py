@@ -7,6 +7,8 @@ import collections
 from torch.nn import Parameter
 from tqdm import tqdm
 from logging import getLogger
+from accelerate import Accelerator
+from accelerate.utils import set_seed
 
 from .scheduler import (
     AbstractScheduler, InverseSquareRootScheduler, CosineScheduler, LinearScheduler, ConstantScheduler
@@ -28,9 +30,10 @@ class AbstractTrainer:
     to different training and evaluation strategies.
     """
 
-    def __init__(self, config: Config, model: AbstractModel):
+    def __init__(self, config: Config, model: AbstractModel, accelerator: Accelerator):
         self.config = config
         self.model = model
+        self.accelerator = accelerator
         self.logger = getLogger()
 
     def fit(self, train_data: AbstractDataLoader):
@@ -62,8 +65,8 @@ class Trainer(AbstractTrainer):
     More information can be found in [placeholder]. `model` is the instantiated object of a Model Class.
     """
 
-    def __init__(self, config: Config, model: AbstractModel):
-        super(Trainer, self).__init__(config, model)
+    def __init__(self, config: Config, model: AbstractModel, accelerator: Accelerator):
+        super(Trainer, self).__init__(config, model, accelerator)
 
         self.DDP: bool = config['DDP']
         self.device: torch.device = config['device']
@@ -75,6 +78,7 @@ class Trainer(AbstractTrainer):
 
         self.learning_rate: float = config['learning_rate']
         self.weight_decay: float = config['weight_decay']
+        # I think default paras about adam can set in config yaml.
         self.adam_beta1: Optional[float] = config['adam_beta1']  # default values set in config yaml?
         self.adam_beta2: Optional[float] = config['adam_beta2']
         self.epsilon: Optional[float] = config['epsilon']
@@ -112,6 +116,7 @@ class Trainer(AbstractTrainer):
         self.evaluator = BaseEvaluator(config, self.metrics)
 
         self.disable_tqdm = self.DDP and torch.distributed.get_rank() != 0
+        self.disable_tqdm = not self.accelerator.is_local_main_process
         self.logdir = './log/'
         self._dashboard_getter = get_dashboard(self.logdir, config)
         self._summary_tracker: Optional[SummaryTracker] = None
@@ -249,8 +254,8 @@ class Trainer(AbstractTrainer):
             if not self.disable_tqdm:
                 train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
 
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
+            self.accelerator.backward(loss)
+            self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
             self.optimizer.step()
 
             if valid_data:
@@ -335,7 +340,10 @@ class Trainer(AbstractTrainer):
         self.valid_result_list.append(self._summary_tracker.epoch_dict())
 
         stopped = bool(self.stopping_step) and self._early_stopping(self._summary_tracker.epoch_score, epoch_idx)
-        self.save_checkpoint()
+        
+        if self.accelerator.is_local_main_process:
+            self.save_checkpoint()
+        self.accelerator.wait_for_everyone()
 
         return stopped
 
@@ -357,7 +365,7 @@ class Trainer(AbstractTrainer):
             return
 
         # construct state_dict and parameters
-        _state_dict = self.model.state_dict()
+        _state_dict = self.accelerator.unwrap_model(self.model).state_dict()
         if self.DDP and torch.distributed.get_rank() == 0:
             _new_dict = dict()
             for key, val in _state_dict["state_dict"].items():
@@ -373,7 +381,7 @@ class Trainer(AbstractTrainer):
             'best_valid_score': self._best_valid_score,
             'epoch': self.epoch_idx,
             'config': self.config,
-            'summary': self.valid_result_list[-1],  #todo add text
+            'summary': self.valid_result_list,  #todo add text
         }
 
         self.logger.debug(checkpoint)
@@ -421,11 +429,14 @@ class Trainer(AbstractTrainer):
 
         # load start epoch and early stopping
         self.start_epoch = checkpoint['epoch'] + 1
-        self.stopping_count = checkpoint['stopping_count'] or checkpoint['cur_step']
-        self._best_valid_score = checkpoint['_best_valid_score']
+        # self.stopping_count = checkpoint['stopping_count'] or checkpoint['cur_step']
+        self.stopping_count = checkpoint['stopping_count']
+        self._best_valid_score = checkpoint['best_valid_score']
+        self.valid_result_list = checkpoint['summary']
 
         if checkpoint['config']['seed']:
             init_seed(checkpoint['config']['seed'], checkpoint['config']['reproducibility'])
+            set_seed(checkpoint['config']['seed'])
 
         # load architecture params from checkpoint
         if checkpoint['config']['model_name'] != self.config['model_name']:
@@ -468,8 +479,12 @@ class Trainer(AbstractTrainer):
             * Complete the docstring.
             * Modify the return value.
         """
+
+        self.model, self.optimizer = self.accelerator.prepare(self.model, self.optimizer)
+
         self.logger.info("====== Start training ======")
         with self._dashboard_getter() as summary_tracker:
+            self.accelerator.wait_for_everyone()
             self._summary_tracker = summary_tracker
             for epoch_idx in range(self.start_epoch, self.epochs):
                 self.epoch_idx = epoch_idx
@@ -484,6 +499,8 @@ class Trainer(AbstractTrainer):
                         break
 
         self.logger.info('====== Finished training, best eval result in epoch {} ======'.format(self.best_epoch))
+
+        self.model = self.accelerator.unwrap_model(self.model)
 
         return self.best_result
 
@@ -548,7 +565,11 @@ class Trainer(AbstractTrainer):
             self.logger.info('Loading model structure and parameters from {} ...'.format(checkpoint_file))
             checkpoint = torch.load(checkpoint_file, map_location=self.device)
             self.model.load_state_dict(checkpoint['state_dict'])
-
+            self.accelerator.wait_for_everyone()
+        
+        if not is_valid:
+            self.model = self.accelerator.prepare(self.model)
+        
         self.model.eval()
 
         # preview only
@@ -562,13 +583,14 @@ class Trainer(AbstractTrainer):
         generate_corpus = []
         eval_tqdm = tqdm(eval_data, desc="generating", dynamic_ncols=True) if not self.disable_tqdm else eval_data
         for batch_data in eval_tqdm:
-            generated = self.model.generate(batch_data, eval_data)
+            generated = self.accelerator.unwrap_model(self.model).generate(batch_data, eval_data, self.accelerator)
             generate_corpus.extend(generated)
+        reference_corpus = eval_data.dataset.target_text
+        generate_corpus = generate_corpus[:len(reference_corpus)]
         if not is_valid:
             self._save_generated_text(generate_corpus)
-        if not self._summary_tracker.tracker_finished:
+        if self._summary_tracker is not None and not self._summary_tracker.tracker_finished:
             self._summary_tracker.add_corpus('corpus', generate_corpus)
-        reference_corpus = eval_data.dataset.target_text
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
 
         return result

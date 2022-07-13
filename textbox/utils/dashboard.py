@@ -30,22 +30,25 @@ class SummaryTracker:
             self,
             DDP: bool,
             kwargs: dict,
+            is_local_main_process: bool,
             metrics_for_best_model: Set[str],
             email: bool = True,
     ):
         self._axes = dict.fromkeys(axes_label, 0)
         self._email = email
-        self._run = wandb.init(**kwargs)
         self._DDP = DDP
+        self._is_local_main_process = is_local_main_process
         self.tracker_finished = False
         self.metrics_for_best_model: Set[str] = metrics_for_best_model
 
-        for axe in axes_label:
-            wandb.define_metric(axe)
-        wandb.define_metric("loss/train", step_metric=train_step)
-        wandb.define_metric("loss/valid", step_metric=train_step)
-        wandb.define_metric("metrics/*", step_metric=train_step)
-        self._tables: Dict[str, wandb.data_types.Table] = dict()
+        if (self._is_local_main_process):
+            self._run = wandb.init(**kwargs)
+            for axe in axes_label:
+                wandb.define_metric(axe)
+            wandb.define_metric("loss/train", step_metric=train_step)
+            wandb.define_metric("loss/valid", step_metric=train_step)
+            wandb.define_metric("metrics/*", step_metric=train_step)
+            self._tables: Dict[str, wandb.data_types.Table] = dict()
 
         self.current_epoch: Optional[EpochTracker] = None
         self.current_mode: Optional[str] = None
@@ -101,14 +104,16 @@ class SummaryTracker:
         self.current_epoch.on_epoch_end()
 
     def add_text(self, tag: str, text_string: str):
-        if tag not in self._tables:
-            self._tables[tag] = wandb.Table(columns=[train_step, tag])
-        self._tables[tag].add_data(self._axes[train_step], text_string)
+        if (self._is_local_main_process):
+            if tag not in self._tables:
+                self._tables[tag] = wandb.Table(columns=[train_step, tag])
+            self._tables[tag].add_data(self._axes[train_step], text_string)
 
     def add_scalar(self, tag: str, scalar_value: Union[float, int]):
         info = {tag: scalar_value}
         info.update(self._axes)
-        wandb.log(info, step=self._axes['train/step'])
+        if (self._is_local_main_process):
+            wandb.log(info, step=self._axes['train/step'])
 
     def add_any(self, tag: str, any_value: Union[str, float, int]):
         if isinstance(any_value, str):
@@ -117,17 +122,19 @@ class SummaryTracker:
             self.add_scalar(tag, any_value)
 
     def add_corpus(self, tag: str, corpus: Iterable[str]):
-        corpus = wandb.Table(columns=[tag], data=pd.DataFrame(corpus))
-        wandb.log({tag: corpus}, step=self._axes[train_step])
+        if (self._is_local_main_process):
+            corpus = wandb.Table(columns=[tag], data=pd.DataFrame(corpus))
+            wandb.log({tag: corpus}, step=self._axes[train_step])
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        wandb.log(self._tables)
         if self._email:
             wandb.alert(title="Training Finished", text="The training is finished.")
-        self._run.finish()
+        if (self._is_local_main_process):
+            wandb.log(self._tables)
+            self._run.finish()
         self.tracker_finished = True
 
 
@@ -300,6 +307,7 @@ def get_dashboard(
         return SummaryTracker(
             DDP=config['DDP'],
             email=config['email'],
+            is_local_main_process=config['is_local_main_process'],
             metrics_for_best_model=config['metrics_for_best_model'],
             kwargs=dict(
                 dir=logdir,

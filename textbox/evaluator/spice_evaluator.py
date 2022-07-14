@@ -1,12 +1,13 @@
 from .abstract_evaluator import AbstractEvaluator
-from pycocoevalcap.cider.cider import Cider
+from pycocoevalcap.spice.spice import Spice
 
-class CiderEvaluator(AbstractEvaluator):
+
+class SpiceEvaluator(AbstractEvaluator):
     r"""Bleu Evaluator. Now, we support metrics `'bleu'`
     """
 
     def __init__(self, config):
-        super(CiderEvaluator, self).__init__(config)
+        super(SpiceEvaluator, self).__init__(config)
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus):
         r"""get metrics result
@@ -21,6 +22,6 @@ class CiderEvaluator(AbstractEvaluator):
         results = {}
         refs = {idx: r for idx, r in enumerate(reference_corpus)}
         gen = {idx: [g] for idx, g in enumerate(generate_corpus)}
-        score = Cider().compute_score(refs, gen)[0]
-        results['CIDEr'] = score
+        score = Spice().compute_score(refs, gen)[0]
+        results['SPICE'] = score * 100
         return results

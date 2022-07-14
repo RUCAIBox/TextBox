@@ -1,20 +1,23 @@
-from textbox.evaluator.bleu_evaluator import BleuEvaluator
-from textbox.evaluator.distinct_evaluator import DistinctEvaluator
-from textbox.evaluator.selfbleu_evaluator import SelfBleuEvaluator
-from textbox.evaluator.averagelength_evaluator import AvgLenEvaluator
-from textbox.evaluator.cider_evaluator import CIDErEvaluator
-from textbox.evaluator.chrfplusplus_evaluator import ChrfPlusPlusEvaluator
-from textbox.evaluator.meteor_evaluator import MeteorEvaluator
-from textbox.evaluator.bertscore_evaluator import BertScoreEvaluator
-from textbox.evaluator.unique_evaluator import UniqueEvaluator
-from textbox.evaluator.rouge_evaluator import RougeEvaluator
+from .bertscore_evaluator import BertScoreEvaluator
+from .bleu_evaluator import BleuEvaluator
+from .chrf_evaluator import ChrfEvaluator
+from .cider_evaluator import CiderEvaluator
+from .distinct_evaluator import DistinctEvaluator
+from .meteor_evaluator import MeteorEvaluator
+from .nist_evaluator import NistEvaluator
+from .qa_evaluator import QaEvaluator
+from .rouge_evaluator import RougeEvaluator
+from .selfbleu_evaluator import SelfBleuEvaluator
+from .spice_evaluator import SpiceEvaluator
+from .ter_evaluator import TerEvaluator
+from .unique_evaluator import UniqueEvaluator
+
 
 from typing import Set
 
 
 evaluator_list = {
-    'bleu', 'self_bleu', 'rouge', 'distinct', 'nll_test', 'avg_len', 'cider', 'chrf++', 'meteor', 'unique',
-    'bert_score'
+    'bert_score', 'bleu', 'chrf', 'chrf+', 'chrf++', 'cider', 'distinct', 'meteor', 'nist', 'qa', 'rouge', 'self_bleu', 'spice', 'ter', 'unique',
 }
 
 
@@ -22,8 +25,8 @@ class BaseEvaluator:
 
     def __init__(self, config, metrics: Set[str]):
         self.config = config
+        self.lower = config['lower_evaluation']
         self.metrics = metrics
-        # [1, 2, 3, 4]
 
     def evaluate(self, generate_corpus, reference_corpus):
         r"""get metrics result
@@ -33,38 +36,44 @@ class BaseEvaluator:
             reference_corpus: the referenced corpus
         
         Returns:
-            dict: such as ``{'bleu-1': xxx, 'bleu-1-avg': yyy}``
+            dict: such as ``{'bleu-1': xxx, 'bleu-2': yyy}``
         """
+        for i, refs in enumerate(reference_corpus):
+            if isinstance(refs, str):
+                reference_corpus[i] = [refs]
+        if self.lower:
+            generate_corpus = [gen.lower() for gen in generate_corpus]
+            reference_corpus = [[ref.lower() for ref in refs] for refs in reference_corpus]
+        
         result_dict = {}
         for metric in self.metrics:
-            if metric == 'bleu':
-                task_type = (self.config['task_type'].lower() == "unconditional")
-                evaluator = BleuEvaluator(task_type)
-            elif metric == 'self_bleu':
-                if self.config['task_type'].lower() == "unconditional":
-                    evaluator = SelfBleuEvaluator()
-                else:
-                    raise ValueError("task_type should be 'unconditional' for self-bleu")
-            elif metric == 'rouge':
-                evaluator = RougeEvaluator()
-            elif metric == 'distinct':
-                evaluator = DistinctEvaluator()
-            elif metric == 'avg_len':
-                evaluator = AvgLenEvaluator()
+            if metric == 'bert_score':
+                evaluator = BertScoreEvaluator(self.config)
+            elif metric == 'bleu':
+                evaluator = BleuEvaluator(self.config)
+            elif metric in ['chrf', 'chrf+', 'chrf++']:
+                evaluator = ChrfEvaluator(self.config, metric)
             elif metric == 'cider':
-                evaluator = CIDErEvaluator()
-            elif metric == 'chrf++':
-                evaluator = ChrfPlusPlusEvaluator()
+                evaluator = CiderEvaluator(self.config)
+            elif metric == 'distinct':
+                evaluator = DistinctEvaluator(self.config)
             elif metric == 'meteor':
-                evaluator = MeteorEvaluator()
-            elif metric == 'bert_score':
-                model = self.config['bert_score_model_path']
-                num_layers = self.config['num_layers']
-                evaluator = BertScoreEvaluator(model, num_layers)
+                evaluator = MeteorEvaluator(self.config)
+            elif metric == 'nist':
+                evaluator = NistEvaluator(self.config)
+            elif metric == 'qa':
+                evaluator = QaEvaluator(self.config)
+            elif metric == 'rouge':
+                evaluator = RougeEvaluator(self.config)
+            elif metric == 'self_bleu':
+                evaluator = SelfBleuEvaluator(self.config)
+            elif metric == 'spice':
+                evaluator = SpiceEvaluator(self.config)
+            elif metric == 'ter':
+                evaluator = TerEvaluator(self.config)
             elif metric == 'unique':
-                evaluator = UniqueEvaluator()
-            elif metric == 'nll_test':
-                continue
-            metric_result = evaluator.evaluate(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
-            result_dict[metric] = metric_result
+                evaluator = UniqueEvaluator(self.config)
+            
+            metric_result = evaluator.evaluate(generate_corpus, reference_corpus)
+            result_dict.update(metric_result)
         return result_dict

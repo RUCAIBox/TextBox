@@ -1,58 +1,24 @@
-# @Time   : 2020/11/14
-# @Author : Gaole He
-# @Email  : hegaole@ruc.edu.cn
-
-# UPDATE:
-# @Time   : 2020/12/3
-# @Author : Tianyi Tang
-# @Email  : steventang@ruc.edu.cn
-
-# UPDATE
-# @Time   : 2021/4/12
-# @Author : Lai Xu
-# @Email  : tsui_lai@163.com
-
-"""
-textbox.evaluator.selfbleu_evaluator
-#######################################
-"""
-
-import numpy as np
+from nltk.tokenize import word_tokenize
 from fast_bleu import SelfBLEU
-from textbox.evaluator.abstract_evaluator import AbstractEvaluator
+from .abstract_evaluator import AbstractEvaluator
 
 
 class SelfBleuEvaluator(AbstractEvaluator):
     r"""Bleu Evaluator. Now, we support metrics `'self-bleu'`.
     """
 
-    def __init__(self):
-        self.n_grams = [1, 2, 3, 4]
-
-    def _self_bleu(self, generate_corpus):
-        r""" Calculate the Self-BLEU metrics of the generated corpus in referenced corpus.
-
-        Args:
-            generate_corpus (List[List[str]]): the generated corpus
-            n_grams (List): the n-gram metric to be calculated
-
-        Returns:
-            list: the Self-BLEU results
-        """
-
-        weight = [0] * max(self.n_grams)
-        weights = {}
-        for n_gram in self.n_grams:
-            weight[n_gram - 1] = 1.0
-            weights["self-bleu-{}".format(n_gram)] = tuple(weight)
-            weight[n_gram - 1] = 0.0
-            avg_weight = [1. / n_gram] * n_gram
-            avg_weight.extend([0. for i in range(max(self.n_grams) - n_gram)])
-            weights["self-bleu-{}-avg".format(n_gram)] = tuple(avg_weight)
-
-        bleu = SelfBLEU(generate_corpus, weights)
-        scores = bleu.get_score()
-        return scores
+    def __init__(self, config):
+        super(SelfBleuEvaluator, self).__init__(config)
+        self.max_ngrams = config['self_bleu_max_ngrams']
+        self.ngrams = ['Self-BLEU-{}'.format(n) for n in range(1, self.max_ngrams + 1)]
+        self._generate_weights()
+    
+    def _generate_weights(self):
+        self.ngram_weights = []
+        for n in range(1, self.max_ngrams + 1):
+            weights = [0.] * self.max_ngrams
+            weights[:n] = [1. / n] * n
+            self.ngram_weights.append(weights)
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus=None):
         r"""get metrics result
@@ -65,16 +31,15 @@ class SelfBleuEvaluator(AbstractEvaluator):
             dict: a dict of metrics <metric> which record the results according to self.n_grams
         """
 
-        bleu_dict = {}
-        for n_gram in self.n_grams:
-            bleu_dict['self-bleu-{}'.format(n_gram)] = []
-        for n_gram in self.n_grams:
-            bleu_dict['self-bleu-{}-avg'.format(n_gram)] = []
+        results = {}
+        for ngram in self.ngrams:
+            results[ngram] = []
 
-        results = self._self_bleu(generate_corpus=generate_corpus)
-        for n_gram in self.n_grams:
-            bleu_dict['self-bleu-{}'.format(n_gram)].append(np.array(results['self-bleu-{}'.format(n_gram)]).mean())
-            bleu_dict['self-bleu-{}-avg'.format(n_gram)].append(
-                np.array(results['self-bleu-{}-avg'.format(n_gram)]).mean()
-            )
-        return bleu_dict
+        for i, gen in enumerate(generate_corpus):
+            generate_corpus[i] = word_tokenize(gen)
+        
+        self_bleu = SelfBLEU(generate_corpus, dict(zip(self.ngrams, self.ngram_weights)))
+        scores = self_bleu.get_score()
+        for ngram in self.ngrams:
+            results[ngram] = [s * 100 for s in scores[ngram]]
+        return results

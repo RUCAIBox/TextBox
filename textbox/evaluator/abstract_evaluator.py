@@ -1,21 +1,7 @@
-# @Time   : 2020/11/14
-# @Author : Junyi Li, Gaole He
-# @Email  : lijunyi@ruc.edu.cn
-
-# UPDATE
-# @Time   : 2021/4/12
-# @Author : Lai Xu
-# @Email  : tsui_lai@163.com
-
-"""
-textbox.evaluator.abstract_evaluator
-#####################################
-"""
-
 import numpy as np
 
 
-class AbstractEvaluator(object):
+class AbstractEvaluator():
     """:class:`AbstractEvaluator` is an abstract object which supports
     the evaluation of the model. It is called by :class:`Trainer`.
 
@@ -28,6 +14,9 @@ class AbstractEvaluator(object):
 
     """
 
+    def __init__(self, config):
+        self.config = config
+
     def evaluate(self, generate_corpus, reference_corpus):
         r"""get metrics result
 
@@ -38,13 +27,10 @@ class AbstractEvaluator(object):
         Returns:
             dict: such as ``{metric-1: xxx}``
         """
-        # get metrics
-        metric_dict = {}
-        info_dict = self._calc_metrics_info(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
-        for key in info_dict:
-            tp_list = info_dict[key]
-            tp_val = np.mean(tp_list)
-            metric_dict[key] = round(tp_val, 4)
+        metric_dict = self._calc_metrics_info(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
+        for k, v in metric_dict.items():
+            if isinstance(v, list) or isinstance(v, float):
+                metric_dict[k] = round(np.mean(v), 2)
         return metric_dict
 
     def _calc_metrics_info(self):

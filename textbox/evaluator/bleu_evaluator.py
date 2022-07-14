@@ -1,45 +1,36 @@
-import numpy as np
-from fast_bleu import BLEU
-from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
-from textbox.evaluator.abstract_evaluator import AbstractEvaluator
+import subprocess
+import nltk
+import tempfile
+import warnings
+import traceback
+from itertools import zip_longest
+from packaging import version
+from .abstract_evaluator import AbstractEvaluator
 
 
 class BleuEvaluator(AbstractEvaluator):
-    r"""Bleu Evaluator. Now, we support metrics `'bleu'`
+    r"""Bleu Evaluator. Now, we support metrics `'BLEU'`
     """
 
-    def __init__(self, task_type):
-        self.n_grams = [1, 2, 3, 4]
-        self.task_type = task_type
-        self.weights = self._generate_weights()
+    def __init__(self, config):
+        super(BleuEvaluator, self).__init__(config)
+        self.bleu_type = config['bleu_type']
+        self.max_ngrams = config['bleu_max_ngrams']
+        self.ngrams = ['BLEU-{}'.format(n) for n in range(1, self.max_ngrams + 1)]
+        self.smoothing_function = config['smoothing_function']
+        self.corpus_bleu = config['corpus_bleu']
+        if self.bleu_type == 'nltk' and self.smoothing_function > 0 and config['dataset'] in ['pc', 'dd']:
+            nltk_version = version.parse(nltk.__version__)
+            if nltk_version < version.parse('3.2.2') or nltk_version > version.parse('3.4.5'):
+                warnings.warn("The version of `NLTK` should be between to reproduce results.")
+        self._generate_weights()
 
     def _generate_weights(self):
-        weight = [0] * max(self.n_grams)
-        weights = {}
-        for n_gram in self.n_grams:
-            weight[n_gram - 1] = 1.0
-            weights['bleu-{}'.format(n_gram)] = tuple(weight)
-            weight[n_gram - 1] = 0.0
-            avg_weight = [1. / n_gram] * n_gram
-            avg_weight.extend([0. for index in range(max(self.n_grams) - n_gram)])
-            weights['bleu-{}-avg'.format(n_gram)] = tuple(avg_weight)
-        return weights
-
-    def _calc_fast_bleu(self, generate_corpus, reference_corpus):
-        r""" Calculate the BLEU metrics of the generated corpus in referenced corpus.
-
-        Args:
-            generate_corpus (List[List[str]]): the generated corpus
-            reference_corpus (List[List[str]]): the referenced corpus
-            n_grams (List): the n-gram metric to be calculated
-
-        Returns:
-            list: the BLEU results and average BLEU scores
-        """
-
-        bleu = BLEU(reference_corpus, self.weights)
-        scores = bleu.get_score(generate_corpus)
-        return scores
+        self.ngram_weights = []
+        for n in range(1, self.max_ngrams + 1):
+            weights = [0.] * self.max_ngrams
+            weights[:n] = [1. / n] * n
+            self.ngram_weights.append(weights)
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus):
         r"""get metrics result
@@ -49,33 +40,91 @@ class BleuEvaluator(AbstractEvaluator):
             reference_corpus: the referenced corpus
 
         Returns:
-            dict: a dict of metrics <metric> which record the results according to self.n_grams
+            dict: a dict of metrics <metric> which record the results according to self.ngrams
         """
+        results = {}
 
-        bleu_dict = {}
-        for n_gram in self.n_grams:
-            bleu_dict['bleu-{}'.format(n_gram)] = []
-        for n_gram in self.n_grams:
-            bleu_dict['bleu-{}-avg'.format(n_gram)] = []
+        # word_tokenize = lambda x: x.split()
+        if self.bleu_type in ['nltk', 'fast-bleu', 'pycocoevalcap']:
+            for ngram in self.ngrams:
+                results[ngram] = []
+        if self.bleu_type in ['nltk', 'fast-bleu']:
+            from nltk.tokenize import word_tokenize
 
-        if self.task_type:
-            results = self._calc_fast_bleu(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
-            for n_gram in self.n_grams:
-                bleu_dict['bleu-{}'.format(n_gram)].append(np.array(results['bleu-{}'.format(n_gram)]).mean())
-                bleu_dict['bleu-{}-avg'.format(n_gram)].append(np.array(results['bleu-{}-avg'.format(n_gram)]).mean())
-        else:
-            for i in range(len(generate_corpus)):
-                pred_sent = generate_corpus[i]
-                gold_sent = reference_corpus[i]
-                results = sentence_bleu(
-                    hypothesis=pred_sent,
-                    references=[gold_sent],
-                    weights=self.weights,
-                    smoothing_function=SmoothingFunction().method1
-                )
-                for n_gram in self.n_grams:
-                    bleu_dict['bleu-{}'.format(n_gram)].append(np.array(results['bleu-{}'.format(n_gram)]).mean())
-                    bleu_dict['bleu-{}-avg'.format(n_gram)].append(
-                        np.array(results['bleu-{}-avg'.format(n_gram)]).mean()
-                    )
-        return bleu_dict
+            for i, gen in enumerate(generate_corpus):
+                generate_corpus[i] = word_tokenize(gen)
+            for refs in reference_corpus:
+                for i, ref in enumerate(refs):
+                    refs[i] = word_tokenize(ref)
+        
+        if self.bleu_type == 'fast-bleu':
+            from fast_bleu import BLEU
+
+            for i, refs in enumerate(reference_corpus):
+                assert len(refs) == 1, "`fast-bleu` only supports single reference."
+                reference_corpus[i] = refs[0]
+            bleu = BLEU(reference_corpus, dict(zip(self.ngrams, self.ngram_weights)))
+            scores = bleu.get_score(generate_corpus)
+            for ngram in self.ngrams:
+                results[ngram] = [s * 100 for s in scores[ngram]]
+        
+        elif self.bleu_type == 'nltk':
+            from nltk.translate.bleu_score import sentence_bleu, corpus_bleu, SmoothingFunction
+
+            if self.corpus_bleu:
+                for ngram, weights in zip(self.ngrams, self.ngram_weights):
+                    score = corpus_bleu(reference_corpus, generate_corpus, weights, getattr(SmoothingFunction(), f"method{self.smoothing_function}"))
+                    results[ngram].append(score * 100)
+            else: # sentence_bleu
+                for gen, refs in zip(generate_corpus, reference_corpus):
+                    for ngram, weights in zip(self.ngrams, self.ngram_weights):
+                        score = sentence_bleu(refs, gen, weights, getattr(SmoothingFunction(), f"method{self.smoothing_function}"))
+                        results[ngram].append(score * 100)
+        
+        elif self.bleu_type == 'mt-eval':
+            from .utils.pymteval import BLEUScore
+
+            bleu = BLEUScore()
+            for gen, refs in zip(generate_corpus, reference_corpus):
+                bleu.append(gen, refs)
+            results['BLEU'] = bleu.score() * 100
+        
+        elif self.bleu_type == 'sacrebleu':
+            import sacrebleu
+
+            reference_corpus = list(zip_longest(*reference_corpus))
+            bleu = sacrebleu.corpus_bleu(generate_corpus, reference_corpus)
+            results['BLEU'] = bleu.score
+            results['BLEU-precisions'] = bleu.prec_str
+        
+        elif self.bleu_type == 'pycocoevalcap':
+            from pycocoevalcap.bleu.bleu import Bleu
+            refs = {idx: r for idx, r in enumerate(reference_corpus)}
+            gen = {idx: [g] for idx, g in enumerate(generate_corpus)}
+            scores = Bleu(4).compute_score(refs, gen, verbose=0)[0]
+            for ngram, score in zip(self.ngrams, scores):
+                results[ngram] = score * 100
+        
+        elif self.bleu_type == 'multi-bleu':
+            reference_corpus = list(zip_longest(*reference_corpus))
+            max_ref_num = len(reference_corpus)
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                gen_file = f"{tmpdir}/gen.txt"
+                ref_file = f"{tmpdir}/ref.txt"
+                with open(f"{gen_file}", "w") as f:
+                    f.write("\n".join(generate_corpus))
+                for i in range(max_ref_num):
+                    with open(f"{ref_file}{i}", "w") as f:
+                        f.write('\n'.join([ref or '' for ref in reference_corpus[i]]))
+                try:
+                    ref_file = f"{ref_file}[{','.join([str(i) for i in range(max_ref_num)])}]"
+                    scores = subprocess.check_output(f"perl textbox/evaluator/utils/multi-bleu.perl {ref_file} < {gen_file}", stderr=subprocess.STDOUT, shell=True)
+                    scores = scores.decode().strip().split('\n')[-1].split()
+                    results['BLEU'] = float(scores[2][:-1])
+                    results['BLEU-precisions'] = scores[3]
+                except subprocess.CalledProcessError as call_e:
+                    traceback.print_exc()
+                    print(call_e.output.decode().strip())
+                    exit(0)
+        return results

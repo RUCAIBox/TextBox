@@ -73,7 +73,7 @@ class Config(object):
         self.parameters['General'] = general_arguments
         self.parameters['Training'] = training_arguments
         self.parameters['Evaluation'] = evaluation_arguments
-        self.parameters['Model']: List[str] = []
+        self.parameters['Model']: List[str] = ['model', 'model_name']
         self.parameters['Dataset']: List[str] = []
 
     def _build_yaml_loader(self):
@@ -211,30 +211,36 @@ class Config(object):
         model_init_file = os.path.join(current_path, '../properties/model/' + model + '.yaml')
         dataset_init_file = os.path.join(current_path, '../properties/dataset/' + dataset + '.yaml')
         if not os.path.exists(dataset_init_file):
-            raise ValueError("dataset {} can't be found".format(dataset))
+            raise ValueError("dataset {} can't be found".format(dataset_init_file))
 
         self.internal_config_dict = self.overall_config_dict
 
-        for file in [dataset_init_file, model_init_file]:
-            if os.path.isfile(file):
-                config_dict = self._update_internal_config_dict(file)
-                if file == model_init_file:
-                    self.parameters['Model'] = [
-                        key for key in config_dict.keys()
-                        if key not in self.parameters['General'] and key not in self.parameters['Training']
-                           and key not in self.parameters['Evaluation'] and key not in self.parameters['Dataset']
-                    ]
-                elif file == dataset_init_file:
-                    self.parameters['Dataset'] += [
-                        key for key in config_dict.keys() if key not in self.parameters['Dataset']
-                    ]
-                self.internal_sources.append(os.path.abspath(file))
+        self.all_parameters = set()
+        for params in self.parameters.values():
+            self.all_parameters.update(params)
+
+        if os.path.isfile(model_init_file):
+            model_config_dict = self._update_internal_config_dict(model_init_file)
+            print(model_config_dict)
+            self.parameters['Model'] += list(set(model_config_dict.keys()) - self.all_parameters)
+            self.all_parameters.update(self.parameters['Model'])
+            self.internal_sources.append(os.path.abspath(model_init_file))
+
+        if os.path.isfile(dataset_init_file):
+            dataset_config_dict = self._update_internal_config_dict(dataset_init_file)
+            self.parameters['Dataset'] += list(set(dataset_config_dict.keys()) - self.all_parameters)
+            self.all_parameters.update(self.parameters['Dataset'])
+            self.internal_sources.append(os.path.abspath(dataset_init_file))
 
     def _get_final_config_dict(self):
         final_config_dict = dict()
         final_config_dict.update(self.internal_config_dict)
         final_config_dict.update(self.external_config_dict)
         return final_config_dict
+
+    def _simplify_parameter(self, key: str):
+        if key in self.final_config_dict and isinstance(self.final_config_dict[key], str):
+            self.final_config_dict[key] = self.final_config_dict[key].lower()
 
     def _set_default_parameters(self):
         self.final_config_dict['dataset'] = self.dataset
@@ -244,6 +250,11 @@ class Config(object):
         self.final_config_dict['filename'] = '{}-{}-{}'.format(
             self.final_config_dict['model'], self.final_config_dict['dataset'], get_local_time()
         )
+        self._simplify_parameter('optimizer')
+        self._simplify_parameter('scheduler')
+        self._simplify_parameter('src_lang')
+        self._simplify_parameter('tgt_lang')
+        self._simplify_parameter('task_type')
 
     def _init_device(self):
         if 'use_gpu' not in self.external_config_dict:
@@ -293,22 +304,20 @@ class Config(object):
         args_info += 'external_config_source: ' + ', '.join(self.external_sources) + '\n'
         args_info += 'internal_config_source: ' + ', '.join(self.internal_sources) + '\n'
         args_info += '=' * 80 + '\n'
-        all_params = set()
         for category in self.parameters:
             args_info += category + ' Hyper Parameters: \n'
             args_info += '\n'.join([
-                '    {} = {} ({} {})'.format(arg, value, self.external_config_dict.get(arg),
-                                             self.internal_config_dict.get(arg)) for arg, value in
-                self.final_config_dict.items()
-                if arg in self.parameters[category]
+                f'    {arg} = {self.final_config_dict[arg]}'
+                for arg in self.parameters[category] if arg in self.final_config_dict
             ])
             args_info += '\n\n'
-            all_params.update(self.parameters[category])
 
-        unrecognized = set(self.final_config_dict.keys()) - all_params
+        unrecognized = set(self.final_config_dict.keys()) - self.all_parameters
         if len(unrecognized) > 0:
-            args_info += 'Unrecognized Parameters: \n    '
-            args_info += '\n    '.join(unrecognized)
+            args_info += 'Unrecognized Parameters: \n'
+            args_info += '\n'.join([
+                f'    {arg} = {self.final_config_dict[arg]}' for arg in unrecognized if arg in self.final_config_dict
+            ])
             args_info += '\n'
 
         args_info += '=' * 80 + '\n'

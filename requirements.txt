@@ -13,3 +13,9 @@ torch
 bert_score
 tensorboard
 future
+typing
+pandas
+wandb
+setuptools
+six
+accelerate

@@ -21,9 +21,9 @@ evaluator_list = {
 }
 
 
-class BaseEvaluator:
+class BaseEvaluator():
 
-    def __init__(self, config, metrics: Set[str]):
+    def __init__(self, config, metrics):
         self.config = config
         self.lower = config['lower_evaluation']
         self.metrics = metrics

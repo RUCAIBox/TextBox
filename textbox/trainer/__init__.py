@@ -1,1 +1,1 @@
-from textbox.trainer.trainer import Trainer, EpochTracker
+from textbox.trainer.trainer import Trainer

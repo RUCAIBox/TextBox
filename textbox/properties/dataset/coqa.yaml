@@ -1,6 +1,5 @@
 src_len: 1024
 tgt_len: 64
-task_type: "translation"
 metrics: ['coqa']
 eval_metrics: ['em', 'f1']
 

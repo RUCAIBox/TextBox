@@ -1,6 +1,5 @@
 src_len: 512
 tgt_len: 128
-task_type: "translation"
 metrics: ['gem']
 eval_metrics: ['bleu', 'meteor', 'rouge']
 

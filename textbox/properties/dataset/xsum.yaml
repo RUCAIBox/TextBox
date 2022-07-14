@@ -1,6 +1,5 @@
 src_len: 1024
 tgt_len: 64
-task_type: "translation"
 metrics: ['rouge']
 eval_metrics: ['rouge-1', 'rouge-2', 'rouge-l']
 

@@ -21,7 +21,6 @@ tokenize_strategy: none
 
 # evaluation settings
 metrics: ["bleu"]
-n_grams: [1,2,3,4,5]
 eval_batch_size: 64
 
 # Pretrained model settings
@@ -31,3 +30,29 @@ truncate: tail
 tokenizer_kwargs: {'use_fast': True, 'additional_special_tokens': []}
 tokenizer_path: {}
 generation_kwargs: {'num_beams': 5, 'early_stopping': True}
+
+# Evaluation settings
+lower_evaluation: True
+multiref_strategy: max
+
+bleu_max_ngrams: 4
+bleu_type: nltk
+smoothing_function: 0
+corpus_bleu: False
+
+rouge_max_ngrams: 2
+rouge_type: files2rouge
+
+meteor_type: pycocoevalcap
+
+chrf_type: m-popovic
+
+distinct_max_ngrams: 4
+inter_distinct: True
+
+unique_max_ngrams: 4
+
+self_bleu_max_ngrams: 4
+
+tgt_lang: 'en'
+bert_score_model_type: None

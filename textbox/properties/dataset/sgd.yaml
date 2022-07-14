@@ -1,7 +1,6 @@
 src_len: 512
 tgt_len: 64
 truncate: head
-task_type: "translation"
 metrics: ['gem']
 eval_metrics: ['bleu', 'meteor', 'rouge']
 

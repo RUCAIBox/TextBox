@@ -1,6 +1,5 @@
 src_len: 1024
 tgt_len: 64
-task_type: "translation"
 metrics: ['qa']
 train_batch_size: 4
 update_freq: 48

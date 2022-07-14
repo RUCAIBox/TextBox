@@ -30,6 +30,7 @@
 - [ ] Save processed files. How to check is config or file changed? (maybe with md5 of config and files)
 - [ ] *Max-token?
 - [ ] `eval` and `repr`
+- [ ] valid target setting if not metric for best is not loss
 ### Pre-training tasks (construct new `target_id` and `source_id` according to old `source_id`)
 - [ ] DAE (like BART)
 - [ ] Masked Seq2Seq (like MASS)
@@ -125,7 +126,7 @@ https://github.com/huggingface/transformers/blob/main/examples/pytorch/summariza
 - [ ] Add TED following https://github.com/PlusLabNLP/AESOP/blob/master/evaluation/eval.py
 - [ ] Name and doc check
 - [ ] Check `bert-score` HF logging
-- [ ] Remake CoQA dataset
+- [ ] Check and remake each dataset (especially, CoQA, webnlg)
 - [ ] Support evaluation for different datasets and task. (how to specify the evaluation method?)
     - [ ] Text summarization: CNN/Daily Mail (cnndm), XSum (xsum), SAMSum (samsum), and WLE (wle).
     - [ ] Open-ended dialogue system: PersonaChat (pc), DailyDialog (dd), DSTC7-AVSD (da), and SGD (sgd).

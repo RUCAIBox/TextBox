@@ -1,3 +1,4 @@
+import logging
 import os
 import torch
 import torch.optim as optim
@@ -30,10 +31,9 @@ class AbstractTrainer:
     to different training and evaluation strategies.
     """
 
-    def __init__(self, config: Config, model: AbstractModel, accelerator: Accelerator):
+    def __init__(self, config: Config, model: AbstractModel):
         self.config = config
         self.model = model
-        self.accelerator = accelerator
         self.logger = getLogger()
 
     def fit(self, train_data: AbstractDataLoader):
@@ -66,36 +66,31 @@ class Trainer(AbstractTrainer):
     """
 
     def __init__(self, config: Config, model: AbstractModel, accelerator: Accelerator):
-        super(Trainer, self).__init__(config, model, accelerator)
+        super(Trainer, self).__init__(config, model)
 
         self.DDP: bool = config['DDP']
         self.device: torch.device = config['device']
         self.filename = self.config['filename']
+        self.accelerator = accelerator
 
-        self.stopping_step: Optional[int] = config['stopping_step']
-        self.stopped = False
-        self.stopping_count = 0
 
+        # Optimization strategy
         self.learning_rate: float = config['learning_rate']
         self.weight_decay: float = config['weight_decay']
-        # I think default paras about adam can set in config yaml.
-        self.adam_beta1: Optional[float] = config['adam_beta1']  # default values set in config yaml?
+        # using optimizer_kwargs and scheduler_kwargs in overall.yaml
+        # e.g., optimizer_kwargs: {betas: (0.9, 0.999), eps: 1e-08, weight_decay: 0.01}
+        self.adam_beta1: Optional[float] = config['adam_beta1']
         self.adam_beta2: Optional[float] = config['adam_beta2']
         self.epsilon: Optional[float] = config['epsilon']
-        self.max_steps: Optional[int] = config['max_steps']
+        self.max_steps: Optional[int] = config['max_steps'] # change name
         self.init_lr: Optional[float] = config['init_lr']
         self.warmup_steps: Optional[int] = config['warmup_steps']
         self.grad_clip: bool = config['grad_clip']
         self._trainable_parameters: Iterator[Parameter] = filter(lambda x: x.requires_grad, self.model.parameters())
         self.optimizer = self._build_optimizer(config['optimizer'], config['scheduler'])
+        self.accumulation_steps = config['accumulation_steps']
 
-        ensure_dir(config['checkpoint_dir'])
-        self.saved_model_filename: str = os.path.join(config['checkpoint_dir'], self.filename)
-        r"""Path to saved checkpoint file (without suffix!), which can be loaded with `load_experiment`."""
-
-        ensure_dir(config['generated_text_dir'])
-        self.saved_text_filename: str = os.path.join(config['generated_text_dir'], self.filename)
-
+        # Training strategy
         self.start_epoch = 0
         r"""Start epoch index. That is, `epoch_idx` iterates through `range(self.start_epoch, self.epochs)`"""
         self.epochs: int = config['epochs']
@@ -103,19 +98,31 @@ class Trainer(AbstractTrainer):
         `range(self.start_epoch, self.epochs)`"""
         self.epoch_idx: int = -1
         r"""current epoch index"""
+        # add `max_steps` 
 
         self.best_epoch = -1
         self._best_valid_score = -math.inf
-        self.eval_interval, self.eval_strategy = self._set_eval_mode()
+        self.eval_interval, self.eval_mode = self._set_eval_mode()
         self._eval_count = 0
         self.train_loss_list: List[float] = list()
         self.valid_result_list: List[dict] = list()
+        self.stopping_steps: Optional[int] = config['stopping_steps']
+        self.stopped = False
+        self.stopping_count = 0
 
+        # Evaluation strategy
         self.metrics = _process_metrics(self.config["metrics"])
-        self.metrics_for_best_model = _process_metrics(self.config["metrics_for_best_model"])
+        self.metrics_for_best_model = _process_metrics(self.config["metrics_for_best_model"]) # not used?
         self.evaluator = BaseEvaluator(config, self.metrics)
 
-        self.disable_tqdm = self.DDP and torch.distributed.get_rank() != 0
+        # Functionality
+        ensure_dir(config['checkpoint_dir'])
+        self.saved_model_filename: str = os.path.join(config['checkpoint_dir'], self.filename)
+        r"""Path to saved checkpoint file (without suffix!), which can be loaded with `load_experiment`."""
+
+        ensure_dir(config['generated_text_dir'])
+        self.saved_text_filename: str = os.path.join(config['generated_text_dir'], self.filename)
+
         self.disable_tqdm = not self.accelerator.is_local_main_process
         self.logdir = './log/'
         self._dashboard_getter = get_dashboard(self.logdir, config)
@@ -139,6 +146,7 @@ class Trainer(AbstractTrainer):
             )
             eval_step = 0
         elif eval_epoch <= 0 and eval_step <= 0:
+            # not eval, maybe set `valid_data=None`
             self.logger.warning(
                 '"eval_step" and "eval_epoch" are set to 0 at the same time. "eval_epoch" has been changed to 1.'
             )
@@ -149,7 +157,7 @@ class Trainer(AbstractTrainer):
             return eval_epoch, "epoch"
         else:
             self.logger.info(f"eval strategy: validate every {eval_step} step")
-        return eval_step, "step"
+            return eval_step, "step"
 
     def _build_optimizer(self, optimizer: Optional[str], scheduler: Optional[str])\
             -> Union[optim.Optimizer, AbstractScheduler]:
@@ -170,6 +178,9 @@ class Trainer(AbstractTrainer):
             if name == 'adam':
                 _optim = optim.Adam
                 defaults.update(betas=(self.adam_beta1, self.adam_beta2), eps=self.epsilon)
+            if name == 'adamw':
+                _optim = optim.AdamW
+                defaults.update(betas=(self.adam_beta1, self.adam_beta2), eps=self.epsilon)
             elif name == 'sgd':
                 _optim = optim.SGD
             elif name == 'adagrad':
@@ -183,10 +194,15 @@ class Trainer(AbstractTrainer):
                 defaults.update(betas=(self.adam_beta1, self.adam_beta2), eps=self.epsilon)
             elif name == 'adafactor':
                 _optim = transformers.Adafactor
+                # using adafactor_kwargs in overall.yaml
+                # adafactor_kwargs: {lr: 1e-3, scale_parameter: False, relative_step: False, warmup_init: False}
+                if self.grad_clip is not None:
+                    self.grad_clip = None
+                    self.logger.warning("Additional optimizer operations like gradient clipping should not be used alongside Adafactor.")
                 defaults.update(eps=self.epsilon, beta1=self.adam_beta1)
             else:
-                self.logger.warning('Received unrecognized optimizer, set default Adam optimizer')
-                _optim = optim.Adam
+                self.logger.warning('Received unrecognized optimizer, set default AdamW optimizer')
+                _optim = optim.AdamW
                 defaults.update(betas=(self.adam_beta1, self.adam_beta2), eps=self.epsilon)
 
             return _optim(**defaults)
@@ -246,7 +262,7 @@ class Trainer(AbstractTrainer):
         else:
             train_tqdm = train_data
 
-        for data in train_tqdm:
+        for step, data in enumerate(train_tqdm):
             self.optimizer.zero_grad()
 
             loss = self.model(data, epoch_idx=epoch_idx)
@@ -254,9 +270,11 @@ class Trainer(AbstractTrainer):
             if not self.disable_tqdm:
                 train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
 
-            self.accelerator.backward(loss)
-            self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
-            self.optimizer.step()
+            if self.grad_clip is not None:
+                self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
+            self.accelerator.backward(loss / self.accumulation_steps)
+            if (step + 1) % self.accumulation_steps == 0 or (step + 1) == len(train_tqdm):
+                self.optimizer.step()
 
             if valid_data:
                 self.stopped &= self._valid(valid_data, epoch_idx, 'step')
@@ -299,7 +317,7 @@ class Trainer(AbstractTrainer):
             if not self.disable_tqdm:
                 valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
 
-        valid_results = self.evaluate(valid_data, load_best_model=False, is_valid=True)
+        valid_results = self.evaluate(valid_data, is_valid=True)
         self._summary_tracker.set_metrics_results(valid_results)
 
         self._summary_tracker.on_epoch_end()
@@ -310,26 +328,26 @@ class Trainer(AbstractTrainer):
             self,
             valid_data: AbstractDataLoader,
             epoch_idx: int,
-            eval_strategy: str,
+            eval_mode: str,
     ) -> bool:
         """Validate every `self.eval_interval` step or epoch if evaluation strategy matches attribute
-        `self.eval_strategy`. Specifically, if `self.eval_interval` is set to `0`, validation will be skipped.
+        `self.eval_mode`. Specifically, if `self.eval_interval` is set to `0`, validation will be skipped.
 
-        Early stopping will also be checked if `self.stopping_step` is positive integer.
+        Early stopping will also be checked if `self.stopping_steps` is positive integer.
 
         Args:
             valid_data: The dataloader of validation set.
             epoch_idx: The current epoch index.
-            eval_strategy: The evaluation strategy of current call ("epoch" or "step").
+            eval_mode: The evaluation strategy of current call ("epoch" or "step").
 
         Returns:
-            bool: Early stopping. Return true if `self.stopping_step` is positive integer and `self._early_stopping()`
+            bool: Early stopping. Return true if `self.stopping_steps` is positive integer and `self._early_stopping()`
             is True.
 
         Todo:
             * Update docstring: valid method 'loss' or 'metrics'
         """
-        if (eval_strategy != self.eval_strategy) or (self.eval_interval <= 0):
+        if (eval_mode != self.eval_mode) or (self.eval_interval <= 0): # why <=0? make sure it >0, otherwise not valid
             return False
 
         self._eval_count += 1
@@ -339,7 +357,7 @@ class Trainer(AbstractTrainer):
         self._valid_epoch(valid_data, self._eval_count // self.eval_interval)
         self.valid_result_list.append(self._summary_tracker.epoch_dict())
 
-        stopped = bool(self.stopping_step) and self._early_stopping(self._summary_tracker.epoch_score, epoch_idx)
+        stopped = bool(self.stopping_steps) and self._early_stopping(self._summary_tracker.epoch_score, epoch_idx)
         
         if self.accelerator.is_local_main_process:
             self.save_checkpoint()
@@ -505,7 +523,7 @@ class Trainer(AbstractTrainer):
         return self.best_result
 
     def _early_stopping(self, score: float, epoch_idx: int) -> bool:
-        r""" Return True if valid score has been lower than best score for `stopping_step` steps.
+        r""" Return True if valid score has been lower than best score for `stopping_steps` steps.
 
         Args:
             valid_tracker: contain valid information (loss and metrics score)
@@ -522,7 +540,7 @@ class Trainer(AbstractTrainer):
             self.best_epoch = epoch_idx  # get best results with index
         else:
             self.stopping_count += 1
-            stop_flag = self.stopping_count > self.stopping_step
+            stop_flag = self.stopping_count > self.stopping_steps
 
         return stop_flag
 
@@ -552,10 +570,8 @@ class Trainer(AbstractTrainer):
         Todo:
             * perform either loss or evaluation according to 'eval_metrics'
         """
-        if is_valid and load_best_model:
+        if is_valid:
             load_best_model = False
-            self.logger.warning('Evaluation should not load best model during validation. `load_best_model` has'
-                                'set to False temporarily.')
 
         if load_best_model:
             checkpoint_file = model_file or self.saved_model_filename + '.pth'
@@ -573,7 +589,7 @@ class Trainer(AbstractTrainer):
         self.model.eval()
 
         # preview only
-        if not _eval or len(self.metrics) == 0:
+        if not _eval or len(self.metrics) == 0: # ???
             generate_sentence = self.model.generate(next(eval_data), eval_data)
             generate_sentence = ' '.join(generate_sentence[0])
             self.logger.info('Generation Preview: ' + generate_sentence)
@@ -586,7 +602,6 @@ class Trainer(AbstractTrainer):
             generated = self.accelerator.unwrap_model(self.model).generate(batch_data, eval_data, self.accelerator)
             generate_corpus.extend(generated)
         reference_corpus = eval_data.dataset.target_text
-        generate_corpus = generate_corpus[:len(reference_corpus)]
         if not is_valid:
             self._save_generated_text(generate_corpus)
         if self._summary_tracker is not None and not self._summary_tracker.tracker_finished:

@@ -1,32 +1,37 @@
-# @Time   : 2021/4/19
-# @Author : Lai Xu
-# @Email  : tsui_lai@163.com
-
-"""
-textbox.evaluator.meteor_evaluator
-#######################################
-"""
-
-import numpy as np
-from nltk.translate.meteor_score import meteor_score
-from textbox.evaluator.abstract_evaluator import AbstractEvaluator
+from .abstract_evaluator import AbstractEvaluator
 
 
 class MeteorEvaluator(AbstractEvaluator):
+    r"""Bleu Evaluator. Now, we support metrics `'bleu'`
+    """
 
-    def _preprocess(self, input_sentence):
-        return " ".join(input_sentence)
+    def __init__(self, config):
+        super(MeteorEvaluator, self).__init__(config)
+        self.meteor_type = config['meteor_type']
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus):
-        generate_corpus = [self._preprocess(generate_sentence) for generate_sentence in generate_corpus]
-        reference_corpus = [self._preprocess(reference_sentence) for reference_sentence in reference_corpus]
-        reference_corpus = [[reference_sentence] for reference_sentence in reference_corpus]
+        r"""get metrics result
 
-        result = {}
-        scores = []
-        for gen, refs in zip(generate_corpus, reference_corpus):
-            score = meteor_score(refs, gen)
-            scores.append(score)
+        Args:
+            generate_corpus: the generated corpus
+            reference_corpus: the referenced corpus
 
-        result['meteor'] = scores
-        return result
+        Returns:
+            dict: a dict of metrics <metric> which record the results according to self.ngrams
+        """
+        results = {}
+        if self.meteor_type == 'pycocoevalcap':
+            from pycocoevalcap.meteor.meteor import Meteor
+            
+            refs = {idx: r for idx, r in enumerate(reference_corpus)}
+            gen = {idx: [g] for idx, g in enumerate(generate_corpus)}
+            score = Meteor().compute_score(refs, gen)[0]
+            results['METEOR'] = score * 100
+        else:
+            from nltk.translate.meteor_score import meteor_score
+
+            results['METEOR'] = []
+            for gen, refs in zip(generate_corpus, reference_corpus):
+                score = meteor_score(refs, gen)
+                results['METEOR'].append(score * 100)
+        return results

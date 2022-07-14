@@ -44,6 +44,7 @@
 ### Efficiency
 - [ ] Multi-GPU with `accelerate`? Need to research! (PyTorch or accelerate)
     - [ ] check `find_unused_parameters`
+    - [ ] will our scheduler be impacted
 ```
 data parallel (model can fit in one GPU)
 single node or several nodes
@@ -119,6 +120,12 @@ https://github.com/huggingface/transformers/blob/main/examples/pytorch/summariza
 
 ## Evaluator
 - [ ] Unify `base_evaluator`
+- [ ] Refactor `files2rouge` and with `try` and `except`
+- [ ] `multi-bleu` traceback
+- [ ] Add TED following https://github.com/PlusLabNLP/AESOP/blob/master/evaluation/eval.py
+- [ ] Name and doc check
+- [ ] Check `bert-score` HF logging
+- [ ] Remake CoQA dataset
 - [ ] Support evaluation for different datasets and task. (how to specify the evaluation method?)
     - [ ] Text summarization: CNN/Daily Mail (cnndm), XSum (xsum), SAMSum (samsum), and WLE (wle).
     - [ ] Open-ended dialogue system: PersonaChat (pc), DailyDialog (dd), DSTC7-AVSD (da), and SGD (sgd).

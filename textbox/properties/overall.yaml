@@ -12,26 +12,48 @@ generated_text_dir: 'generated/'
 # training settings
 epochs: 50
 train_batch_size: 16
-optimizer: adam
-learning_rate: 1e-5
+optimizer: adamw
+learning_rate: 3e-5
 eval_epoch: 1
-stopping_step: 2
+stopping_steps: 2
 grad_clip: 0.1
-tokenize_strategy: none
 adam_beta1: 0.9
 adam_beta2: 0.999
 epsilon: 1e-8
-weight_decay: 0
+weight_decay: 0.01
+accumulation_steps: 1
 
 # evaluation settings
 metrics: ["bleu"]
-n_grams: [1,2,3,4,5]
 eval_batch_size: 64
 
 # Pretrained model settings
-tokenize_strategy: none
 config_kwargs: {}
 truncate: tail
 tokenizer_kwargs: {'use_fast': True, 'additional_special_tokens': []}
-tokenizer_path: {}
 generation_kwargs: {'num_beams': 5, 'early_stopping': True}
+
+# Evaluation settings
+lower_evaluation: True
+multiref_strategy: max
+
+bleu_max_ngrams: 4
+bleu_type: nltk
+smoothing_function: 0
+corpus_bleu: False
+
+rouge_max_ngrams: 2
+rouge_type: files2rouge
+
+meteor_type: pycocoevalcap
+
+chrf_type: m-popovic
+
+distinct_max_ngrams: 4
+inter_distinct: True
+
+unique_max_ngrams: 4
+
+self_bleu_max_ngrams: 4
+
+tgt_lang: 'en'

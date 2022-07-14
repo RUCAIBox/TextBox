@@ -1,5 +1,6 @@
 import os
 from numpy import pad
+from sklearn.svm import l1_min_c
 import torch
 from torch import Tensor
 from typing import List
@@ -138,13 +139,15 @@ def load_data(dataset_path):
     text = []
     with open(dataset_path, "r") as fin:
         for line in fin:
-            line = line.strip()
-            if len(line) >= 2 and ((line[0] == '"' and line[-1] == '"') or (line[0] == "'" and line[-1] == "'")):
+            l = line.strip()
+            if len(l) >= 2 and ((l[0] == '"' and l[-1] == '"') or (l[0] == "'" and l[-1] == "'") or (l[0] == '[' and l[-1] == ']')):
                 try:
-                    line = str(eval(line))
+                    l = eval(l)
+                    if not isinstance(l, list):
+                        l = str(l)
                 except:
                     pass
-            text.append(line)
+            text.append(l)
     return text
 
 def _pad_sequence(tensors: List[Tensor], padding_value: int, padding_side: str = 'right'):

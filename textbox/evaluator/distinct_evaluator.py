@@ -1,66 +1,40 @@
-# @Time   : 2020/11/14
-# @Author : Gaole He
-# @Email  : hegaole@ruc.edu.cn
-
-# UPDATE:
-# @Time   : 2020/12/3
-# @Author : Tianyi Tang
-# @Email  : steventang@ruc.edu.cn
-
-# UPDATE:
-# @Time   : 2021/4/12
-# @Author : Lai Xu
-# @Email  : tsui_lai@163.com
-
-"""
-textbox.evaluator.distinct_evaluator
-#######################################
-"""
-
-import numpy as np
-from collections import defaultdict, Counter
-from textbox.evaluator.abstract_evaluator import AbstractEvaluator
+from collections import Counter
+from .abstract_evaluator import AbstractEvaluator
+from nltk.tokenize import word_tokenize
 
 
 class DistinctEvaluator(AbstractEvaluator):
-    r"""Distinct Evaluator. Now, we support metrics `'inter-distinct'` and `'intra-distinct'`.
+    r"""Distinct Evaluator. Now, we support metrics `'distinct'`.
     """
 
-    def __init__(self):
-        self.n_grams = [1, 2, 3, 4]
-
-    def dist_func(self, generate_sentence, ngram):
-        ngram_dict = defaultdict(int)
-        tokens = generate_sentence[:ngram]
-        ngram_dict[" ".join(tokens)] += 1
-        for i in range(1, len(generate_sentence) - ngram + 1):
-            tokens = tokens[1:]
-            tokens.append(generate_sentence[i + ngram - 1])
-            ngram_dict[" ".join(tokens)] += 1
-        return ngram_dict
+    def __init__(self, config):
+        super(DistinctEvaluator, self).__init__(config)
+        self.distinct_max_ngrams = config['distinct_max_ngrams']
+        self.inter_distinct = config['inter_distinct']
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus=None):
-        r"""get metrics result
+        results = {}
 
-        Args:
-            generate_corpus: the generated corpus
+        for i, gen in enumerate(generate_corpus):
+            generate_corpus[i] = word_tokenize(gen)
 
-        Returns:
-            list: a list of metrics <metric> which record the results
-        """
-        dist_dict = {}
-        intra_ngrams = []
-        for n_gram in self.n_grams:
-            ngrams_all = Counter()
-            intra_ngram = []
-            for generate_sentence in generate_corpus:
-                result = self.dist_func(generate_sentence=generate_sentence, ngram=n_gram)
-                intra_ngram.append(len(result) / sum(result.values()))
-                ngrams_all.update(result)
-            key = "inter-distinct-{}".format(n_gram)
-            dist_dict[key] = len(ngrams_all) / sum(ngrams_all.values())
-            intra_ngrams.append(np.average(intra_ngram))
-        for i in range(len(self.n_grams)):
-            key = "intra-distinct-{}".format(self.n_grams[i])
-            dist_dict[key] = np.average(intra_ngrams[i])
-        return dist_dict
+        if self.inter_distinct:
+            ngrams_all = [Counter() for _ in range(self.distinct_max_ngrams)]
+        else:
+            scores = [[] for _ in range(self.distinct_max_ngrams)]
+        
+        for gen in generate_corpus:
+            ngrams = []
+            for i in range(self.distinct_max_ngrams):
+                ngrams.append(gen[i:])
+                ngram = Counter(zip(*ngrams))
+                if self.inter_distinct:
+                    ngrams_all[i].update(ngram)
+                else:
+                    scores[i].append((len(ngram)+1e-12) / (max(0, len(gen)-i)+1e-5) * 100)
+
+        for i in range(self.distinct_max_ngrams):
+            if self.inter_distinct:
+                results[f'Distinct-{i+1}'] = (len(ngrams_all[i])+1e-12) / (sum(ngrams_all[i].values())+1e-5) * 100 if self.inter_distinct else scores[i]
+                
+        return results

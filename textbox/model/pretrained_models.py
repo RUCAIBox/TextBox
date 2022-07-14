@@ -22,12 +22,8 @@ r"""
 """
 
 
-import torch
 import torch.nn as nn
 import warnings
-from torch import Tensor
-from typing import List
-from torch.nn.utils.rnn import pad_sequence
 from .abstract_model import AbstractModel
 from textbox import CLM_MODELS, SEQ2SEQ_MODELS
 
@@ -134,7 +130,7 @@ class Pretrained_Models(AbstractModel):
         if self.model_name == 'cpm':
             import jieba
             import os
-            jieba.dt.tmp_dir = "/home/tangtianyi/.cache/jieba"
+            jieba.dt.tmp_dir = "/tmp/jieba"
             os.makedirs(jieba.dt.tmp_dir, exist_ok=True)
 
     def forward(self, batch, epoch_idx=-1):
@@ -171,6 +167,6 @@ class Pretrained_Models(AbstractModel):
         if self.is_casual_model:
             sample_outputs = sample_outputs[:, input_ids_len:]
         
-        decode_kwargs = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': False}
+        decode_kwargs = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': True}
         generated_text = self.tokenizer.batch_decode(sample_outputs, **decode_kwargs)
         return generated_text

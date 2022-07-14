@@ -1,6 +1,5 @@
 src_len: 1024
 tgt_len: 300
-task_type: "translation"
 metrics: ['bleu', 'distinct']
 eval_metrics: ['bleu-1', 'bleu-2', 'bleu-3', 'bleu-4']
 smoothing_function: 'corpus'

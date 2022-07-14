@@ -8,13 +8,14 @@ pyyaml
 sentencepiece
 pycocoevalcap
 rouge-score
-logzero
-sacrebleu
+sacrebleu>=2.0.0
 torch
 bert_score
 tensorboard
+future
 typing
 pandas
 wandb
 setuptools
 six
+accelerate

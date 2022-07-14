@@ -1,12 +1,12 @@
 from .abstract_evaluator import AbstractEvaluator
-from pycocoevalcap.cider.cider import Cider
+from sacrebleu import sentence_ter
 
-class CiderEvaluator(AbstractEvaluator):
+class TerEvaluator(AbstractEvaluator):
     r"""Bleu Evaluator. Now, we support metrics `'bleu'`
     """
 
     def __init__(self, config):
-        super(CiderEvaluator, self).__init__(config)
+        super(TerEvaluator, self).__init__(config)
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus):
         r"""get metrics result
@@ -18,9 +18,9 @@ class CiderEvaluator(AbstractEvaluator):
         Returns:
             dict: a dict of metrics <metric> which record the results according to self.ngrams
         """
-        results = {}
-        refs = {idx: r for idx, r in enumerate(reference_corpus)}
-        gen = {idx: [g] for idx, g in enumerate(generate_corpus)}
-        score = Cider().compute_score(refs, gen)[0]
-        results['CIDEr'] = score
+        results = {'ter': []}
+        
+        for gen, ref in zip(generate_corpus, reference_corpus):
+            score = sentence_ter(gen, ref).score
+            results['ter'].append(score)
         return results

@@ -6,3 +6,6 @@ git clone https://github.com/pltrdy/files2rouge.git
 cd files2rouge
 python setup_rouge.py
 python setup.py install
+
+pip uninstall rouge
+pip install py-rouge

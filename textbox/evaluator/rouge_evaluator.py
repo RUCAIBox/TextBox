@@ -1,114 +1,99 @@
-# @Time   : 2020/11/14
-# @Author : Gaole He
-# @Email  : hegaole@ruc.edu.cn
-
-# UPDATE:
-# @Time   : 2020/12/3
-# @Author : Tianyi Tang
-# @Email  : steventang@ruc.edu.cn
-
-# UPDATE:
-# @Time   : 2021/4/12
-# @Author : Lai Xu
-# @Email  : tsui_lai@163.com
-
-"""
-textbox.evaluator.rouge_evaluator
-#################################
-"""
-
 import os
 import tempfile
 import logging
-from files2rouge import settings
-from files2rouge import utils
-from pyrouge import Rouge155
-from collections import defaultdict
-from textbox.evaluator.abstract_evaluator import AbstractEvaluator
+import numpy as np
+from .abstract_evaluator import AbstractEvaluator
 
 
 class RougeEvaluator(AbstractEvaluator):
-    r"""Rouge Evaluator. Now we support rouge-based ngram metrics which conains rouge-n, rouge-l and rouge-w.
+    r"""Bleu Evaluator. Now, we support metrics `'bleu'`
     """
 
-    def __init__(self):
-        #"-c 95 -r 1000 -n 2 -w 1.2 -a"
-        self.rouge_args = ['-c', 95, '-r', 1000, '-n', 2, '-w', 1.2, '-a']
-        self._deal_args()
-
-    def _deal_args(self):
-        self.rouge_args = " ".join([str(_) for _ in self.rouge_args])
-
-    def _preprocess(self, input_sentence):
-        return " ".join(input_sentence)
-
-    def _write_file(self, write_path, content):
-        f = open(write_path, 'w')
-        f.write("\n".join(content))
-        f.close()
-
-    def _split_rouge(self, input_sentence):
-        res_list = input_sentence.split()
-        res = {}
-        res[res_list[1].lower()] = float(res_list[3])
-        return res
-
-    def _calc_rouge(self, args):
-        summ_path = args['summ_path']
-        ref_path = args['ref_path']
-        eos = args['eos']
-        ignore_empty_reference = args['ignore_empty_reference']
-        ignore_empty_summary = args['ignore_empty_summary']
-        stemming = args['stemming']
-
-        s = settings.Settings()
-        s._load()
-        with tempfile.TemporaryDirectory() as dirpath:
-            sys_root, model_root = [os.path.join(dirpath, _) for _ in ["system", "model"]]
-            utils.mkdirs([sys_root, model_root])
-            ignored = utils.split_files(
-                model_path=ref_path,
-                system_path=summ_path,
-                model_dir=model_root,
-                system_dir=sys_root,
-                eos=eos,
-                ignore_empty_reference=ignore_empty_reference,
-                ignore_empty_summary=ignore_empty_summary
-            )
-            r = Rouge155(rouge_dir=os.path.dirname(s.data['ROUGE_path']), log_level=logging.ERROR, stemming=stemming)
-            r.system_dir = sys_root
-            r.model_dir = model_root
-            r.system_filename_pattern = r's.(\d+).txt'
-            r.model_filename_pattern = 'm.[A-Z].#ID#.txt'
-            data_arg = "-e %s" % s.data['ROUGE_data']
-            rouge_args_str = "%s %s" % (data_arg, self.rouge_args)
-            output = r.convert_and_evaluate(rouge_args=rouge_args_str)
-            res = self._get_info(output)
-        return res
-
-    def _get_info(self, input_str):
-        rouge_list = input_str.replace("---------------------------------------------",
-                                       "").replace("\n\n", "\n").strip().split("\n")
-        rouge_list = [rouge for rouge in rouge_list if "Average_F" in rouge]
-        rouge_dict = defaultdict(float)
-        for each in list(map(self._split_rouge, rouge_list)):
-            rouge_dict.update(each)
-        return rouge_dict
+    def __init__(self, config):
+        self.rouge_type = config['rouge_type']
+        self.rouge_max_ngrams = config['rouge_max_ngrams']
+        self.multiref_strategy = config['multiref_strategy']
+        super(RougeEvaluator, self).__init__(config)
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus):
-        with tempfile.TemporaryDirectory() as path:
-            generate_path = os.path.join(path, 'generate_corpus.txt')
-            reference_path = os.path.join(path, 'reference_corpus.txt')
-            self._write_file(generate_path, generate_corpus)
-            self._write_file(reference_path, reference_corpus)
+        r"""get metrics result
 
-            calc_args = {
-                'summ_path': generate_path,
-                'ref_path': reference_path,
-                'eos': '.',
-                'ignore_empty_reference': False,
-                'ignore_empty_summary': False,
-                'stemming': True
-            }
-            res = self._calc_rouge(calc_args)
-        return res
+        Args:
+            generate_corpus: the generated corpus
+            reference_corpus: the referenced corpus
+
+        Returns:
+            dict: a dict of metrics <metric> which record the results according to self.ngrams
+        """
+        results = {}
+        if self.rouge_type == 'files2rouge':
+            from files2rouge import settings
+            from files2rouge import utils
+            from pyrouge import Rouge155
+            from nltk.tokenize import word_tokenize
+            
+            with tempfile.TemporaryDirectory() as tmpdir:
+                gen_file = f"{tmpdir}/gen.txt"
+                ref_file = f"{tmpdir}/ref.txt"
+                with open(gen_file, 'w') as f:
+                    f.write('\n'.join([' '.join(word_tokenize(g)) for g in generate_corpus]))
+                with open(ref_file, 'w') as f:
+                    for refs in reference_corpus:
+                        assert len(refs) == 1, "`files2rouge` only supports single reference."
+                        f.write(' '.join(word_tokenize(refs[0])) + '\n')
+                sys_root, model_root = [os.path.join(tmpdir, _) for _ in ["system", "model"]]
+                os.mkdir(sys_root)
+                os.mkdir(model_root)
+            
+                s = settings.Settings()
+                s._load()
+
+                utils.split_files(ref_file, gen_file, model_root, sys_root)
+                r = Rouge155(rouge_dir=os.path.dirname(s.data['ROUGE_path']), log_level=logging.ERROR, stemming=True)
+                r.system_dir = sys_root
+                r.model_dir = model_root
+                r.system_filename_pattern = r's.(\d+).txt'
+                r.model_filename_pattern = 'm.[A-Z].#ID#.txt'
+                rouge_args_str = f"-e {s.data['ROUGE_data']} -c 95 -r 1000 -n {self.rouge_max_ngrams} -w 1.2 -a"
+                output = r.convert_and_evaluate(rouge_args=rouge_args_str)
+            
+            for l in output.split('\n'):
+                if l.find('Average_F') >= 0:
+                    l = l.split(' ')
+                    results[l[1]] = float(l[3]) * 100
+        
+        elif self.rouge_type == 'py-rouge':
+            from rouge import Rouge 
+
+            rouge = Rouge(metrics=['rouge-n', 'rouge-l', 'rouge-w'], max_n=self.rouge_max_ngrams, limit_length=False, apply_avg=False, apply_best=True, weight_factor=1.2)
+            scores = rouge.get_scores(generate_corpus, reference_corpus)
+            for i in range(1, self.rouge_max_ngrams + 1):
+                results[f'ROUGE-{i}'] = scores[f'rouge-{i}']['f'] * 100
+            results['ROUGE-L'] = scores['rouge-l']['f'] * 100
+            results['ROUGE-W-1.2'] = scores['rouge-w']['f'] * 100
+
+        elif self.rouge_type == 'rouge-score':
+            from rouge_score import rouge_scorer
+            
+            rouge_types = [f'rouge{i}' for i in range(1, self.rouge_max_ngrams + 1)] + ["rougeLsum"]
+            rouge = rouge_scorer.RougeScorer(rouge_types=rouge_types, use_stemmer=True)
+            results = {k: [] for k in [f'ROUGE-{i}' for i in range(1, self.rouge_max_ngrams + 1)] + ['ROUGE-L']}
+            for gen, refs in zip(generate_corpus, reference_corpus):
+                scores = [rouge.score(ref, gen) for ref in refs]
+                if len(scores) > 1 and self.multiref_strategy == 'leave_one_out':
+                    func = lambda x: (max(x) * (len(x) - 1) + np.partition(x, -2)[-2]) / len(x)
+                else:
+                    func = max
+
+                for i in range(1, self.rouge_max_ngrams + 1):
+                    results[f'ROUGE-{i}'].append(func([s[f'rouge{i}'].fmeasure for s in scores]) * 100)
+                results['ROUGE-L'].append(func([s['rougeLsum'].fmeasure for s in scores]) * 100)
+            
+        elif self.rouge_type == 'pycocoevalcap':
+            from pycocoevalcap.rouge.rouge import Rouge
+
+            refs = {idx: r for idx, r in enumerate(reference_corpus)}
+            gen = {idx: [g] for idx, g in enumerate(generate_corpus)}
+            score = Rouge().compute_score(refs, gen)[0]
+            results['ROUGE-L'] = score * 100
+        return results

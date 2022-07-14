@@ -1,1 +1,1 @@
-from textbox.evaluator.base_evaluator import *
+from .base_evaluator import BaseEvaluator

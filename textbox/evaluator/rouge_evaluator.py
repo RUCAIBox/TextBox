@@ -68,16 +68,16 @@ class RougeEvaluator(AbstractEvaluator):
             rouge = Rouge(metrics=['rouge-n', 'rouge-l', 'rouge-w'], max_n=self.rouge_max_ngrams, limit_length=False, apply_avg=False, apply_best=True, weight_factor=1.2)
             scores = rouge.get_scores(generate_corpus, reference_corpus)
             for i in range(1, self.rouge_max_ngrams + 1):
-                results[f'ROUGE-{i}'] = scores[f'rouge-{i}']['f'] * 100
-            results['ROUGE-L'] = scores['rouge-l']['f'] * 100
-            results['ROUGE-W-1.2'] = scores['rouge-w']['f'] * 100
+                results[f'rouge-{i}'] = scores[f'rouge-{i}']['f'] * 100
+            results['rouge-l'] = scores['rouge-l']['f'] * 100
+            results['rouge-l-1.2'] = scores['rouge-w']['f'] * 100
 
         elif self.rouge_type == 'rouge-score':
             from rouge_score import rouge_scorer
             
             rouge_types = [f'rouge{i}' for i in range(1, self.rouge_max_ngrams + 1)] + ["rougeLsum"]
             rouge = rouge_scorer.RougeScorer(rouge_types=rouge_types, use_stemmer=True)
-            results = {k: [] for k in [f'ROUGE-{i}' for i in range(1, self.rouge_max_ngrams + 1)] + ['ROUGE-L']}
+            results = {k: [] for k in [f'rouge-{i}' for i in range(1, self.rouge_max_ngrams + 1)] + ['rouge-l']}
             for gen, refs in zip(generate_corpus, reference_corpus):
                 scores = [rouge.score(ref, gen) for ref in refs]
                 if len(scores) > 1 and self.multiref_strategy == 'leave_one_out':
@@ -86,8 +86,8 @@ class RougeEvaluator(AbstractEvaluator):
                     func = max
 
                 for i in range(1, self.rouge_max_ngrams + 1):
-                    results[f'ROUGE-{i}'].append(func([s[f'rouge{i}'].fmeasure for s in scores]) * 100)
-                results['ROUGE-L'].append(func([s['rougeLsum'].fmeasure for s in scores]) * 100)
+                    results[f'rouge-{i}'].append(func([s[f'rouge{i}'].fmeasure for s in scores]) * 100)
+                results['rouge-l'].append(func([s['rougeLsum'].fmeasure for s in scores]) * 100)
             
         elif self.rouge_type == 'pycocoevalcap':
             from pycocoevalcap.rouge.rouge import Rouge
@@ -95,5 +95,5 @@ class RougeEvaluator(AbstractEvaluator):
             refs = {idx: r for idx, r in enumerate(reference_corpus)}
             gen = {idx: [g] for idx, g in enumerate(generate_corpus)}
             score = Rouge().compute_score(refs, gen)[0]
-            results['ROUGE-L'] = score * 100
+            results['rouge-l'] = score * 100
         return results

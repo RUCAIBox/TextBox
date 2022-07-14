@@ -53,16 +53,16 @@ class AbstractDataset(Dataset):
         self.tokenizer = tokenizer
         self._process_prompt()
         self.source_ids = []
-        for text in self.source_text:
-            ids = tokenizer.encode(text, add_special_tokens=False)
+        source_ids = tokenizer(self.source_text, add_special_tokens=False, return_token_type_ids=False, return_attention_mask=False)['input_ids']
+        for ids in source_ids:
             ids = ids[:self.source_max_length] if self.config['truncate'] == 'tail' else ids[-self.source_max_length:]
             ids = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + ids + self.suffix_ids)
             self.source_ids.append(torch.tensor(ids, dtype=torch.long))
         if self.set != 'test':
             self.target_ids = []
             with tokenizer.as_target_tokenizer():
-                for text in self.target_text:
-                    ids = tokenizer.encode(text, add_special_tokens=False)
+                target_ids = tokenizer(self.target_text, add_special_tokens=False, return_token_type_ids=False, return_attention_mask=False)['input_ids']
+                for ids in target_ids:
                     ids = ids[:self.target_max_length] if self.config['truncate'] == 'tail' else ids[-self.target_max_length:]
                     ids = self.tokenizer.build_inputs_with_special_tokens(ids)
                     if self.config['model_name'] in ['bert2bert', 'opt']:

@@ -9,14 +9,14 @@ from .abstract_evaluator import AbstractEvaluator
 
 
 class BleuEvaluator(AbstractEvaluator):
-    r"""Bleu Evaluator. Now, we support metrics `'BLEU'`
+    r"""Bleu Evaluator. Now, we support metrics `'bleu'`
     """
 
     def __init__(self, config):
         super(BleuEvaluator, self).__init__(config)
         self.bleu_type = config['bleu_type']
         self.max_ngrams = config['bleu_max_ngrams']
-        self.ngrams = ['BLEU-{}'.format(n) for n in range(1, self.max_ngrams + 1)]
+        self.ngrams = ['bleu-{}'.format(n) for n in range(1, self.max_ngrams + 1)]
         self.smoothing_function = config['smoothing_function']
         self.corpus_bleu = config['corpus_bleu']
         if self.bleu_type == 'nltk' and self.smoothing_function > 0 and config['dataset'] in ['pc', 'dd']:
@@ -58,12 +58,12 @@ class BleuEvaluator(AbstractEvaluator):
                     refs[i] = word_tokenize(ref)
         
         if self.bleu_type == 'fast-bleu':
-            from fast_bleu import BLEU
+            from fast_bleu import bleu
 
             for i, refs in enumerate(reference_corpus):
                 assert len(refs) == 1, "`fast-bleu` only supports single reference."
                 reference_corpus[i] = refs[0]
-            bleu = BLEU(reference_corpus, dict(zip(self.ngrams, self.ngram_weights)))
+            bleu = bleu(reference_corpus, dict(zip(self.ngrams, self.ngram_weights)))
             scores = bleu.get_score(generate_corpus)
             for ngram in self.ngrams:
                 results[ngram] = [s * 100 for s in scores[ngram]]
@@ -87,15 +87,15 @@ class BleuEvaluator(AbstractEvaluator):
             bleu = BLEUScore()
             for gen, refs in zip(generate_corpus, reference_corpus):
                 bleu.append(gen, refs)
-            results['BLEU'] = bleu.score() * 100
+            results['bleu'] = bleu.score() * 100
         
         elif self.bleu_type == 'sacrebleu':
             import sacrebleu
 
             reference_corpus = list(zip_longest(*reference_corpus))
             bleu = sacrebleu.corpus_bleu(generate_corpus, reference_corpus)
-            results['BLEU'] = bleu.score
-            results['BLEU-precisions'] = bleu.prec_str
+            results['bleu'] = bleu.score
+            results['bleu-precisions'] = bleu.prec_str
         
         elif self.bleu_type == 'pycocoevalcap':
             from pycocoevalcap.bleu.bleu import Bleu
@@ -121,8 +121,8 @@ class BleuEvaluator(AbstractEvaluator):
                     ref_file = f"{ref_file}[{','.join([str(i) for i in range(max_ref_num)])}]"
                     scores = subprocess.check_output(f"perl textbox/evaluator/utils/multi-bleu.perl {ref_file} < {gen_file}", stderr=subprocess.STDOUT, shell=True)
                     scores = scores.decode().strip().split('\n')[-1].split()
-                    results['BLEU'] = float(scores[2][:-1])
-                    results['BLEU-precisions'] = scores[3]
+                    results['bleu'] = float(scores[2][:-1])
+                    results['bleu-precisions'] = scores[3]
                 except subprocess.CalledProcessError as call_e:
                     traceback.print_exc()
                     print(call_e.output.decode().strip())

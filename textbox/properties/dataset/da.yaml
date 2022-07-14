@@ -2,7 +2,10 @@ src_len: 1024
 tgt_len: 64
 truncate: head
 metrics: ['da']
-eval_metrics: ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4", 'METEOR', 'ROUGE_L', 'CIDEr']
+metrics_for_best_model: ["bleu-1", "bleu-2", "bleu-3", "bleu-4", 'meteor', 'rouge-l', 'cider']
+bleu_type: pycocoevalcap
+rouge_type: pycocoevalcap
+meteor_type: pycocoevalcap
 
 train_batch_size: 6
 update_freq: 32

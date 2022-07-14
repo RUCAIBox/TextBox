@@ -26,12 +26,12 @@ class MeteorEvaluator(AbstractEvaluator):
             refs = {idx: r for idx, r in enumerate(reference_corpus)}
             gen = {idx: [g] for idx, g in enumerate(generate_corpus)}
             score = Meteor().compute_score(refs, gen)[0]
-            results['METEOR'] = score * 100
+            results['meteor'] = score * 100
         else:
             from nltk.translate.meteor_score import meteor_score
 
-            results['METEOR'] = []
+            results['meteor'] = []
             for gen, refs in zip(generate_corpus, reference_corpus):
                 score = meteor_score(refs, gen)
-                results['METEOR'].append(score * 100)
+                results['meteor'].append(score * 100)
         return results

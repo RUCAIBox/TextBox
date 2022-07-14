@@ -1,7 +1,10 @@
 src_len: 512
 tgt_len: 128
-metrics: ['dt']
-eval_metrics: ['BLEU', 'METEOR', 'ROUGE_L']
+metrics: ['bleu', 'rouge', 'meteor']
+metrics_for_best_model: ['bleu', 'meteor', 'rouge-l']
+bleu_type: mt-eval
+rouge_type: pycocoevalcap
+meteor_type: pycocoevalcap
 
 train_batch_size: 12
 update_freq: 16

@@ -24,5 +24,5 @@ class NistEvaluator(AbstractEvaluator):
         nist = NISTScore()
         for gen, refs in zip(generate_corpus, reference_corpus):
             nist.append(gen, refs)
-        results['NIST'] = nist.score()
+        results['nist'] = nist.score()
         return results

@@ -22,5 +22,5 @@ class BertScoreEvaluator(AbstractEvaluator):
 
         results = {}
         _, _, f_score = score(generate_corpus, reference_corpus, lang=self.lang, batch_size=self.batch_size, device=self.device)
-        results['BERTScore'] = f_score.mean().item() * 100
+        results['bertscore'] = f_score.mean().item() * 100
         return results

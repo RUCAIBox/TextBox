@@ -35,6 +35,6 @@ class DistinctEvaluator(AbstractEvaluator):
 
         for i in range(self.distinct_max_ngrams):
             if self.inter_distinct:
-                results[f'Distinct-{i+1}'] = (len(ngrams_all[i])+1e-12) / (sum(ngrams_all[i].values())+1e-5) * 100 if self.inter_distinct else scores[i]
+                results[f'distinct-{i+1}'] = (len(ngrams_all[i])+1e-12) / (sum(ngrams_all[i].values())+1e-5) * 100 if self.inter_distinct else scores[i]
                 
         return results

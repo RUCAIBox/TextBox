@@ -7,7 +7,7 @@ class ChrfEvaluator(AbstractEvaluator):
 
     def __init__(self, config, metric):
         super(ChrfEvaluator, self).__init__(config)
-        self.metric = metric.replace('f', 'F')
+        self.metric = metric
         self.chrf_type = config['chrf_type']
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus):

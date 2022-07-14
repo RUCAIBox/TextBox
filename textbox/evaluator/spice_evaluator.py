@@ -23,5 +23,5 @@ class SpiceEvaluator(AbstractEvaluator):
         refs = {idx: r for idx, r in enumerate(reference_corpus)}
         gen = {idx: [g] for idx, g in enumerate(generate_corpus)}
         score = Spice().compute_score(refs, gen)[0]
-        results['SPICE'] = score * 100
+        results['spice'] = score * 100
         return results

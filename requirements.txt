@@ -3,13 +3,13 @@ matplotlib
 fast-bleu
 transformers
 tqdm
-nltk==3.5
+nltk
 pyyaml
 sentencepiece
 pycocoevalcap
 rouge-score
-logzero
-sacrebleu
+sacrebleu>=2.0.0
 torch
 bert_score
 tensorboard
+future

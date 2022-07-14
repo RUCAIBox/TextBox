@@ -1,7 +1,7 @@
 src_len: 1024
 tgt_len: 64
 metrics: ['rouge']
-eval_metrics: ['rouge-1', 'rouge-2', 'rouge-l']
+metrics_for_best_model: ['rouge-1', 'rouge-2', 'rouge-l']
 
 train_batch_size: 4
 update_freq: 48

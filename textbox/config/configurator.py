@@ -54,8 +54,8 @@ class Config(object):
         """
         self._init_parameters_category()
         self.yaml_loader = self._build_yaml_loader()
-        self._load_overall_config()
         self.external_sources = list()
+        self._load_overall_config()
         self.file_config_dict = self._load_config_files(config_file_list)
         self.variable_config_dict = self._load_variable_config_dict(config_dict)
         self.cmd_config_dict = self._load_cmd_line()
@@ -121,6 +121,7 @@ class Config(object):
         current_path = os.path.dirname(os.path.realpath(__file__))
         overall_init_file = os.path.join(current_path, '../properties/overall.yaml')
 
+        self.external_sources.append(overall_init_file)
         if os.path.isfile(overall_init_file):
             with open(overall_init_file, 'r', encoding='utf-8') as f:
                 self.overall_config_dict = yaml.load(f.read(), Loader=self.yaml_loader)

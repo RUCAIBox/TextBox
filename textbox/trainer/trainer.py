@@ -73,20 +73,16 @@ class Trainer(AbstractTrainer):
         self.filename = self.config['filename']
         self.accelerator = accelerator
 
-
         # Optimization strategy
-        self.learning_rate: float = config['learning_rate']
-        self.weight_decay: float = config['weight_decay']
+        self.learning_rate = config['learning_rate']
         # using optimizer_kwargs and scheduler_kwargs in overall.yaml
         # e.g., optimizer_kwargs: {betas: (0.9, 0.999), eps: 1e-08, weight_decay: 0.01}
-        self.adam_beta1: Optional[float] = config['adam_beta1']
-        self.adam_beta2: Optional[float] = config['adam_beta2']
-        self.epsilon: Optional[float] = config['epsilon']
-        self.max_steps: Optional[int] = config['max_steps'] # change name
-        self.init_lr: Optional[float] = config['init_lr']
-        self.warmup_steps: Optional[int] = config['warmup_steps']
-        self.grad_clip: bool = config['grad_clip']
-        self._trainable_parameters: Iterator[Parameter] = filter(lambda x: x.requires_grad, self.model.parameters())
+        self.optimizer_kwargs = config['optimizer_kwargs']  # parameters other than `lr`
+        self.adafactor_kwargs = config['adafactor_kwargs']
+        self.optimizer_kwargs.setdefault("weight_decay", 0.01)
+        self.scheduler_kwargs = config['scheduler_kwargs']
+        self.grad_clip = config['grad_clip']
+        self._trainable_parameters = filter(lambda x: x.requires_grad, self.model.parameters())
         self.optimizer = self._build_optimizer(config['optimizer'], config['scheduler'])
         self.accumulation_steps = config['accumulation_steps']
 
@@ -98,7 +94,7 @@ class Trainer(AbstractTrainer):
         `range(self.start_epoch, self.epochs)`"""
         self.epoch_idx: int = -1
         r"""current epoch index"""
-        # add `max_steps` 
+        self.max_steps = config['max_steps']  # max batch step
 
         self.best_epoch = -1
         self._best_valid_score = -math.inf
@@ -106,7 +102,7 @@ class Trainer(AbstractTrainer):
         self._eval_count = 0
         self.train_loss_list: List[float] = list()
         self.valid_result_list: List[dict] = list()
-        self.stopping_steps: Optional[int] = config['stopping_steps']
+        self.stopping_steps = config['stopping_steps']
         self.stopped = False
         self.stopping_count = 0
 
@@ -159,7 +155,7 @@ class Trainer(AbstractTrainer):
             self.logger.info(f"eval strategy: validate every {eval_step} step")
             return eval_step, "step"
 
-    def _build_optimizer(self, optimizer: Optional[str], scheduler: Optional[str])\
+    def _build_optimizer(self, optimizer: str, scheduler: Optional[str])\
             -> Union[optim.Optimizer, AbstractScheduler]:
         """Init the optimizer and scheduler.
 
@@ -169,71 +165,57 @@ class Trainer(AbstractTrainer):
 
         def _get_base_optimizer(name: str) -> optim.Optimizer:
 
-            defaults: Dict[str, Any] = dict(
-                params=self._trainable_parameters,
-                lr=self.learning_rate,
-                weight_decay=self.weight_decay
-            )
-
             if name == 'adam':
                 _optim = optim.Adam
-                defaults.update(betas=(self.adam_beta1, self.adam_beta2), eps=self.epsilon)
-            if name == 'adamw':
-                _optim = optim.AdamW
-                defaults.update(betas=(self.adam_beta1, self.adam_beta2), eps=self.epsilon)
             elif name == 'sgd':
                 _optim = optim.SGD
             elif name == 'adagrad':
                 _optim = optim.Adagrad
-                defaults.update(eps=self.epsilon)
             elif name == 'rmsprop':
                 _optim = optim.RMSprop
-                defaults.update(eps=self.epsilon)
-            elif name == 'adamw':
-                _optim = optim.AdamW
-                defaults.update(betas=(self.adam_beta1, self.adam_beta2), eps=self.epsilon)
             elif name == 'adafactor':
                 _optim = transformers.Adafactor
                 # using adafactor_kwargs in overall.yaml
                 # adafactor_kwargs: {lr: 1e-3, scale_parameter: False, relative_step: False, warmup_init: False}
                 if self.grad_clip is not None:
                     self.grad_clip = None
-                    self.logger.warning("Additional optimizer operations like gradient clipping should not be used alongside Adafactor.")
-                defaults.update(eps=self.epsilon, beta1=self.adam_beta1)
+                    self.logger.warning("Additional optimizer operations like gradient clipping "
+                                        "should not be used alongside Adafactor.")
+                if self.learning_rate:
+                    self.logger.warning(f"learning_rate (={self.learning_rate}) will be overwritten "
+                                        f"by that in adafactor_kwargs (={self.adafactor_kwargs['lr']})")
+                if isinstance(self.adafactor_kwargs, dict):
+                    self.optimizer_kwargs.update(self.adafactor_kwargs)
             else:
-                self.logger.warning('Received unrecognized optimizer, set default AdamW optimizer')
+                if name != 'adamw':
+                    self.logger.warning('Received unrecognized optimizer, set default AdamW optimizer')
                 _optim = optim.AdamW
-                defaults.update(betas=(self.adam_beta1, self.adam_beta2), eps=self.epsilon)
 
-            return _optim(**defaults)
+            # use default value of pytorch if self.optimizer_kwargs is empty.
+            return _optim(params=self._trainable_parameters, lr=self.learning_rate, **self.optimizer_kwargs)
 
         def _get_scheduler(name: Optional[str], _optim: optim.Optimizer) -> Union[optim.Optimizer, AbstractScheduler]:
 
             if name is None:
                 return _optim
 
-            defaults = dict(
-                base_optimizer=_optim,
-                init_lr=self.init_lr,
-                max_lr=self.learning_rate,
-                n_warmup_steps=self.warmup_steps
-            )
+            self.scheduler_kwargs.setdefault("max_lr", self.learning_rate)
 
             if name == 'inverse':
                 _scheduler = InverseSquareRootScheduler
             elif name == 'cosine':
                 _scheduler = CosineScheduler
-                defaults.update(max_steps=self.max_steps)
             elif name == 'linear':
                 _scheduler = LinearScheduler
-                defaults.update(max_steps=self.max_steps)
             elif name == 'constant':
                 _scheduler = ConstantScheduler
             else:
-                self.logger.info("Learning rate scheduling disabled.")
+                self.logger.info(f"Received unrecognized scheduler {name}. Learning rate scheduling disabled.")
                 return _optim
 
-            return _scheduler(**defaults)
+            assert isinstance(self.scheduler_kwargs, dict), "Please specify scheduler_kwargs"
+
+            return _scheduler(base_optimizer=_optim, **self.scheduler_kwargs)
 
         optimizer = _get_base_optimizer(optimizer)
         optimizer = _get_scheduler(scheduler, optimizer)

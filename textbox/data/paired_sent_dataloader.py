@@ -12,8 +12,8 @@ class PairedSentenceDataLoader(AbstractDataLoader):
         shuffle (bool, optional): Whether the dataloader will be shuffle after a round. Defaults to ``False``.
     """
 
-    def __init__(self, config, dataset, batch_size=1, shuffle=False, drop_last=True, DDP=False):
-        super().__init__(config, dataset, batch_size, shuffle, drop_last, DDP)
+    def __init__(self, config, dataset, batch_size=1, shuffle=False, drop_last=True):
+        super().__init__(config, dataset, batch_size, shuffle, drop_last)
 
     def _next_source_patch(self):
         source_text = self.source_text[self.pr:self.pr + self.step]

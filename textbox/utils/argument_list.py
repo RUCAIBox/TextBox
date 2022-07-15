@@ -1,5 +1,5 @@
 general_arguments = [
-    'gpu_id', 'use_gpu', 'DDP', 'seed', 'reproducibility', 'state', 'data_path', 'checkpoint_dir', 'generated_text_dir'
+    'gpu_id', 'use_gpu', 'seed', 'reproducibility', 'state', 'data_path', 'checkpoint_dir', 'generated_text_dir'
 ]
 
 training_arguments = [

@@ -27,10 +27,6 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     config['is_local_main_process'] = accelerator.is_local_main_process
 
     local_rank = None
-    if config['DDP']:
-        local_rank = torch.distributed.get_rank()
-        torch.cuda.set_device(local_rank)
-        config['device'] = torch.device("cuda", local_rank)
 
     init_seed(config['seed'], config['reproducibility'])
     set_seed(config['seed'])
@@ -48,18 +44,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     train_data, valid_data, test_data = accelerator.prepare(train_data, valid_data, test_data)
 
     # model loading and initialization
-    single_model = get_model(config['model_name'])(config, tokenizer).to(config['device'])
-    if config['DDP']:
-        if config['find_unused_parameters']:
-            model = torch.nn.parallel.DistributedDataParallel(
-                single_model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=True
-            )
-        else:
-            model = torch.nn.parallel.DistributedDataParallel(
-                single_model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=False
-            )
-    else:
-        model = single_model
+    model = get_model(config['model_name'])(config, tokenizer).to(config['device'])
 
     logger.info(model)
 
@@ -77,13 +62,6 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
         # model training
         result = trainer.fit(train_data, valid_data)
         # model evaluating
-        if config['DDP']:
-            if torch.distributed.get_rank() != 0:
-                return
-            config['DDP'] = False
-            model = get_model(config['model_name'])(config, train_data).to(config['device'])
-            trainer = get_trainer(config['model'])(config, model)
-            #todo: check necessity of get model and get trainer
         for key, value in result.items():
             logger.info(f"{key}: {value}")
         test_result = trainer.evaluate(test_data)

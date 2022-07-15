@@ -1,11 +1,9 @@
-import logging
 import os
 import torch
 import torch.optim as optim
 import math
 import collections
 
-from torch.nn import Parameter
 from tqdm import tqdm
 from logging import getLogger
 from accelerate import Accelerator
@@ -19,7 +17,7 @@ from ..evaluator import BaseEvaluator
 from ..utils import ensure_dir, get_local_time, init_seed
 from textbox.utils.dashboard import SummaryTracker, get_dashboard
 
-from typing import Dict, Optional, Union, List, Tuple, Iterator, Any, Iterable, Set
+from typing import Optional, Union, List, Tuple, Set
 from ..model.abstract_model import AbstractModel
 from ..data.abstract_dataloader import AbstractDataLoader
 from textbox import Config
@@ -75,8 +73,6 @@ class Trainer(AbstractTrainer):
 
         # Optimization strategy
         self.learning_rate = config['learning_rate']
-        # using optimizer_kwargs and scheduler_kwargs in overall.yaml
-        # e.g., optimizer_kwargs: {betas: (0.9, 0.999), eps: 1e-08, weight_decay: 0.01}
         self.optimizer_kwargs = config['optimizer_kwargs']  # parameters other than `lr`
         self.adafactor_kwargs = config['adafactor_kwargs']
         self.optimizer_kwargs.setdefault("weight_decay", 0.01)
@@ -99,7 +95,7 @@ class Trainer(AbstractTrainer):
 
         self.best_epoch = -1
         self._best_valid_score = -math.inf
-        self.eval_interval, self.eval_mode = self._set_eval_mode()
+        self.eval_interval, self.eval_strategy = self._set_eval_strategy()
         self._eval_count = 0
         self.train_loss_list: List[float] = list()
         self.valid_result_list: List[dict] = list()
@@ -108,6 +104,7 @@ class Trainer(AbstractTrainer):
         self.stopping_count = 0
 
         # Evaluation strategy
+        self.metrics_for_best_model = set(self.config["metrics_for_best_model"])
         self.evaluator = BaseEvaluator(config, self.config["metrics"])
 
         # Functionality
@@ -123,12 +120,12 @@ class Trainer(AbstractTrainer):
         self._dashboard_getter = get_dashboard(self.logdir, config)
         self._summary_tracker: Optional[SummaryTracker] = None
 
-    def _set_eval_mode(self) -> Tuple[int, str]:
-        r"""Check evaluation mode. Default = (1, "epoch") (If both `eval_epoch` and `eval_step` are specified,
-        `eval_step` is ignored. If both are set to 0, `eval_epoch` is set to 1.)
+    def _set_eval_strategy(self) -> Tuple[int, str]:
+        r"""Check evaluation strategy. Default = (1, "epoch") If both `eval_epoch` and `eval_step` are specified,
+        `eval_step` is ignored. Validation will be skipped if both `eval_epoch` and `eval_step` are 0.
 
         Returns:
-            Tuple[int, Literal["epoch", "step"]]: a tuple of (evaluation interval, evaluation mode)
+            Tuple[int, str]: a tuple of (evaluation interval, evaluation mode)
         """
         # default value
         eval_epoch = self.config['eval_epoch'] or 0
@@ -141,11 +138,7 @@ class Trainer(AbstractTrainer):
             )
             eval_step = 0
         elif eval_epoch <= 0 and eval_step <= 0:
-            # not eval, maybe set `valid_data=None`
-            self.logger.warning(
-                '"eval_step" and "eval_epoch" are set to 0 at the same time. "eval_epoch" has been changed to 1.'
-            )
-            eval_epoch = 1
+            return 0, "skipped"
 
         if eval_epoch > 0:
             self.logger.info(f"eval strategy: validate every {eval_epoch} epoch")
@@ -162,62 +155,54 @@ class Trainer(AbstractTrainer):
             Union[optim.Optimizer, AbstractScheduler]: the optimizer
         """
 
-        def _get_base_optimizer(name: str) -> optim.Optimizer:
+        optimizer_class = collections.defaultdict(lambda: optim.AdamW, {
+            'adam': optim.Adam,
+            'adamw': optim.AdamW,
+            'sgd': optim.SGD,
+            'adagrad': optim.Adagrad,
+            'rmsprop': optim.RMSprop,
+            'adafactor': transformers.Adafactor,
+        })
 
-            if name == 'adam':
-                _optim = optim.Adam
-            elif name == 'sgd':
-                _optim = optim.SGD
-            elif name == 'adagrad':
-                _optim = optim.Adagrad
-            elif name == 'rmsprop':
-                _optim = optim.RMSprop
-            elif name == 'adafactor':
-                _optim = transformers.Adafactor
-                # using adafactor_kwargs in overall.yaml
-                # adafactor_kwargs: {lr: 1e-3, scale_parameter: False, relative_step: False, warmup_init: False}
-                if self.grad_clip is not None:
-                    self.grad_clip = None
-                    self.logger.warning("Additional optimizer operations like gradient clipping "
-                                        "should not be used alongside Adafactor.")
-                if self.learning_rate:
-                    self.logger.warning(f"learning_rate (={self.learning_rate}) will be overwritten "
-                                        f"by that in adafactor_kwargs (={self.adafactor_kwargs['lr']})")
-                if isinstance(self.adafactor_kwargs, dict):
-                    self.optimizer_kwargs.update(self.adafactor_kwargs)
-            else:
-                if name != 'adamw':
-                    self.logger.warning('Received unrecognized optimizer, set default AdamW optimizer')
-                _optim = optim.AdamW
+        scheduler_class = {
+            'inverse': InverseSquareRootScheduler,
+            'cosine': CosineScheduler,
+            'linear': LinearScheduler,
+            'constant': ConstantScheduler,
+        }
 
-            # use default value of pytorch if self.optimizer_kwargs is empty.
-            return _optim(params=self._trainable_parameters, lr=self.learning_rate, **self.optimizer_kwargs)
+        # dealing with adafactor
+        if optimizer == 'adafactor':
+            # using adafactor_kwargs in overall.yaml
+            # adafactor_kwargs: {lr: 1e-3, scale_parameter: False, relative_step: False, warmup_init: False}
+            if self.grad_clip is not None:
+                self.grad_clip = None
+                self.logger.warning("Additional optimizer operations like gradient clipping "
+                                    "should not be used alongside Adafactor.")
+            if self.learning_rate:
+                self.logger.warning(f"learning_rate (={self.learning_rate}) will be overwritten "
+                                    f"by that in adafactor_kwargs (={self.adafactor_kwargs['lr']})")
+            if isinstance(self.adafactor_kwargs, dict):
+                self.optimizer_kwargs.update(self.adafactor_kwargs)
 
-        def _get_scheduler(name: Optional[str], _optim: optim.Optimizer) -> Union[optim.Optimizer, AbstractScheduler]:
+        # get optimizer (use default value of pytorch if self.optimizer_kwargs is empty)
+        self.logger.info(f'Using optimizer {optimizer}')
+        optimizer = optimizer_class[optimizer](
+            params=self._trainable_parameters,
+            lr=self.learning_rate,
+            **self.optimizer_kwargs
+        )
 
-            if name is None:
-                return _optim
-
-            self.scheduler_kwargs.setdefault("max_lr", self.learning_rate)
-
-            if name == 'inverse':
-                _scheduler = InverseSquareRootScheduler
-            elif name == 'cosine':
-                _scheduler = CosineScheduler
-            elif name == 'linear':
-                _scheduler = LinearScheduler
-            elif name == 'constant':
-                _scheduler = ConstantScheduler
-            else:
-                self.logger.info(f"Received unrecognized scheduler {name}. Learning rate scheduling disabled.")
-                return _optim
-
+        # scheduling
+        if scheduler is not None and scheduler in scheduler_class:
             assert isinstance(self.scheduler_kwargs, dict), "Please specify scheduler_kwargs"
+            self.logger.info(f'Using scheduler {scheduler}.')
+            self.scheduler_kwargs.setdefault("max_lr", self.learning_rate)
+            optimizer = scheduler_class[scheduler](
+                base_optimizer=optimizer,
+                **self.scheduler_kwargs
+            )
 
-            return _scheduler(base_optimizer=_optim, **self.scheduler_kwargs)
-
-        optimizer = _get_base_optimizer(optimizer)
-        optimizer = _get_scheduler(scheduler, optimizer)
         return optimizer
 
     def _train_epoch(
@@ -234,7 +219,7 @@ class Trainer(AbstractTrainer):
             valid_data: Optional (default = None) the dataloader of validation set
 
         Returns:
-            EpochTracker: :class:`EpochTracker` that includes epoch information.
+            dict: Training losses.
         """
         self.model.train()
         self._summary_tracker.new_epoch("train")
@@ -283,27 +268,25 @@ class Trainer(AbstractTrainer):
             idx: the current epoch index.
 
         Returns:
-            EpochTracker: :class:`EpochTracker` that includes epoch information.
-
-        Todo:
-            * perform either loss or evaluation according to 'eval_metrics'
+            dict: Validation losses and results.
         """
 
         self._summary_tracker.new_epoch('valid')
 
-        self.model.eval()
-        if not self.disable_tqdm:
-            valid_tqdm = tqdm(valid_data, desc=f"valid {idx:4}", dynamic_ncols=True, postfix={'loss': None})
-        else:
-            valid_tqdm = valid_data
-        for data in valid_tqdm:
-            loss = self.model(data)
-            self._summary_tracker.append_loss(loss)
+        if 'loss' in self.metrics_for_best_model:
+            self.model.eval()
             if not self.disable_tqdm:
-                valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
-
-        valid_results = self.evaluate(valid_data, is_valid=True)
-        self._summary_tracker.set_metrics_results(valid_results)
+                valid_tqdm = tqdm(valid_data, desc=f"valid {idx:4}", dynamic_ncols=True, postfix={'loss': None})
+            else:
+                valid_tqdm = valid_data
+            for data in valid_tqdm:
+                loss = self.model(data)
+                self._summary_tracker.append_loss(loss)
+                if not self.disable_tqdm:
+                    valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
+        else:
+            valid_results = self.evaluate(valid_data, is_valid=True, valid_idx=idx)
+            self._summary_tracker.set_metrics_results(valid_results)
 
         self._summary_tracker.on_epoch_end()
 
@@ -316,7 +299,7 @@ class Trainer(AbstractTrainer):
             eval_mode: str,
     ) -> bool:
         """Validate every `self.eval_interval` step or epoch if evaluation strategy matches attribute
-        `self.eval_mode`. Specifically, if `self.eval_interval` is set to `0`, validation will be skipped.
+        `self.eval_strategy`. Specifically, if `self.eval_interval` is set to `0`, validation will be skipped.
 
         Early stopping will also be checked if `self.stopping_steps` is positive integer.
 
@@ -328,11 +311,8 @@ class Trainer(AbstractTrainer):
         Returns:
             bool: Early stopping. Return true if `self.stopping_steps` is positive integer and `self._early_stopping()`
             is True.
-
-        Todo:
-            * Update docstring: valid method 'loss' or 'metrics'
         """
-        if (eval_mode != self.eval_mode) or (self.eval_interval <= 0): # why <=0? make sure it >0, otherwise not valid
+        if (self.eval_interval <= 0) or (eval_mode != self.eval_strategy):
             return False
 
         self._eval_count += 1
@@ -352,16 +332,14 @@ class Trainer(AbstractTrainer):
 
     @property
     def best_result(self) -> dict:
+        """Retrieve best result dict with index `self.best_epoch` from `self.valid_result_list`."""
         return self.valid_result_list[self.best_epoch]
 
     def save_checkpoint(self, tag: Optional[str] = None, overwrite: bool = True):
         r"""Store the model parameters information and training information.
 
         Save checkpoint every validation as the formate of 'Model-Dataset-Time_epoch-?.pth'. A soft link named
-        'Model-Dataset-Time.pth' pointing to best epoch will be created.
-
-        Todo:
-            * Checkpoint save which files?
+        'Model-Dataset-Time.pth' pointing to the best epoch will be created.
         """
         if len(self.valid_result_list) == 0:
             self.logger.warning('Save checkpoint failed. No validation has been performed.')
@@ -384,7 +362,7 @@ class Trainer(AbstractTrainer):
             'best_valid_score': self._best_valid_score,
             'epoch': self.epoch_idx,
             'config': self.config,
-            'summary': self.valid_result_list,  #todo add text
+            'summary': self.valid_result_list,
         }
 
         self.logger.debug(checkpoint)
@@ -410,9 +388,13 @@ class Trainer(AbstractTrainer):
                 os.remove(path_to_best)
             os.symlink(path_to_save, path_to_best)
 
-    def _save_generated_text(self, generated_corpus: List[str]):
+    def _save_generated_text(self, generated_corpus: List[str], valid_idx: Optional[int] = None):
         r"""Store the generated text by our model into `self.saved_text_filename`."""
-        with open(self.saved_text_filename + '.txt', 'w') as fout:
+        path_to_save = self.saved_text_filename
+        if valid_idx:
+            path_to_save += '_epoch-' + str(valid_idx)
+        path_to_save += '.txt'
+        with open(path_to_save, 'w') as fout:
             for text in generated_corpus:
                 fout.write(text + '\n')
 
@@ -432,7 +414,6 @@ class Trainer(AbstractTrainer):
 
         # load start epoch and early stopping
         self.start_epoch = checkpoint['epoch'] + 1
-        # self.stopping_count = checkpoint['stopping_count'] or checkpoint['cur_step']
         self.stopping_count = checkpoint['stopping_count']
         self._best_valid_score = checkpoint['best_valid_score']
         self.valid_result_list = checkpoint['summary']
@@ -469,7 +450,7 @@ class Trainer(AbstractTrainer):
             train_data: AbstractDataLoader,
             valid_data: Optional[AbstractDataLoader] = None,
     ) -> dict:
-        r"""Train the model based on the train data and the valid data.
+        r"""Train the model based on the train data.
 
         Args:
             train_data: The dataloader of training set.
@@ -477,10 +458,6 @@ class Trainer(AbstractTrainer):
 
         Returns:
              dict: the best valid score and best valid result.
-
-        Todo:
-            * Complete the docstring.
-            * Modify the return value.
         """
 
         self.model, self.optimizer = self.accelerator.prepare(self.model, self.optimizer)
@@ -511,10 +488,7 @@ class Trainer(AbstractTrainer):
         r""" Return True if valid score has been lower than best score for `stopping_steps` steps.
 
         Args:
-            valid_tracker: contain valid information (loss and metrics score)
-
-        Todo:
-            * Abstract results.
+            score: Score that about to update `self._best_valid_score` of current validation.
         """
 
         stop_flag = False
@@ -537,6 +511,7 @@ class Trainer(AbstractTrainer):
             model_file: Optional[str] = None,
             _eval: bool = True,
             is_valid: bool = False,
+            valid_idx: Optional[int] = None,
     ) -> Optional[dict]:
         r"""Evaluate the model based on the `eval_data`.
 
@@ -548,12 +523,10 @@ class Trainer(AbstractTrainer):
                                         trained model file, they can set this parameter.
             _eval: (default = True) True to evaluate and False to preview generation only.
             is_valid: (default = False) True if evaluate during validation
+            valid_idx: (default = None) Validation index if `is_valid` is True.
 
         Returns:
             dict: eval result, key is the eval metric and value in the corresponding metric value
-
-        Todo:
-            * perform either loss or evaluation according to 'eval_metrics'
         """
         if is_valid:
             load_best_model = False
@@ -573,13 +546,6 @@ class Trainer(AbstractTrainer):
         
         self.model.eval()
 
-        # preview only
-        if not _eval or len(self.metrics) == 0: # ???
-            generate_sentence = self.model.generate(next(eval_data), eval_data)
-            generate_sentence = ' '.join(generate_sentence[0])
-            self.logger.info('Generation Preview: ' + generate_sentence)
-            return {"preview": generate_sentence}
-
         # generate
         generate_corpus = []
         eval_tqdm = tqdm(eval_data, desc="generating", dynamic_ncols=True) if not self.disable_tqdm else eval_data
@@ -587,8 +553,7 @@ class Trainer(AbstractTrainer):
             generated = self.accelerator.unwrap_model(self.model).generate(batch_data, eval_data, self.accelerator)
             generate_corpus.extend(generated)
         reference_corpus = eval_data.dataset.target_text
-        if not is_valid:
-            self._save_generated_text(generate_corpus)
+        self._save_generated_text(generate_corpus, valid_idx)
         if self._summary_tracker is not None and not self._summary_tracker.tracker_finished:
             self._summary_tracker.add_corpus('corpus', generate_corpus)
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
@@ -600,4 +565,3 @@ def _process_metrics(metrics: Union[str, List[str]]) -> Set[str]:
     if isinstance(metrics, str):
         metrics = (metrics, )
     return set(metrics)
-

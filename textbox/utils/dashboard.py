@@ -41,7 +41,7 @@ class SummaryTracker:
         self.tracker_finished = False
         self.metrics_for_best_model: Set[str] = metrics_for_best_model
 
-        if (self._is_local_main_process):
+        if self._is_local_main_process:
             self._run = wandb.init(**kwargs)
             for axe in axes_label:
                 wandb.define_metric(axe)
@@ -104,7 +104,7 @@ class SummaryTracker:
         self.current_epoch.on_epoch_end()
 
     def add_text(self, tag: str, text_string: str):
-        if (self._is_local_main_process):
+        if self._is_local_main_process:
             if tag not in self._tables:
                 self._tables[tag] = wandb.Table(columns=[train_step, tag])
             self._tables[tag].add_data(self._axes[train_step], text_string)
@@ -112,7 +112,7 @@ class SummaryTracker:
     def add_scalar(self, tag: str, scalar_value: Union[float, int]):
         info = {tag: scalar_value}
         info.update(self._axes)
-        if (self._is_local_main_process):
+        if self._is_local_main_process:
             wandb.log(info, step=self._axes['train/step'])
 
     def add_any(self, tag: str, any_value: Union[str, float, int]):
@@ -122,7 +122,7 @@ class SummaryTracker:
             self.add_scalar(tag, any_value)
 
     def add_corpus(self, tag: str, corpus: Iterable[str]):
-        if (self._is_local_main_process):
+        if self._is_local_main_process:
             corpus = wandb.Table(columns=[tag], data=pd.DataFrame(corpus))
             wandb.log({tag: corpus}, step=self._axes[train_step])
 
@@ -130,9 +130,9 @@ class SummaryTracker:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self._email:
-            wandb.alert(title="Training Finished", text="The training is finished.")
         if (self._is_local_main_process):
+            if self._email:
+                wandb.alert(title="Training Finished", text="The training is finished.")
             wandb.log(self._tables)
             self._run.finish()
         self.tracker_finished = True

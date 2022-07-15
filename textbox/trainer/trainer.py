@@ -68,7 +68,6 @@ class Trainer(AbstractTrainer):
     def __init__(self, config: Config, model: AbstractModel, accelerator: Accelerator):
         super(Trainer, self).__init__(config, model)
 
-        self.DDP: bool = config['DDP']
         self.device: torch.device = config['device']
         self.filename = self.config['filename']
         self.accelerator = accelerator
@@ -392,12 +391,6 @@ class Trainer(AbstractTrainer):
 
         # construct state_dict and parameters
         _state_dict = self.accelerator.unwrap_model(self.model).state_dict()
-        if self.DDP and torch.distributed.get_rank() == 0:
-            _new_dict = dict()
-            for key, val in _state_dict["state_dict"].items():
-                changed_key = key[7:] if key.startswith('module.') else key
-                _new_dict[changed_key] = val
-            _state_dict = _new_dict
 
         # get optimizer, config and validation summary
         checkpoint = {
@@ -472,12 +465,6 @@ class Trainer(AbstractTrainer):
                 'Architecture configuration given in config file is different from that of checkpoint. '
                 'This may yield an exception while state_dict is being loaded.'
             )
-        if self.DDP:
-            saved_dict = collections.OrderedDict()
-            for state_dict_key, state_dict_val in checkpoint['state_dict'].items():
-                changed_key = 'module.' + state_dict_key
-                saved_dict[changed_key] = state_dict_val
-            checkpoint['state_dict'] = saved_dict
         self.model.load_state_dict(checkpoint['state_dict'])
 
         # load optimizer state from checkpoint only when optimizer type is not changed

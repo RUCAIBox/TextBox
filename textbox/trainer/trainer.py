@@ -89,12 +89,13 @@ class Trainer(AbstractTrainer):
         # Training strategy
         self.start_epoch = 0
         r"""Start epoch index. That is, `epoch_idx` iterates through `range(self.start_epoch, self.epochs)`"""
-        self.epochs: int = config['epochs']
+        self.epochs = config['epochs']
         r"""End epoch index + 1, aka max iteration times. That is, `epoch_idx` iterates through 
         `range(self.start_epoch, self.epochs)`"""
-        self.epoch_idx: int = -1
+        self.epoch_idx = -1
         r"""current epoch index"""
-        self.max_steps = config['max_steps']  # max batch step
+        self.max_steps = config['max_steps']  # max training batch step
+        self.step_idx = -1
 
         self.best_epoch = -1
         self._best_valid_score = -math.inf
@@ -107,9 +108,7 @@ class Trainer(AbstractTrainer):
         self.stopping_count = 0
 
         # Evaluation strategy
-        self.metrics = _process_metrics(self.config["metrics"])
-        self.metrics_for_best_model = _process_metrics(self.config["metrics_for_best_model"]) # not used?
-        self.evaluator = BaseEvaluator(config, self.metrics)
+        self.evaluator = BaseEvaluator(config, self.config["metrics"])
 
         # Functionality
         ensure_dir(config['checkpoint_dir'])
@@ -245,6 +244,10 @@ class Trainer(AbstractTrainer):
             train_tqdm = train_data
 
         for step, data in enumerate(train_tqdm):
+            self.step_idx += 1
+            if self.step_idx == self.max_steps:
+                self.stopped = True
+                break
             self.optimizer.zero_grad()
 
             loss = self.model(data, epoch_idx=epoch_idx)
@@ -260,8 +263,8 @@ class Trainer(AbstractTrainer):
 
             if valid_data:
                 self.stopped &= self._valid(valid_data, epoch_idx, 'step')
-                if self.stopped:
-                    break
+            if self.stopped:
+                break
 
         self._summary_tracker.on_epoch_end()
 
@@ -495,8 +498,8 @@ class Trainer(AbstractTrainer):
                 # valid
                 if valid_data:
                     self.stopped &= self._valid(valid_data, epoch_idx, 'epoch')
-                    if self.stopped:
-                        break
+                if self.stopped:
+                    break
 
         self.logger.info('====== Finished training, best eval result in epoch {} ======'.format(self.best_epoch))
 

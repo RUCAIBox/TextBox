@@ -266,15 +266,18 @@ class Trainer(AbstractTrainer):
             self.optimizer.zero_grad()
 
             loss = self.model(data, epoch_idx=epoch_idx)
-            self._summary_tracker.append_loss(loss)
-            if not self.disable_tqdm:
-                train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
 
             if self.grad_clip is not None:
                 self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
             self.accelerator.backward(loss / self.accumulation_steps)
             if (step + 1) % self.accumulation_steps == 0 or (step + 1) == len(train_tqdm):
                 self.optimizer.step()
+
+            losses = self.accelerator.gather(loss)
+            losses = losses.mean()
+            self._summary_tracker.append_loss(losses)
+            if not self.disable_tqdm:
+                train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
 
             if valid_data:
                 self.stopped &= self._valid(valid_data, epoch_idx, 'step')
@@ -313,7 +316,9 @@ class Trainer(AbstractTrainer):
             valid_tqdm = valid_data
         for data in valid_tqdm:
             loss = self.model(data)
-            self._summary_tracker.append_loss(loss)
+            losses = self.accelerator.gather(loss)
+            losses = losses.mean()
+            self._summary_tracker.append_loss(losses)
             if not self.disable_tqdm:
                 valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
 
@@ -378,6 +383,9 @@ class Trainer(AbstractTrainer):
         Todo:
             * Checkpoint save which files?
         """
+        if not self.accelerator.is_local_main_process:
+            return
+
         if len(self.valid_result_list) == 0:
             self.logger.warning('Save checkpoint failed. No validation has been performed.')
             return
@@ -427,6 +435,8 @@ class Trainer(AbstractTrainer):
 
     def _save_generated_text(self, generated_corpus: List[str]):
         r"""Store the generated text by our model into `self.saved_text_filename`."""
+        if not self.accelerator.is_local_main_process:
+            return
         with open(self.saved_text_filename + '.txt', 'w') as fout:
             for text in generated_corpus:
                 fout.write(text + '\n')
@@ -602,6 +612,7 @@ class Trainer(AbstractTrainer):
             generated = self.accelerator.unwrap_model(self.model).generate(batch_data, eval_data, self.accelerator)
             generate_corpus.extend(generated)
         reference_corpus = eval_data.dataset.target_text
+        generate_corpus = generate_corpus[:len(reference_corpus)]
         if not is_valid:
             self._save_generated_text(generate_corpus)
         if self._summary_tracker is not None and not self._summary_tracker.tracker_finished:

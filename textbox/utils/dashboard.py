@@ -86,7 +86,7 @@ class SummaryTracker:
         for metric, result in results.items():
             self.add_any('metrics/' + metric, result)
             if not isinstance(result, str):
-                self.current_epoch.update_metrics(metric=result)
+                self.current_epoch.update_metrics({metric: result})
 
     @property
     def epoch_score(self) -> float:
@@ -129,7 +129,7 @@ class SummaryTracker:
     def add_corpus(self, tag: str, corpus: Iterable[str]):
         if self._is_local_main_process and not self.tracker_finished:
             corpus = wandb.Table(columns=[tag], data=pd.DataFrame(corpus))
-            #wandb.log({tag: corpus}, step=self._axes[train_step])
+            wandb.log({tag: corpus}, step=self._axes[train_step])
 
     def on_experiment_end(self):
         if self._is_local_main_process:
@@ -262,13 +262,13 @@ class EpochTracker:
         r"""Output loss with epoch and time information."""
         def add_metric(_k, _v):
             _o = ', '
-            if _k in self.metrics_for_best_model:
+            if _k.lower() in self.metrics_for_best_model:
                 _o += '<'
             if isinstance(_v, str):
                 _o += f'{_k}: "{_v[:15]}..."'
             elif isinstance(_v, float):
                 _o += f'{_k}: {_v:.4f}'
-            if _k in self.metrics_for_best_model:
+            if _k.lower() in self.metrics_for_best_model:
                 _o += '>'
             return _o
 

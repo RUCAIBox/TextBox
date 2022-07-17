@@ -360,7 +360,7 @@ class Trainer(AbstractTrainer):
             'best_valid_score': self._best_valid_score,
             'epoch': self.epoch_idx,
             'config': self.config,
-            'summary': self.valid_result_list,
+            'summary': self.valid_result_list[-1],
         }
 
         self.logger.debug(checkpoint)

@@ -5,7 +5,7 @@ import yaml
 import torch
 from logging import getLogger
 
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union, Iterable
 
 from textbox.utils.utils import get_local_time
 from textbox.utils.argument_list import general_arguments, training_arguments, evaluation_arguments
@@ -240,8 +240,11 @@ class Config(object):
         return final_config_dict
 
     def _simplify_parameter(self, key: str):
-        if key in self.final_config_dict and isinstance(self.final_config_dict[key], str):
-            self.final_config_dict[key] = self.final_config_dict[key].lower()
+        if key in self.final_config_dict:
+            if isinstance(self.final_config_dict[key], str):
+                self.final_config_dict[key] = self.final_config_dict[key].lower()
+            elif isinstance(self.final_config_dict[key], list):
+                self.final_config_dict[key] = [x.lower() for x in self.final_config_dict[key]]
 
     def _set_default_parameters(self):
         self.final_config_dict['dataset'] = self.dataset
@@ -257,6 +260,7 @@ class Config(object):
         self._simplify_parameter('src_lang')
         self._simplify_parameter('tgt_lang')
         self._simplify_parameter('task_type')
+        self._simplify_parameter('metrics_for_best_model')
 
     def _init_device(self):
         if 'use_gpu' not in self.external_config_dict:

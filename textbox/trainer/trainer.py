@@ -116,9 +116,7 @@ class Trainer(AbstractTrainer):
         self.saved_text_filename: str = os.path.join(config['generated_text_dir'], self.filename)
 
         self.disable_tqdm = not self.accelerator.is_local_main_process
-        self.logdir = './log/'
-        self._dashboard_getter = get_dashboard(self.logdir, config)
-        self._summary_tracker: Optional[SummaryTracker] = None
+        self._summary_tracker = get_dashboard()
 
     def _set_eval_strategy(self) -> Tuple[int, str]:
         r"""Check evaluation strategy. Default = (1, "epoch") If both `eval_epoch` and `eval_step` are specified,
@@ -398,6 +396,8 @@ class Trainer(AbstractTrainer):
             for text in generated_corpus:
                 fout.write(text + '\n')
 
+        self._summary_tracker.add_corpus('epoch-' + str(valid_idx), generated_corpus)
+
     def resume_checkpoint(self, resume_file: str):
         r"""Load the model parameters information and training information.
 
@@ -463,20 +463,18 @@ class Trainer(AbstractTrainer):
         self.model, self.optimizer = self.accelerator.prepare(self.model, self.optimizer)
 
         self.logger.info("====== Start training ======")
-        with self._dashboard_getter() as summary_tracker:
-            self.accelerator.wait_for_everyone()
-            self._summary_tracker = summary_tracker
-            for epoch_idx in range(self.start_epoch, self.epochs):
-                self.epoch_idx = epoch_idx
-                # train
-                self._train_epoch(train_data, epoch_idx, valid_data)
-                self.train_loss_list.append(summary_tracker.epoch_loss)
+        self.accelerator.wait_for_everyone()
+        for epoch_idx in range(self.start_epoch, self.epochs):
+            self.epoch_idx = epoch_idx
+            # train
+            self._train_epoch(train_data, epoch_idx, valid_data)
+            self.train_loss_list.append(self._summary_tracker.epoch_loss)
 
-                # valid
-                if valid_data:
-                    self.stopped &= self._valid(valid_data, epoch_idx, 'epoch')
-                if self.stopped:
-                    break
+            # valid
+            if valid_data:
+                self.stopped &= self._valid(valid_data, epoch_idx, 'epoch')
+            if self.stopped:
+                break
 
         self.logger.info('====== Finished training, best eval result in epoch {} ======'.format(self.best_epoch))
 
@@ -554,8 +552,6 @@ class Trainer(AbstractTrainer):
             generate_corpus.extend(generated)
         reference_corpus = eval_data.dataset.target_text
         self._save_generated_text(generate_corpus, valid_idx)
-        if self._summary_tracker is not None and not self._summary_tracker.tracker_finished:
-            self._summary_tracker.add_corpus('corpus', generate_corpus)
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
 
         return result

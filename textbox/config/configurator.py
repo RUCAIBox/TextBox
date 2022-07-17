@@ -251,6 +251,7 @@ class Config(object):
         self.final_config_dict['filename'] = '{}-{}-{}'.format(
             self.final_config_dict['model'], self.final_config_dict['dataset'], get_local_time()
         )
+        self.final_config_dict['logdir'] = './log/'
         self._simplify_parameter('optimizer')
         self._simplify_parameter('scheduler')
         self._simplify_parameter('src_lang')

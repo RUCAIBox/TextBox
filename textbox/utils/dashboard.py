@@ -5,6 +5,7 @@ Todo:
     * wandb: resume?
 """
 import math
+import os
 from time import time
 
 import pandas as pd
@@ -12,7 +13,7 @@ import torch
 from logging import getLogger, Logger
 import wandb
 
-from typing import Optional, List, Union, Iterable, Callable, Dict, Collection, Set
+from typing import Optional, Union, Iterable, Dict, Collection, Set
 from textbox.config.configurator import Config
 
 train_step = 'train/step'
@@ -109,10 +110,14 @@ class SummaryTracker:
                 self._tables[tag] = wandb.Table(columns=[train_step, tag])
             self._tables[tag].add_data(self._axes[train_step], text_string)
 
+    def flush_text(self):
+        wandb.log(self._tables)
+        self._tables = dict()
+
     def add_scalar(self, tag: str, scalar_value: Union[float, int]):
         info = {tag: scalar_value}
         info.update(self._axes)
-        if self._is_local_main_process:
+        if self._is_local_main_process and not self.tracker_finished:
             wandb.log(info, step=self._axes['train/step'])
 
     def add_any(self, tag: str, any_value: Union[str, float, int]):
@@ -122,18 +127,15 @@ class SummaryTracker:
             self.add_scalar(tag, any_value)
 
     def add_corpus(self, tag: str, corpus: Iterable[str]):
-        if self._is_local_main_process:
+        if self._is_local_main_process and not self.tracker_finished:
             corpus = wandb.Table(columns=[tag], data=pd.DataFrame(corpus))
-            wandb.log({tag: corpus}, step=self._axes[train_step])
+            #wandb.log({tag: corpus}, step=self._axes[train_step])
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if (self._is_local_main_process):
+    def on_experiment_end(self):
+        if self._is_local_main_process:
             if self._email:
                 wandb.alert(title="Training Finished", text="The training is finished.")
-            wandb.log(self._tables)
+            self.flush_text()
             self._run.finish()
         self.tracker_finished = True
 
@@ -158,6 +160,9 @@ class EpochTracker:
         >>>     valid_tracker.set_result({"metric1": 1.0})
         >>>     valid_tracker.info(time_duration=10.0)
         Epoch 0,  validating [time: 10.00s, validating_loss: 1.0000]
+
+    Todo:
+        * Update docstring
     """
 
     def __init__(self, DDP: bool, mode: str, epoch_idx: int, metrics_for_best_model: Set[str]):
@@ -211,9 +216,12 @@ class EpochTracker:
         self._valid_metrics_results.update(kwargs)
 
     def as_dict(self) -> dict:
-        results = {'loss': self.avg_loss}
         if self._valid_metrics_results:
-            results.update(self._valid_metrics_results)
+            results = self._valid_metrics_results
+        else:
+            results = {}
+        if self._accumulate_step != 0:
+            results.update(loss=self.avg_loss)
         return results
 
     def calc_score(self) -> float:
@@ -244,7 +252,7 @@ class EpochTracker:
         return score
 
     def _loss_all_reduce(self):
-        if self._DDP:
+        if self._DDP and self._accumulate_step != 0:
             _loss = torch.tensor(self.avg_loss, device="cuda")
             torch.distributed.all_reduce(_loss, op=torch.distributed.ReduceOp.SUM)
             _loss /= torch.distributed.get_world_size()
@@ -278,10 +286,12 @@ class EpochTracker:
         self._logger.info(output)
 
 
-def get_dashboard(
-        logdir: str,
+root: Optional[SummaryTracker] = None
+
+
+def init_dashboard(
         config: Config,
-) -> Callable[[], SummaryTracker]:
+) -> SummaryTracker:
     r"""Get the dashboard class.
 
     Args:
@@ -299,22 +309,39 @@ def get_dashboard(
         >>>         tbw.update_axes("train/step")
         >>>         ...
 
+    Todo:
+        * Update docstring
+
     """
+    os.environ["WANDB_SILENT"] = "true"
+
+    global root
+    if root is not None:
+        return root
+
     project = f"{config['model']}-{config['dataset']}"
     name = config['filename'][len(project) + 1:]
 
-    def _get_wandb():
-        return SummaryTracker(
-            DDP=config['DDP'],
-            email=config['email'],
-            is_local_main_process=config['is_local_main_process'],
-            metrics_for_best_model=config['metrics_for_best_model'],
-            kwargs=dict(
-                dir=logdir,
-                project=project,
-                name=name,
-                config=config.final_config_dict
-            )
+    root = SummaryTracker(
+        DDP=config['DDP'],
+        email=config['email'],
+        is_local_main_process=config['is_local_main_process'],
+        metrics_for_best_model=config['metrics_for_best_model'],
+        kwargs=dict(
+            dir=config['logdir'],
+            project=project,
+            name=name,
+            config=config.final_config_dict
         )
+    )
 
-    return _get_wandb
+    return root
+
+
+def finish_dashboard():
+    root.on_experiment_end()
+
+
+def get_dashboard() -> SummaryTracker:
+    assert root is not None, "Please initialize dashboard first."
+    return root

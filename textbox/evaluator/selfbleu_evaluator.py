@@ -10,7 +10,7 @@ class SelfBleuEvaluator(AbstractEvaluator):
     def __init__(self, config):
         super(SelfBleuEvaluator, self).__init__(config)
         self.max_ngrams = config['self_bleu_max_ngrams']
-        self.ngrams = ['Self-BLEU-{}'.format(n) for n in range(1, self.max_ngrams + 1)]
+        self.ngrams = ['self-bleu-{}'.format(n) for n in range(1, self.max_ngrams + 1)]
         self._generate_weights()
     
     def _generate_weights(self):

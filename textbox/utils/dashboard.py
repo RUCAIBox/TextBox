@@ -29,7 +29,6 @@ class SummaryTracker:
 
     def __init__(
             self,
-            DDP: bool,
             kwargs: dict,
             is_local_main_process: bool,
             metrics_for_best_model: Set[str],
@@ -37,7 +36,6 @@ class SummaryTracker:
     ):
         self._axes = dict.fromkeys(axes_label, 0)
         self._email = email
-        self._DDP = DDP
         self._is_local_main_process = is_local_main_process
         self.tracker_finished = False
         self.metrics_for_best_model: Set[str] = metrics_for_best_model
@@ -58,7 +56,7 @@ class SummaryTracker:
         self.current_mode = mode
         axe = mode + '/epoch'
         self.update_axe(axe)
-        self.current_epoch = EpochTracker(self._DDP, mode, self._axes[axe], self.metrics_for_best_model)
+        self.current_epoch = EpochTracker(mode, self._axes[axe], self.metrics_for_best_model)
         self.current_epoch.on_epoch_start()
 
     def append_loss(self, loss: Union[float, torch.Tensor]):
@@ -75,9 +73,6 @@ class SummaryTracker:
     @property
     def epoch_loss(self) -> float:
         r"""Loss of this epoch. Average loss will be calculated and returned.
-
-        Notes:
-            If DDP is enabled and `loss_all_reduce()` has been called, average loss of all machines will be returned.
         """
         return self.current_epoch.avg_loss
 
@@ -147,14 +142,13 @@ class EpochTracker:
 
     Args:
         epoch_idx: Current epoch index.
-        DDP: Whether the Pytorch DDP is enabled.
         mode: Optional (default = True)
             Train or eval mode.
 
     Example:
         >>> tbw = TensorboardWriter("log/dir", "filename")
         >>> for epoch in range(10):
-        >>>     valid_tracker = EpochTracker(epoch, DDP=False, train=False, dashboard=tbw)
+        >>>     valid_tracker = EpochTracker(epoch, train=False, dashboard=tbw)
         >>>     for step in range(10):
         >>>         valid_tracker.append_loss(1.0)
         >>>     valid_tracker.set_result({"metric1": 1.0})
@@ -165,7 +159,7 @@ class EpochTracker:
         * Update docstring
     """
 
-    def __init__(self, DDP: bool, mode: str, epoch_idx: int, metrics_for_best_model: Set[str]):
+    def __init__(self, mode: str, epoch_idx: int, metrics_for_best_model: Set[str]):
 
         # loss
         self._avg_loss: float = 0.
@@ -179,7 +173,6 @@ class EpochTracker:
         self._score: Optional[float] = None
 
         self._logger: Logger = getLogger()
-        self._DDP: bool = DDP
         self._start_time: Optional[float] = None
         self._end_time: Optional[float] = None
         self.mode_tag = mode
@@ -252,11 +245,7 @@ class EpochTracker:
         return score
 
     def _loss_all_reduce(self):
-        if self._DDP and self._accumulate_step != 0:
-            _loss = torch.tensor(self.avg_loss, device="cuda")
-            torch.distributed.all_reduce(_loss, op=torch.distributed.ReduceOp.SUM)
-            _loss /= torch.distributed.get_world_size()
-            self._reduced_loss = _loss.item()
+        pass
 
     def _epoch_info(self, time_duration):
         r"""Output loss with epoch and time information."""
@@ -323,7 +312,6 @@ def init_dashboard(
     name = config['filename'][len(project) + 1:]
 
     root = SummaryTracker(
-        DDP=config['DDP'],
         email=config['email'],
         is_local_main_process=config['is_local_main_process'],
         metrics_for_best_model=config['metrics_for_best_model'],

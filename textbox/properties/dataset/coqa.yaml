@@ -1,7 +1,7 @@
 src_len: 1024
 tgt_len: 64
-metrics: ['coqa']
-eval_metrics: ['em', 'f1']
+metrics: ['qa']
+metrics_for_best_model: ['em', 'f1']
 
 train_batch_size: 4
 update_freq: 48

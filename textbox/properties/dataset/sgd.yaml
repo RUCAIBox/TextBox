@@ -1,8 +1,11 @@
 src_len: 512
 tgt_len: 64
 truncate: head
-metrics: ['gem']
-eval_metrics: ['bleu', 'meteor', 'rouge']
+metrics: ['bleu', 'rouge', 'meteor']
+metrics_for_best_model: ['bleu', 'rouge-2', 'meteor']
+bleu_type: sacrebleu
+rouge_type: rouge-score
+meteor_type: pycocoevalcap
 
 train_batch_size: 12
 update_freq: 16

@@ -1,8 +1,12 @@
 src_len: 1024
 tgt_len: 64
-metrics: ['squad']
+metrics: ['qa']
+metrics_for_best_model: ['bleu-4', 'meteor', 'rouge-l']
+bleu_type: pycocoevalcap
+rouge_type: pycocoevalcap
+meteor_type: pycocoevalcap
+
 train_batch_size: 4
 update_freq: 48
 eval_batch_size: 16
 prefix: 'Generate the question based on the answer: '
-eval_metrics: ['Bleu_4', 'METEOR', 'ROUGE_L']

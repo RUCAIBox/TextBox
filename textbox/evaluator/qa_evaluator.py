@@ -58,12 +58,12 @@ class QaEvaluator(AbstractEvaluator):
         return func(scores_for_ground_truths)
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus):
-        results = {'EM': [], 'F1': []}
+        results = {'em': [], 'f1': []}
         
         for gen, refs in zip(generate_corpus, reference_corpus):
             em = self._metric_max_over_ground_truths(self._exact_match_score, gen, refs)
             f1 = self._metric_max_over_ground_truths(self._f1_score, gen, refs)
-            results['EM'].append(em * 100)
-            results['F1'].append(f1 * 100)
+            results['em'].append(em * 100)
+            results['f1'].append(f1 * 100)
 
         return results

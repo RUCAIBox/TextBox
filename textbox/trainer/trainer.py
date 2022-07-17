@@ -66,7 +66,6 @@ class Trainer(AbstractTrainer):
     def __init__(self, config: Config, model: AbstractModel, accelerator: Accelerator):
         super(Trainer, self).__init__(config, model)
 
-        self.DDP: bool = config['DDP']
         self.device: torch.device = config['device']
         self.filename = self.config['filename']
         self.accelerator = accelerator
@@ -234,15 +233,18 @@ class Trainer(AbstractTrainer):
             self.optimizer.zero_grad()
 
             loss = self.model(data, epoch_idx=epoch_idx)
-            self._summary_tracker.append_loss(loss)
-            if not self.disable_tqdm:
-                train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
 
             if self.grad_clip is not None:
                 self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
             self.accelerator.backward(loss / self.accumulation_steps)
             if (step + 1) % self.accumulation_steps == 0 or (step + 1) == len(train_tqdm):
                 self.optimizer.step()
+
+            losses = self.accelerator.gather(loss)
+            losses = losses.mean()
+            self._summary_tracker.append_loss(losses)
+            if not self.disable_tqdm:
+                train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
 
             if valid_data:
                 self.stopped &= self._valid(valid_data, epoch_idx, 'step')
@@ -279,7 +281,9 @@ class Trainer(AbstractTrainer):
                 valid_tqdm = valid_data
             for data in valid_tqdm:
                 loss = self.model(data)
-                self._summary_tracker.append_loss(loss)
+                losses = self.accelerator.gather(loss)
+                losses = losses.mean()
+                self._summary_tracker.append_loss(losses)
                 if not self.disable_tqdm:
                     valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
         else:
@@ -339,18 +343,15 @@ class Trainer(AbstractTrainer):
         Save checkpoint every validation as the formate of 'Model-Dataset-Time_epoch-?.pth'. A soft link named
         'Model-Dataset-Time.pth' pointing to the best epoch will be created.
         """
+        if not self.accelerator.is_local_main_process:
+            return
+
         if len(self.valid_result_list) == 0:
             self.logger.warning('Save checkpoint failed. No validation has been performed.')
             return
 
         # construct state_dict and parameters
         _state_dict = self.accelerator.unwrap_model(self.model).state_dict()
-        if self.DDP and torch.distributed.get_rank() == 0:
-            _new_dict = dict()
-            for key, val in _state_dict["state_dict"].items():
-                changed_key = key[7:] if key.startswith('module.') else key
-                _new_dict[changed_key] = val
-            _state_dict = _new_dict
 
         # get optimizer, config and validation summary
         checkpoint = {
@@ -388,6 +389,8 @@ class Trainer(AbstractTrainer):
 
     def _save_generated_text(self, generated_corpus: List[str], valid_idx: Optional[int] = None):
         r"""Store the generated text by our model into `self.saved_text_filename`."""
+        if not self.accelerator.is_local_main_process:
+            return
         path_to_save = self.saved_text_filename
         if valid_idx:
             path_to_save += '_epoch-' + str(valid_idx)
@@ -428,12 +431,6 @@ class Trainer(AbstractTrainer):
                 'Architecture configuration given in config file is different from that of checkpoint. '
                 'This may yield an exception while state_dict is being loaded.'
             )
-        if self.DDP:
-            saved_dict = collections.OrderedDict()
-            for state_dict_key, state_dict_val in checkpoint['state_dict'].items():
-                changed_key = 'module.' + state_dict_key
-                saved_dict[changed_key] = state_dict_val
-            checkpoint['state_dict'] = saved_dict
         self.model.load_state_dict(checkpoint['state_dict'])
 
         # load optimizer state from checkpoint only when optimizer type is not changed
@@ -551,6 +548,7 @@ class Trainer(AbstractTrainer):
             generated = self.accelerator.unwrap_model(self.model).generate(batch_data, eval_data, self.accelerator)
             generate_corpus.extend(generated)
         reference_corpus = eval_data.dataset.target_text
+        generate_corpus = generate_corpus[:len(reference_corpus)]
         self._save_generated_text(generate_corpus, valid_idx)
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
 

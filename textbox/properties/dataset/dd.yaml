@@ -3,7 +3,7 @@ tgt_len: 64
 truncate: head
 metrics: ['bleu', 'distinct']
 smoothing_function: 7
-eval_metrics: ['bleu-1', 'bleu-2', 'bleu-3', 'bleu-4']
+metrics_for_best_model: ['bleu-1', 'bleu-2', 'bleu-3', 'bleu-4']
 
 train_batch_size: 8
 update_freq: 24

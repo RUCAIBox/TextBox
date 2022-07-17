@@ -1,7 +1,7 @@
 src_len: 1024
 tgt_len: 128
 metrics: ['bleu']
-eval_metrics: ['overall']
+metrics_for_best_model: ['overall']
 
 train_batch_size: 4
 update_freq: 48

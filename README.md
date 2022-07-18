@@ -5,7 +5,7 @@
 - [ ] Resume training (default) Loading existing parameters? (add an options) Work with trainer checkpoint
 - [ ] Only generation and only evaluation. (`--do_train --do_test --do_eval`)
 - [ ] Quick test the whole pipeline (and `max_length`). Work with dataloader. (`--quick_test` with lazy load using `fseek`)
-- [ ] Logger with DDP
+- [x] Logger with DDP
 - [ ] Reminder through email (wandb)
 - [ ] Hyper-parameter tuning (e.g. batch-size 16, 32, 64) (https://github.com/RUCAIBox/RecBole/blob/master/run_hyper.py, https://recbole.io/docs/user_guide/usage/parameter_tuning.html) (without saving model)
 - [ ] Run on several random seeds and average their results (without saving model)
@@ -16,7 +16,6 @@
 - **Do not use `import *`**
 
 ## Config
-- [ ] Argparse & config?
 - [ ] Config check (user should add their own config in a file, eg `argument_list`)
 - [ ] Print all the config and command line (is `argument_list.py` necessary?) (maybe 3 classes `general`, `model` and `dataset`)
 - [ ] Simplify `init_logger`, remove `is_logger` and support user-defined filename
@@ -24,8 +23,8 @@
 
 ## Dataset / Dataloader
 ### Overall
-- [ ] Use `dataset` and `dataloader` from PyTorch, only with `source_id`, `source_text`, `target_id`, `target_text`. (optional `target_id`, `target_text`)
-- [ ] Load tokenizer and tokenize text here (support tokenize and token2idx seprately)
+- [x] Use `dataset` and `dataloader` from PyTorch, only with `source_id`, `source_text`, `target_id`, `target_text`. (optional `target_id`, `target_text`)
+- [x] Load tokenizer and tokenize text here (support tokenize and token2idx seprately)
 - [ ] Download and process dataset automatically
 - [ ] Save processed files. How to check is config or file changed? (maybe with md5 of config and files)
 - [ ] *Max-token?
@@ -43,7 +42,7 @@
 
 ## Trainer
 ### Efficiency
-- [ ] Multi-GPU with `accelerate`? Need to research! (PyTorch or accelerate)
+- [x] Multi-GPU with `accelerate`? Need to research! (PyTorch or accelerate)
     - [ ] check `find_unused_parameters`
     - [ ] will our scheduler be impacted
 ```
@@ -58,12 +57,12 @@ https://github.com/huggingface/transformers/blob/main/examples/pytorch/summariza
 https://github.com/huggingface/transformers/blob/main/examples/pytorch/summarization/run_summarization_no_trainer.py
 ```
 - [ ] Fast generation (with https://github.com/microsoft/fastseq or https://github.com/bytedance/lightseq/tree/master/lightseq/training )
-- [ ] Multi-GPU generation (divide data to multiple GPUs for generation.) Is it possible? Under DDP?
-- [ ] *FP16 (HF? or Pytorch?)
+- [x] Multi-GPU generation (divide data to multiple GPUs for generation.) Is it possible? Under DDP?
+- [x] *FP16 (HF? or Pytorch?)
 ### Useful features
-- [ ] WanDB to record loss and metric
-- [ ] Support train and valid for several steps
-- [ ] Support generation and evaluation during validation
+- [x] WanDB to record loss and metric
+- [x] Support train and valid for several steps
+- [x] Support generation and evaluation during validation
 ### Save checkpoint
 - [ ] Checkpoint format? (following HF?)
 ```
@@ -73,26 +72,26 @@ https://github.com/huggingface/transformers/blob/main/examples/pytorch/summariza
         config
         valid results
 ```
-- [ ] Save checkpoint and generated text every validation
+- [x] Save checkpoint and generated text every validation
 ### Others
-- [ ] Check `_check_metrics`
-- [ ] Add optimizer `AdamW` and `Adafactor` (for T5)
-- [ ] Hyper-parameter for optimizer
-- [ ] Only pass tuned parameters (`requires_grad=True`) to optimizer
-- [ ] Simplify useless code
-- [ ] `tqdm` with loss (metric) and `dynamic_ncols=True`
-- [ ] Check `torch.no_grad()`, `model.train()` and `model.eval()`
-- [ ] Move `optimizer` to `trainer` and change name to `scheduler`
+- [x] Check `_check_metrics`
+- [x] Add optimizer `AdamW` and `Adafactor` (for T5)
+- [x] Hyper-parameter for optimizer
+- [x] Only pass tuned parameters (`requires_grad=True`) to optimizer
+- [x] Simplify useless code
+- [x] `tqdm` with loss (metric) and `dynamic_ncols=True`
+- [x] Check `torch.no_grad()`, `model.train()` and `model.eval()`
+- [x] Move `optimizer` to `trainer` and change name to `scheduler`
 
 ## Model
 ### Overall
 - [ ] Automaticly detect model name (case-insensitive)
-- [ ] Simplify code using AutoModel and AutoTokenizer, following HF example
+- [x] Simplify code using AutoModel and AutoTokenizer, following HF example
 - [ ] Model without pre-trained weights
-- [ ] Support `model_name`, `--tokenizer_name` and `--config_name`
-- [ ] Check `__getattr__` in `abstract_model.py`
+- [x] Support `model_name`, `--tokenizer_name` and `--config_name`
+- [x] Check `__getattr__` in `abstract_model.py`
 ### Models in HF
-- [ ] Add OPT
+- [x] Add OPT
 ### Models not in HF
 - [ ] Add UniLM (reproduce results on SQuAD)
 - [ ] Add MASS (reproduce results on SQuAD)
@@ -120,7 +119,7 @@ https://github.com/huggingface/transformers/blob/main/examples/pytorch/summariza
 
 
 ## Evaluator
-- [ ] Unify `base_evaluator`
+- [x] Unify `base_evaluator`
 - [ ] Refactor `files2rouge` and with `try` and `except`
 - [ ] `multi-bleu` traceback
 - [ ] Add TED following https://github.com/PlusLabNLP/AESOP/blob/master/evaluation/eval.py
@@ -128,15 +127,15 @@ https://github.com/huggingface/transformers/blob/main/examples/pytorch/summariza
 - [ ] Check `bert-score` HF logging
 - [ ] Check and remake each dataset (especially, CoQA, webnlg)
 - [ ] Support evaluation for different datasets and task. (how to specify the evaluation method?)
-    - [ ] Text summarization: CNN/Daily Mail (cnndm), XSum (xsum), SAMSum (samsum), and WLE (wle).
-    - [ ] Open-ended dialogue system: PersonaChat (pc), DailyDialog (dd), DSTC7-AVSD (da), and SGD (sgd).
-    - [ ] Data-to-text generation: WebNLG v2.1 (webnlg), WebNLG v3.0 (webnlg2), WikiBio (wikibio), E2E (e2e), DART (dart), and ToTTo (totto).
-    - [ ] Question generation: SQuAD (squadqg) and CoQA (coqaqg).
-    - [ ] Story generation: ROCStories (roc) and WritingPrompts (wp).
-    - [ ] Question answering: SQuAD (squad) and CoQA (coqa).
+    - [x] Text summarization: CNN/Daily Mail (cnndm), XSum (xsum), SAMSum (samsum), and WLE (wle).
+    - [x] Open-ended dialogue system: PersonaChat (pc), DailyDialog (dd), DSTC7-AVSD (da), and SGD (sgd).
+    - [x] Data-to-text generation: WebNLG v2.1 (webnlg), WebNLG v3.0 (webnlg2), WikiBio (wikibio), E2E (e2e), DART (dart), and ToTTo (totto).
+    - [x] Question generation: SQuAD (squadqg) and CoQA (coqaqg).
+    - [x] Story generation: ROCStories (roc) and WritingPrompts (wp).
+    - [x] Question answering: SQuAD (squad) and CoQA (coqa).
     - [ ] Task-oriented dialogue system: MultiWOZ 2.0 (multiwoz).
-    - [ ] Commonsense generation: CommonGen (cg).
-    - [ ] Text simplification: WikiAuto + Turk/ASSET (wia).
+    - [x] Commonsense generation: CommonGen (cg).
+    - [x] Text simplification: WikiAuto + Turk/ASSET (wia).
     - [ ] Paraphrase generation: Quora (comming soon).
     - [ ] Text style transfer: GYAFC-E&M and F&R (comming soon).
 

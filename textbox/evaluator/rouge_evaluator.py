@@ -60,7 +60,7 @@ class RougeEvaluator(AbstractEvaluator):
             for l in output.split('\n'):
                 if l.find('Average_F') >= 0:
                     l = l.split(' ')
-                    results[l[1]] = float(l[3]) * 100
+                    results[l[1].lower()] = float(l[3]) * 100
         
         elif self.rouge_type == 'py-rouge':
             from rouge import Rouge 

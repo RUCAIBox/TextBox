@@ -22,8 +22,7 @@ class AbstractDataLoader(object):
         batch_size (int): The max interaction number for all batch.
     """
 
-    def __init__(self, config, dataset, batch_size=1, shuffle=False, drop_last=True, DDP=False):
-        self.DDP = config['DDP'] and DDP
+    def __init__(self, config, dataset, batch_size=1, shuffle=False, drop_last=True):
         self.config = config
         self.device = config['device']
         self.logger = getLogger()
@@ -32,12 +31,8 @@ class AbstractDataLoader(object):
         self.shuffle = shuffle
         self.drop_last = drop_last
 
-        if self.DDP:
-            self.step = batch_size // torch.distributed.get_world_size()
-            self.pr = batch_size // torch.distributed.get_world_size() * torch.distributed.get_rank()
-        else:
-            self.step = batch_size
-            self.pr = 0
+        self.step = batch_size
+        self.pr = 0
 
         self.std_pr = 0
         self.pr_end = len(self.target_text)
@@ -58,10 +53,7 @@ class AbstractDataLoader(object):
     def __next__(self):
         if (self.drop_last
             and self.std_pr + self.batch_size >= self.pr_end) or (not self.drop_last and self.pr >= self.pr_end):
-            if (self.DDP == True):
-                self.pr = self.batch_size // torch.distributed.get_world_size() * torch.distributed.get_rank()
-            else:
-                self.pr = 0
+            self.pr = 0
             self.std_pr = 0
             raise StopIteration()
 

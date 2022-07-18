@@ -5,7 +5,7 @@ import yaml
 import torch
 from logging import getLogger
 
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union, Iterable
 
 from textbox.utils.utils import get_local_time
 from textbox.utils.argument_list import general_arguments, training_arguments, evaluation_arguments
@@ -54,8 +54,8 @@ class Config(object):
         """
         self._init_parameters_category()
         self.yaml_loader = self._build_yaml_loader()
-        self._load_overall_config()
         self.external_sources = list()
+        self._load_overall_config()
         self.file_config_dict = self._load_config_files(config_file_list)
         self.variable_config_dict = self._load_variable_config_dict(config_dict)
         self.cmd_config_dict = self._load_cmd_line()
@@ -121,6 +121,7 @@ class Config(object):
         current_path = os.path.dirname(os.path.realpath(__file__))
         overall_init_file = os.path.join(current_path, '../properties/overall.yaml')
 
+        self.external_sources.append(overall_init_file)
         if os.path.isfile(overall_init_file):
             with open(overall_init_file, 'r', encoding='utf-8') as f:
                 self.overall_config_dict = yaml.load(f.read(), Loader=self.yaml_loader)
@@ -239,8 +240,11 @@ class Config(object):
         return final_config_dict
 
     def _simplify_parameter(self, key: str):
-        if key in self.final_config_dict and isinstance(self.final_config_dict[key], str):
-            self.final_config_dict[key] = self.final_config_dict[key].lower()
+        if key in self.final_config_dict:
+            if isinstance(self.final_config_dict[key], str):
+                self.final_config_dict[key] = self.final_config_dict[key].lower()
+            elif isinstance(self.final_config_dict[key], list):
+                self.final_config_dict[key] = [x.lower() for x in self.final_config_dict[key]]
 
     def _set_default_parameters(self):
         self.final_config_dict['dataset'] = self.dataset
@@ -250,11 +254,13 @@ class Config(object):
         self.final_config_dict['filename'] = '{}-{}-{}'.format(
             self.final_config_dict['model'], self.final_config_dict['dataset'], get_local_time()
         )
+        self.final_config_dict['logdir'] = './log/'
         self._simplify_parameter('optimizer')
         self._simplify_parameter('scheduler')
         self._simplify_parameter('src_lang')
         self._simplify_parameter('tgt_lang')
         self._simplify_parameter('task_type')
+        self._simplify_parameter('metrics_for_best_model')
 
     def _init_device(self):
         if 'use_gpu' not in self.external_config_dict:
@@ -272,14 +278,6 @@ class Config(object):
                 os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(i) for i in gpu_id)
             else:
                 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
-
-        if 'DDP' not in self.external_config_dict:
-            use_DDP = self.overall_config_dict['DDP']
-        else:
-            use_DDP = self.external_config_dict['DDP']
-
-        if use_DDP:
-            torch.distributed.init_process_group(backend="nccl")
 
         self.external_config_dict['device'] = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
 

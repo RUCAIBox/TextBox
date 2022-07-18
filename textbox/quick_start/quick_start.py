@@ -6,6 +6,7 @@ from textbox.utils.logger import init_logger
 from textbox.utils.utils import get_model, get_tokenizer, get_trainer, init_seed
 from textbox.config.configurator import Config
 from textbox.data.utils import data_preparation
+from textbox.utils.dashboard import init_dashboard, finish_dashboard
 
 
 def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=None):
@@ -32,9 +33,8 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     set_seed(config['seed'])
 
     # logger initialization
-    is_logger = accelerator.is_local_main_process
-
-    init_logger(config['filename'], config['state'], is_logger)
+    init_logger(config['filename'], config['state'], accelerator.is_local_main_process, config['logdir'])
+    init_dashboard(config)
     logger = getLogger()
     logger.info(config)
 
@@ -67,3 +67,4 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
         test_result = trainer.evaluate(test_data)
 
     logger.info('test result: {}'.format(test_result))
+    finish_dashboard()

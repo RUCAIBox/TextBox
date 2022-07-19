@@ -2,6 +2,7 @@ import os
 import datetime
 import importlib
 import random
+from typing import Union, Optional
 
 import torch
 import numpy as np
@@ -30,6 +31,58 @@ def ensure_dir(dir_path: str):
 
     """
     os.makedirs(dir_path, exist_ok=True)
+
+
+def serialized_save(
+        source: Union[dict, list],
+        path_without_extension: str,
+        serial: Optional[int],
+        serial_of_soft_link: Optional[int],
+        tag: Optional[str] = None,
+        overwrite: bool = True,
+        save_method: Optional[str] = None,
+):
+    r"""Store the model parameters information and training information.
+
+    Save checkpoint every validation as the formate of 'Model-Dataset-Time_epoch-?.pth'. A soft link named
+    'Model-Dataset-Time.pth' pointing to the best epoch will be created.
+
+    Todo:
+        * Update docstring
+        - maintain useless files
+        - add save strategy
+    """
+
+    # deal with naming
+    tag = '' if tag is None else '_' + tag
+    if serial is not None:
+        tag += '-' + str(serial)
+
+    path_to_save = os.path.abspath(path_without_extension + tag)
+    if os.path.exists(path_to_save):
+        if overwrite:
+            os.remove(path_to_save)  # behavior of torch.save is not clearly defined.
+        else:
+            path_to_save += get_local_time()
+
+    # save
+    if save_method is None or save_method not in ('txt', 'pth'):
+        save_method = 'txt' if isinstance(source, list) else 'pth'
+    path_to_save += save_method
+
+    if save_method == 'txt':
+        with open(path_to_save, 'w') as fout:
+            for text in source:
+                fout.write(text + '\n')
+    else:
+        torch.save(source, path_to_save)
+
+    # create soft link to best model
+    if serial_of_soft_link == serial:
+        path_to_best = os.path.abspath(path_without_extension + save_method)
+        if os.path.exists(path_to_best):
+            os.remove(path_to_best)
+        os.symlink(path_to_save, path_to_best)
 
 
 def get_model(model_name):

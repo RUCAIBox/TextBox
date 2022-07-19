@@ -14,7 +14,7 @@ from .scheduler import (
 )
 import transformers
 from ..evaluator import BaseEvaluator
-from ..utils import ensure_dir, get_local_time, init_seed
+from ..utils import ensure_dir, serialized_save, init_seed
 from textbox.utils.dashboard import SummaryTracker, get_dashboard
 
 from typing import Optional, Union, List, Tuple, Set
@@ -82,6 +82,7 @@ class Trainer(AbstractTrainer):
         self.accumulation_steps = config['accumulation_steps']
 
         # Training strategy
+        self.quick_test = bool(config['quick_test'])
         self.start_epoch = 0
         r"""Start epoch index. That is, `epoch_idx` iterates through `range(self.start_epoch, self.epochs)`"""
         self.epochs = config['epochs']
@@ -259,13 +260,13 @@ class Trainer(AbstractTrainer):
     def _valid_epoch(
             self,
             valid_data: AbstractDataLoader,
-            idx: int,
+            valid_count: int,
     ) -> dict:
         r"""Valid the model with `valid_data`
 
         Args:
             valid_data: the dataloader of validation set
-            idx: the current epoch index.
+            valid_count: the current epoch index.
 
         Returns:
             dict: Validation losses and results.
@@ -276,7 +277,7 @@ class Trainer(AbstractTrainer):
         if 'loss' in self.metrics_for_best_model:
             self.model.eval()
             if not self.disable_tqdm:
-                valid_tqdm = tqdm(valid_data, desc=f"valid {idx:4}", dynamic_ncols=True, postfix={'loss': None})
+                valid_tqdm = tqdm(valid_data, desc=f"valid {valid_count:4}", dynamic_ncols=True, postfix={'loss': None})
             else:
                 valid_tqdm = valid_data
             for data in valid_tqdm:
@@ -287,7 +288,7 @@ class Trainer(AbstractTrainer):
                 if not self.disable_tqdm:
                     valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
         else:
-            valid_results = self.evaluate(valid_data, is_valid=True, valid_idx=idx)
+            valid_results = self.evaluate(valid_data, is_valid=True, valid_count=valid_count)
             self._summary_tracker.set_metrics_results(valid_results)
 
         self._summary_tracker.on_epoch_end()
@@ -325,8 +326,8 @@ class Trainer(AbstractTrainer):
         self.valid_result_list.append(self._summary_tracker.epoch_dict())
 
         stopped = bool(self.stopping_steps) and self._early_stopping(self._summary_tracker.epoch_score, epoch_idx)
-        
-        if self.accelerator.is_local_main_process:
+
+        if self.is_save():
             self.save_checkpoint()
         self.accelerator.wait_for_everyone()
 
@@ -337,18 +338,13 @@ class Trainer(AbstractTrainer):
         """Retrieve best result dict with index `self.best_epoch` from `self.valid_result_list`."""
         return self.valid_result_list[self.best_epoch]
 
-    def save_checkpoint(self, tag: Optional[str] = None, overwrite: bool = True):
-        r"""Store the model parameters information and training information.
+    def is_save(self) -> bool:
+        return self.accelerator.is_local_main_process and not self.quick_test
 
-        Save checkpoint every validation as the formate of 'Model-Dataset-Time_epoch-?.pth'. A soft link named
-        'Model-Dataset-Time.pth' pointing to the best epoch will be created.
-        """
-        if not self.accelerator.is_local_main_process:
-            return
-
+    def _get_checkpoint(self) -> Optional[dict]:
         if len(self.valid_result_list) == 0:
-            self.logger.warning('Save checkpoint failed. No validation has been performed.')
-            return
+            self.logger.warning('Get checkpoint failed. No validation has been performed.')
+            return None
 
         # construct state_dict and parameters
         _state_dict = self.accelerator.unwrap_model(self.model).state_dict()
@@ -363,43 +359,30 @@ class Trainer(AbstractTrainer):
             'config': self.config,
             'summary': self.valid_result_list[-1],
         }
-
         self.logger.debug(checkpoint)
+        return checkpoint
 
-        # deal with naming
-        if tag is None:
-            tag = '_epoch-' + str(self.epoch_idx)
-        path_to_save = os.path.abspath(self.saved_model_filename + tag)
-        if os.path.exists(path_to_save):
-            if overwrite:
-                os.remove(path_to_save)  # behavior of torch.save is not clearly defined.
-            else:
-                path_to_save += get_local_time()
-        path_to_save += '.pth'
+    def save_checkpoint(self):
+        serialized_save(
+            self._get_checkpoint(),
+            self.saved_model_filename,
+            serial=self.epoch_idx,
+            serial_of_soft_link=self.best_epoch,
+            tag='epoch',
+            save_method='pth'
+        )
 
-        torch.save(checkpoint, path_to_save)
-        self.logger.info('Saving current: {}'.format(path_to_save))
-
-        # create soft link to best model
-        if self.best_epoch == self.epoch_idx:
-            path_to_best = os.path.abspath(self.saved_model_filename + '.pth')
-            if os.path.exists(path_to_best):
-                os.remove(path_to_best)
-            os.symlink(path_to_save, path_to_best)
-
-    def _save_generated_text(self, generated_corpus: List[str], valid_idx: Optional[int] = None):
+    def save_generated_text(self, generated_corpus: List[str], valid_count: Optional[int] = None):
         r"""Store the generated text by our model into `self.saved_text_filename`."""
-        if not self.accelerator.is_local_main_process:
-            return
-        path_to_save = self.saved_text_filename
-        if valid_idx:
-            path_to_save += '_epoch-' + str(valid_idx)
-        path_to_save += '.txt'
-        with open(path_to_save, 'w') as fout:
-            for text in generated_corpus:
-                fout.write(text + '\n')
-
-        self._summary_tracker.add_corpus('epoch-' + str(valid_idx), generated_corpus)
+        serialized_save(
+            generated_corpus,
+            self.saved_text_filename,
+            serial=valid_count,
+            serial_of_soft_link=None,
+            tag='valid',
+            save_method='txt'
+        )
+        self._summary_tracker.add_corpus('valid-' + str(valid_count), generated_corpus)
 
     def resume_checkpoint(self, resume_file: str):
         r"""Load the model parameters information and training information.
@@ -506,7 +489,7 @@ class Trainer(AbstractTrainer):
             model_file: Optional[str] = None,
             _eval: bool = True,
             is_valid: bool = False,
-            valid_idx: Optional[int] = None,
+            valid_count: Optional[int] = None,
     ) -> Optional[dict]:
         r"""Evaluate the model based on the `eval_data`.
 
@@ -518,7 +501,7 @@ class Trainer(AbstractTrainer):
                                         trained model file, they can set this parameter.
             _eval: (default = True) True to evaluate and False to preview generation only.
             is_valid: (default = False) True if evaluate during validation
-            valid_idx: (default = None) Validation index if `is_valid` is True.
+            valid_count: (default = None) Validation index if `is_valid` is True.
 
         Returns:
             dict: eval result, key is the eval metric and value in the corresponding metric value
@@ -549,7 +532,8 @@ class Trainer(AbstractTrainer):
             generate_corpus.extend(generated)
         reference_corpus = eval_data.dataset.target_text
         generate_corpus = generate_corpus[:len(reference_corpus)]
-        self._save_generated_text(generate_corpus, valid_idx)
+        if self.is_save():
+            self.save_generated_text(generate_corpus, valid_count)
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
 
         return result

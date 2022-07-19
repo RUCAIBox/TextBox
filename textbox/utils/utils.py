@@ -2,6 +2,7 @@ import os
 import datetime
 import importlib
 import random
+from logging import getLogger
 from typing import Union, Optional
 
 import torch
@@ -33,6 +34,13 @@ def ensure_dir(dir_path: str):
     os.makedirs(dir_path, exist_ok=True)
 
 
+def get_tag(_tag: str, _serial: int):
+    _tag = '' if _tag is None else '_' + _tag
+    if _serial is not None:
+        _tag += '-' + str(_serial)
+    return _tag
+
+
 def serialized_save(
         source: Union[dict, list],
         path_without_extension: str,
@@ -40,7 +48,8 @@ def serialized_save(
         serial_of_soft_link: Optional[int],
         tag: Optional[str] = None,
         overwrite: bool = True,
-        save_method: Optional[str] = None,
+        extension_name: Optional[str] = None,
+        max_save: int = 0,
 ):
     r"""Store the model parameters information and training information.
 
@@ -54,33 +63,38 @@ def serialized_save(
     """
 
     # deal with naming
-    tag = '' if tag is None else '_' + tag
-    if serial is not None:
-        tag += '-' + str(serial)
-
-    path_to_save = os.path.abspath(path_without_extension + tag)
+    if extension_name not in ('txt', 'pth'):
+        extension_name = 'txt' if isinstance(source, list) else 'pth'
+    path_to_save = os.path.abspath(path_without_extension + get_tag(tag, serial) + '.' + extension_name)
     if os.path.exists(path_to_save):
         if overwrite:
             os.remove(path_to_save)  # behavior of torch.save is not clearly defined.
         else:
             path_to_save += get_local_time()
+    getLogger().info(f'Saving file to {path_to_save}')
 
     # save
-    if save_method is None or save_method not in ('txt', 'pth'):
-        save_method = 'txt' if isinstance(source, list) else 'pth'
-    path_to_save += save_method
-
-    if save_method == 'txt':
+    if extension_name == 'txt':
         with open(path_to_save, 'w') as fout:
             for text in source:
                 fout.write(text + '\n')
     else:
         torch.save(source, path_to_save)
 
-    # create soft link to best model
+    # delete the file before the max_save
+    path_to_best = os.path.abspath(path_without_extension + '.' + extension_name)
+    path_to_previous = os.readlink(path_to_best) if os.path.exists(path_to_best) else None
+    if max_save != 0 and serial - max_save >= 0:
+        path_to_delete = os.path.abspath(
+            path_without_extension + get_tag(tag, serial - max_save) + '.' + extension_name
+        )
+        if not os.path.samefile(path_to_delete, path_to_previous):
+            os.remove(path_to_delete)
+
+    # create soft link
     if serial_of_soft_link == serial:
-        path_to_best = os.path.abspath(path_without_extension + save_method)
-        if os.path.exists(path_to_best):
+        if path_to_previous:
+            os.remove(path_to_previous)
             os.remove(path_to_best)
         os.symlink(path_to_save, path_to_best)
 

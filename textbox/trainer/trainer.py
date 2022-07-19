@@ -115,6 +115,9 @@ class Trainer(AbstractTrainer):
         ensure_dir(config['generated_text_dir'])
         self.saved_text_filename: str = os.path.join(config['generated_text_dir'], self.filename)
 
+        if self.quick_test and config['max_save'] is None:
+            config['max_save'] = 0
+        self.max_save = 1 if config['max_save'] is None else config['max_save']
         self.disable_tqdm = not self.accelerator.is_local_main_process
         self._summary_tracker = get_dashboard()
 
@@ -339,7 +342,7 @@ class Trainer(AbstractTrainer):
         return self.valid_result_list[self.best_epoch]
 
     def is_save(self) -> bool:
-        return self.accelerator.is_local_main_process and not self.quick_test
+        return self.accelerator.is_local_main_process
 
     def _get_checkpoint(self) -> Optional[dict]:
         if len(self.valid_result_list) == 0:
@@ -351,12 +354,14 @@ class Trainer(AbstractTrainer):
 
         # get optimizer, config and validation summary
         checkpoint = {
+            # parameters that needed to be loaded
             'state_dict': _state_dict,
             'optimizer': self.optimizer.state_dict(),
             'stopping_count': self.stopping_count,
             'best_valid_score': self._best_valid_score,
             'epoch': self.epoch_idx,
             'config': self.config,
+            # parameters for recording only
             'summary': self.valid_result_list[-1],
         }
         self.logger.debug(checkpoint)
@@ -369,7 +374,8 @@ class Trainer(AbstractTrainer):
             serial=self.epoch_idx,
             serial_of_soft_link=self.best_epoch,
             tag='epoch',
-            save_method='pth'
+            extension_name='pth',
+            max_save=self.max_save,
         )
 
     def save_generated_text(self, generated_corpus: List[str], valid_count: Optional[int] = None):
@@ -380,7 +386,7 @@ class Trainer(AbstractTrainer):
             serial=valid_count,
             serial_of_soft_link=None,
             tag='valid',
-            save_method='txt'
+            extension_name='txt',
         )
         self._summary_tracker.add_corpus('valid-' + str(valid_count), generated_corpus)
 

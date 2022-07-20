@@ -17,3 +17,5 @@ run_test.py
 /files2rouge/
 /textbox/tests/
 *.json
+.env
+wandb/

@@ -17,3 +17,6 @@ run_test.py
 /files2rouge/
 /textbox/tests/
 *.json
+facebook/
+gpt2/
+t5*/

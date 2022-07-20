@@ -1,7 +1,7 @@
 import os
 from numpy import pad
-from sklearn.svm import l1_min_c
 import torch
+import warnings
 from torch import Tensor
 from typing import List
 from torch.nn.utils.rnn import pad_sequence
@@ -18,6 +18,8 @@ class AbstractDataset(Dataset):
         target_filename = os.path.join(config['data_path'], f'{set}.tgt')
         self.source_text = load_data(source_filename)
         self.target_text = load_data(target_filename)
+        self.source_length = self.config['src_len']
+        self.target_length = self.config['tgt_len']
         if set != 'test':
             assert len(self.source_text) == len(self.target_text)
     
@@ -36,6 +38,25 @@ class AbstractDataset(Dataset):
             })
         return sample
     
+    def _init_process(self):
+        if self.source_length > self.tokenizer.model_max_length:
+            warnings.warn(f"The max length of source text {self.source_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and will be set to {self.tokenizer.model_max_length}.")
+            self.source_length = self.tokenizer.model_max_length
+            
+        if self.target_length > self.tokenizer.model_max_length:
+            warnings.warn(f"The max length of target text {self.target_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and will be set to {self.tokenizer.model_max_length}.")
+            self.target_length = self.tokenizer.model_max_length
+        
+        if self.config['efficient_methods'] and 'prompt-tuning' in self.config['efficient_methods']:
+            prompt_length = self.config['efficient_kwargs']['prompt_length']
+            if self.config['model_name'] in CLM_MODELS:
+                if self.source_length + self.target_length + prompt_length > self.tokenizer.model_max_length:
+                    warnings.warn(f"The length of source text {self.source_length}, target text {self.target_length} and prompt {prompt_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and the max length of source sentence will be set to {self.tokenizer.model_max_length - prompt_length - self.target_length}.")
+                    self.source_length = self.tokenizer.model_max_length - prompt_length - self.target_length
+            elif self.source_length + prompt_length > self.tokenizer.model_max_length:
+                warnings.warn(f"The length of source text {self.source_length} and prompt {prompt_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and the max length of source sentence will be set to {self.tokenizer.model_max_length - prompt_length}.")
+                self.source_length = self.tokenizer.model_max_length - prompt_length
+
     def _process_prompt(self):
         prefix = self.config['prefix_prompt'] or ''
         suffix = self.config['suffix_prompt'] or ''
@@ -43,14 +64,15 @@ class AbstractDataset(Dataset):
         self.prefix_ids = self.tokenizer.encode(prefix, add_special_tokens=False)
         self.suffix_ids = self.tokenizer.encode(suffix, add_special_tokens=False)
 
-        self.source_max_length = self.config['src_len'] - self.tokenizer.num_special_tokens_to_add() - len(self.prefix_ids) - len(self.suffix_ids)
-        self.target_max_length = self.config['tgt_len'] - self.tokenizer.num_special_tokens_to_add()
+        self.source_max_length = self.source_length - self.tokenizer.num_special_tokens_to_add() - len(self.prefix_ids) - len(self.suffix_ids)
+        self.target_max_length = self.target_length - self.tokenizer.num_special_tokens_to_add()
 
         if self.config['model_name'] in ['bert2bert', 'opt']:
             self.target_max_length += 1
 
     def tokenize(self, tokenizer):
         self.tokenizer = tokenizer
+        self._init_process()
         self._process_prompt()
         self.source_ids = []
         source_ids = tokenizer(self.source_text, add_special_tokens=False, return_token_type_ids=False, return_attention_mask=False)['input_ids']

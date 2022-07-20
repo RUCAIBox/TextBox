@@ -27,8 +27,21 @@ eval_batch_size: 64
 # Pretrained model settings
 config_kwargs: {}
 truncate: tail
-tokenizer_kwargs: {'use_fast': True, 'additional_special_tokens': []}
+tokenizer_kwargs: {'use_fast': True} #'additional_special_tokens': None
 generation_kwargs: {'num_beams': 5, 'early_stopping': True}
+# efficient_methods: ['lora']
+# efficient_kwargs: {'lora_r': 4, 'lora_dropout': 0.1, 'lora_alpha': 32}
+# efficient_methods: ['prefix-tuning'] # ['p-tuning-v2']
+# efficient_kwargs: {'prefix_length': 100, 'prefix_dropout': 0.1, 'prefix_mid_dim': 512}
+efficient_methods: ['adapter']
+efficient_kwargs: {'adapter_mid_dim': 64}
+# efficient_methods: ['prompt-tuning']
+# efficient_kwargs: {'prompt_length': 100}
+# efficient_methods: ['bitfit']
+# efficient_kwargs: {}
+# efficient_methods: []
+# efficient_kwargs: {}
+efficient_unfreeze_model: False
 
 # Evaluation settings
 lower_evaluation: True

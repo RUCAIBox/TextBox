@@ -12,6 +12,7 @@
 - [ ] Model deployment (https://clip-as-service.jina.ai/)
 - [ ] Check `print` and `logger.info`
 - [ ] Check `get_model`, `get_trainer`, `get_dataset` and `get_dataloader`
+- [ ] Check `warnings.warn()` and `logger.warning()`
 - **Simplfy import relation, add useful module in `__init__.py`** (for example `PLM_MODELS`)
 - **Do not use `import *`**
 
@@ -106,21 +107,23 @@ https://github.com/huggingface/transformers/blob/main/examples/pytorch/summariza
 - [ ] Add basic Transformer
 - [ ] Model initilazation (for PLM?)
 ### Prompting
-- [ ] Add prompt tuning
-- [ ] Add prefix tuning for GPT-2, BART, T5
-- [ ] Add P-tuningv2 for GPT-2, BART, T5
-- [ ] Add adapter for GPT-2, BART, T5
-- [ ] Add LoRA for GPT-2, BART, T5
-- [ ] Add bias tuning for GPT-2, BART, T5
+- [x] Add prompt tuning
+- [x] Add prefix tuning for GPT-2, BART, T5
+- [x] Add P-tuningv2 for GPT-2, BART, T5
+- [x] Add adapter for GPT-2, BART, T5
+- [x] Add LoRA for BART, T5
+- [ ] Add LoRA, prompt tuning for GPT-2
+- [x] Add bias tuning for GPT-2, BART, T5
+- [ ] Right prompt tuning
 ### *Other models
-- [ ] Add CTRL
+- [x] Add CTRL
 - [ ] Add PPLM
 - [ ] Add non-autoregressive models
 
 
 ## Evaluator
 - [x] Unify `base_evaluator`
-- [ ] Refactor `files2rouge` and with `try` and `except`
+- [ ] Refactor `files2rouge` and with `try` and `except`, and remove empty line
 - [ ] `multi-bleu` traceback
 - [ ] Add TED following https://github.com/PlusLabNLP/AESOP/blob/master/evaluation/eval.py
 - [ ] Name and doc check

@@ -115,9 +115,10 @@ class Trainer(AbstractTrainer):
         ensure_dir(config['generated_text_dir'])
         self.saved_text_filename: str = os.path.join(config['generated_text_dir'], self.filename)
 
-        if self.quick_test and config['max_save'] is None:
-            config['max_save'] = 0
-        self.max_save = 1 if config['max_save'] is None else config['max_save']
+        self.max_save = config['max_save']
+        if self.quick_test and self.max_save is None:
+            self.max_save = 0
+        self.max_save = self.max_save or 2
         self.disable_tqdm = not self.accelerator.is_local_main_process
         self._summary_tracker = get_dashboard()
 
@@ -370,9 +371,9 @@ class Trainer(AbstractTrainer):
     def save_checkpoint(self):
         serialized_save(
             self._get_checkpoint(),
-            self.saved_model_filename,
             serial=self.epoch_idx,
             serial_of_soft_link=self.best_epoch,
+            path_without_extension=self.saved_model_filename,
             tag='epoch',
             extension_name='pth',
             max_save=self.max_save,
@@ -382,9 +383,9 @@ class Trainer(AbstractTrainer):
         r"""Store the generated text by our model into `self.saved_text_filename`."""
         serialized_save(
             generated_corpus,
-            self.saved_text_filename,
             serial=valid_count,
             serial_of_soft_link=None,
+            path_without_extension=self.saved_text_filename,
             tag='valid',
             extension_name='txt',
         )

@@ -6,7 +6,7 @@ from textbox.utils.logger import init_logger
 from textbox.utils.utils import get_model, get_tokenizer, get_trainer, init_seed
 from textbox.config.configurator import Config
 from textbox.data.utils import data_preparation
-from textbox.utils.dashboard import init_dashboard, finish_dashboard
+from textbox.utils.dashboard import init_dashboard, start_dashboard, finish_dashboard
 
 
 def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=None):
@@ -35,6 +35,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     init_dashboard(config)
     logger = getLogger()
     logger.info(config)
+    start_dashboard()
 
     # dataset initialization
     tokenizer = get_tokenizer(config)
@@ -48,6 +49,28 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     # trainer loading and initialization
     trainer = get_trainer(config['model'])(config, model, accelerator)
 
+    if config['test_only']:
+        # test only
+        logger.info('Test only')
+        if not config['load_experiment']:
+            logger.warning('Specific path to model file with `load_experiment`.')
+        test_result = trainer.evaluate(test_data, model_file=config['load_experiment'])
+    else:
+        # checkpoint initialization
+        if config['load_experiment'] is not None:
+            trainer.resume_checkpoint(resume_file=config['load_experiment'])
+        # do_train & do_test
+        result = trainer.fit(train_data, valid_data)
+        # do_eval
+        for key, value in result.items():
+            logger.info(f"{key}: {value}")
+        test_result = trainer.evaluate(test_data)
+
+    # finish
+    logger.info('test result: {}'.format(test_result))
+    finish_dashboard()
+
+    start_dashboard()
     if config['test_only']:
         # test only
         logger.info('Test only')

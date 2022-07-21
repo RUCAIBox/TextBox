@@ -39,18 +39,21 @@ class SummaryTracker:
         self._is_local_main_process = is_local_main_process
         self.tracker_finished = False
         self.metrics_for_best_model: Set[str] = metrics_for_best_model
+        self._run = None
+        self._tables: Dict[str, wandb.data_types.Table] = dict()
+        self.kwargs = kwargs
 
+        self.current_epoch: Optional[EpochTracker] = None
+        self.current_mode: Optional[str] = None
+
+    def on_experiment_start(self):
         if self._is_local_main_process:
-            self._run = wandb.init(**kwargs)
+            self._run = wandb.init(reinit=True, **self.kwargs)
             for axe in axes_label:
                 wandb.define_metric(axe)
             wandb.define_metric("loss/train", step_metric=train_step)
             wandb.define_metric("loss/valid", step_metric=train_step)
             wandb.define_metric("metrics/*", step_metric=train_step)
-            self._tables: Dict[str, wandb.data_types.Table] = dict()
-
-        self.current_epoch: Optional[EpochTracker] = None
-        self.current_mode: Optional[str] = None
 
     def new_epoch(self, mode: str):
         self.current_mode = mode
@@ -324,6 +327,10 @@ def init_dashboard(
     )
 
     return root
+
+
+def start_dashboard():
+    root.on_experiment_start()
 
 
 def finish_dashboard():

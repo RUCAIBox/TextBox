@@ -71,6 +71,17 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     finish_dashboard()
 
     start_dashboard()
+    # dataset initialization
+    tokenizer = get_tokenizer(config)
+    train_data, valid_data, test_data = data_preparation(config, tokenizer)
+    train_data, valid_data, test_data = accelerator.prepare(train_data, valid_data, test_data)
+
+    # model loading and initialization
+    model = get_model(config['model_name'])(config, tokenizer).to(config['device'])
+    logger.info(model)
+
+    # trainer loading and initialization
+    trainer = get_trainer(config['model'])(config, model, accelerator)
     if config['test_only']:
         # test only
         logger.info('Test only')

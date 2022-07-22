@@ -256,7 +256,7 @@ class EpochTracker:
             if isinstance(_v, str):
                 _o += f'{_k}: "{_v[:15]}..."'
             elif isinstance(_v, float):
-                _o += f'{_k}: {_v:.4f}'
+                _o += f'{_k}: {_v:.2f}'
             if _k.lower() in self.metrics_for_best_model:
                 _o += '>'
             return _o

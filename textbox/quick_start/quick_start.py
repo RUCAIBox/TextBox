@@ -10,6 +10,13 @@ from textbox.utils.dashboard import init_dashboard, start_dashboard, finish_dash
 
 
 def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=None):
+    from textbox.quick_start.experiment import Experiment
+    experiment = Experiment(model, dataset, config_file_list, config_dict)
+    experiment.run(do_train=True, do_valid=True, do_test=True)
+
+
+
+def _run_textbox(model=None, dataset=None, config_file_list=None, config_dict=None):
     r""" A fast running api, which includes the complete process of
     training and testing a model on a specified dataset
 
@@ -35,6 +42,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     init_dashboard(config)
     logger = getLogger()
     logger.info(config)
+    # ================ ROUND 1 ================
     start_dashboard()
 
     # dataset initialization
@@ -70,6 +78,7 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
     logger.info('test result: {}'.format(test_result))
     finish_dashboard()
 
+    # ================ ROUND 2 ================
     start_dashboard()
     # dataset initialization
     tokenizer = get_tokenizer(config)

@@ -76,7 +76,7 @@ class RougeEvaluator(AbstractEvaluator):
             from rouge_score import rouge_scorer
             
             rouge_types = [f'rouge{i}' for i in range(1, self.rouge_max_ngrams + 1)] + ["rougeLsum"]
-            rouge = rouge_scorer.RougeScorer(rouge_types=rouge_types, use_stemmer=True)
+            rouge = rouge_scorer.RougeScorer(rouge_types=rouge_types, split_summaries=True, use_stemmer=True)
             results = {k: [] for k in [f'rouge-{i}' for i in range(1, self.rouge_max_ngrams + 1)] + ['rouge-l']}
             for gen, refs in zip(generate_corpus, reference_corpus):
                 scores = [rouge.score(ref, gen) for ref in refs]

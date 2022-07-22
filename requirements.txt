@@ -6,7 +6,7 @@ nltk
 pyyaml
 sentencepiece
 pycocoevalcap
-rouge-score
+rouge-score>=0.0.7
 sacrebleu>=2.0.0
 torch
 bert_score

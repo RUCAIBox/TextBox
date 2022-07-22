@@ -1273,8 +1273,6 @@ class GenerationMixin:
         )
 
         # 8. prepare stopping criteria
-        print(max_length)
-        print(input_ids.shape)
         stopping_criteria = self._get_stopping_criteria(
             max_length=max_length, max_time=max_time, stopping_criteria=stopping_criteria
         )

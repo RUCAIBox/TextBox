@@ -72,9 +72,9 @@ class Trainer(AbstractTrainer):
 
         # Optimization strategy
         self.learning_rate = config['learning_rate']
-        self.optimizer_kwargs = config['optimizer_kwargs']  # parameters other than `lr`
+        self.optimizer_kwargs = {'lr': config['learning_rate']}
+        self.optimizer_kwargs.update(config['optimizer_kwargs'])
         self.adafactor_kwargs = config['adafactor_kwargs']
-        self.optimizer_kwargs.setdefault("weight_decay", 0.01)
         self.scheduler_kwargs = config['scheduler_kwargs']
         self.grad_clip = config['grad_clip']
         self._trainable_parameters = filter(lambda x: x.requires_grad, self.model.parameters())
@@ -176,22 +176,16 @@ class Trainer(AbstractTrainer):
         # dealing with adafactor
         if optimizer == 'adafactor':
             # using adafactor_kwargs in overall.yaml
-            # adafactor_kwargs: {lr: 1e-3, scale_parameter: False, relative_step: False, warmup_init: False}
             if self.grad_clip is not None:
                 self.grad_clip = None
                 self.logger.warning("Additional optimizer operations like gradient clipping "
                                     "should not be used alongside Adafactor.")
-            if self.learning_rate:
-                self.logger.warning(f"learning_rate (={self.learning_rate}) will be overwritten "
-                                    f"by that in adafactor_kwargs (={self.adafactor_kwargs['lr']})")
-            if isinstance(self.adafactor_kwargs, dict):
-                self.optimizer_kwargs.update(self.adafactor_kwargs)
+            self.optimizer_kwargs.update(self.adafactor_kwargs)
 
         # get optimizer (use default value of pytorch if self.optimizer_kwargs is empty)
         self.logger.info(f'Using optimizer {optimizer}')
         optimizer = optimizer_class[optimizer](
             params=self._trainable_parameters,
-            lr=self.learning_rate,
             **self.optimizer_kwargs
         )
 
@@ -544,9 +538,3 @@ class Trainer(AbstractTrainer):
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
 
         return result
-
-
-def _process_metrics(metrics: Union[str, List[str]]) -> Set[str]:
-    if isinstance(metrics, str):
-        metrics = (metrics, )
-    return set(metrics)

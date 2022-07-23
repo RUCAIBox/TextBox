@@ -94,7 +94,6 @@ class Trainer(AbstractTrainer):
         self.step_idx = -1
 
         self.best_epoch = -1
-        self._best_valid_score = -math.inf
         self.eval_interval, self.eval_strategy = self._set_eval_strategy()
         self._eval_count = 0
         self.train_loss_list: List[float] = list()
@@ -143,10 +142,10 @@ class Trainer(AbstractTrainer):
             return 0, "skipped"
 
         if eval_epoch > 0:
-            self.logger.info(f"eval strategy: validate every {eval_epoch} epoch")
+            self.logger.debug(f"eval strategy: validate every {eval_epoch} epoch")
             return eval_epoch, "epoch"
         else:
-            self.logger.info(f"eval strategy: validate every {eval_step} step")
+            self.logger.debug(f"eval strategy: validate every {eval_step} step")
             return eval_step, "step"
 
     def _build_optimizer(self, optimizer: str, scheduler: Optional[str])\
@@ -183,7 +182,7 @@ class Trainer(AbstractTrainer):
             self.optimizer_kwargs.update(self.adafactor_kwargs)
 
         # get optimizer (use default value of pytorch if self.optimizer_kwargs is empty)
-        self.logger.info(f'Using optimizer {optimizer}')
+        self.logger.debug(f'Using optimizer {optimizer}')
         optimizer = optimizer_class[optimizer](
             params=self._trainable_parameters,
             **self.optimizer_kwargs
@@ -192,7 +191,7 @@ class Trainer(AbstractTrainer):
         # scheduling
         if scheduler is not None and scheduler in scheduler_class:
             assert isinstance(self.scheduler_kwargs, dict), "Please specify scheduler_kwargs"
-            self.logger.info(f'Using scheduler {scheduler}.')
+            self.logger.debug(f'Using scheduler {scheduler}.')
             self.scheduler_kwargs.setdefault("max_lr", self.learning_rate)
             optimizer = scheduler_class[scheduler](
                 base_optimizer=optimizer,
@@ -220,7 +219,9 @@ class Trainer(AbstractTrainer):
         self.model.train()
         self._summary_tracker.new_epoch("train")
         if not self.disable_tqdm:
-            train_tqdm = tqdm(train_data, desc=f"train {epoch_idx:4}", dynamic_ncols=True, postfix={'loss': None})
+            train_tqdm = tqdm(
+                train_data, desc=f"train {epoch_idx:4}", dynamic_ncols=True, postfix={'loss': None}, unit='step'
+            )
         else:
             train_tqdm = train_data
 
@@ -246,7 +247,7 @@ class Trainer(AbstractTrainer):
                 train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
 
             if valid_data:
-                self.stopped &= self._valid(valid_data, epoch_idx, 'step')
+                self.stopped |= self._valid(valid_data, 'step')
             if self.stopped:
                 break
 
@@ -275,14 +276,16 @@ class Trainer(AbstractTrainer):
         if 'loss' in self.metrics_for_best_model:
             self.model.eval()
             if not self.disable_tqdm:
-                valid_tqdm = tqdm(valid_data, desc=f"valid {valid_count:4}", dynamic_ncols=True, postfix={'loss': None})
+                valid_tqdm = tqdm(
+                    valid_data, desc=f"valid {valid_count:4}", dynamic_ncols=True, postfix={'loss': None}, unit='step'
+                )
             else:
                 valid_tqdm = valid_data
             for data in valid_tqdm:
                 loss = self.model(data)
                 losses = self.accelerator.gather(loss)
-                losses = losses.mean()
-                self._summary_tracker.append_loss(losses)
+                loss = losses.mean()
+                self._summary_tracker.append_loss(loss)
                 if not self.disable_tqdm:
                     valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
         else:
@@ -296,7 +299,6 @@ class Trainer(AbstractTrainer):
     def _valid(
             self,
             valid_data: AbstractDataLoader,
-            epoch_idx: int,
             eval_mode: str,
     ) -> bool:
         """Validate every `self.eval_interval` step or epoch if evaluation strategy matches attribute
@@ -306,7 +308,6 @@ class Trainer(AbstractTrainer):
 
         Args:
             valid_data: The dataloader of validation set.
-            epoch_idx: The current epoch index.
             eval_mode: The evaluation strategy of current call ("epoch" or "step").
 
         Returns:
@@ -323,13 +324,34 @@ class Trainer(AbstractTrainer):
         self._valid_epoch(valid_data, self._eval_count // self.eval_interval)
         self.valid_result_list.append(self._summary_tracker.epoch_dict())
 
-        stopped = bool(self.stopping_steps) and self._early_stopping(self._summary_tracker.epoch_score, epoch_idx)
+        self.best_epoch, current_best = self._summary_tracker.get_best_epoch()
+        stopped = bool(self.stopping_steps) and self._early_stopping(current_best)
 
         if self.is_save():
             self.save_checkpoint()
         self.accelerator.wait_for_everyone()
 
         return stopped
+
+    def _early_stopping(self, current_best: bool) -> bool:
+        r""" Check early stopping with `stopping_steps`, a maximum amount of non-best validation.
+
+        Args:
+            current_best: Whether current epoch is the one with the best score.
+
+        Return:
+            bool: If true, the training process will be stopped, else the `self.stopping_count` will accumulate.
+        """
+
+        stop_flag = False
+
+        if current_best:
+            self.stopping_count = 0
+        else:
+            self.stopping_count += 1
+            stop_flag = self.stopping_count > self.stopping_steps
+
+        return stop_flag
 
     @property
     def best_result(self) -> dict:
@@ -353,7 +375,7 @@ class Trainer(AbstractTrainer):
             'state_dict': _state_dict,
             'optimizer': self.optimizer.state_dict(),
             'stopping_count': self.stopping_count,
-            'best_valid_score': self._best_valid_score,
+            'best_valid_score': self._summary_tracker.best_valid_score,
             'epoch': self.epoch_idx,
             'config': self.config,
             # parameters for recording only
@@ -365,8 +387,8 @@ class Trainer(AbstractTrainer):
     def save_checkpoint(self):
         serialized_save(
             self._get_checkpoint(),
-            serial=self.epoch_idx,
-            serial_of_soft_link=self.best_epoch,
+            serial=self.epoch_idx+1,
+            serial_of_soft_link=self.best_epoch+1,
             path_without_extension=self.saved_model_filename,
             tag='epoch',
             extension_name='pth',
@@ -400,9 +422,9 @@ class Trainer(AbstractTrainer):
             return
 
         # load start epoch and early stopping
-        self.start_epoch = checkpoint['epoch'] + 1
+        self.start_epoch = checkpoint['epoch'] + 1  # start from the next step
         self.stopping_count = checkpoint['stopping_count']
-        self._best_valid_score = checkpoint['best_valid_score']
+        self._summary_tracker.best_valid_score = checkpoint['best_valid_score']
         self.valid_result_list = checkpoint['summary']
 
         if checkpoint['config']['seed']:
@@ -453,34 +475,17 @@ class Trainer(AbstractTrainer):
 
             # valid
             if valid_data:
-                self.stopped &= self._valid(valid_data, epoch_idx, 'epoch')
+                self.stopped |= self._valid(valid_data, 'epoch')
             if self.stopped:
+                self.logger.info(f'Early stopped at {self.stopping_count} non-best validation.')
                 break
-
+        file = self.saved_model_filename+".pth"
+        self.logger.info(f'Soft link created: {file} -> {os.readlink(file)}')
         self.logger.info('====== Finished training, best eval result in epoch {} ======'.format(self.best_epoch))
 
         self.model = self.accelerator.unwrap_model(self.model)
 
         return self.best_result
-
-    def _early_stopping(self, score: float, epoch_idx: int) -> bool:
-        r""" Return True if valid score has been lower than best score for `stopping_steps` steps.
-
-        Args:
-            score: Score that about to update `self._best_valid_score` of current validation.
-        """
-
-        stop_flag = False
-
-        if score > self._best_valid_score:
-            self._best_valid_score = score
-            self.stopping_count = 0
-            self.best_epoch = epoch_idx  # get best results with index
-        else:
-            self.stopping_count += 1
-            stop_flag = self.stopping_count > self.stopping_steps
-
-        return stop_flag
 
     @torch.no_grad()
     def evaluate(
@@ -535,6 +540,8 @@ class Trainer(AbstractTrainer):
         generate_corpus = generate_corpus[:len(reference_corpus)]
         if self.is_save():
             self.save_generated_text(generate_corpus, valid_count)
+            file = self.saved_text_filename+".txt"
+            self.logger.info(f'Soft link created: {file} -> {os.readlink(file)}')
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
 
         return result

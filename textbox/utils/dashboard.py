@@ -13,7 +13,7 @@ import torch
 from logging import getLogger, Logger
 import wandb
 
-from typing import Optional, Union, Iterable, Dict, Collection, Set
+from typing import Optional, Union, Iterable, Dict, Collection, Set, Tuple
 from textbox.config.configurator import Config
 
 train_step = 'train/step'
@@ -52,11 +52,19 @@ class SummaryTracker:
         self.current_epoch: Optional[EpochTracker] = None
         self.current_mode: Optional[str] = None
 
+        self.best_valid_score = -math.inf
+        self.best_epoch = -1
+        self.current_best = False
+
     def new_epoch(self, mode: str):
+        """
+        Args:
+            mode: Literal of "train" or "valid"
+        """
         self.current_mode = mode
         axe = mode + '/epoch'
         self.update_axe(axe)
-        self.current_epoch = EpochTracker(mode, self._axes[axe], self.metrics_for_best_model)
+        self.current_epoch = EpochTracker(self.metrics_for_best_model, mode=mode, axes=self._axes)
         self.current_epoch.on_epoch_start()
 
     def append_loss(self, loss: Union[float, torch.Tensor]):
@@ -85,7 +93,26 @@ class SummaryTracker:
 
     @property
     def epoch_score(self) -> float:
+        """Get the score of current epoch calculated by `metrics_for_best_model`.
+
+        Notes:
+            If `loss` metric is in `metrics_for_best_model`, the negative of `loss` will be returned.
+        """
         return self.current_epoch.calc_score()
+
+    def get_best_epoch(self) -> Tuple[int, bool]:
+        """Get the epoch index of the highest score.
+
+        Returns:
+            Tuple[int, bool]: A tuple of the best epoch index and a boolean indicating
+                whether the current epoch is the best
+        """
+        self.current_best = False
+        if self.epoch_score > self.best_valid_score:
+            self.best_valid_score = self.epoch_score
+            self.best_epoch = self._axes[train_epoch]
+            self.current_best = True
+        return self.best_epoch, self.current_best
 
     def epoch_dict(self) -> dict:
         return self.current_epoch.as_dict()
@@ -97,7 +124,7 @@ class SummaryTracker:
             self._axes[axe] += 1
 
     def on_epoch_end(self):
-        self.current_epoch.on_epoch_end()
+        self.current_epoch.on_epoch_end(self.current_best if self.current_mode == 'valid' else False)
 
     def add_text(self, tag: str, text_string: str):
         if self._is_local_main_process:
@@ -159,7 +186,12 @@ class EpochTracker:
         * Update docstring
     """
 
-    def __init__(self, mode: str, epoch_idx: int, metrics_for_best_model: Set[str]):
+    def __init__(
+            self,
+            metrics_for_best_model: Set[str],
+            mode: Optional[str] = None,
+            axes: Optional[Dict[str, int]] = None,
+    ):
 
         # loss
         self._avg_loss: float = 0.
@@ -175,18 +207,24 @@ class EpochTracker:
         self._logger: Logger = getLogger()
         self._start_time: Optional[float] = None
         self._end_time: Optional[float] = None
-        self.mode_tag = mode
-        self.epoch_idx = epoch_idx
+        self.mode = mode or 'Epoch'
+        self.axes = axes
         self.metrics_for_best_model = metrics_for_best_model
+        if self.mode == 'train':
+            self.desc = 'Train epoch '
+            self.serial = self.axes[train_epoch]
+        elif self.mode == 'valid':
+            self.desc = 'Validation '
+            self.serial = self.axes[valid_epoch]
+        else:
+            self.desc = 'Epoch '
 
     def on_epoch_start(self):
         self._start_time = time()
 
-    def on_epoch_end(self):
+    def on_epoch_end(self, current_best: bool):
         self._end_time = time()
-        if self._accumulate_step != 0:
-            self._loss_all_reduce()
-        self._epoch_info(self._end_time - self._start_time)
+        self._epoch_info(self._end_time - self._start_time, current_best)
 
     def append_loss(self, loss: float):
         self._avg_loss *= self._accumulate_step / (self._accumulate_step + 1)
@@ -244,10 +282,7 @@ class EpochTracker:
 
         return score
 
-    def _loss_all_reduce(self):
-        pass
-
-    def _epoch_info(self, time_duration):
+    def _epoch_info(self, time_duration: float, current_best: bool):
         r"""Output loss with epoch and time information."""
         def add_metric(_k, _v):
             _o = ', '
@@ -256,12 +291,17 @@ class EpochTracker:
             if isinstance(_v, str):
                 _o += f'{_k}: "{_v[:15]}..."'
             elif isinstance(_v, float):
-                _o += f'{_k}: {_v:.2f}'
+                _o += f'{_k}: {_v:.4f}'
             if _k.lower() in self.metrics_for_best_model:
                 _o += '>'
             return _o
 
-        output = "Epoch {}, {} [time: {:.2f}s".format(self.epoch_idx, self.mode_tag, time_duration)
+        output = "{} {} ".format(self.desc, self.serial)
+        if current_best:
+            output += '(best) '
+        output += "[time: {:.2f}s".format(time_duration)
+        if self.mode == 'valid':
+            output += add_metric('score', self.calc_score())
 
         for metric, result in self.as_dict().items():
             if isinstance(result, dict):

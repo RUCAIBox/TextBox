@@ -4,7 +4,7 @@
 
 #### Login
 
-You only need to log in to W&B by pasting the API key retrieved from [here](https://wandb.ai/authorize) for the first run.
+You only need to register and log in to W&B by pasting the API key retrieved from [here](https://wandb.ai/authorize) for the first run.
 
 You can also log in manually beforehand from command line: `wandb login`
 

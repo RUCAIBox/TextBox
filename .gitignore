@@ -18,5 +18,5 @@ run_test.py
 /textbox/tests/
 *.json
 facebook/
-gpt2/
-t5*/
+/gpt2/
+/t5*/

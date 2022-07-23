@@ -40,7 +40,6 @@ from .generation_logits_process import (
     NoRepeatNGramLogitsProcessor,
     PrefixConstrainedLogitsProcessor,
     RepetitionPenaltyLogitsProcessor,
-    # NoRepeatNGramLogitsProcessorV2,
     TemperatureLogitsWarper,
     TopKLogitsWarper,
     TopPLogitsWarper,
@@ -3341,8 +3340,9 @@ class GenerationMixin(GenerationMixin_origin):
         
         from .models.bart.modeling_bart import BartForConditionalGeneration
         from .models.t5.modeling_t5 import T5ForConditionalGeneration
-        from .models.gpt2.modeling_gpt2 import GPT2Model
-        if True or isinstance(self, BartForConditionalGeneration):
+        from .models.gpt2.modeling_gpt2 import GPT2Model, GPT2LMHeadModel, GPT2DoubleHeadsModel
+
+        if isinstance(self, BartForConditionalGeneration):
             for layer in self.model.decoder.layers:
                 layer.encoder_attn.num_beams = num_beams
                 layer.self_attn.num_beams = num_beams
@@ -3369,12 +3369,6 @@ class GenerationMixin(GenerationMixin_origin):
             isinstance(self, GPT2DoubleHeadsModel)):
             for block in self.transformer.h:
                 block.attn.num_beams = num_beams
-            logger.debug("num_beams has been updated to {}".format(num_beams))
-            return
-
-        if isinstance(self, ProphetNetForConditionalGeneration):
-            for layer in self.prophetnet.decoder.layers:
-                layer.cross_attn.num_beams = num_beams
             logger.debug("num_beams has been updated to {}".format(num_beams))
             return
 

@@ -331,16 +331,6 @@ class TypicalLogitsWarper(LogitsWarper):
         return scores
 
 
-# def _get_ngrams(ngram_size: int, prev_input_ids: torch.Tensor, num_hypos: int):
-#     generated_ngrams = [{} for _ in range(num_hypos)]
-#     for idx in range(num_hypos):
-#         gen_tokens = prev_input_ids[idx].tolist()
-#         generated_ngram = generated_ngrams[idx]
-#         for ngram in zip(*[gen_tokens[i:] for i in range(ngram_size)]):
-#             prev_ngram_tuple = tuple(ngram[:-1])
-#             generated_ngram[prev_ngram_tuple] = generated_ngram.get(prev_ngram_tuple, []) + [ngram[-1]]
-#     return generated_ngrams
-
 def _get_ngrams(
     ngram_size: int, prev_input_ids: torch.Tensor, num_hypos: int, pad_token_id: int = None
 ) -> List[Dict]:
@@ -362,22 +352,6 @@ def _get_generated_ngrams(banned_ngrams, prev_input_ids, ngram_size, cur_len):
     return banned_ngrams.get(ngram_idx, [])
 
 
-# def _calc_banned_ngram_tokens(
-#     ngram_size: int, prev_input_ids: torch.Tensor, num_hypos: int, cur_len: int
-# ) -> List[Iterable[int]]:
-#     """Copied from fairseq for no_repeat_ngram in beam_search"""
-#     if cur_len + 1 < ngram_size:
-#         # return no banned tokens if we haven't generated no_repeat_ngram_size tokens yet
-#         return [[] for _ in range(num_hypos)]
-
-#     generated_ngrams = _get_ngrams(ngram_size, prev_input_ids, num_hypos)
-
-#     banned_tokens = [
-#         _get_generated_ngrams(generated_ngrams[hypo_idx], prev_input_ids[hypo_idx], ngram_size, cur_len)
-#         for hypo_idx in range(num_hypos)
-#     ]
-#     return banned_tokens
-
 def _calc_banned_ngram_tokens(
     ngram_size: int, prev_input_ids: torch.Tensor, num_hypos: int, cur_len: int, pad_tokens_id: int
 ) -> List[Iterable[int]]:
@@ -386,7 +360,7 @@ def _calc_banned_ngram_tokens(
         # return no banned tokens if we haven't generated no_repeat_ngram_size tokens yet
         return [[] for _ in range(num_hypos)]
 
-    generated_ngrams = _get_ngrams_v2(ngram_size, prev_input_ids, num_hypos, pad_tokens_id)
+    generated_ngrams = _get_ngrams(ngram_size, prev_input_ids, num_hypos, pad_tokens_id)
 
     banned_tokens = [
         _get_generated_ngrams(generated_ngrams[hypo_idx], prev_input_ids[hypo_idx], ngram_size, cur_len)
@@ -459,7 +433,7 @@ class NoRepeatNGramLogitsProcessor(NoRepeatNGramLogitsProcessor_origin):
                     return scores
 
         num_batch_hypotheses = scores.shape[0]
-        banned_batch_tokens = _calc_banned_ngram_tokens_v2(self.ngram_size, cpu_input_ids, num_batch_hypotheses, cur_len, self.pad_token_id)
+        banned_batch_tokens = _calc_banned_ngram_tokens(self.ngram_size, cpu_input_ids, num_batch_hypotheses, cur_len, self.pad_token_id)
         _update_scores(banned_batch_tokens)
         return scores
 

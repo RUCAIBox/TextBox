@@ -3437,7 +3437,6 @@ class GenerationMixin(GenerationMixin_origin):
         if repetition_penalty is not None and repetition_penalty != 1.0:
             processors.append(RepetitionPenaltyLogitsProcessor(penalty=repetition_penalty))
         if no_repeat_ngram_size is not None and no_repeat_ngram_size > 0:
-            # processors.append(NoRepeatNGramLogitsProcessorV2(no_repeat_ngram_size, num_beams, batch_size, self.config.pad_token_id))
             processors.append(NoRepeatNGramLogitsProcessor(no_repeat_ngram_size, num_beams, batch_size, self.config.pad_token_id))
         if encoder_no_repeat_ngram_size is not None and encoder_no_repeat_ngram_size > 0:
             if self.config.is_encoder_decoder:

@@ -20,7 +20,7 @@ evaluation_parameters = [
 
 model_parameters = [
     'model', 'model_name', 'model_path', 'config_kwargs', 'truncate', 'tokenizer_kwargs', 'generation_kwargs',
-    'efficient_kwargs', 'efficient_methods', 'efficient_kwargs', 'efficient_unfreeze_model'
+    'efficient_kwargs', 'efficient_methods', 'efficient_unfreeze_model'
 ]
 
 dataset_parameters = [

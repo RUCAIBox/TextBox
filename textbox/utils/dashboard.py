@@ -6,6 +6,7 @@ Todo:
 """
 import math
 import os
+from collections import namedtuple
 from time import time
 
 import pandas as pd
@@ -20,9 +21,32 @@ train_step = 'train/step'
 train_epoch = 'train/epoch'
 valid_step = 'valid/step'
 valid_epoch = 'valid/epoch'
-axes_label = (train_step, train_epoch, valid_step, valid_epoch)
+metrics_labels = (train_step, train_epoch, valid_step, valid_epoch)
 
 MetricsDict = Dict[str, Union[float, Dict[str, float], Collection[float]]]
+
+
+class Timestamp:
+
+    def __init__(self):
+        self.train_step = 0
+        self.train_epoch = 0
+        self.valid_step = 0
+        self.valid_epoch = 0
+
+    def update_axe(self, *name: str):
+        axe = '_'.join(name)
+        value = getattr(self, axe)
+        if isinstance(value, int):
+            setattr(self, axe, value+1)
+        else:
+            getLogger().warning(f'Failed when updating axe {axe}')
+
+    def as_dict(self) -> dict:
+        return {
+            train_step: self.train_step, train_epoch: self.train_epoch,
+            valid_step: self.valid_step, valid_epoch: self.train_epoch,
+        }
 
 
 class SummaryTracker:
@@ -34,7 +58,7 @@ class SummaryTracker:
             metrics_for_best_model: Set[str],
             email: bool = True,
     ):
-        self._axes = dict.fromkeys(axes_label, 0)
+        self.axes = Timestamp()
         self._email = email
         self._is_local_main_process = is_local_main_process
         self.tracker_finished = False
@@ -42,7 +66,7 @@ class SummaryTracker:
 
         if self._is_local_main_process:
             self._run = wandb.init(**kwargs)
-            for axe in axes_label:
+            for axe in metrics_labels:
                 wandb.define_metric(axe)
             wandb.define_metric("loss/train", step_metric=train_step)
             wandb.define_metric("loss/valid", step_metric=train_step)
@@ -53,7 +77,7 @@ class SummaryTracker:
         self.current_mode: Optional[str] = None
 
         self.best_valid_score = -math.inf
-        self.best_epoch = -1
+        self.best_valid_timestamp = Timestamp()
         self.current_best = False
 
     def new_epoch(self, mode: str):
@@ -62,10 +86,14 @@ class SummaryTracker:
             mode: Literal of "train" or "valid"
         """
         self.current_mode = mode
-        axe = mode + '/epoch'
-        self.update_axe(axe)
-        self.current_epoch = EpochTracker(self.metrics_for_best_model, mode=mode, axes=self._axes)
+        self.axes.update_axe(mode, 'epoch')
+        self.current_epoch = EpochTracker(self.metrics_for_best_model, mode=mode, axes=self.axes)
         self.current_epoch.on_epoch_start()
+
+    def new_step(self):
+        if self.current_mode is None:
+            raise RuntimeError('`new_epoch()` should be called before `new_step()`')
+        self.axes.update_axe(self.current_mode, 'step')
 
     def append_loss(self, loss: Union[float, torch.Tensor]):
         r"""Append loss of current step to tracker and update current step."""
@@ -74,7 +102,6 @@ class SummaryTracker:
         if math.isnan(loss):
             raise ValueError('Value is nan.')
         self.add_scalar("loss/" + self.current_mode, loss)
-        self.update_axe(self.current_mode + "/step")
 
         self.current_epoch.append_loss(loss)
 
@@ -100,37 +127,32 @@ class SummaryTracker:
         """
         return self.current_epoch.calc_score()
 
-    def get_best_epoch(self) -> Tuple[int, bool]:
+    def get_best_valid(self) -> Tuple[Timestamp, bool]:
         """Get the epoch index of the highest score.
 
         Returns:
-            Tuple[int, bool]: A tuple of the best epoch index and a boolean indicating
+            Tuple[Timestamp, bool]: A tuple of the best epoch timestamp and a boolean indicating
                 whether the current epoch is the best
         """
         self.current_best = False
         if self.epoch_score > self.best_valid_score:
             self.best_valid_score = self.epoch_score
-            self.best_epoch = self._axes[train_epoch]
+            self.best_valid_timestamp = self.axes
             self.current_best = True
-        return self.best_epoch, self.current_best
+        return self.best_valid_timestamp, self.current_best
 
     def epoch_dict(self) -> dict:
         return self.current_epoch.as_dict()
 
-    def update_axe(self, axe: str):
-        if axe not in self._axes:
-            getLogger().warning(f'Failed when updating axe {axe}.')
-        else:
-            self._axes[axe] += 1
-
     def on_epoch_end(self):
         self.current_epoch.on_epoch_end(self.current_best if self.current_mode == 'valid' else False)
+        self.current_mode = None
 
     def add_text(self, tag: str, text_string: str):
         if self._is_local_main_process:
             if tag not in self._tables:
                 self._tables[tag] = wandb.Table(columns=[train_step, tag])
-            self._tables[tag].add_data(self._axes[train_step], text_string)
+            self._tables[tag].add_data(self.axes.train_step, text_string)
 
     def flush_text(self):
         wandb.log(self._tables)
@@ -138,9 +160,9 @@ class SummaryTracker:
 
     def add_scalar(self, tag: str, scalar_value: Union[float, int]):
         info = {tag: scalar_value}
-        info.update(self._axes)
+        info.update(self.axes.as_dict())
         if self._is_local_main_process and not self.tracker_finished:
-            wandb.log(info, step=self._axes['train/step'])
+            wandb.log(info, step=self.axes.train_step)
 
     def add_any(self, tag: str, any_value: Union[str, float, int]):
         if isinstance(any_value, str):
@@ -151,7 +173,7 @@ class SummaryTracker:
     def add_corpus(self, tag: str, corpus: Iterable[str]):
         if self._is_local_main_process and not self.tracker_finished:
             corpus = wandb.Table(columns=[tag], data=pd.DataFrame(corpus))
-            wandb.log({tag: corpus}, step=self._axes[train_step])
+            wandb.log({tag: corpus}, step=self.axes.train_step)
 
     def on_experiment_end(self):
         if self._is_local_main_process:
@@ -190,7 +212,7 @@ class EpochTracker:
             self,
             metrics_for_best_model: Set[str],
             mode: Optional[str] = None,
-            axes: Optional[Dict[str, int]] = None,
+            axes: Optional[Timestamp] = None,
     ):
 
         # loss
@@ -212,10 +234,10 @@ class EpochTracker:
         self.metrics_for_best_model = metrics_for_best_model
         if self.mode == 'train':
             self.desc = 'Train epoch '
-            self.serial = self.axes[train_epoch]
+            self.serial = self.axes.train_epoch
         elif self.mode == 'valid':
             self.desc = 'Validation '
-            self.serial = self.axes[valid_epoch]
+            self.serial = self.axes.valid_epoch
         else:
             self.desc = 'Epoch '
 
@@ -359,7 +381,8 @@ def init_dashboard(
             dir=config['logdir'],
             project=project,
             name=name,
-            config=config.final_config_dict
+            config=config.final_config_dict,
+            mode='disabled' if config['quick_test'] else 'online'
         )
     )
 

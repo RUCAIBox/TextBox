@@ -2,6 +2,8 @@ import os
 import datetime
 import importlib
 import random
+from logging import getLogger
+from typing import Union, Optional
 
 import torch
 import numpy as np
@@ -30,6 +32,106 @@ def ensure_dir(dir_path: str):
 
     """
     os.makedirs(dir_path, exist_ok=True)
+
+
+def safe_remove(dir_path: Optional[str], overwrite: bool = True):
+    """
+    `safe_remove` is a function that removes a file or soft link at a given path, and if the file or soft link doesn't
+    exist, it does nothing
+
+    Args:
+        dir_path: The path to the directory you want to remove
+        overwrite: (default = True) If True, the file will be deleted.
+            If False, the file will be renamed with the current time.
+    """
+    if not dir_path:
+        return
+    if os.path.exists(dir_path) or os.path.islink(dir_path):
+        if overwrite:
+            os.remove(dir_path)
+        else:
+            dir_path += get_local_time()
+
+
+def get_tag(_tag: Optional[str], _serial: Optional[int]):
+    r"""
+    Get the file tag with serial number.
+
+    Examples:
+        >>> get_tag('epoch', 1)
+        _epoch-1
+    """
+    _tag = '' if _tag is None else '_' + _tag
+    if _serial is not None:
+        _tag += '-' + str(_serial)
+    return _tag
+
+
+def serialized_save(
+        source: Union[dict, list],
+        serial: Optional[int],
+        serial_of_soft_link: Optional[int],
+        path_without_extension: str,
+        tag: Optional[str] = None,
+        extension_name: Optional[str] = None,
+        overwrite: bool = True,
+        max_save: int = -1,
+):
+    r"""
+    Save a sequence of files with given serial numbers and create a soft link
+    to the file with specified serial number.
+
+    Args:
+        source: The source of current file.
+        serial: The serial number of current file.
+        serial_of_soft_link: The serial number that the soft link will point to.
+        path_without_extension: The path to base file without extension name.
+            This should remain the same within the sequence.
+        tag: The extended tag of filename like 'epoch' or 'valid'.
+            This should remain the same within the sequence.
+        extension_name: (default = None) The extension name of file. This can also
+            be specific automatically if leave blank.
+        overwrite: (default = True) Whether to overwrite the file to be saved.
+        max_save: (default = -1) The maximal amount of files. If -1, every file
+            will be saved. 1: only the file with serial number same as `serial_
+            of_soft_link` will be saved. 2: both the last one and linked files.
+    """
+    if max_save == 0 or (max_save == 1 and serial_of_soft_link != serial):
+        return
+
+    # deal with naming
+    if extension_name not in ('txt', 'pth'):
+        extension_name = 'txt' if isinstance(source, list) else 'pth'
+    path_to_save = os.path.abspath(path_without_extension + get_tag(tag, serial) + '.' + extension_name)
+    safe_remove(path_to_save, overwrite)  # behavior of torch.save is not clearly defined.
+    getLogger().info(f'Saving file to {path_to_save}')
+
+    path_to_link = os.path.abspath(path_without_extension + '.' + extension_name)
+    path_to_pre_best = os.readlink(path_to_link) if os.path.exists(path_to_link) else ''
+    if not os.path.exists(path_to_pre_best):
+        path_to_pre_best = None
+
+    # save
+    if extension_name == 'txt':
+        with open(path_to_save, 'w') as fout:
+            for text in source:
+                fout.write(text + '\n')
+    else:
+        torch.save(source, path_to_save)
+
+    # delete the file before the max_save
+    if max_save != -1 and 0 <= serial - max_save + 1 < serial:
+        path_to_delete = os.path.abspath(
+            path_without_extension + get_tag(tag, serial - max_save + 1) + '.' + extension_name
+        )
+        if not path_to_pre_best or not os.path.samefile(path_to_delete, path_to_pre_best):
+            safe_remove(path_to_delete)
+
+    # create soft link
+    if serial_of_soft_link == serial:
+        safe_remove(path_to_pre_best)
+        safe_remove(path_to_link)
+        os.symlink(path_to_save, path_to_link)
 
 
 def get_model(model_name):

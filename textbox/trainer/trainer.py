@@ -4,6 +4,7 @@ import torch.optim as optim
 import math
 import collections
 
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 from logging import getLogger
 from accelerate import Accelerator
@@ -338,7 +339,7 @@ class Trainer(AbstractTrainer):
         return stopped
 
     @property
-    def best_result(self) -> dict:
+    def best_valid_result(self) -> dict:
         """Retrieve best result dict with index `self.best_epoch` from `self.valid_result_list`."""
         return self.valid_result_list[self.best_epoch]
 
@@ -434,8 +435,8 @@ class Trainer(AbstractTrainer):
 
     def fit(
             self,
-            train_data: AbstractDataLoader,
-            valid_data: Optional[AbstractDataLoader] = None,
+            train_data: DataLoader,
+            valid_data: Optional[DataLoader] = None,
     ) -> dict:
         r"""Train the model based on the train data.
 
@@ -467,7 +468,7 @@ class Trainer(AbstractTrainer):
 
         self.model = self.accelerator.unwrap_model(self.model)
 
-        return self.best_result
+        return self.best_valid_result
 
     def _early_stopping(self, score: float, epoch_idx: int) -> bool:
         r""" Return True if valid score has been lower than best score for `stopping_steps` steps.
@@ -491,7 +492,7 @@ class Trainer(AbstractTrainer):
     @torch.no_grad()
     def evaluate(
             self,
-            eval_data: AbstractDataLoader,
+            eval_data: DataLoader,
             load_best_model: bool = True,
             model_file: Optional[str] = None,
             _eval: bool = True,

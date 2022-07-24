@@ -218,6 +218,8 @@ class EpochTracker:
             results = {}
         if self._accumulate_step != 0:
             results.update(loss=self.avg_loss)
+        if self.mode_tag == 'valid':
+            results.update(score=self.calc_score())
         return results
 
     def calc_score(self) -> float:
@@ -284,26 +286,11 @@ root: Optional[SummaryTracker] = None
 def init_dashboard(
         config: Config,
 ) -> SummaryTracker:
-    r"""Get the dashboard class.
+    r"""Initialize configuration of W&B.
 
-    Args:
-        dashboard: Name of dashboard (`tensorboard`, `wandb` or None).
-        logdir: Directory of log files. Subdirectories of dashboards will be created.
-        config: Configuration.
-
-    Examples:
-        >>> TB = get_dashboard("tensorboard", logdir="log/dir", config=config)
-        >>> with TB() as tbw:
-        >>>     for epoch in range(10):
-        >>>         ...
-        >>>         tbw.add_scalar("Tag", 1)
-        >>>         tbw.add_scalar("Another/Tag", 2)
-        >>>         tbw.update_axes("train/step")
-        >>>         ...
-
-    Todo:
-        * Update docstring
-
+    Notes:
+        After initialize configuration, call `start_dashboard()` and `finish_dashboard()`
+        to start and finish one run.
     """
     os.environ["WANDB_SILENT"] = "true"
 

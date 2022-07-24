@@ -1,6 +1,8 @@
 conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
 pip install -r requirements.txt 
 
+pip install git+https://github.com/microsoft/fastseq.git
+
 cd transformers
 pip install -e .
 cd ..

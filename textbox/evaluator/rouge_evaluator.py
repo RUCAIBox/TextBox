@@ -70,7 +70,7 @@ class RougeEvaluator(AbstractEvaluator):
             for i in range(1, self.rouge_max_ngrams + 1):
                 results[f'rouge-{i}'] = scores[f'rouge-{i}']['f'] * 100
             results['rouge-l'] = scores['rouge-l']['f'] * 100
-            results['rouge-l-1.2'] = scores['rouge-w']['f'] * 100
+            results['rouge-w-1.2'] = scores['rouge-w']['f'] * 100
 
         elif self.rouge_type == 'rouge-score':
             from rouge_score import rouge_scorer

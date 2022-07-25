@@ -292,14 +292,14 @@ class Config(object):
 
     def __str__(self):
         args_info = f'{len(self.final_config_dict)} parameters found.\n'
-        args_info += '=' * 80 + '\n'
+        args_info += '=' * 80 + '\n\n'
         for category in self.parameters:
-            args_info += category + ' Hyper Parameters: \n'
+            args_info += '# ' + category + ' Hyper Parameters: \n\n'
             args_info += '\n'.join([
-                f'    {arg} = {self.final_config_dict[arg]}'
+                f'{arg}: {self.final_config_dict[arg]}'
                 for arg in self.parameters[category] if arg in self.final_config_dict
             ])
-            args_info += '\n\n'
+            args_info += '\n\n\n'
 
         unrecognized = set(self.final_config_dict.keys()) - self.all_parameters
         if len(unrecognized) > 0:
@@ -307,9 +307,11 @@ class Config(object):
             args_info += '\n'.join([
                 f'    {arg} = {self.final_config_dict[arg]}' for arg in unrecognized if arg in self.final_config_dict
             ])
-            args_info += '\n'
+            args_info += '\n\n\n'
 
-        args_info += '=' * 80 + '\n'
+        args_info = args_info[:-2]
+
+        args_info += '=' * 80 + ''
         return args_info
 
     def __repr__(self):

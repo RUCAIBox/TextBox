@@ -8,7 +8,8 @@ from logging import getLogger
 from typing import List, Dict, Optional, Union, Iterable
 
 from textbox.utils.utils import get_local_time
-from textbox.utils.argument_list import general_arguments, training_arguments, evaluation_arguments
+from textbox.utils.argument_list import general_parameters, training_parameters, evaluation_parameters, model_parameters, \
+    dataset_parameters
 
 
 class Config(object):
@@ -54,7 +55,6 @@ class Config(object):
         """
         self._init_parameters_category()
         self.yaml_loader = self._build_yaml_loader()
-        self.external_sources = list()
         self._load_overall_config()
         self.file_config_dict = self._load_config_files(config_file_list)
         self.variable_config_dict = self._load_variable_config_dict(config_dict)
@@ -62,7 +62,6 @@ class Config(object):
         self._merge_external_config_dict()
 
         self._init_device()
-        self.internal_sources = list()
         self.model, self.dataset = self._get_model_and_dataset(model, dataset)
         self._load_internal_config_dict(self.model, self.dataset)
         self.final_config_dict = self._get_final_config_dict()
@@ -70,11 +69,11 @@ class Config(object):
 
     def _init_parameters_category(self):
         self.parameters: Dict[str, List[str]] = dict()
-        self.parameters['General'] = general_arguments
-        self.parameters['Training'] = training_arguments
-        self.parameters['Evaluation'] = evaluation_arguments
-        self.parameters['Model']: List[str] = ['model', 'model_name']
-        self.parameters['Dataset']: List[str] = []
+        self.parameters['General'] = general_parameters
+        self.parameters['Training'] = training_parameters
+        self.parameters['Evaluation'] = evaluation_parameters
+        self.parameters['Model']: List[str] = model_parameters
+        self.parameters['Dataset']: List[str] = dataset_parameters
 
     def _build_yaml_loader(self):
         loader = yaml.FullLoader
@@ -121,7 +120,6 @@ class Config(object):
         current_path = os.path.dirname(os.path.realpath(__file__))
         overall_init_file = os.path.join(current_path, '../properties/overall.yaml')
 
-        self.external_sources.append(overall_init_file)
         if os.path.isfile(overall_init_file):
             with open(overall_init_file, 'r', encoding='utf-8') as f:
                 self.overall_config_dict = yaml.load(f.read(), Loader=self.yaml_loader)
@@ -132,7 +130,6 @@ class Config(object):
             for file in file_list:
                 with open(file, 'r', encoding='utf-8') as f:
                     file_config_dict.update(yaml.load(f.read(), Loader=self.yaml_loader))
-                self.external_sources.append(os.path.abspath(file))
         return file_config_dict
 
     def _load_variable_config_dict(self, config_dict) -> dict:
@@ -140,7 +137,6 @@ class Config(object):
         # then config_dict will receive a str '[]', but indeed it's a list []
         # temporarily use _convert_config_dict to solve this problem
         if config_dict:
-            self.external_sources.append('variables')
             return self._convert_config_dict(config_dict)
         else:
             return dict()
@@ -166,8 +162,6 @@ class Config(object):
             logger.warning('command line args [{}] will not be used in TextBox'.format(' '.join(unrecognized_args)))
         cmd_config_dict = self._convert_config_dict(cmd_config_dict)
 
-        if len(cmd_config_dict) > 0:
-            self.external_sources.append('cmd')
         return cmd_config_dict
 
     def _merge_external_config_dict(self):
@@ -225,13 +219,11 @@ class Config(object):
             print(model_config_dict)
             self.parameters['Model'] += list(set(model_config_dict.keys()) - self.all_parameters)
             self.all_parameters.update(self.parameters['Model'])
-            self.internal_sources.append(os.path.abspath(model_init_file))
 
         if os.path.isfile(dataset_init_file):
             dataset_config_dict = self._update_internal_config_dict(dataset_init_file)
             self.parameters['Dataset'] += list(set(dataset_config_dict.keys()) - self.all_parameters)
             self.all_parameters.update(self.parameters['Dataset'])
-            self.internal_sources.append(os.path.abspath(dataset_init_file))
 
     def _get_final_config_dict(self):
         final_config_dict = dict()
@@ -254,7 +246,8 @@ class Config(object):
         self.final_config_dict['filename'] = '{}-{}-{}'.format(
             self.final_config_dict['model'], self.final_config_dict['dataset'], get_local_time()
         )
-        self.final_config_dict['logdir'] = './log/'
+        if 'logdir' not in self.final_config_dict:
+            self.final_config_dict['logdir'] = './log/'
         self._simplify_parameter('optimizer')
         self._simplify_parameter('scheduler')
         self._simplify_parameter('src_lang')
@@ -299,16 +292,14 @@ class Config(object):
 
     def __str__(self):
         args_info = f'{len(self.final_config_dict)} parameters found.\n'
-        args_info += 'external_config_source: ' + ', '.join(self.external_sources) + '\n'
-        args_info += 'internal_config_source: ' + ', '.join(self.internal_sources) + '\n'
-        args_info += '=' * 80 + '\n'
+        args_info += '=' * 80 + '\n\n'
         for category in self.parameters:
-            args_info += category + ' Hyper Parameters: \n'
+            args_info += '# ' + category + ' Hyper Parameters: \n\n'
             args_info += '\n'.join([
-                f'    {arg} = {self.final_config_dict[arg]}'
+                f'{arg}: {self.final_config_dict[arg]}'
                 for arg in self.parameters[category] if arg in self.final_config_dict
             ])
-            args_info += '\n\n'
+            args_info += '\n\n\n'
 
         unrecognized = set(self.final_config_dict.keys()) - self.all_parameters
         if len(unrecognized) > 0:
@@ -316,9 +307,11 @@ class Config(object):
             args_info += '\n'.join([
                 f'    {arg} = {self.final_config_dict[arg]}' for arg in unrecognized if arg in self.final_config_dict
             ])
-            args_info += '\n'
+            args_info += '\n\n\n'
 
-        args_info += '=' * 80 + '\n'
+        args_info = args_info[:-2]
+
+        args_info += '=' * 80 + ''
         return args_info
 
     def __repr__(self):

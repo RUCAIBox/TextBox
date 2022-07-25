@@ -84,45 +84,13 @@ def _run_textbox(model=None, dataset=None, config_file_list=None, config_dict=No
             trainer.resume_checkpoint(resume_file=config['load_experiment'])
         # do_train & do_test
         result = trainer.fit(train_data, valid_data)
+        if 'generated_corpus' in result:
+            del result['generated_corpus']
+        logger.info('best validation result: {}'.format(result))
         # do_eval
-        for key, value in result.items():
-            logger.info(f"{key}: {value}")
         test_result = trainer.evaluate(test_data)
 
-    # finish
-    logger.info('test result: {}'.format(test_result))
-    finish_dashboard()
-
-    # ================ ROUND 2 ================
-    start_dashboard()
-    # dataset initialization
-    tokenizer = get_tokenizer(config)
-    train_data, valid_data, test_data = data_preparation(config, tokenizer)
-    train_data, valid_data, test_data = accelerator.prepare(train_data, valid_data, test_data)
-
-    # model loading and initialization
-    model = get_model(config['model_name'])(config, tokenizer).to(config['device'])
-    logger.info(model)
-
-    # trainer loading and initialization
-    trainer = get_trainer(config['model'])(config, model, accelerator)
-    if config['test_only']:
-        # test only
-        logger.info('Test only')
-        if not config['load_experiment']:
-            logger.warning('Specific path to model file with `load_experiment`.')
-        test_result = trainer.evaluate(test_data, model_file=config['load_experiment'])
-    else:
-        # checkpoint initialization
-        if config['load_experiment'] is not None:
-            trainer.resume_checkpoint(resume_file=config['load_experiment'])
-        # do_train & do_test
-        result = trainer.fit(train_data, valid_data)
-        # do_eval
-        for key, value in result.items():
-            logger.info(f"{key}: {value}")
-        test_result = trainer.evaluate(test_data)
-
-    # finish
-    logger.info('test result: {}'.format(test_result))
+    logger.info('test result:')
+    for key, value in test_result.items():
+        logger.info(f"  {key}: {value}")
     finish_dashboard()

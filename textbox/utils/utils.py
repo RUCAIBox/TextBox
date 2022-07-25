@@ -104,7 +104,7 @@ def serialized_save(
         extension_name = 'txt' if isinstance(source, list) else 'pth'
     path_to_save = os.path.abspath(path_without_extension + get_tag(tag, serial) + '.' + extension_name)
     safe_remove(path_to_save, overwrite)  # behavior of torch.save is not clearly defined.
-    getLogger().info(f'Saving file to {path_to_save}')
+    getLogger().debug(f'Saving file to {path_to_save}')
 
     path_to_link = os.path.abspath(path_without_extension + '.' + extension_name)
     path_to_pre_best = os.readlink(path_to_link) if os.path.exists(path_to_link) else ''
@@ -128,7 +128,7 @@ def serialized_save(
             safe_remove(path_to_delete)
 
     # create soft link
-    if serial_of_soft_link == serial:
+    if serial_of_soft_link is not None and serial_of_soft_link == serial:
         safe_remove(path_to_pre_best)
         safe_remove(path_to_link)
         os.symlink(path_to_save, path_to_link)

@@ -1,12 +1,8 @@
 """Provides several APIs for dashboard including :py:mod:`torch.utils.tensorboard`
-
-Todo:
-    * WandBWriter with distributed training
-    * wandb: resume?
 """
 import math
 import os
-from collections import namedtuple
+from copy import copy
 from time import time
 
 import pandas as pd
@@ -28,6 +24,8 @@ MetricsDict = Dict[str, Union[float, Dict[str, float], Collection[float]]]
 
 class Timestamp:
 
+    """A timestamp class including train step, train epoch, validation step and validation epoch."""
+
     def __init__(self):
         self.train_step = 0
         self.train_epoch = 0
@@ -35,6 +33,7 @@ class Timestamp:
         self.valid_epoch = 0
 
     def update_axe(self, *name: str):
+        """Update one of the timestamp."""
         axe = '_'.join(name)
         value = getattr(self, axe)
         if isinstance(value, int):
@@ -43,6 +42,7 @@ class Timestamp:
             getLogger().warning(f'Failed when updating axe {axe}')
 
     def as_dict(self) -> dict:
+        """Get the timestamp as a dictionary. The entries are also metrics labels shown in W&B."""
         return {
             train_step: self.train_step, train_epoch: self.train_epoch,
             valid_step: self.valid_step, valid_epoch: self.train_epoch,
@@ -50,6 +50,31 @@ class Timestamp:
 
 
 class SummaryTracker:
+    """Track the result of an experiment, including uploading result to W&B, calculating validation score
+    and maintaining best result.
+
+    Args:
+        kwargs: The arguments of `wandb.init()`
+        is_local_main_process: Decide whether to upload result
+        metrics_for_best_model: A set of entry to calculate validation score.
+        email: Whether to send an email through W&B.
+
+    Examples:
+        >>> init_dashboard(config)
+        >>> summary_tracker = get_dashboard()
+        >>> ...
+        >>> # at the beginning of a validation epoch
+        >>> summary_tracker.new_epoch('valid')
+        >>> for step in valid_data:
+        >>>     summary_tracker.new_step()
+        >>>     ...
+        >>>     summary_tracker.append_loss(1.0)
+        >>> summary_tracker.set_metrics_results({'metric-1': 1.0, 'metric-2': 2.0})
+        >>> best_valid_timestamp, current_best = summary_tracker.get_best_valid()
+        >>> summary_tracker.on_epoch_end()
+        >>> ...
+        >>> finish_dashboard()
+    """
 
     def __init__(
             self,
@@ -81,7 +106,7 @@ class SummaryTracker:
         self.current_best = False
 
     def new_epoch(self, mode: str):
-        """
+        r""" Call at the beginning of one epoch.
         Args:
             mode: Literal of "train" or "valid"
         """
@@ -91,6 +116,7 @@ class SummaryTracker:
         self.current_epoch.on_epoch_start()
 
     def new_step(self):
+        r"""Call at the beginning of one step."""
         if self.current_mode is None:
             raise RuntimeError('`new_epoch()` should be called before `new_step()`')
         self.axes.update_axe(self.current_mode, 'step')
@@ -120,7 +146,7 @@ class SummaryTracker:
 
     @property
     def epoch_score(self) -> float:
-        """Get the score of current epoch calculated by `metrics_for_best_model`.
+        r"""Get the score of current epoch calculated by `metrics_for_best_model`.
 
         Notes:
             If `loss` metric is in `metrics_for_best_model`, the negative of `loss` will be returned.
@@ -128,7 +154,7 @@ class SummaryTracker:
         return self.current_epoch.calc_score()
 
     def get_best_valid(self) -> Tuple[Timestamp, bool]:
-        """Get the epoch index of the highest score.
+        r"""Get the epoch index of the highest score.
 
         Returns:
             Tuple[Timestamp, bool]: A tuple of the best epoch timestamp and a boolean indicating
@@ -137,40 +163,48 @@ class SummaryTracker:
         self.current_best = False
         if self.epoch_score > self.best_valid_score:
             self.best_valid_score = self.epoch_score
-            self.best_valid_timestamp = self.axes
+            self.best_valid_timestamp = copy(self.axes)
             self.current_best = True
         return self.best_valid_timestamp, self.current_best
 
     def epoch_dict(self) -> dict:
+        r"""Get result of current epoch."""
         return self.current_epoch.as_dict()
 
     def on_epoch_end(self):
+        r"""Call at the end of one epoch."""
         self.current_epoch.on_epoch_end(self.current_best if self.current_mode == 'valid' else False)
         self.current_mode = None
 
     def add_text(self, tag: str, text_string: str):
+        r"""Add text to summary. The text will automatically upload to W&B at the end of experiment
+        with `on_experiment_end()`. It may also be manually upload with `flush_text()`"""
         if self._is_local_main_process:
             if tag not in self._tables:
                 self._tables[tag] = wandb.Table(columns=[train_step, tag])
             self._tables[tag].add_data(self.axes.train_step, text_string)
 
     def flush_text(self):
+        r"""Manually flush temporary text added."""
         wandb.log(self._tables)
         self._tables = dict()
 
     def add_scalar(self, tag: str, scalar_value: Union[float, int]):
+        r"""Add a scalar (`float` or `int`) to summary."""
         info = {tag: scalar_value}
         info.update(self.axes.as_dict())
         if self._is_local_main_process and not self.tracker_finished:
             wandb.log(info, step=self.axes.train_step)
 
     def add_any(self, tag: str, any_value: Union[str, float, int]):
+        r"""Add a metric of any type (`float`, `int` and `str` supported) to summary."""
         if isinstance(any_value, str):
             self.add_text(tag, any_value)
         elif isinstance(any_value, (float, int)):
             self.add_scalar(tag, any_value)
 
     def add_corpus(self, tag: str, corpus: Iterable[str]):
+        r"""Add a corpus to summary."""
         if tag.startswith('valid'):
             self.current_epoch.update_metrics({'generated_corpus': '\n'.join(corpus)})
         if self._is_local_main_process and not self.tracker_finished:
@@ -178,6 +212,7 @@ class SummaryTracker:
             wandb.log({tag: corpus}, step=self.axes.train_step)
 
     def on_experiment_end(self):
+        """Call at the end of experiment. `finish_dashboard()` will automatically call this function."""
         if self._is_local_main_process:
             if self._email:
                 wandb.alert(title="Training Finished", text="The training is finished.")
@@ -187,27 +222,12 @@ class SummaryTracker:
 
 
 class EpochTracker:
-    r"""
-    Track and visualize validating metrics results and training / validating loss.
-    Dashboard now supports :class:`textbox.utils.TensorboardWriter`.
+    r"""Track the result of an epoch.
 
     Args:
-        epoch_idx: Current epoch index.
-        mode: Optional (default = True)
-            Train or eval mode.
-
-    Example:
-        >>> tbw = TensorboardWriter("log/dir", "filename")
-        >>> for epoch in range(10):
-        >>>     valid_tracker = EpochTracker(epoch, train=False, dashboard=tbw)
-        >>>     for step in range(10):
-        >>>         valid_tracker.append_loss(1.0)
-        >>>     valid_tracker.set_result({"metric1": 1.0})
-        >>>     valid_tracker.info(time_duration=10.0)
-        Epoch 0,  validating [time: 10.00s, validating_loss: 1.0000]
-
-    Todo:
-        * Update docstring
+        metrics_for_best_model: A set of entry to calculate validation score.
+        mode: (default = None) "train" or "valid" mode.
+        axes: (default = None) The timestamp for the moment.
     """
 
     def __init__(
@@ -220,7 +240,6 @@ class EpochTracker:
         # loss
         self._avg_loss: float = 0.
         self._accumulate_step: int = 0
-        self._reduced_loss: Optional[float] = None
 
         # metrics
         self._valid_metrics_results: MetricsDict = dict()
@@ -244,33 +263,36 @@ class EpochTracker:
             self.desc = 'Epoch '
 
     def on_epoch_start(self):
+        """Call at epoch start."""
         self._start_time = time()
 
     def on_epoch_end(self, current_best: bool):
+        """Call at epoch end. This function will output information of this epoch."""
         self._end_time = time()
         self._epoch_info(self._end_time - self._start_time, current_best)
 
     def append_loss(self, loss: float):
+        """Append the loss of one step."""
         self._avg_loss *= self._accumulate_step / (self._accumulate_step + 1)
         self._avg_loss += loss / (self._accumulate_step + 1)
         self._accumulate_step += 1
 
     @property
     def avg_loss(self) -> float:
+        """Get the average of losses in each step."""
         if self._accumulate_step == 0:
             self._logger.warning("Trying to access epoch average loss before append any.")
             return math.inf
-        if self._reduced_loss is not None:
-            return self._reduced_loss
-        else:
-            return self._avg_loss
+        return self._avg_loss
 
     def update_metrics(self, results: Optional[dict] = None, **kwargs):
+        """Update metrics result of this epoch."""
         if results is not None:
             self._valid_metrics_results.update(results)
         self._valid_metrics_results.update(kwargs)
 
     def as_dict(self) -> dict:
+        """Return the epoch result as a dict"""
         if self._valid_metrics_results:
             results = self._valid_metrics_results
         else:
@@ -335,26 +357,26 @@ root: Optional[SummaryTracker] = None
 def init_dashboard(
         config: Config,
 ) -> SummaryTracker:
-    r"""Get the dashboard class.
+    r"""Initialize dashboard configuration.
 
     Args:
-        dashboard: Name of dashboard (`tensorboard`, `wandb` or None).
-        logdir: Directory of log files. Subdirectories of dashboards will be created.
         config: Configuration.
 
     Examples:
-        >>> TB = get_dashboard("tensorboard", logdir="log/dir", config=config)
-        >>> with TB() as tbw:
-        >>>     for epoch in range(10):
-        >>>         ...
-        >>>         tbw.add_scalar("Tag", 1)
-        >>>         tbw.add_scalar("Another/Tag", 2)
-        >>>         tbw.update_axes("train/step")
-        >>>         ...
-
-    Todo:
-        * Update docstring
-
+        >>> init_dashboard(config)
+        >>> summary_tracker = get_dashboard()
+        >>> ...
+        >>> # at the beginning of a validation epoch
+        >>> summary_tracker.new_epoch('valid')
+        >>> for step in valid_data:
+        >>>     summary_tracker.new_step()
+        >>>     ...
+        >>>     summary_tracker.append_loss(1.0)
+        >>> summary_tracker.set_metrics_results({'metric-1': 1.0, 'metric-2': 2.0})
+        >>> best_valid_timestamp, current_best = summary_tracker.get_best_valid()
+        >>> summary_tracker.on_epoch_end()
+        >>> ...
+        >>> finish_dashboard()
     """
     os.environ["WANDB_SILENT"] = "true"
 
@@ -382,9 +404,11 @@ def init_dashboard(
 
 
 def finish_dashboard():
+    """Close dashboard tracking."""
     root.on_experiment_end()
 
 
 def get_dashboard() -> SummaryTracker:
+    """Get summary tracker. `init_dashboard()` must be called before `get_dashboard()`"""
     assert root is not None, "Please initialize dashboard first."
     return root

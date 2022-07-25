@@ -202,7 +202,7 @@ class Trainer(AbstractTrainer):
         return self._summary_tracker.axes
 
     @property
-    def best_result(self) -> dict:
+    def best_valid_result(self) -> dict:
         """Retrieve best result dict from `self.valid_result_list`."""
         return self.valid_result_list[self.best_valid_timestamp.valid_epoch]
 

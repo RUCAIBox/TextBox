@@ -294,9 +294,9 @@ class Config(object):
         args_info = f'{len(self.final_config_dict)} parameters found.\n'
         args_info += '=' * 80 + '\n'
         for category in self.parameters:
-            args_info += category + ' Hyper Parameters: \n'
+            args_info += '# ' + category + ' Hyper Parameters: \n'
             args_info += '\n'.join([
-                f'    {arg} = {self.final_config_dict[arg]}'
+                f'{arg}: {self.final_config_dict[arg]}'
                 for arg in self.parameters[category] if arg in self.final_config_dict
             ])
             args_info += '\n\n'

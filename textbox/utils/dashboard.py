@@ -238,7 +238,7 @@ class EpochTracker:
             self.desc = 'Train epoch '
             self.serial = self.axes.train_epoch
         elif self.mode == 'valid':
-            self.desc = 'Validation '
+            self.desc = ' Validation '
             self.serial = self.axes.valid_epoch
         else:
             self.desc = 'Epoch '

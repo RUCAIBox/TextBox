@@ -171,6 +171,8 @@ class SummaryTracker:
             self.add_scalar(tag, any_value)
 
     def add_corpus(self, tag: str, corpus: Iterable[str]):
+        if tag.startswith('valid'):
+            self.current_epoch.update_metrics({'generated_corpus': '\n'.join(corpus)})
         if self._is_local_main_process and not self.tracker_finished:
             corpus = wandb.Table(columns=[tag], data=pd.DataFrame(corpus))
             wandb.log({tag: corpus}, step=self.axes.train_step)
@@ -288,31 +290,21 @@ class EpochTracker:
             return -self.avg_loss
 
         score = 0.
-        float_list = []
         for metric, result in self._valid_metrics_results.items():
-            if isinstance(result, dict):
-                float_list = [v for k, v in result.items() if k in self.metrics_for_best_model and isinstance(v, float)]
-            elif metric in self.metrics_for_best_model:
-                if isinstance(result, Collection):
-                    float_list = list(filter(lambda x: isinstance(x, float), result))
-                elif isinstance(result, float):
-                    float_list = [result]
-
-            if len(float_list) != 0:
-                score += sum(float_list) / len(float_list)
-                float_list = []
+            if metric in self.metrics_for_best_model and isinstance(result, float):
+                score += result
 
         return score
 
     def _epoch_info(self, time_duration: float, current_best: bool):
         r"""Output loss with epoch and time information."""
-        def add_metric(_k, _v):
+        def add_metric(_k: str, _v: Union[str, float]) -> str:
+            if isinstance(_v, str):
+                return ''
             _o = ', '
             if _k.lower() in self.metrics_for_best_model:
                 _o += '<'
-            if isinstance(_v, str):
-                _o += f'{_k}: "{_v[:15]}..."'
-            elif isinstance(_v, float):
+            if isinstance(_v, float):
                 _o += f'{_k}: {_v:.4f}'
             if _k.lower() in self.metrics_for_best_model:
                 _o += '>'

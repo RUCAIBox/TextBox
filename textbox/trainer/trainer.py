@@ -382,21 +382,17 @@ class Trainer(AbstractTrainer):
     def save_generated_text(self, generated_corpus: List[str], is_valid: bool = False):
         r"""Store the generated text by our model into `self.saved_text_filename`."""
         if is_valid:
-            serial = self.timestamp.valid_epoch
-            tag = 'valid'
-            self._summary_tracker.add_corpus('valid-' + str(serial), generated_corpus)
+            self._summary_tracker.add_corpus('valid-' + str(self.timestamp.valid_epoch), generated_corpus)
         else:
-            serial = None
-            tag = 'eval'
             self._summary_tracker.add_corpus('test', generated_corpus)
-        serialized_save(
-            generated_corpus,
-            serial=serial,
-            serial_of_soft_link=None,
-            path_without_extension=self.saved_text_filename,
-            tag=tag,
-            extension_name='txt',
-        )
+            serialized_save(
+                generated_corpus,
+                serial=None,
+                serial_of_soft_link=None,
+                path_without_extension=self.saved_text_filename,
+                tag='eval',
+                extension_name='txt',
+            )
 
     def resume_checkpoint(self, resume_file: str):
         r"""Load the model parameters information and training information.

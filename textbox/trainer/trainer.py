@@ -390,7 +390,7 @@ class Trainer(AbstractTrainer):
                 serial=None,
                 serial_of_soft_link=None,
                 path_without_extension=self.saved_text_filename,
-                tag='eval',
+                tag=None,
                 extension_name='txt',
             )
 

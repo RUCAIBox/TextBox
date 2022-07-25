@@ -128,7 +128,7 @@ def serialized_save(
             safe_remove(path_to_delete)
 
     # create soft link
-    if serial_of_soft_link == serial:
+    if serial_of_soft_link is not None and serial_of_soft_link == serial:
         safe_remove(path_to_pre_best)
         safe_remove(path_to_link)
         os.symlink(path_to_save, path_to_link)

@@ -31,6 +31,7 @@
 - [ ] *Max-token?
 - [ ] `eval` and `repr`
 - [ ] valid target setting if not metric for best is not loss
+- [ ] Add attribute `tokenized`?
 ### Pre-training tasks (construct new `target_id` and `source_id` according to old `source_id`)
 - [ ] DAE (like BART)
 - [ ] Masked Seq2Seq (like MASS)
@@ -129,6 +130,7 @@ https://github.com/huggingface/transformers/blob/main/examples/pytorch/summariza
 - [ ] Name and doc check
 - [ ] Check `bert-score` HF logging
 - [ ] Check and remake each dataset (especially, CoQA, webnlg)
+- [ ] corpus.copy()
 - [ ] Support evaluation for different datasets and task. (how to specify the evaluation method?)
     - [x] Text summarization: CNN/Daily Mail (cnndm), XSum (xsum), SAMSum (samsum), and WLE (wle).
     - [x] Open-ended dialogue system: PersonaChat (pc), DailyDialog (dd), DSTC7-AVSD (da), and SGD (sgd).

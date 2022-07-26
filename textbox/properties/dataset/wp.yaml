@@ -2,9 +2,10 @@ src_len: 1024
 tgt_len: 1024
 metrics: ['bleu', 'distinct']
 metrics_for_best_model: ['bleu-1', 'bleu-2', 'bleu-3', 'bleu-4']
-smoothing_function: 'corpus'
+corpus_bleu: true
 
 train_batch_size: 20
 update_freq: 10
 eval_batch_size: 64
 prefix: 'Given the story title: '
+generation_kwargs: {'num_beams': 1, 'do_sample': True, 'top_p': 0.9, 'temperature': 0.7}

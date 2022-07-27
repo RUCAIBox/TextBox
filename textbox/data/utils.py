@@ -1,3 +1,4 @@
+import itertools
 import os
 from numpy import pad
 import torch
@@ -13,11 +14,14 @@ class AbstractDataset(Dataset):
     def __init__(self, config, set):
         super().__init__()
         self.config = config
+        self.quick_test = config['quick_test']
+        if isinstance(self.quick_test, bool):
+            self.quick_test = 32 if self.quick_test else 0
         self.set = set
         source_filename = os.path.join(config['data_path'], f'{set}.src')
         target_filename = os.path.join(config['data_path'], f'{set}.tgt')
-        self.source_text = load_data(source_filename)
-        self.target_text = load_data(target_filename)
+        self.source_text = load_data(source_filename, max_length=self.quick_test)
+        self.target_text = load_data(target_filename, max_length=self.quick_test)
         self.source_length = self.config['src_len']
         self.target_length = self.config['tgt_len']
         if set != 'test':
@@ -42,11 +46,11 @@ class AbstractDataset(Dataset):
         if self.source_length > self.tokenizer.model_max_length:
             warnings.warn(f"The max length of source text {self.source_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and will be set to {self.tokenizer.model_max_length}.")
             self.source_length = self.tokenizer.model_max_length
-            
+
         if self.target_length > self.tokenizer.model_max_length:
             warnings.warn(f"The max length of target text {self.target_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and will be set to {self.tokenizer.model_max_length}.")
             self.target_length = self.tokenizer.model_max_length
-        
+
         if self.config['efficient_methods'] and 'prompt-tuning' in self.config['efficient_methods']:
             prompt_length = self.config['efficient_kwargs']['prompt_length']
             if self.config['model_name'] in CLM_MODELS:
@@ -147,13 +151,15 @@ def data_preparation(config, tokenizer):
     test_dataloader = DataLoader(test_dataset, batch_size=config['eval_batch_size'], shuffle=False, collate_fn=AbstractCollate(config, tokenizer, 'test'))
     return train_dataloader, valid_dataloader, test_dataloader
 
-def load_data(dataset_path):
+
+def load_data(dataset_path: str, max_length: int = 0):
     """Load dataset from split (train, valid, test).
     This is designed for single sentence format.
 
     Args:
         dataset_path (str): path of dataset dir.
-    
+        max_length: (default = 0) The amount of line about to load. If 0, quick_test will be disabled.
+
     Returns:
         List[List[str]]: the text list loaded from dataset path.
     """
@@ -162,6 +168,8 @@ def load_data(dataset_path):
 
     text = []
     with open(dataset_path, "r") as fin:
+        if max_length:
+            fin = itertools.islice(fin, max_length)
         for line in fin:
             l = line.strip()
             if len(l) >= 2 and ((l[0] == '"' and l[-1] == '"') or (l[0] == "'" and l[-1] == "'") or (l[0] == '[' and l[-1] == ']')):
@@ -173,6 +181,7 @@ def load_data(dataset_path):
                     pass
             text.append(l)
     return text
+
 
 def _pad_sequence(tensors: List[Tensor], padding_value: int, padding_side: str = 'right'):
     """

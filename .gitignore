@@ -20,3 +20,5 @@ run_test.py
 facebook/
 /gpt2/
 /t5*/
+.env
+/wandb/

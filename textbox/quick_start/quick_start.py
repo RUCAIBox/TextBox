@@ -61,10 +61,13 @@ def run_textbox(model=None, dataset=None, config_file_list=None, config_dict=Non
             trainer.resume_checkpoint(resume_file=config['load_experiment'])
         # model training
         result = trainer.fit(train_data, valid_data)
+        if 'generated_corpus' in result:
+            del result['generated_corpus']
+        logger.info('best validation result: {}'.format(result))
         # model evaluating
-        for key, value in result.items():
-            logger.info(f"{key}: {value}")
         test_result = trainer.evaluate(test_data)
 
-    logger.info('test result: {}'.format(test_result))
+    logger.info('test result:')
+    for key, value in test_result.items():
+        logger.info(f"  {key}: {value}")
     finish_dashboard()

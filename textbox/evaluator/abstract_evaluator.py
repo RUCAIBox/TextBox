@@ -17,20 +17,22 @@ class AbstractEvaluator():
     def __init__(self, config):
         self.config = config
 
-    def evaluate(self, generate_corpus, reference_corpus):
+    def evaluate(self, generate_corpus, reference_corpus, avg=True):
         r"""get metrics result
 
         Args:
             generate_corpus: the generated corpus
             reference_corpus: the referenced corpus
+            avg: whether or not to average the metric results
         
         Returns:
             dict: such as ``{metric-1: xxx}``
         """
         metric_dict = self._calc_metrics_info(generate_corpus=generate_corpus, reference_corpus=reference_corpus)
-        for k, v in metric_dict.items():
-            if isinstance(v, list) or isinstance(v, float):
-                metric_dict[k] = round(np.mean(v), 2)
+        if avg:
+            for k, v in metric_dict.items():
+                if isinstance(v, list) or isinstance(v, float):
+                    metric_dict[k] = round(np.mean(v), 2)
         return metric_dict
 
     def _calc_metrics_info(self):

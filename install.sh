@@ -13,5 +13,5 @@ cd files2rouge
 python setup_rouge.py
 python setup.py install
 
-pip uninstall rouge
+pip uninstall py-rouge
 pip install rouge

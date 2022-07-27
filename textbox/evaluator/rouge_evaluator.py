@@ -66,7 +66,8 @@ class RougeEvaluator(AbstractEvaluator):
             from rouge import Rouge 
 
             reference_corpus = [ref[0] for ref in reference_corpus]
-            rouge = Rouge(metrics=['rouge-1', 'rouge-2', 'rouge-3', 'rouge-4', 'rouge-5', 'rouge-l'])
+            metrics = [f'rouge-{i}' for i in range(1, self.rouge_max_ngrams + 1)] + ['rouge-l']
+            rouge = Rouge(metrics=metrics)
             scores = rouge.get_scores(generate_corpus, reference_corpus, avg=True)
             for i in range(1, self.rouge_max_ngrams + 1):
                 results[f'rouge-{i}'] = scores[f'rouge-{i}']['f'] * 100

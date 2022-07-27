@@ -14,4 +14,4 @@ python setup_rouge.py
 python setup.py install
 
 pip uninstall rouge
-pip install py-rouge
+pip install rouge

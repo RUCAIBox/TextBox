@@ -62,15 +62,15 @@ class RougeEvaluator(AbstractEvaluator):
                     l = l.split(' ')
                     results[l[1].lower()] = float(l[3]) * 100
         
-        elif self.rouge_type == 'py-rouge':
+        elif self.rouge_type == 'rouge':
             from rouge import Rouge 
 
-            rouge = Rouge(metrics=['rouge-n', 'rouge-l', 'rouge-w'], max_n=self.rouge_max_ngrams, limit_length=False, apply_avg=False, apply_best=True, weight_factor=1.2)
-            scores = rouge.get_scores(generate_corpus, reference_corpus)
+            reference_corpus = [ref[0] for ref in reference_corpus]
+            rouge = Rouge(metrics=['rouge-1', 'rouge-2', 'rouge-3', 'rouge-4', 'rouge-5', 'rouge-l'])
+            scores = rouge.get_scores(generate_corpus, reference_corpus, avg=True)
             for i in range(1, self.rouge_max_ngrams + 1):
                 results[f'rouge-{i}'] = scores[f'rouge-{i}']['f'] * 100
             results['rouge-l'] = scores['rouge-l']['f'] * 100
-            results['rouge-w-1.2'] = scores['rouge-w']['f'] * 100
 
         elif self.rouge_type == 'rouge-score':
             from rouge_score import rouge_scorer

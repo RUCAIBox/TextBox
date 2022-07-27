@@ -4,6 +4,7 @@ metrics: ['rouge']
 metrics_for_best_model: ['rouge-1', 'rouge-2', 'rouge-l']
 is_chinese_task: True
 label_smoothing: 0.1
+rouge_type: 'rouge'
 
 train_batch_size: 8
 eval_batch_size: 16

@@ -29,6 +29,7 @@ from .abstract_model import AbstractModel
 from textbox import CLM_MODELS, SEQ2SEQ_MODELS
 
 from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForSeq2SeqLM, EncoderDecoderModel
+from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
 
 '''
 # Model for Causal LM mapping
@@ -70,6 +71,8 @@ class Pretrained_Models(AbstractModel):
         # loading model
         if self.model_name == 'bert2bert':
             self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(model_path, model_path, config=self.configuration)
+        elif self.model_name == 'cpt':
+            self.model = CPTForConditionalGeneration.from_pretrained(model_path, config=self.configuration)
         elif self.is_casual_model:
             self.configuration.is_decoder = True
             if model_path:
@@ -178,7 +181,8 @@ class Pretrained_Models(AbstractModel):
         
         if self.label_smoothing:
             loss_fct = nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
-            return loss_fct(outputs.logits.view(len(batch['source_text']), -1), inputs['labels'].view(-1))
+            vocab_size = outputs.logits.size()[-1]
+            return loss_fct(outputs.logits.view(-1, vocab_size), inputs['labels'].view(-1))
         else:
             return outputs.loss
 

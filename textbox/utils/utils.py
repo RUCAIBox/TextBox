@@ -5,7 +5,7 @@ import random
 
 import torch
 import numpy as np
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, BertTokenizer
 
 from .enum_type import PLM_MODELS
 
@@ -78,7 +78,10 @@ def get_tokenizer(config):
     if model_name in PLM_MODELS:
         tokenizer_kwargs = config['tokenizer_kwargs'] or {}
         tokenizer_path = config['tokenizer_path'] or config['model_path']
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
+        if (config['model_name'] in ['chinese-bart', 'chinese-pegasus', 'cpt']):
+            tokenizer = BertTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
+        else:
+            tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
 
         # (1): tokenizer needs to add eos token
         if model_name in ['ctrl', 'openai-gpt']:

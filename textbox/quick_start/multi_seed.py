@@ -27,8 +27,9 @@ def run_multi_seed(
     avg_results = defaultdict(int)
     best_trial = -1
     best_score = -math.inf
-    trial_tqdm = tqdm(range(multi_seed), unit='trial', desc="multi_seed", dynamic_ncols=True)
 
+    logger.info('======Multiple Random Seeds Test Start======')
+    trial_tqdm = tqdm(range(multi_seed), unit='trial', desc="multi_seed", dynamic_ncols=True)
     for trial_idx in trial_tqdm:
         st_time = time()
         trial_seed = rng.integers(int(1e9))
@@ -45,11 +46,12 @@ def run_multi_seed(
         for key, value in valid_result.items():
             avg_results[key] *= trial_idx / (trial_idx + 1)
             avg_results[key] += value / (trial_idx + 1)
-            output += f', {key}: {value}'
+            output += f', {key}: {value:4f}'
         output += ']'
         logger.info(output)
 
-    logger.info(f'Best trial at {best_trial} (score = {best_score:4f})')
+    logger.info(f'======Multiple Random Seeds Test Finished. Best at {best_trial} '
+                f'trial (score = {best_score:4f}).======')
     logger.info(f'Average results:')
     for key, value in avg_results.items():
         logger.info(f' {key}: {value}')

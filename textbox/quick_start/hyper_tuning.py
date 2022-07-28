@@ -1,4 +1,5 @@
 import logging
+import math
 from copy import copy
 from logging import getLogger
 from time import time
@@ -72,6 +73,9 @@ class HyperTuning:
         self.logger = getLogger('hyper_tuning')
         self.logger.disabled = False
         self._trial_count = 0
+        self.best_trial = -1
+        self.best_score = -math.inf
+        self.best_params = None
 
     def fn(self, params: dict) -> dict:
         """
@@ -81,19 +85,39 @@ class HyperTuning:
         st_time = time()
         extended_config = copy(params)
         self.logger.info(f"Optimizing parameters: {params}")
+
         _, test_result = self.experiment.run(extended_config)
         if not isinstance(test_result, dict):
             return {'status': hyperopt.STATUS_FAIL, 'loss': None}
+        ed_time = time()
+
+        current_best = False
+        if test_result['loss'] > self.best_score:
+            self.best_score = test_result['score']
+            self.best_trial = self._trial_count
+            self.best_params = copy(params)
+            current_best = True
         test_result['loss'] = test_result['score']
         test_result['status'] = hyperopt.STATUS_OK
         del test_result['score']
-        ed_time = time()
-        self.logger.info(f'Trial {self._trial_count} [time: {ed_time - st_time:2f}, test score: {test_result["loss"]:4f}]')
+
+        output = f'Trial {self._trial_count}'
+        if current_best:
+            output += ' (best)'
+        output += f' [time: {ed_time - st_time:2f}, test score: {test_result["loss"]:4f}'
+        for key, value in test_result.items():
+            output += f', {key}: {value:4f}'
+        output += ']'
+        self.logger.info(output)
         self._trial_count += 1
         return test_result
 
     def run(self):
+        self.logger.info('======Hyper Tuning Start======')
         fmin(fn=self.fn, space=self.space, algo=self.algo, max_evals=self.max_evals)
+        self.logger.info(f'======Hyper Tuning Finished. Best at {self.best_trial}'
+                         f' trial (score = {self.best_score:4f}).======')
+        self.logger.info(f'Best params: {self.best_params}')
 
     @staticmethod
     def _build_space_from_file(file: Optional[str]) -> Dict[str, Any]:

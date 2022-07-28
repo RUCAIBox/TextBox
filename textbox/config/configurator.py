@@ -5,7 +5,7 @@ import yaml
 import torch
 from logging import getLogger
 
-from typing import List, Dict, Optional, Union, Iterable
+from typing import List, Dict, Optional, Union, Iterable, Any
 
 from textbox.utils.utils import get_local_time
 from textbox.utils.argument_list import general_parameters, training_parameters, evaluation_parameters, model_parameters, \
@@ -68,7 +68,7 @@ class Config(object):
         self._set_default_parameters()
 
     def _init_parameters_category(self):
-        self.parameters: Dict[str, List[str]] = dict()
+        self.parameters: Dict[str, Iterable[str]] = dict()
         self.parameters['General'] = general_parameters
         self.parameters['Training'] = training_parameters
         self.parameters['Evaluation'] = evaluation_parameters
@@ -243,11 +243,14 @@ class Config(object):
         self.final_config_dict['model'] = self.model
         self.final_config_dict['model_name'] = self.model.lower()
         self.final_config_dict['data_path'] = os.path.join(self.final_config_dict['data_path'], self.dataset)
-        self.final_config_dict['filename'] = '{}-{}-{}'.format(
-            self.final_config_dict['model'], self.final_config_dict['dataset'], get_local_time()
-        )
-        if 'logdir' not in self.final_config_dict:
-            self.final_config_dict['logdir'] = './log/'
+        self.setdefault('filename', f'{self.final_config_dict["model"]}'
+                                    f'-{self.final_config_dict["dataset"]}'
+                                    f'-{get_local_time()}')  # warning: filename is not replicable
+        self.setdefault('logdir', './log/')
+        self.setdefault('_hyper_tuning', [])
+        self.setdefault('do_train', True)
+        self.setdefault('do_valid', True)
+        self.setdefault('do_test', True)
         self._simplify_parameter('optimizer')
         self._simplify_parameter('scheduler')
         self._simplify_parameter('src_lang')
@@ -274,7 +277,23 @@ class Config(object):
 
         self.external_config_dict['device'] = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
 
+    def setdefault(self, _key: str, _default: Any):
+        """
+        Insert key with a value of default if key is not in the final_config_dict dictionary.
+
+        Return the value for key if key is in the final_config_dict dictionary, else default.
+        """
+        if _key not in self.final_config_dict:
+            self.final_config_dict[_key] = _default
+            return _default
+        else:
+            return self.final_config_dict[_key]
+
+    def update(self, _m, **kwargs):
+        self.final_config_dict.update(_m, **kwargs)
+
     def __setitem__(self, key, value):
+        # for safety reasons, a direct modification of config is not suggested
         if not isinstance(key, str):
             raise TypeError("index must be a str.")
         self.final_config_dict[key] = value
@@ -293,26 +312,23 @@ class Config(object):
     def __str__(self):
         args_info = f'{len(self.final_config_dict)} parameters found.\n'
         args_info += '=' * 80 + '\n\n'
-        for category in self.parameters:
-            args_info += '# ' + category + ' Hyper Parameters: \n\n'
-            args_info += '\n'.join([
-                f'{arg}: {self.final_config_dict[arg]}'
-                for arg in self.parameters[category] if arg in self.final_config_dict
-            ])
-            args_info += '\n\n\n'
-
         unrecognized = set(self.final_config_dict.keys()) - self.all_parameters
         if len(unrecognized) > 0:
-            args_info += 'Unrecognized Parameters: \n'
-            args_info += '\n'.join([
-                f'    {arg} = {self.final_config_dict[arg]}' for arg in unrecognized if arg in self.final_config_dict
-            ])
-            args_info += '\n\n\n'
+            self.parameters['Unrecognized'] = unrecognized
 
-        args_info = args_info[:-2]
+        for category in self.parameters:
+            args_info += '# ' + category + ' Hyper Parameters: \n\n'
+            for arg in self.parameters[category]:
+                if arg.startswith('_'):
+                    continue
+                if arg in self.final_config_dict:
+                    if arg in self.final_config_dict['_hyper_tuning']:
+                        args_info += '#[HYPER_TUNING] '
+                    args_info += f'{arg}: {self.final_config_dict[arg]}\n'
+            args_info += '\n\n'
 
-        args_info += '=' * 80 + ''
+        args_info = args_info[:-1] + '=' * 80
         return args_info
 
     def __repr__(self):
-        return self.__str__()
+        return str(self.final_config_dict)

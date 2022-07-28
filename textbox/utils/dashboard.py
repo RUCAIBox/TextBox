@@ -85,17 +85,22 @@ class SummaryTracker:
             metrics_for_best_model: Set[str],
             email: bool = True,
     ):
-        self.axes = Timestamp()
         self._email = email
         self._is_local_main_process = is_local_main_process
         self.tracker_finished = False
         self.metrics_for_best_model: Set[str] = metrics_for_best_model
-        self._run = None
         self._tables: Dict[str, wandb.data_types.Table] = dict()
         self.kwargs = kwargs
 
+        self._run = None
+        self.axes = None
+
         self.current_epoch: Optional[EpochTracker] = None
         self.current_mode: Optional[str] = None
+
+        self.best_valid_score = None
+        self.best_valid_timestamp = None
+        self.current_best = None
 
     def on_experiment_start(self):
         r"""Call at the beginning of experiment."""
@@ -106,6 +111,8 @@ class SummaryTracker:
             wandb.define_metric("loss/train", step_metric=train_step)
             wandb.define_metric("loss/valid", step_metric=train_step)
             wandb.define_metric("metrics/*", step_metric=train_step)
+
+        self.axes = Timestamp()
 
         self.best_valid_score = -math.inf
         self.best_valid_timestamp = Timestamp()
@@ -305,7 +312,7 @@ class EpochTracker:
             results = {}
         if self._accumulate_step != 0:
             results.update(loss=self.avg_loss)
-        if self.mode_tag == 'valid':
+        if self.mode == 'valid':
             results.update(score=self.calc_score())
         return results
 
@@ -393,6 +400,7 @@ def init_dashboard(
         >>> finish_dashboard()
     """
     os.environ["WANDB_SILENT"] = "true"
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
     global root
     if root is not None:

@@ -19,4 +19,4 @@ wandb
 setuptools
 six
 accelerate
-hyperopt
+hyperopt>=0.2.6

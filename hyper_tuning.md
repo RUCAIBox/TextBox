@@ -5,14 +5,17 @@
 
 Open `TextBox/hyper.test` and set several hyperparameters to auto-searching in parameter list. 
 
-- **choice**: indicates that the parameter takes discrete values from the setting list.
-- **uniform**:
-- **quniform**:
-- **loguniform**: indicates that the parameters obey the uniform distribution, randomly taking values from $e^{-8}$ to $e^{0}$.
-
 ```text
-<parameter-name> <search-method> <search-space>
+<param> <method> <space>
 ```
+
+- `<param>`: Parameters to be optimized
+- `<method>`: Supports following method 
+    - **choice**: indicates that the parameter takes discrete values from the setting list.
+    - **uniform**:
+    - **quniform**:
+    - **loguniform**: indicates that the parameters obey the uniform distribution, randomly taking values from $e^{-8}$ to $e^{0}$.
+- `<space>`: Search space. Any Python object within one line is supported.
 
 Here is an example for `hyper.test`: 
 

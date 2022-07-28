@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from textbox import Config
-from textbox.utils.dashboard import get_dashboard, Timestamp
+from textbox.utils.dashboard import get_dashboard, Timestamp, EpochTracker
 from .scheduler import (
     AbstractScheduler, InverseSquareRootScheduler, CosineScheduler, LinearScheduler, ConstantScheduler
 )
@@ -114,7 +114,8 @@ class Trainer(AbstractTrainer):
         if self.quick_test and self.max_save is None:
             self.max_save = 0
         self.max_save = self.max_save or 2
-        self.disable_tqdm = not self.accelerator.is_local_main_process
+        self.hyper_tuning = bool(config['_hyper_tuning'])
+        self.disable_tqdm = self.hyper_tuning or not self.accelerator.is_local_main_process
         self._summary_tracker = get_dashboard()
 
     def _set_eval_strategy(self) -> Tuple[int, str]:
@@ -512,7 +513,8 @@ class Trainer(AbstractTrainer):
         if load_best_model:
             checkpoint_file = model_file or self.saved_model_filename + '.pth'
             if not os.path.isfile(checkpoint_file):
-                self.logger.error(f'Failed to evaluate model: "{checkpoint_file}" not found.')
+                self.logger.error(f'Failed to evaluate model: "{checkpoint_file}" not found. '
+                                  f'(You may specify it with `load_experiment`)')
                 return None
             self.logger.info('Loading model structure and parameters from {} ...'.format(checkpoint_file))
             checkpoint = torch.load(checkpoint_file, map_location=self.device)
@@ -535,5 +537,8 @@ class Trainer(AbstractTrainer):
         if self.is_save():
             self.save_generated_text(generate_corpus, is_valid)
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
+        et = EpochTracker(self.metrics_for_best_model)
+        et.update_metrics(result)
+        result.update(score=et.calc_score())
 
         return result

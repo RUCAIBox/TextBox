@@ -31,6 +31,16 @@ def run_textbox(
     experiment.run()
 
 
+def run_multi_seed(
+        seed_num: int,
+        model: Optional[str] = None,
+        dataset: Optional[str] = None,
+        config_file_list: Optional[list] = None,
+        config_dict: Optional[dict] = None,
+):
+    pass
+
+
 def _run_textbox(model=None, dataset=None, config_file_list=None, config_dict=None):
     r""" A fast running api, which includes the complete process of
     training and testing a model on a specified dataset

@@ -1,19 +1,24 @@
+import logging
 from copy import copy
 from logging import getLogger
+from time import time
+from typing import Optional, Dict, Any, Callable, Union, Iterable, Generator, Iterator
 
+import hyperopt
+import numpy as np
+from hyperopt import fmin, hp, pyll
+from hyperopt.base import miscs_update_idxs_vals
+from hyperopt.pyll.base import Apply
+from numpy import ndarray
 
 from .experiment import Experiment
 from ..config.configurator import Config
-
-from hyperopt import Trials, fmin, hp
-
-from typing import Optional, Dict, Any
-from hyperopt.pyll import Apply
-
 from ..utils.dashboard import EpochTracker
 
+SpaceType = Union[Apply, Iterable, dict]
 
-class AbstractHyperTuning:
+
+class HyperTuning:
     """
     Args:
         model:
@@ -31,23 +36,63 @@ class AbstractHyperTuning:
             dataset: Optional[str],
             base_config_file_list: list,
             base_config_dict: dict,
-            space_file: Optional[str],
+            space: Union[SpaceType, str],
+            algo: Union[Callable, str],
             path_to_output: str,
-            space_dict: Optional[dict] = None
     ):
 
+        if isinstance(space, dict):
+            self.space = space
+        elif isinstance(space, str):
+            self.space = self._build_space_from_file(space)
+        else:
+            raise ValueError(f'Unrecognized search space configuration {space}.')
+
+        if isinstance(algo, str):
+            algo = algo.split('.')[-1]
+            self.algo = getattr(self, algo) if hasattr(self, algo) else getattr(hyperopt.tpe, algo)
+        elif callable(algo):
+            self.algo = algo
+        else:
+            raise ValueError(f'Unrecognized algorithm configuration {space}.')
+
+        self.max_evals = _space_size(self.space)
+
         self.path_to_output = path_to_output
-        self.base_config_file_list = base_config_file_list
+        self.base_config_kwargs = dict(
+            model=model,
+            dataset=dataset,
+            config_file_list=base_config_file_list,
+        )
         self.base_config_dict = base_config_dict
-        self.base_config = Config(model, dataset, base_config_file_list, base_config_dict)
-        self.metrics_for_best_model = self.base_config['metrics_for_best_model']
+        self.base_config_dict['_hyper_tuning'] = list(self.space.keys())
+        self.base_config_dict.setdefault('max_save', 1)
+        self.experiment = Experiment(model, dataset, base_config_file_list, base_config_dict)
+        self.config = self.experiment.get_config()
+        self.metrics_for_best_model = self.config['metrics_for_best_model']
+        getLogger().setLevel(logging.WARNING)
+        self.logger = getLogger(__name__)
+        print(self.logger.level, __name__)
+        self.logger.disabled = False
+        self.trail_count = 0
 
-        self.space = space_dict or self._build_space_from_file(space_file)
-        self.algo = None
-        self.max_evals = None
-
-    def fn(self, params: dict):
-        raise NotImplementedError
+    def fn(self, params: dict) -> dict:
+        """
+        Args:
+            params: Hyper-parameters to be tuned.
+        """
+        st_time = time()
+        extended_config = copy(params)
+        print("Optimizing parameters: ", params)
+        valid_result, test_result = self.experiment.run(extended_config)
+        if not isinstance(test_result, dict):
+            return {'status': hyperopt.STATUS_FAIL, 'loss': None}
+        test_result['loss'] = test_result['score']
+        test_result['status'] = hyperopt.STATUS_OK
+        del test_result['score']
+        ed_time = time()
+        self.logger.info(f'Trail {self.trail_count} [time: {ed_time-st_time:2f}, test score: {test_result["loss"]:4f}]')
+        return test_result
 
     def run(self):
         fmin(fn=self.fn, space=self.space, algo=self.algo, max_evals=self.max_evals)
@@ -58,71 +103,113 @@ class AbstractHyperTuning:
         assert file is not None, "Configuration of search space must be specified with `params_file`"
         with open(file, 'r', encoding='utf-8') as fp:
             for line in fp:
-                para_list = line.strip().split(' ')
+                line = line.strip()
+                if line.startswith('#'):
+                    continue
+                para_list = line.split()
                 if len(para_list) < 3:
-                    raise ValueError(f'Unrecognized parameter: {line}')
+                    continue
                 para_name, para_type, para_value = para_list[0], para_list[1], "".join(para_list[2:])
 
+                para_value = eval(para_value)
                 if para_type == 'choice':
-                    para_value = eval(para_value)
                     space[para_name] = hp.choice(para_name, para_value)
-                elif para_type == 'uniform':
-                    low, high = para_value.strip().split(',')
-                    space[para_name] = hp.uniform(para_name, float(low), float(high))
-                elif para_type == 'quniform':
-                    low, high, q = para_value.strip().split(',')
-                    space[para_name] = hp.quniform(para_name, float(low), float(high), float(q))
-                elif para_type == 'loguniform':
-                    low, high = para_value.strip().split(',')
-                    space[para_name] = hp.loguniform(para_name, float(low), float(high))
                 else:
-                    raise ValueError('Illegal param type [{}]'.format(para_type))
+                    para_type = getattr(hp, para_type)
+                    space[para_name] = para_type(para_name, *para_value)
 
         return space
 
+    @staticmethod
+    def exhaustive(new_ids, domain, trials, seed, nb_max_successive_failures=1000):
+        r""" This is for exhaustive search in HyperTuning.
 
-class ExhaustiveTuning(AbstractHyperTuning):
-
-    def __init__(
-            self,
-            model: Optional[str],
-            dataset: Optional[str],
-            base_config_file_list: list,
-            base_config_dict: dict,
-            space_file: Optional[str],
-            path_to_output: str,
-            space_dict: Optional[dict] = None
-    ):
-        super().__init__(model, dataset, base_config_file_list, base_config_dict, space_file, path_to_output, space_dict)
-
-    def fn(self, params: dict) -> dict:
         """
-        Args:
-            params: Hyper-parameters to be tuned.
-        """
-        copied = copy(params)
-        copied.update(self.base_config_dict)
-        experiment = Experiment(config_file_list=self.base_config_file_list, config_dict=copied)
-        valid_result, test_result = experiment.run()
-        et = EpochTracker('hyper_tuning', -1, self.metrics_for_best_model)
-        print(valid_result, test_result, et.calc_score())
-        return {'loss': valid_result['score']}
+        # Build a hash set for previous trials
+        hashset = set([
+            hash(
+                frozenset([(key, value[0]) if len(value) > 0 else (key, None)
+                           for key, value in trial['misc']['vals'].items()])
+            ) for trial in trials.trials
+        ])
+
+        rng = np.random.default_rng(seed)
+        r_val = []
+        for _, new_id in enumerate(new_ids):
+            new_sample = False
+            nb_successive_failures = 0
+            new_result = None
+            new_misc = None
+            while not new_sample:
+                # -- sample new specs, indices, values
+                indices, values = pyll.rec_eval(domain.s_idxs_vals, memo={
+                    domain.s_new_ids: [new_id],
+                    domain.s_rng: rng,
+                })
+                new_result = domain.new_result()
+                new_misc = dict(tid=new_id, cmd=domain.cmd, workdir=domain.workdir)
+                miscs_update_idxs_vals([new_misc], indices, values)
+
+                # Compare with previous hashes
+                h = hash(
+                    frozenset([(key, value[0]) if len(value) > 0 else (key, None) for key, value in values.items()]))
+                if h not in hashset:
+                    new_sample = True
+                else:
+                    # Duplicated sample, ignore
+                    nb_successive_failures += 1
+
+                if nb_successive_failures > nb_max_successive_failures:
+                    # No more samples to produce
+                    return []
+
+            r_val.extend(trials.new_trial_docs([new_id], [None], [new_result], [new_misc]))
+        return r_val
 
 
 def run_hyper(
+        algo: str,
         model: str,
         dataset: str,
         base_config_file_list: list,
         base_config_dict: dict,
-        space_file: str,
+        space: str,
         path_to_output: str,
 ):
-    hyper_tuning = ExhaustiveTuning(
+    hyper_tuning = HyperTuning(
         model=model,
         dataset=dataset,
         base_config_file_list=base_config_file_list,
         base_config_dict=base_config_dict,
-        space_file=space_file,
+        space=space,
+        algo=algo,
         path_to_output=path_to_output,
     )
     hyper_tuning.run()
+    # todo output best result
+
+
+def _find_all_nodes(root: SpaceType, node_type: str = 'switch') -> Iterator[Apply]:
+    if isinstance(root, (list, tuple)):
+        for node in root:
+            yield from _find_all_nodes(node, node_type)
+    elif isinstance(root, dict):
+        for node in root.values():
+            yield from _find_all_nodes(node, node_type)
+    elif isinstance(root, Apply):
+        if root.name == node_type:
+            yield root
+        for node in root.pos_args:
+            if node.name == node_type:
+                yield node
+        for _, node in root.named_args:
+            if node.name == node_type:
+                yield node
+
+
+def _space_size(space: SpaceType) -> int:
+    num = 1
+    for node in _find_all_nodes(space, 'switch'):
+        assert node.pos_args[0].name == 'hyperopt_param'
+        num *= len(node.pos_args) - 1
+    return num

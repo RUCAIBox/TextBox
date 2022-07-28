@@ -7,6 +7,7 @@ from typing import Union, Optional
 
 import torch
 import numpy as np
+from accelerate.utils import set_seed
 from transformers import AutoTokenizer
 
 from .enum_type import PLM_MODELS
@@ -221,11 +222,8 @@ def init_seed(seed, reproducibility):
         seed (int): random seed
         reproducibility (bool): Whether to require reproducibility
     """
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+    set_seed(seed)
+
     if reproducibility:
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True

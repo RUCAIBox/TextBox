@@ -1,16 +1,18 @@
-from logging import getLogger, Logger
+import logging
+from copy import copy
+from logging import getLogger
+from typing import Optional, Tuple, Any, List, Dict
+
 from accelerate import Accelerator
-from accelerate.utils import set_seed
 from torch.utils.data import DataLoader
 
-from textbox.trainer.trainer import AbstractTrainer, Trainer
-from textbox.utils.logger import init_logger
-from textbox.utils.utils import get_model, get_tokenizer, get_trainer, init_seed
-from textbox.config.configurator import Config
-from textbox.data.utils import data_preparation
-from textbox.utils.dashboard import init_dashboard, finish_dashboard
+from ..config.configurator import Config
+from ..data.utils import data_preparation
+from ..trainer.trainer import Trainer
+from ..utils.dashboard import init_dashboard, finish_dashboard, start_dashboard
+from ..utils.logger import init_logger
+from ..utils.utils import get_model, get_tokenizer, get_trainer, init_seed
 
-from typing import Optional, Tuple, Any, List, Dict
 ResultType = Dict[str, Any]
 
 
@@ -35,29 +37,23 @@ class Experiment:
 
         self.accelerator = Accelerator()
 
-        # for safety reasons, a direct modification of config is not suggested
         if not isinstance(config_dict, dict):
             config_dict = dict()
         config_dict.update({
             'is_local_main_process': self.accelerator.is_local_main_process,
         })
-        self.config = self.init_config(model, dataset, config_file_list, config_dict)
-        self.logger = getLogger()
-
-        init_dashboard(self.config)
-        init_seed(self.config['seed'], self.config['reproducibility'])
-        set_seed(self.config['seed'])
+        self.__base_config = self.init_config(model, dataset, config_file_list, config_dict)
+        self.__extended_config = None
+        self.logger = getLogger(__name__)
+        init_dashboard(self.get_config())
         self.train_data, self.valid_data, self.test_data, self.tokenizer = \
-            self._init_data(self.config, self.accelerator)
-        self.model = get_model(self.config['model_name'])(self.config, self.tokenizer).to(self.config['device'])
-        self.logger.info(self.model)
-        self.trainer: Trainer = get_trainer(self.config['model'])(self.config, self.model, self.accelerator)
-        # reproducibility initialization
-        self.do_train = True if self.config['do_train'] is None else self.config['do_train']
-        self.do_valid = True if self.config['do_valid'] is None else self.config['do_valid']
-        self.do_test = True if self.config['do_test'] is None else self.config['do_test']
-        self.valid_result: Optional[ResultType] = None
-        self.test_result: Optional[ResultType] = None
+            self._init_data(self.get_config(), self.accelerator)
+
+    def get_config(self) -> Config:
+        config = copy(self.__base_config)
+        if self.__extended_config is not None:
+            config.update(self.__extended_config)
+        return config
 
     @staticmethod
     def init_config(
@@ -71,8 +67,14 @@ class Experiment:
         config = Config(model=model, dataset=dataset, config_file_list=config_file_list, config_dict=config_dict)
 
         # logger initialization
-        init_logger(config['filename'], config['state'], config['is_local_main_process'], config['logdir'])
+        init_logger(
+            filename=config['filename'],
+            log_level=config['state'],
+            enabled=config['is_local_main_process'],
+            logdir=config['logdir']
+        )
         logger = getLogger()
+        print(__name__)
         logger.info(config)
 
         return config
@@ -84,14 +86,33 @@ class Experiment:
         train_data, valid_data, test_data = accelerator.prepare(train_data, valid_data, test_data)
         return train_data, valid_data, test_data, tokenizer
 
+    def _on_experiment_start(self, extended_config: Optional[dict]):
+        """(Re-)initialize configuration. Since for now config and trainer is modifiable, this
+        function is needed to ensure they were aligned to initial configuration.
+        """
+        start_dashboard()
+        self.__extended_config = extended_config
+        config = self.get_config()
+        init_seed(config['seed'], config['reproducibility'])
+
+        self.model = get_model(config['model_name'])(config, self.tokenizer).to(config['device'])
+        self.logger.info(self.model)
+        self.trainer: Trainer = get_trainer(config['model'])(config, self.model, self.accelerator)
+
+        self.do_train = config['do_train']
+        self.do_valid = config['do_valid']
+        self.do_test = config['do_test']
+        self.valid_result: Optional[ResultType] = None
+        self.test_result: Optional[ResultType] = None
+
     def _do_train_and_valid(self):
 
         if not self.do_train and self.do_valid:
             raise ValueError('Cannot execute validation without training.')
 
         if self.do_train:
-            if self.config['load_experiment'] is not None:
-                self.trainer.resume_checkpoint(resume_file=self.config['load_experiment'])
+            if self.__base_config['load_experiment'] is not None:
+                self.trainer.resume_checkpoint(resume_file=self.__base_config['load_experiment'])
             train_data = self.train_data
             valid_data = self.valid_data if self.do_valid else None
 
@@ -103,15 +124,19 @@ class Experiment:
 
         if self.do_test:
 
-            self.test_result = self.trainer.evaluate(self.test_data, model_file=self.config['load_experiment'])
+            self.test_result = self.trainer.evaluate(self.test_data, model_file=self.__base_config['load_experiment'])
 
-            for key, value in self.test_result.items():
-                self.logger.info(f"{key}: {value}")
+            if isinstance(self.test_result, dict):
+                for key, value in self.test_result.items():
+                    self.logger.info(f"{key}: {value}")
 
     def _on_experiment_end(self):
         finish_dashboard()
+        self.__extended_config = None
 
-    def run(self) -> Tuple[Optional[ResultType], Optional[ResultType]]:
+    def run(self, extended_config: Optional[dict] = None) -> Tuple[Optional[ResultType], Optional[ResultType]]:
+
+        self._on_experiment_start(extended_config)
 
         self._do_train_and_valid()
         self._do_test()

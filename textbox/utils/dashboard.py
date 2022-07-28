@@ -260,7 +260,7 @@ class EpochTracker:
         # result: loss & metrics
         self._score: Optional[float] = None
 
-        self._logger: Logger = getLogger()
+        self._logger: Logger = getLogger(__name__)
         self._start_time: Optional[float] = None
         self._end_time: Optional[float] = None
         self.mode = mode or 'Epoch'

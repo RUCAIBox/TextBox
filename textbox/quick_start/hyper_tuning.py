@@ -2,18 +2,15 @@ import logging
 from copy import copy
 from logging import getLogger
 from time import time
-from typing import Optional, Dict, Any, Callable, Union, Iterable, Generator, Iterator
+from typing import Optional, Dict, Any, Callable, Union, Iterable, Iterator
 
 import hyperopt
 import numpy as np
 from hyperopt import fmin, hp, pyll
 from hyperopt.base import miscs_update_idxs_vals
 from hyperopt.pyll.base import Apply
-from numpy import ndarray
 
 from .experiment import Experiment
-from ..config.configurator import Config
-from ..utils.dashboard import EpochTracker
 
 SpaceType = Union[Apply, Iterable, dict]
 
@@ -66,6 +63,7 @@ class HyperTuning:
         )
         self.base_config_dict = base_config_dict
         self.base_config_dict['_hyper_tuning'] = list(self.space.keys())
+        self.base_config_dict['disable_tqdm'] = True
         self.base_config_dict.setdefault('max_save', 1)
         self.experiment = Experiment(model, dataset, base_config_file_list, base_config_dict)
         self.config = self.experiment.get_config()
@@ -73,7 +71,7 @@ class HyperTuning:
         getLogger('textbox').setLevel(logging.WARNING)
         self.logger = getLogger('hyper_tuning')
         self.logger.disabled = False
-        self.trail_count = 0
+        self._trial_count = 0
 
     def fn(self, params: dict) -> dict:
         """
@@ -83,14 +81,15 @@ class HyperTuning:
         st_time = time()
         extended_config = copy(params)
         self.logger.info(f"Optimizing parameters: {params}")
-        valid_result, test_result = self.experiment.run(extended_config)
+        _, test_result = self.experiment.run(extended_config)
         if not isinstance(test_result, dict):
             return {'status': hyperopt.STATUS_FAIL, 'loss': None}
         test_result['loss'] = test_result['score']
         test_result['status'] = hyperopt.STATUS_OK
         del test_result['score']
         ed_time = time()
-        self.logger.info(f'Trail {self.trail_count} [time: {ed_time-st_time:2f}, test score: {test_result["loss"]:4f}]')
+        self.logger.info(f'Trial {self._trial_count} [time: {ed_time - st_time:2f}, test score: {test_result["loss"]:4f}]')
+        self._trial_count += 1
         return test_result
 
     def run(self):
@@ -173,7 +172,6 @@ def run_hyper(
         base_config_file_list: list,
         base_config_dict: dict,
         space: str,
-        path_to_output: str,
 ):
     hyper_tuning = HyperTuning(
         model=model,
@@ -182,7 +180,6 @@ def run_hyper(
         base_config_dict=base_config_dict,
         space=space,
         algo=algo,
-        path_to_output=path_to_output,
     )
     hyper_tuning.run()
     # todo output best result

@@ -114,8 +114,7 @@ class Trainer(AbstractTrainer):
         if self.quick_test and self.max_save is None:
             self.max_save = 0
         self.max_save = self.max_save or 2
-        self.hyper_tuning = bool(config['_hyper_tuning'])
-        self.disable_tqdm = self.hyper_tuning or not self.accelerator.is_local_main_process
+        self.disable_tqdm = config['disable_tqdm'] or not self.accelerator.is_local_main_process
         self._summary_tracker = get_dashboard()
 
     def _set_eval_strategy(self) -> Tuple[int, str]:

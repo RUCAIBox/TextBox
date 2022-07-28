@@ -73,8 +73,7 @@ class Experiment:
             enabled=config['is_local_main_process'],
             logdir=config['logdir']
         )
-        logger = getLogger()
-        print(__name__)
+        logger = getLogger(__name__)
         logger.info(config)
 
         return config

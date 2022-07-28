@@ -158,7 +158,7 @@ class Config(object):
                 else:
                     cmd_config_dict[cmd_arg_name] = cmd_arg_value
         if len(unrecognized_args) > 0:
-            logger = getLogger()
+            logger = getLogger(__name__)
             logger.warning('command line args [{}] will not be used in TextBox'.format(' '.join(unrecognized_args)))
         cmd_config_dict = self._convert_config_dict(cmd_config_dict)
 
@@ -216,7 +216,7 @@ class Config(object):
 
         if os.path.isfile(model_init_file):
             model_config_dict = self._update_internal_config_dict(model_init_file)
-            print(model_config_dict)
+            #print(model_config_dict)
             self.parameters['Model'] += list(set(model_config_dict.keys()) - self.all_parameters)
             self.all_parameters.update(self.parameters['Model'])
 

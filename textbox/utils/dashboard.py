@@ -39,7 +39,7 @@ class Timestamp:
         if isinstance(value, int):
             setattr(self, axe, value+1)
         else:
-            getLogger().warning(f'Failed when updating axe {axe}')
+            getLogger(__name__).warning(f'Failed when updating axe {axe}')
 
     def as_dict(self) -> dict:
         """Get the timestamp as a dictionary. The entries are also metrics labels shown in W&B."""

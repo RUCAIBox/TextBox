@@ -31,7 +31,7 @@ class AbstractTrainer:
     def __init__(self, config: Config, model: AbstractModel):
         self.config = config
         self.model = model
-        self.logger = getLogger()
+        self.logger = getLogger(__name__)
 
     def fit(self, train_data: AbstractDataLoader):
         r"""Train the model based on the train data.

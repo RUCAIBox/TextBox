@@ -70,9 +70,8 @@ class HyperTuning:
         self.experiment = Experiment(model, dataset, base_config_file_list, base_config_dict)
         self.config = self.experiment.get_config()
         self.metrics_for_best_model = self.config['metrics_for_best_model']
-        getLogger().setLevel(logging.WARNING)
-        self.logger = getLogger(__name__)
-        print(self.logger.level, __name__)
+        getLogger('textbox').setLevel(logging.WARNING)
+        self.logger = getLogger('hyper_tuning')
         self.logger.disabled = False
         self.trail_count = 0
 
@@ -83,7 +82,7 @@ class HyperTuning:
         """
         st_time = time()
         extended_config = copy(params)
-        print("Optimizing parameters: ", params)
+        self.logger.info(f"Optimizing parameters: {params}")
         valid_result, test_result = self.experiment.run(extended_config)
         if not isinstance(test_result, dict):
             return {'status': hyperopt.STATUS_FAIL, 'loss': None}

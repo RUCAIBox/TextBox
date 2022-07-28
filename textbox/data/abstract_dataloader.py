@@ -25,7 +25,7 @@ class AbstractDataLoader(object):
     def __init__(self, config, dataset, batch_size=1, shuffle=False, drop_last=True):
         self.config = config
         self.device = config['device']
-        self.logger = getLogger()
+        self.logger = getLogger(__name__)
         self.dataset = dataset
         self.batch_size = batch_size
         self.shuffle = shuffle

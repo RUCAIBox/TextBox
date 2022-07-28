@@ -27,7 +27,7 @@ def run_multi_seed(
     avg_results = defaultdict(int)
     best_trial = -1
     best_score = -math.inf
-    trial_tqdm = tqdm(range(multi_seed), unit='trial')
+    trial_tqdm = tqdm(range(multi_seed), unit='trial', desc="multi_seed", dynamic_ncols=True)
 
     for trial_idx in trial_tqdm:
         st_time = time()
@@ -37,12 +37,17 @@ def run_multi_seed(
         if 'generated_corpus' in valid_result:
             del valid_result['generated_corpus']
         if valid_result['score'] > best_score:
-            best_trial = trial_seed
+            best_trial = trial_idx
+            best_score = valid_result['score']
+        ed_time = time()
+
+        output = f'Trial {trial_idx} [time: {ed_time-st_time:2f}, seed: {trial_seed}'
         for key, value in valid_result.items():
             avg_results[key] *= trial_idx / (trial_idx + 1)
             avg_results[key] += value / (trial_idx + 1)
-        ed_time = time()
-        logger.info(f'Trial {trial_idx} [time: {ed_time-st_time:2f}, seed: {trial_seed}]')
+            output += f', {key}: {value}'
+        output += ']'
+        logger.info(output)
 
     logger.info(f'Best trial at {best_trial} (score = {best_score:4f})')
     logger.info(f'Average results:')

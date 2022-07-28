@@ -67,6 +67,7 @@ class Trainer(AbstractTrainer):
 
         self.device: torch.device = config['device']
         self.filename = self.config['filename']
+        self.is_chinese_task = self.config['is_chinese_task']
         self.accelerator = accelerator
 
         # Optimization strategy
@@ -131,9 +132,9 @@ class Trainer(AbstractTrainer):
         # check
         if eval_epoch > 0 and eval_step > 0:
             self.logger.warning(
-                '"eval_step" and "eval_epoch" are specified at the same time. "eval_step" has been ignored.'
+                '"eval_step" and "eval_epoch" are specified at the same time. "eval_epoch" has been ignored.'
             )
-            eval_step = 0
+            eval_epoch = 0
         elif eval_epoch <= 0 and eval_step <= 0:
             return 0, "skipped"
 
@@ -310,6 +311,8 @@ class Trainer(AbstractTrainer):
         else:
             valid_results = self.evaluate(valid_data, is_valid=True, valid_count=self.timestamp.valid_epoch)
             self._summary_tracker.set_metrics_results(valid_results)
+        
+        self.model.train()
 
         self.valid_result_list[self._summary_tracker.axes.valid_epoch] = self._summary_tracker.epoch_dict()
 
@@ -531,7 +534,10 @@ class Trainer(AbstractTrainer):
         for batch_data in eval_tqdm:
             generated = self.accelerator.unwrap_model(self.model).generate(batch_data, eval_data, self.accelerator)
             generate_corpus.extend(generated)
-        reference_corpus = eval_data.dataset.target_text
+        if (self.is_chinese_task):
+            reference_corpus = eval_data.dataset.target_tokens
+        else:
+            reference_corpus = eval_data.dataset.target_text
         generate_corpus = generate_corpus[:len(reference_corpus)]
         if self.is_save():
             self.save_generated_text(generate_corpus, is_valid)

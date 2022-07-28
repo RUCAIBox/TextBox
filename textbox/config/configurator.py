@@ -232,6 +232,8 @@ class Config(object):
         return final_config_dict
 
     def _simplify_parameter(self, key: str):
+        if key in ['src_lang', 'tgt_lang']:
+            return
         if key in self.final_config_dict:
             if isinstance(self.final_config_dict[key], str):
                 self.final_config_dict[key] = self.final_config_dict[key].lower()

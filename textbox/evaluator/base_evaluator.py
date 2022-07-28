@@ -28,12 +28,13 @@ class BaseEvaluator():
         self.lower = config['lower_evaluation']
         self.metrics = metrics
 
-    def evaluate(self, generate_corpus, reference_corpus):
+    def evaluate(self, generate_corpus, reference_corpus, avg=False):
         r"""get metrics result
 
         Args:
             generate_corpus: the generated corpus
             reference_corpus: the referenced corpus
+            avg: whether or not to average the metric results
         
         Returns:
             dict: such as ``{'bleu-1': xxx, 'bleu-2': yyy}``
@@ -74,6 +75,6 @@ class BaseEvaluator():
             elif metric == 'unique':
                 evaluator = UniqueEvaluator(self.config)
             
-            metric_result = evaluator.evaluate(generate_corpus, reference_corpus)
+            metric_result = evaluator.evaluate(generate_corpus.copy(), reference_corpus.copy(), avg=avg)
             result_dict.update(metric_result)
         return result_dict

@@ -8,18 +8,19 @@ general_parameters = [
 ]
 
 training_parameters = [
-    'do_train', 'do_valid', 'epochs', 'train_batch_size', 'optimizer', 'learning_rate', 'eval_step', 'eval_epoch',
-    'stopping_step', 'grad_clip', 'g_pretraining_epochs', 'd_pretraining_epochs', 'd_sample_num',
-    'd_sample_training_epochs', 'adversarial_training_epochs', 'adversarial_g_epochs', 'adversarial_d_epochs',
-    'scheduler', 'init_lr', 'warmup_steps', 'max_steps', 'weight_decay', 'adafactor_kwargs', 'optimizer_kwargs',
-    'accumulation_steps', 'max_save', 'stopping_steps'
+    'do_train', 'do_valid',  # partial experiment
+    'optimizer', 'adafactor_kwargs', 'optimizer_kwargs', 'scheduler', 'scheduler_kwargs'  # optimizer
+    'max_save',  # checkpoint saving
+    'stopping_steps',  # early stopping
+    'epochs', 'max_steps', 'learning_rate', 'train_batch_size', 'grad_clip', 'weight_decay',  # common parameters
+    'accumulation_steps',  # accelerator
 ]
 
 evaluation_parameters = [
     'do_test', 'lower_evaluation', 'multiref_strategy', 'bleu_max_ngrams', 'bleu_type', 'beam_size',
     'smoothing_function', 'corpus_bleu', 'rouge_max_ngrams', 'rouge_type', 'meteor_type', 'chrf_type',
     'distinct_max_ngrams', 'inter_distinct', 'unique_max_ngrams', 'self_bleu_max_ngrams', 'tgt_lang',
-    'decoding_strategy', 'metrics', 'n_grams', 'eval_batch_size',
+    'decoding_strategy', 'metrics', 'n_grams', 'eval_batch_size', 
 ]
 
 model_parameters = [

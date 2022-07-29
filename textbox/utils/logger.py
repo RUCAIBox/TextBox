@@ -28,13 +28,13 @@ def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, l
 
     Args:
         filename: The filename of current experiment.
-        log_level: Log level of loggers in `logging` module.
+        log_level: Log log_level of loggers in `logging` module.
         enabled: (Default = True) False to throttle logging output down.
         logdir: (Default = './log/') Directory of log files.
 
     Example:
         >>> init_logger("filename", "warning", disabled=True)
-        >>> logger = logging.getLogger()
+        >>> logger = logging.getLogger(__name__)
         >>> logger.debug("train_state")
         >>> logger.info("train_result")
         >>> logger.warning("Warning!")
@@ -51,17 +51,21 @@ def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, l
 
     if log_level is None:
         log_level = "warning"
-    level = getattr(logging, log_level.upper(), None)
-
-    if not enabled:
-        logging.disable(logging.CRITICAL)
+    log_level = getattr(logging, log_level.upper(), None)
 
     file_handler = logging.FileHandler(log_filepath)
-    file_handler.setLevel(level)
+    file_handler.setLevel(log_level)
     file_handler.setFormatter(file_formatter)
 
     stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(level)
+    stream_handler.setLevel(log_level)
     stream_handler.setFormatter(stream_formatter)
 
-    logging.basicConfig(level=level, handlers=[file_handler, stream_handler])
+    logging.basicConfig(level=log_level, handlers=[file_handler, stream_handler])
+    textbox_logger = logging.getLogger('textbox')
+    textbox_logger.setLevel(log_level)
+
+    if not enabled:
+        textbox_logger.disabled = True
+
+

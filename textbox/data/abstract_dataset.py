@@ -24,7 +24,7 @@ class AbstractDataset(object):
         self.target_max_length = int(config['tgt_len'] or config['seq_len'] or 1e4)
         self.tokenize_strategy = config['tokenize_strategy'] or 'by_space'
 
-        self.logger = getLogger()
+        self.logger = getLogger(__name__)
         self._init_special_token()
         self._get_preset()
         self.restored_exist = self._detect_restored()

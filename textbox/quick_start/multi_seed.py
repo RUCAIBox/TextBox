@@ -21,6 +21,8 @@ def run_multi_seed(
     experiment = Experiment(model, dataset, base_config_file_list, base_config_dict)
     config = experiment.get_config()
     rng = np.random.default_rng(config['seed'])
+    base_config_dict.update({'do_test': False, 'disable_tqdm': True, 'max_save': 0})
+
     logger = getLogger('multi_seed')
     getLogger('textbox').setLevel(logging.WARNING)
     logger.setLevel(logging.INFO)
@@ -34,7 +36,10 @@ def run_multi_seed(
         st_time = time()
         trial_seed = rng.integers(int(1e9))
         trial_tqdm.set_postfix(seed=str(trial_seed))
-        valid_result, _ = experiment.run({'seed': trial_seed, 'do_test': False, 'disable_tqdm': True})
+        extend_config = {'seed': trial_seed}
+        extend_config.update(base_config_dict)
+        valid_result, _ = experiment.run(extend_config)
+
         if 'generated_corpus' in valid_result:
             del valid_result['generated_corpus']
         if valid_result['score'] > best_score:
@@ -42,13 +47,13 @@ def run_multi_seed(
             best_score = valid_result['score']
         ed_time = time()
 
-        output = f'Trial {trial_idx} [time: {ed_time-st_time:2f}, seed: {trial_seed}'
+        et = EpochTracker()
+        et.update_metrics(seed=trial_seed)
+        et.update_metrics(valid_result)
+        et.epoch_info(desc='Trial', serial=trial_idx, time_duration=ed_time-st_time, logger=logger)
         for key, value in valid_result.items():
             avg_results[key] *= trial_idx / (trial_idx + 1)
             avg_results[key] += value / (trial_idx + 1)
-            output += f', {key}: {value:4f}'
-        output += ']'
-        logger.info(output)
 
     logger.info(f'======Multiple Random Seeds Test Finished. Best at trial {best_trial} '
                 f'(score = {best_score:4f}).======')

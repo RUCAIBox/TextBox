@@ -245,7 +245,7 @@ class EpochTracker:
 
     def __init__(
             self,
-            metrics_for_best_model: Set[str],
+            metrics_for_best_model: Optional[Set[str]] = None,
             mode: Optional[str] = None,
             axes: Optional[Timestamp] = None,
     ):
@@ -255,7 +255,7 @@ class EpochTracker:
         self._accumulate_step: int = 0
 
         # metrics
-        self._valid_metrics_results: MetricsDict = dict()
+        self._metrics_results: MetricsDict = dict()
 
         # result: loss & metrics
         self._score: Optional[float] = None
@@ -265,7 +265,7 @@ class EpochTracker:
         self._end_time: Optional[float] = None
         self.mode = mode or 'Epoch'
         self.axes = axes
-        self.metrics_for_best_model = metrics_for_best_model
+        self.metrics_for_best_model = metrics_for_best_model or set()
         if self.mode == 'train':
             self.desc = 'Train epoch '
             self.serial = self.axes.train_epoch
@@ -274,6 +274,9 @@ class EpochTracker:
             self.serial = self.axes.valid_epoch
         else:
             self.desc = 'Epoch '
+            self.serial = ''
+        self._has_score = False
+        self._has_loss = False
 
     def on_epoch_start(self):
         """Call at epoch start."""
@@ -282,13 +285,14 @@ class EpochTracker:
     def on_epoch_end(self, current_best: bool):
         """Call at epoch end. This function will output information of this epoch."""
         self._end_time = time()
-        self._epoch_info(self._end_time - self._start_time, current_best)
+        self.epoch_info(self._end_time - self._start_time, current_best)
 
     def append_loss(self, loss: float):
         """Append the loss of one step."""
         self._avg_loss *= self._accumulate_step / (self._accumulate_step + 1)
         self._avg_loss += loss / (self._accumulate_step + 1)
         self._accumulate_step += 1
+        self._has_loss = True
 
     @property
     def avg_loss(self) -> float:
@@ -300,20 +304,19 @@ class EpochTracker:
 
     def update_metrics(self, results: Optional[dict] = None, **kwargs):
         """Update metrics result of this epoch."""
-        if results is not None:
-            self._valid_metrics_results.update(results)
-        self._valid_metrics_results.update(kwargs)
+        for results_dict in (results, kwargs):
+            if results_dict is not None:
+                self._metrics_results.update(results_dict)
+                self._has_score = True
 
     def as_dict(self) -> dict:
         """Return the epoch result as a dict"""
-        if self._valid_metrics_results:
-            results = self._valid_metrics_results
-        else:
-            results = {}
-        if self._accumulate_step != 0:
+        results = {}
+        if self._has_loss:
             results.update(loss=self.avg_loss)
-        if self.mode == 'valid':
+        if self._has_score:
             results.update(score=self.calc_score())
+            results.update(self._metrics_results)
         return results
 
     def calc_score(self) -> float:
@@ -325,49 +328,54 @@ class EpochTracker:
 
         if 'loss' in self.metrics_for_best_model:
             return -self.avg_loss
+        if 'score' in self._metrics_results:
+            return self._metrics_results['score']
 
         score = 0.
-        for metric, result in self._valid_metrics_results.items():
+        for metric, result in self._metrics_results.items():
             if metric in self.metrics_for_best_model and isinstance(result, float):
                 score += result
 
         return score
 
-    def _add_metric(self, _k: str, _v: Union[str, float]) -> str:
+    def _add_metric(self, _k: str, _v: Union[str, float], indent, sep) -> str:
         if isinstance(_v, str):
             return ''
-        _o = ''
+        _o = indent
         if _k.lower() in self.metrics_for_best_model:
             _o += '<'
         if isinstance(_v, float):
             _o += f'{_k}: {_v:.4f}'
         if _k.lower() in self.metrics_for_best_model:
             _o += '>'
-        return _o
+        return _o + sep
 
     def metrics_info(self, sep=', ', indent=''):
         output = ''
-        if self.mode == 'valid':
-            output += indent + self._add_metric('score', self.calc_score()) + sep
-
         for metric, result in self.as_dict().items():
-            if isinstance(result, dict):
-                for key, value in result.items():
-                    output += indent + self._add_metric(key, value) + sep
-            elif metric != 'score':
-                output += indent + self._add_metric(metric, result) + sep
-
+            output += self._add_metric(metric, result, indent, sep)
         return output[:-len(sep)]
 
-    def _epoch_info(self, time_duration: float, current_best: bool):
+    def epoch_info(
+            self,
+            time_duration: float,
+            current_best: bool = False,
+            desc: Optional[str] = None,
+            serial: Optional[int] = None,
+            logger: Optional[Logger] = None
+    ):
         r"""Output loss with epoch and time information."""
 
-        output = "{} {} ".format(self.desc, self.serial)
+        if serial is None:
+            serial = self.serial
+        output = "{} {} ".format(desc or self.desc, serial)
         if current_best:
             output += '(best) '
         output += f"[time: {time_duration:.2f}s, {self.metrics_info()}]"
 
-        self._logger.info(output)
+        if logger is None:
+            logger = self._logger
+        logger.info(output)
 
     def __repr__(self):
         return self.metrics_info()

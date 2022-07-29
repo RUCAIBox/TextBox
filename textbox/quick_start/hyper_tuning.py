@@ -12,6 +12,7 @@ from hyperopt.base import miscs_update_idxs_vals
 from hyperopt.pyll.base import Apply
 
 from .experiment import Experiment
+from ..utils.dashboard import EpochTracker
 
 SpaceType = Union[Apply, Iterable, dict]
 
@@ -93,23 +94,20 @@ class HyperTuning:
         ed_time = time()
 
         current_best = False
-        if test_result['loss'] > self.best_score:
+        if test_result['score'] > self.best_score:
             self.best_score = test_result['score']
             self.best_trial = self._trial_count
             self.best_params = copy(params)
             current_best = True
+
+        et = EpochTracker(self.metrics_for_best_model)
+        et.update_metrics(test_result)
+        et.epoch_info(desc='Trial', serial=self._trial_count, time_duration=ed_time-st_time, current_best=current_best,
+                      logger=self.logger)
+
         test_result['loss'] = test_result['score']
         test_result['status'] = hyperopt.STATUS_OK
         del test_result['score']
-
-        output = f'Trial {self._trial_count}'
-        if current_best:
-            output += ' (best)'
-        output += f' [time: {ed_time - st_time:2f}, test score: {test_result["loss"]:4f}'
-        for key, value in test_result.items():
-            output += f', {key}: {value:4f}'
-        output += ']'
-        self.logger.info(output)
         self._trial_count += 1
         return test_result
 

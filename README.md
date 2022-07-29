@@ -25,6 +25,8 @@ TextBox is developed based on Python and PyTorch for reproducing and developing 
 We provide the support for 9 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team. 
 
 
+<!-- ===================== Installation ===================== -->
+
 
 ## Installation
 
@@ -37,8 +39,6 @@ pip install textbox
 > **Note**
 >
 > **TroubleShooting**: If you face a problem when installing `fast-bleu`, for Linux, please ensure `GCC >= 5.1.0`. For Windows, you can use the wheels in [fast_bleu_wheel4windows](https://github.com/RUCAIBox/TextBox/tree/main/fast_bleu_wheel4windows) for installation. For MacOS, you can install with the following command: `pip install fast-bleu --install-option="--CC=$(which gcc-11)" --install-option="--CXX=$(which g++-11)"`.
->
-> After installing `fast-bleu` successfully, just reinstall `textbox`.
 
 ### Install from Source
 
@@ -52,55 +52,92 @@ bash install.sh
 For the first run, follow the prompt to register an account and log in with [API key](https://wandb.ai/authorize). See [advanced configuration](#wb-dashboard-advanced-configuration) for more information.
 
 
+<!-- ===================== Quick Start ===================== -->
+
+
+## Quick Start
+
+The script below will run the `BART` model on the `samsum` dataset. The yielded files mainly include a log file like [example.log](asset/example.log) in `log` and checkpoint files in `saved`.
+
+```bash
+python run_textbox.py --model_path=facekbook/bart-base
+```
+
+### Specify Model, Dataset, and Evaluation Metrics
+
+Subtitue `<xxx>` with your choices. See [Model](#Model), [Dataset](#Dataset), and [Metrics](#Metrics) for a full support list.  <!-- TODO -->
+
+```bash
+python run_textbox.py ... --model=<model-name> --dataset=<dataset-name> --metrics=<list-of-metrics>
+```
+
+> **Warning**
+> Backslashes may be required when inputing a list of string like `\[\'rouge\'\]` in command line (but omitted in this tutorial). As a result, a preset run configuration is more recommended.
+
+### Partial Experiment
+
+Running partial experiment with `do_train`, `do_valid`, `do_test`, and `quick_test=<amount-of-data-to-load>` may help with specialized application, like debugging. In some cases, `load_experiment=<path-to-checkpoint>` is needed to load model beforehand.
+
+```python
+python run_textbox.py ... --do_train=False --load_experiment=example.pth --quick_test=16
+```
+
+### Load From YAML and Python Scripts
+
+You may also want to load configuration with `--config_files` from YAML files like [overall.yaml](textbox/properties/overall.yaml) (though most of configuration inside [`properties`](textbox/properties) folder will be load automatically):
+
+```bash
+python run_textbox.py ... --config_files <yaml-file-one> <yaml-file-two>
+```
+
+Or start from python scripts:
+
+```python
+from textbox.quick_start import run_textbox
+run_textbox(config_dict={ 'model': 'BART', 'dataset': 'samsum', ... })
+```
+
+
+<!-- ===================== Training ===================== -->
 
 
 ## Training
 
-### Start from source
+### Basics
 
-With the source code, you can use the provided script for initial usage of our library:
+#### Training Parameters
 
-```bash
-python run_textbox.py
-```
+`optimizer=<optimizer-name>` and `scheduler=<scheduler-name>` provides a wrapper around **pytorch optimizer**, which means parameters like `epsilon` or `warmup_steps` can be specified with keyword dictionaries `optimizer_kwargs={ 'epsilon': ... }` and `scheduler_kwargs={ 'warmup_steps': ... }`. See [pytorch optimizer](https://pytorch.org/docs/stable/optim.html#algorithms) and [scheduler]() for a complete tutorial.  <!-- TODO -->
 
-This script will run the RNN model on the COCO dataset to conduct unconditional generation. Typically, this example takes a few minutes. We will obtain the output log like [example.log](asset/example.log).
+Variable validation pace is introduced to validate the model **at each specific batch-steps or epochs**. Specify `valid_strategy` (either `'step'` or `'epoch'`) and `valid_intervals=<int>` to adjust the pace. Specifically, traditional train-validate paradigm is a special case with `valid_strategy=epoch` and `valid_intervals=1`.
 
-If you want to change the parameters, such as `rnn_type`, `max_vocab_size`, just set the additional command parameters as you need:
+`max_save=<int>` indicates **the maximal amount of saved files** (checkpoint and generated corpus during evaluation). `-1`: save every file, `0`: do not save any file, `1`: only save the file with best score, and `n`: save both the best and the last $n−1$ files.
 
-```bash
-python run_textbox.py --rnn_type=lstm --max_vocab_size=4000
-```
-
-We also support to modify YAML configuration files in corresponding dataset and model [`properties`](https://github.com/RUCAIBox/TextBox/tree/main/textbox/properties) folders and include it in the command line.
-
-If you want to change the model, the dataset or the task type, just run the script by modifying corresponding command parameters: 
+**Early stopping** can be configurated with `metrics_for_best_model=<list-of-metrics-entries>`, which is used to calculate score, and `stopping_steps=<int>`, which specifies the amount of validation steps:
 
 ```bash
-python run_textbox.py --model=[model_name] --dataset=[dataset_name]
+python run_textbox.py ... --stopping_steps=8 --metrics_for_best_model=['rouge-1', 'rouge-w']
 ```
 
-`model_name` is the model to be run, such as RNN and BART. Models we implemented can be found in [Model](#Model).
+Other commonly used parameters includs `epochs=<int>`, `max_steps=<int>`, `learning_rate=<float>`, `train_batch_size=<int>`, `weight_decay=<bool>`, `grad_clip=<bool>`, and so on.
 
-If you want to change the datasets, please refer to [Dataset](#Dataset).
+#### Model Parameters
 
-### Start from API
+#### Dataset Parameters
 
-If TextBox is installed from pip, you can create a new python file, download the dataset, and write and run the following code:
+#### Tokenizer Parameters
 
-```python
-from textbox.quick_start import run_textbox
+#### Generation Parameters
 
-run_textbox(config_dict={'model': 'RNN',
-                         'dataset': 'COCO',
-                         'data_path': './dataset'})
-```
+#### Evaluation Parameters
 
-This will perform the training and test of the RNN model on the COCO dataset.
+### Prompting
 
-If you want to run different models, parameters or datasets, the operations are same with [Start from source](#Start-from-source).
+#### Human Instruction
 
-### **Use Pretrained Language Model**
+#### Parameter-efficient Methods
+
+### Pre-training
 
 In most cases, only the following two parameters need to be passed in addition:
 
@@ -143,7 +180,9 @@ mbart: en ->zh
 --tgt_lang='zh_CN'
 ```
 
-### **Train with Distributed Data Parallel (DDP)**
+### Efficient Training
+
+#### Distributed Data Parallel (DDP)
 
 TextBox supports to train models with multiple GPUs conveniently. You don't need to modify the model, just run the following command:
 
@@ -157,6 +196,12 @@ python -m torch.distributed.launch --nproc_per_node=[gpu_num] \
 
 Notice that: we only support DDP for end-to-end model. We will add support for non-end-to-end models, such as GAN, in the future.
 
+#### FP16
+
+### Hyper-Parameters Tuning
+
+### Multiple Random Seeds
+
 ### W&B Dashboard Advanced Configuration
 
 If you are running your code in jupyter environments, you may want to login by simply setting an environment variable (your key will be stored in plain text):
@@ -168,6 +213,7 @@ If you are running your code in jupyter environments, you may want to login by s
 If you are debugging your model, you may want to **disable W&B** with `wandb disabled` in the command line and **none of the metrics** will be recorded. To re-enable it, use `wandb enabled`.
 
 You can also disable **sync only** with `wandb offline` and enable it again with `wandb online`. The local files can be uploaded by executing `wandb sync`.
+
 
 
 

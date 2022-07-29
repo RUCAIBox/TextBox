@@ -1,7 +1,5 @@
 numpy
 matplotlib
-fast-bleu
-transformers
 tqdm
 nltk
 pyyaml

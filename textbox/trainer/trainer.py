@@ -94,7 +94,7 @@ class Trainer(AbstractTrainer):
         self.eval_interval, self.eval_strategy = self._set_eval_strategy()
         self._eval_count = 0
         self.train_loss_list: List[float] = list()
-        self.valid_result_list: Dict[int, dict] = dict()
+        self.valid_result_dict: Dict[int, EpochTracker] = dict()
         self.stopping_steps = config['stopping_steps']
         self.stopped = False
         self.stopping_count = 0
@@ -203,9 +203,9 @@ class Trainer(AbstractTrainer):
         return self._summary_tracker.axes
 
     @property
-    def best_valid_result(self) -> dict:
+    def best_valid_result(self) -> EpochTracker:
         """Retrieve best result dict from `self.valid_result_list`."""
-        return self.valid_result_list[self.best_valid_timestamp.valid_epoch]
+        return self.valid_result_dict[self.best_valid_timestamp.valid_epoch]
 
     def is_save(self) -> bool:
         return self.accelerator.is_local_main_process
@@ -314,7 +314,7 @@ class Trainer(AbstractTrainer):
         
         self.model.train()
 
-        self.valid_result_list[self._summary_tracker.axes.valid_epoch] = self._summary_tracker.epoch_dict()
+        self.valid_result_dict[self._summary_tracker.axes.valid_epoch] = self._summary_tracker.current_epoch
 
         self.best_valid_timestamp, current_best = self._summary_tracker.get_best_valid()
         stopped = bool(self.stopping_steps) and self._early_stopping(current_best)
@@ -348,7 +348,7 @@ class Trainer(AbstractTrainer):
         return stop_flag
 
     def _get_checkpoint(self) -> Optional[dict]:
-        if len(self.valid_result_list) == 0:
+        if len(self.valid_result_dict) == 0:
             self.logger.warning('Get checkpoint failed. No validation has been performed.')
             return None
 
@@ -366,7 +366,7 @@ class Trainer(AbstractTrainer):
             'timestamp': self.timestamp,
             'config': self.config,
             # parameters for recording only
-            'summary': self.valid_result_list[self._summary_tracker.axes.valid_epoch],
+            'summary': self.valid_result_dict[self._summary_tracker.axes.valid_epoch],
         }
         self.logger.debug(checkpoint)
         return checkpoint
@@ -416,7 +416,7 @@ class Trainer(AbstractTrainer):
         self._summary_tracker.axes = checkpoint['timestamp']
         self.stopping_count = checkpoint['stopping_count']
         self._summary_tracker.best_valid_score = checkpoint['best_valid_score']
-        self.valid_result_list = checkpoint['summary']
+        self.valid_result_dict = checkpoint['summary']
 
         if checkpoint['config']['seed']:
             init_seed(checkpoint['config']['seed'], checkpoint['config']['reproducibility'])
@@ -481,8 +481,8 @@ class Trainer(AbstractTrainer):
                          f'at train epoch {self.best_valid_timestamp.train_epoch} ======')
 
         self.model = self.accelerator.unwrap_model(self.model)
-
-        return self.best_valid_result
+        self.logger.info('Best valid result: {}'.format(self.best_valid_result.metrics_info()))
+        return self.best_valid_result.as_dict()
 
     @torch.no_grad()
     def evaluate(
@@ -534,7 +534,7 @@ class Trainer(AbstractTrainer):
         for batch_data in eval_tqdm:
             generated = self.accelerator.unwrap_model(self.model).generate(batch_data, eval_data, self.accelerator)
             generate_corpus.extend(generated)
-        if (self.is_chinese_task):
+        if self.is_chinese_task:
             reference_corpus = eval_data.dataset.target_tokens
         else:
             reference_corpus = eval_data.dataset.target_text
@@ -544,6 +544,7 @@ class Trainer(AbstractTrainer):
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
         et = EpochTracker(self.metrics_for_best_model)
         et.update_metrics(result)
-        result.update(score=et.calc_score())
+        if not is_valid:
+            self.logger.info('Evaluation result:\n{}'.format(et.metrics_info(sep=",\n", indent=" ")))
 
-        return result
+        return et.as_dict()

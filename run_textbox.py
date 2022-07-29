@@ -6,7 +6,6 @@ if __name__ == '__main__':
     parser.add_argument('--model', '-m', type=str, default='BART', help='name of models')
     parser.add_argument('--dataset', '-d', type=str, default='samsum', help='name of datasets')
     parser.add_argument('--config_files', type=str, default=None, help='config files')
-    parser.add_argument('--config_files', type=str, default=None, help='config files')
 
     args, _ = parser.parse_known_args()
 

@@ -3,12 +3,12 @@ import math
 from collections import defaultdict
 from logging import getLogger
 from time import time
-from typing import Optional, Dict, Any, Callable, Union, Iterable, Iterator
 
 import numpy as np
-from tqdm import trange, tqdm
+from tqdm import tqdm
 
 from .experiment import Experiment
+from ..utils.dashboard import EpochTracker
 
 
 def run_multi_seed(
@@ -24,7 +24,7 @@ def run_multi_seed(
     logger = getLogger('multi_seed')
     getLogger('textbox').setLevel(logging.WARNING)
     logger.setLevel(logging.INFO)
-    avg_results = defaultdict(int)
+    avg_results = defaultdict(float)
     best_trial = -1
     best_score = -math.inf
 
@@ -50,8 +50,8 @@ def run_multi_seed(
         output += ']'
         logger.info(output)
 
-    logger.info(f'======Multiple Random Seeds Test Finished. Best at {best_trial} '
-                f'trial (score = {best_score:4f}).======')
+    logger.info(f'======Multiple Random Seeds Test Finished. Best at trial {best_trial} '
+                f'(score = {best_score:4f}).======')
     logger.info(f'Average results:')
     for key, value in avg_results.items():
         logger.info(f' {key}: {value}')

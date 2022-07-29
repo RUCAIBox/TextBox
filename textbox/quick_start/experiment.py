@@ -40,7 +40,7 @@ class Experiment:
         if not isinstance(config_dict, dict):
             config_dict = dict()
         config_dict.update({
-            'is_local_main_process': self.accelerator.is_local_main_process,
+            '_is_local_main_process': self.accelerator.is_local_main_process,
         })
         self.__base_config = self.init_config(model, dataset, config_file_list, config_dict)
         self.__extended_config = None
@@ -70,7 +70,7 @@ class Experiment:
         init_logger(
             filename=config['filename'],
             log_level=config['state'],
-            enabled=config['is_local_main_process'],
+            enabled=config['_is_local_main_process'],
             logdir=config['logdir']
         )
         logger = getLogger(__name__)
@@ -117,17 +117,9 @@ class Experiment:
 
             self.valid_result = self.trainer.fit(train_data, valid_data)
 
-            self.logger.info('test result: {}'.format(self.valid_result))
-
     def _do_test(self):
-
         if self.do_test:
-
             self.test_result = self.trainer.evaluate(self.test_data, model_file=self.__base_config['load_experiment'])
-
-            if isinstance(self.test_result, dict):
-                for key, value in self.test_result.items():
-                    self.logger.info(f"{key}: {value}")
 
     def _on_experiment_end(self):
         finish_dashboard()

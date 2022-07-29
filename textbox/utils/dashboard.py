@@ -333,37 +333,44 @@ class EpochTracker:
 
         return score
 
-    def _epoch_info(self, time_duration: float, current_best: bool):
-        r"""Output loss with epoch and time information."""
-        def add_metric(_k: str, _v: Union[str, float]) -> str:
-            if isinstance(_v, str):
-                return ''
-            _o = ', '
-            if _k.lower() in self.metrics_for_best_model:
-                _o += '<'
-            if isinstance(_v, float):
-                _o += f'{_k}: {_v:.4f}'
-            if _k.lower() in self.metrics_for_best_model:
-                _o += '>'
-            return _o
+    def _add_metric(self, _k: str, _v: Union[str, float]) -> str:
+        if isinstance(_v, str):
+            return ''
+        _o = ''
+        if _k.lower() in self.metrics_for_best_model:
+            _o += '<'
+        if isinstance(_v, float):
+            _o += f'{_k}: {_v:.4f}'
+        if _k.lower() in self.metrics_for_best_model:
+            _o += '>'
+        return _o
 
-        output = "{} {} ".format(self.desc, self.serial)
-        if current_best:
-            output += '(best) '
-        output += "[time: {:.2f}s".format(time_duration)
+    def metrics_info(self, sep=', ', indent=''):
+        output = ''
         if self.mode == 'valid':
-            output += add_metric('score', self.calc_score())
+            output += indent + self._add_metric('score', self.calc_score()) + sep
 
         for metric, result in self.as_dict().items():
             if isinstance(result, dict):
                 for key, value in result.items():
-                    output += add_metric(key, value)
-            else:
-                output += add_metric(metric, result)
+                    output += indent + self._add_metric(key, value) + sep
+            elif metric != 'score':
+                output += indent + self._add_metric(metric, result) + sep
 
-        output += "]"
+        return output[:-len(sep)]
+
+    def _epoch_info(self, time_duration: float, current_best: bool):
+        r"""Output loss with epoch and time information."""
+
+        output = "{} {} ".format(self.desc, self.serial)
+        if current_best:
+            output += '(best) '
+        output += f"[time: {time_duration:.2f}s, {self.metrics_info()}]"
 
         self._logger.info(output)
+
+    def __repr__(self):
+        return self.metrics_info()
 
 
 root: Optional[SummaryTracker] = None
@@ -411,7 +418,7 @@ def init_dashboard(
 
     root = SummaryTracker(
         email=config['email'],
-        is_local_main_process=config['is_local_main_process'],
+        is_local_main_process=config['_is_local_main_process'],
         metrics_for_best_model=config['metrics_for_best_model'],
         kwargs=dict(
             dir=config['logdir'],

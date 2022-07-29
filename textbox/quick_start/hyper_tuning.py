@@ -18,14 +18,17 @@ SpaceType = Union[Apply, Iterable, dict]
 
 class HyperTuning:
     """
+    Hyperparameters optimizing.
+
+    To extend the class, you can re-implement
+
     Args:
         model:
         dataset:
         base_config_file_list:
         base_config_dict:
-        space_file:
-        path_to_output:
-        space_dict:
+        space:
+        algo: The algorithm to be adapted.
     """
 
     def __init__(
@@ -36,7 +39,6 @@ class HyperTuning:
             base_config_dict: dict,
             space: Union[SpaceType, str],
             algo: Union[Callable, str],
-            path_to_output: str,
     ):
 
         if isinstance(space, dict):
@@ -56,7 +58,6 @@ class HyperTuning:
 
         self.max_evals = _space_size(self.space)
 
-        self.path_to_output = path_to_output
         self.base_config_kwargs = dict(
             model=model,
             dataset=dataset,
@@ -206,7 +207,6 @@ def run_hyper(
         algo=algo,
     )
     hyper_tuning.run()
-    # todo output best result
 
 
 def _find_all_nodes(root: SpaceType, node_type: str = 'switch') -> Iterator[Apply]:

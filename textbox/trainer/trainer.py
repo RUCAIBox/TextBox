@@ -58,7 +58,7 @@ class Trainer(AbstractTrainer):
     pre-training and so on.
 
     Initializing the Trainer needs two parameters: `config` and `model`. `config` records the parameters' information
-    for controlling training and evaluation, such as `learning_rate`, `epochs`, `eval_step` and so on.
+    for controlling training and evaluation, such as `learning_rate`, `epochs` and so on.
     More information can be found in [placeholder]. `model` is the instantiated object of a Model Class.
     """
 
@@ -91,8 +91,9 @@ class Trainer(AbstractTrainer):
         self.max_steps = config['max_steps']  # max training batch step
 
         self.best_valid_timestamp = Timestamp()
-        self.eval_interval, self.eval_strategy = self._set_eval_strategy()
-        self._eval_count = 0
+        self.valid_intervals = self.config['valid_intervals']
+        self.valid_strategy = self.config['valid_strategy']
+        self._valid_count = 0
         self.train_loss_list: List[float] = list()
         self.valid_result_dict: Dict[int, EpochTracker] = dict()
         self.stopping_steps = config['stopping_steps']
@@ -118,33 +119,6 @@ class Trainer(AbstractTrainer):
         self.disable_tqdm = config['disable_tqdm'] or not self.accelerator.is_local_main_process
         self._summary_tracker = get_dashboard()
 
-    def _set_eval_strategy(self) -> Tuple[int, str]:
-        r"""Check evaluation strategy. Default = (1, "epoch") If both `eval_epoch` and `eval_step` are specified,
-        `eval_step` is ignored. Validation will be skipped if both `eval_epoch` and `eval_step` are 0.
-
-        Returns:
-            Tuple[int, str]: a tuple of (evaluation interval, evaluation mode)
-        """
-        # default value
-        eval_epoch = self.config['eval_epoch'] or 0
-        eval_step = self.config['eval_step'] or 0
-
-        # check
-        if eval_epoch > 0 and eval_step > 0:
-            self.logger.warning(
-                '"eval_step" and "eval_epoch" are specified at the same time. "eval_epoch" has been ignored.'
-            )
-            eval_epoch = 0
-        elif eval_epoch <= 0 and eval_step <= 0:
-            return 0, "skipped"
-
-        if eval_epoch > 0:
-            self.logger.debug(f"eval strategy: validate every {eval_epoch} epoch")
-            return eval_epoch, "epoch"
-        else:
-            self.logger.debug(f"eval strategy: validate every {eval_step} step")
-            return eval_step, "step"
-
     def _build_optimizer(self, optimizer: str, scheduler: Optional[str])\
             -> Union[optim.Optimizer, AbstractScheduler]:
         """Init the optimizer and scheduler.
@@ -161,7 +135,6 @@ class Trainer(AbstractTrainer):
             'rmsprop': optim.RMSprop,
             'adafactor': transformers.Adafactor,
         })
-
         scheduler_class = {
             'inverse': InverseSquareRootScheduler,
             'cosine': CosineScheduler,
@@ -269,7 +242,7 @@ class Trainer(AbstractTrainer):
     def _valid(
             self,
             valid_data: DataLoader,
-            eval_mode: str,
+            valid_mode: str,
     ) -> bool:
         """Validate every `self.eval_interval` step or epoch if evaluation strategy matches attribute
         `self.eval_strategy`. Specifically, if `self.eval_interval` is set to `0`, validation will be skipped.
@@ -278,17 +251,17 @@ class Trainer(AbstractTrainer):
 
         Args:
             valid_data: The dataloader of validation set.
-            eval_mode: The evaluation strategy of current call ("epoch" or "step").
+            valid_mode: The evaluation strategy of current call ("epoch" or "step").
 
         Returns:
             bool: Early stopping. Return true if `self.stopping_steps` is positive integer and `self._early_stopping()`
             is True.
         """
-        if (self.eval_interval <= 0) or (eval_mode != self.eval_strategy):
+        if (self.valid_intervals <= 0) or (valid_mode != self.valid_strategy):
             return False
 
-        self._eval_count += 1
-        if self._eval_count % self.eval_interval != 0:
+        self._valid_count += 1
+        if self._valid_count % self.valid_intervals != 0:
             return False
 
         self._summary_tracker.new_epoch('valid')

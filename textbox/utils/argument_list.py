@@ -15,13 +15,14 @@ training_parameters = [
     'stopping_steps',  # early stopping
     'epochs', 'max_steps', 'learning_rate', 'train_batch_size', 'grad_clip', 'weight_decay',  # common parameters
     'accumulation_steps',  # accelerator
+    'disable_tqdm',  # tqdm
 ]
 
 evaluation_parameters = [
     'do_test', 'lower_evaluation', 'multiref_strategy', 'bleu_max_ngrams', 'bleu_type', 'beam_size',
     'smoothing_function', 'corpus_bleu', 'rouge_max_ngrams', 'rouge_type', 'meteor_type', 'chrf_type',
     'distinct_max_ngrams', 'inter_distinct', 'unique_max_ngrams', 'self_bleu_max_ngrams', 'tgt_lang',
-    'decoding_strategy', 'metrics', 'n_grams', 'eval_batch_size', 
+    'decoding_strategy', 'metrics', 'n_grams', 'eval_batch_size',
 ]
 
 model_parameters = [

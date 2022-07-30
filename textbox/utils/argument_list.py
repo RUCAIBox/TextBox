@@ -8,11 +8,14 @@ general_parameters = [
 ]
 
 training_parameters = [
-    'do_train', 'do_valid', 'epochs', 'train_batch_size', 'optimizer', 'learning_rate', 'eval_step', 'eval_epoch',
-    'stopping_step', 'grad_clip', 'g_pretraining_epochs', 'd_pretraining_epochs', 'd_sample_num',
-    'd_sample_training_epochs', 'adversarial_training_epochs', 'adversarial_g_epochs', 'adversarial_d_epochs',
-    'scheduler', 'init_lr', 'warmup_steps', 'max_steps', 'weight_decay', 'adafactor_kwargs', 'optimizer_kwargs',
-    'accumulation_steps', 'max_save', 'stopping_steps'
+    'do_train', 'do_valid',  # partial experiment
+    'optimizer', 'adafactor_kwargs', 'optimizer_kwargs', 'scheduler', 'scheduler_kwargs',  # optimizer
+    'valid_intervals', 'valid_strategy',
+    'max_save',  # checkpoint saving
+    'stopping_steps',  # early stopping
+    'epochs', 'max_steps', 'learning_rate', 'train_batch_size', 'grad_clip', 'weight_decay',  # common parameters
+    'accumulation_steps',  # accelerator
+    'disable_tqdm',  # tqdm
 ]
 
 evaluation_parameters = [

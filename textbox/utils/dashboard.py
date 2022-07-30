@@ -134,8 +134,12 @@ class SummaryTracker:
             raise RuntimeError('`new_epoch()` should be called before `new_step()`')
         self.axes.update_axe(self.current_mode, 'step')
 
-    def append_loss(self, loss: Union[float, torch.Tensor]):
-        r"""Append loss of current step to tracker and update current step."""
+    def append_loss(self, loss: float):
+        r"""Append loss of current step to tracker and update current step.
+
+        Notes:
+            `loss` should be a float! (like `loss.item()`)
+        """
         if isinstance(loss, torch.Tensor):
             loss = loss.item()
         if math.isnan(loss):
@@ -207,7 +211,7 @@ class SummaryTracker:
         info = {tag: scalar_value}
         info.update(self.axes.as_dict())
         if self._is_local_main_process and not self.tracker_finished:
-            wandb.log(info, step=self.axes.train_step)
+            wandb.log(info, step=self.axes.train_step, commit=False)
 
     def add_any(self, tag: str, any_value: Union[str, float, int]):
         r"""Add a metric of any type (`float`, `int` and `str` supported) to summary."""

@@ -155,7 +155,7 @@ https://github.com/huggingface/transformers/blob/main/examples/pytorch/summariza
     - [ ] Question answering: SQuAD (squad) and CoQA (coqa).
     - [ ] Task-oriented dialogue system: MultiWOZ 2.0 (multiwoz).
     - [ ] Commonsense generation: CommonGen (cg).
-    - [ ] Text simplification: WikiAuto + Turk/ASSET (wia).
+    - [ ] Text simplification: WikiAuto + Turk/ASSET (wia). https://arxiv.org/pdf/2005.00352v2.pdf https://arxiv.org/pdf/2110.08329v2.pdf
     - [ ] Paraphrase generation: Quora (comming soon).
     - [ ] Text style transfer: GYAFC-E&M and F&R (comming soon).
 

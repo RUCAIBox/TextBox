@@ -4,7 +4,7 @@ metrics: ['qa']
 metrics_for_best_model: ['em', 'f1']
 
 train_batch_size: 4
-update_freq: 48
+accumulation_steps: 48
 eval_batch_size: 16
 prefix: 'Answer the following question: '
 

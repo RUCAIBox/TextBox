@@ -183,6 +183,8 @@ class Trainer(AbstractTrainer):
     def is_save(self) -> bool:
         return self.accelerator.is_local_main_process
 
+
+    @profile
     def _train_epoch(
             self,
             train_data: DataLoader,
@@ -213,19 +215,18 @@ class Trainer(AbstractTrainer):
             if self.timestamp.train_step == self.max_steps:
                 self.stopped = True
                 break
-            self.optimizer.zero_grad()
 
             loss = self.model(data, epoch_idx=epoch_idx)
-
-            if self.grad_clip is not None:
-                self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
+            # loss = self.accelerator.gather(loss).mean().item()
+            self._summary_tracker.append_loss(loss.item())
             self.accelerator.backward(loss / self.accumulation_steps)
+            
             if (step + 1) % self.accumulation_steps == 0 or (step + 1) == len(train_tqdm):
+                if self.grad_clip is not None:
+                    self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
                 self.optimizer.step()
-
-            losses = self.accelerator.gather(loss)
-            losses = losses.mean().item()
-            self._summary_tracker.append_loss(losses)
+                self.optimizer.zero_grad()
+            
             if not self.disable_tqdm:
                 train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
 

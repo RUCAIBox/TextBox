@@ -6,6 +6,6 @@ smoothing_function: 7
 metrics_for_best_model: ['bleu-1', 'bleu-2', 'bleu-3', 'bleu-4']
 
 train_batch_size: 12
-update_freq: 16
+accumulation_steps: 16
 eval_batch_size: 24
 prefix: 'Given the dialog: '

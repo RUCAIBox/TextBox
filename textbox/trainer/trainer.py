@@ -183,8 +183,6 @@ class Trainer(AbstractTrainer):
     def is_save(self) -> bool:
         return self.accelerator.is_local_main_process
 
-
-    @profile
     def _train_epoch(
             self,
             train_data: DataLoader,

@@ -32,7 +32,7 @@ class AbstractEvaluator():
         if avg:
             for k, v in metric_dict.items():
                 if isinstance(v, list) or isinstance(v, float):
-                    metric_dict[k] = round(np.mean(v), 2)
+                    metric_dict[k] = round(np.mean(v), 2 if k != 'cider' else 3)
         return metric_dict
 
     def _calc_metrics_info(self):

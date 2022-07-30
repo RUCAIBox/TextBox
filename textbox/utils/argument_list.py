@@ -15,6 +15,7 @@ training_parameters = [
     'stopping_steps',  # early stopping
     'epochs', 'max_steps', 'learning_rate', 'train_batch_size', 'grad_clip', 'weight_decay',  # common parameters
     'accumulation_steps',  # accelerator
+    'disable_tqdm',  # tqdm
 ]
 
 evaluation_parameters = [

@@ -58,25 +58,25 @@ For the first run, follow the prompt to register an account and log in with [API
 The script below will run the `BART` model on the `samsum` dataset. The yielded files mainly include a log file like [example.log](asset/example.log) in `log` and checkpoint files in `saved`. See [Model Parameters](#model-parameters) for more detail of model_path.
 
 ```bash
-python run_textbox.py --model_path=facekbook/bart-base
+python run_textbox.py --model_path=facebook/bart-base
 ```
 
 ### Specify Model, Dataset, and Evaluation Metrics
 
-Subtitue `<xxx>` with your choices. See [Model](#Model), [Dataset](#Dataset), and [Metrics](#Metrics) for a full support list.  <!-- TODO -->
+Substitute `<xxx>` with your choices. See [Model](#Model), [Dataset](#Dataset), and [Metrics](#Metrics) for a full support list.  <!-- TODO -->
 
 ```bash
 python run_textbox.py ... --model=<model-name> --dataset=<dataset-name> --metrics=<list-of-metrics>
 ```
 
 > **Warning**
-> Backslashes may be required when inputing a list of string like `\[\'rouge\'\]` in command line (but omitted in this tutorial). As a result, a preset run configuration is more recommended.
+> Backslashes may be required when inputting a list of string like `\[\'rouge\'\]` in command line (but omitted in this tutorial). As a result, a preset run configuration is more recommended.
 
 ### Partial Experiment
 
 Running partial experiment with `do_train`, `do_valid`, `do_test`, and `quick_test=<amount-of-data-to-load>` may help with specialized application, like debugging. In some cases, `load_experiment=<path-to-checkpoint>` is needed to load model beforehand.
 
-```python
+```bash
 python run_textbox.py ... --do_train=False --load_experiment=example.pth --quick_test=16
 ```
 
@@ -111,20 +111,18 @@ Variable validation pace is introduced to validate the model **at each specific 
 
 `max_save=<int>` indicates **the maximal amount of saved files** (checkpoint and generated corpus during evaluation). `-1`: save every file, `0`: do not save any file, `1`: only save the file with best score, and `n`: save both the best and the last $n−1$ files.
 
-**Early stopping** can be configurated with `metrics_for_best_model=<list-of-metrics-entries>`, which is used to calculate score, and `stopping_steps=<int>`, which specifies the amount of validation steps:
+**Early stopping** can be configured with `metrics_for_best_model=<list-of-metrics-entries>`, which is used to calculate score, and `stopping_steps=<int>`, which specifies the amount of validation steps:
 
 ```bash
 python run_textbox.py ... --stopping_steps=8 --metrics_for_best_model=['rouge-1', 'rouge-w']
 ```
 
-Other commonly used parameters includs `epochs=<int>`, `max_steps=<int>`, `learning_rate=<float>`, `train_batch_size=<int>`, `weight_decay=<bool>`, `grad_clip=<bool>`, and so on.
+Other commonly used parameters includes `epochs=<int>`, `max_steps=<int>`, `learning_rate=<float>`, `train_batch_size=<int>`, `weight_decay=<bool>`, `grad_clip=<bool>`, and so on.
 
 #### Model Parameters
 
-`model_path`
+`model_path` receives a name of model on [huggingface](https://huggingface.co/models) like [facebook/bart-base](https://huggingface.co/models?search=facebook%2Fbart-base) or a local path.
 
-#### Model Parameters
-#### Model Parameters
 
 #### Dataset Parameters
 
@@ -133,6 +131,17 @@ Other commonly used parameters includs `epochs=<int>`, `max_steps=<int>`, `learn
 #### Tokenizer Parameters
 
 #### Generation Parameters
+
+For some models used for translation task like m2m100, you need to specify source language and target language:
+
+```bash
+m2m100: en -> zh
+--src_lang='en'
+--tgt_lang='zh'
+mbart: en ->zh
+--src_lang='en_XX'
+--tgt_lang='zh_CN'
+```
 
 #### Evaluation Parameters
 
@@ -174,16 +183,6 @@ If you want to add label smoothing during training, add one additional parameter
 --label_smoothing=<smooth loss weight>
 ```
 
-For some models used for translation task like m2m100, you need to specify source language and target language:
-
-```bash
-m2m100: en -> zh
---src_lang='en'
---tgt_lang='zh'
-mbart: en ->zh
---src_lang='en_XX'
---tgt_lang='zh_CN'
-```
 
 ### Efficient Training
 
@@ -193,15 +192,22 @@ TextBox supports to train models with multiple GPUs conveniently. You don't need
 
 ```bash
 python -m torch.distributed.launch --nproc_per_node=<gpu-num> \
-       run_textbox.py --model=[model_name] \
-       --dataset=[dataset_name] --gpu_id=[gpu_ids] --DDP=True
+       run_textbox.py ... --gpu_id=<gpu-ids> --DDP=True
 ```
 
 `gpu_num` is the number of GPUs you want to train with (such as 4), and `gpu_ids` is the usable GPU id list (such as 0,1,2,3).
 
 Notice that: we only support DDP for end-to-end model. We will add support for non-end-to-end models, such as GAN, in the future.
 
-#### FP16
+#### FP16 Accelerate
+
+Configurate and test (not necessary) [accelerate](https://github.com/huggingface/accelerate) with `accelerate config` and `accelerate test` in shell ([example](asset/accelerate.md)).
+
+To accelerate multi-gpu training with `accelerate`, run the script below. Note that `accelerate` occupies a communication port, to resolve port conflict, an available port have to be allocated with `main_process_port` manually.
+
+```bash
+accelerate launch [--main_process_port <port-number>] run_textbox.py ...
+```
 
 ### Hyper-Parameters Tuning
 

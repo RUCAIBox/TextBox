@@ -30,8 +30,6 @@ We provide the support for 9 benchmark text generation datasets. A user can appl
 
 ## Installation
 
-### Install from PyPI
-
 ```python
 pip install textbox
 ```
@@ -57,7 +55,7 @@ For the first run, follow the prompt to register an account and log in with [API
 
 ## Quick Start
 
-The script below will run the `BART` model on the `samsum` dataset. The yielded files mainly include a log file like [example.log](asset/example.log) in `log` and checkpoint files in `saved`.
+The script below will run the `BART` model on the `samsum` dataset. The yielded files mainly include a log file like [example.log](asset/example.log) in `log` and checkpoint files in `saved`. See [Model Parameters](#model-parameters) for more detail of model_path.
 
 ```bash
 python run_textbox.py --model_path=facekbook/bart-base
@@ -123,7 +121,14 @@ Other commonly used parameters includs `epochs=<int>`, `max_steps=<int>`, `learn
 
 #### Model Parameters
 
+`model_path`
+
+#### Model Parameters
+#### Model Parameters
+
 #### Dataset Parameters
+
+`src_len`, `tgt_len`, `truncate` provide functionalities to modify dataset.
 
 #### Tokenizer Parameters
 
@@ -187,7 +192,7 @@ mbart: en ->zh
 TextBox supports to train models with multiple GPUs conveniently. You don't need to modify the model, just run the following command:
 
 ```bash
-python -m torch.distributed.launch --nproc_per_node=[gpu_num] \
+python -m torch.distributed.launch --nproc_per_node=<gpu-num> \
        run_textbox.py --model=[model_name] \
        --dataset=[dataset_name] --gpu_id=[gpu_ids] --DDP=True
 ```
@@ -204,7 +209,7 @@ Notice that: we only support DDP for end-to-end model. We will add support for n
 
 ### W&B Dashboard Advanced Configuration
 
-If you are running your code in jupyter environments, you may want to login by simply setting an environment variable (your key will be stored in plain text):
+If you are running your code in jupyter environments, you may want to login by simply setting an environment variable (your key may be stored in plain text):
 
 ```python
 %env WANDB_API_KEY=<your-key>

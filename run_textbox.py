@@ -9,4 +9,4 @@ if __name__ == '__main__':
 
     args, _ = parser.parse_known_args()
 
-    run_textbox(model=args.model, dataset=args.dataset, config_file_list=config_file_list, config_dict={})
+    run_textbox(model=args.model, dataset=args.dataset, config_file_list=args.config_files, config_dict={})

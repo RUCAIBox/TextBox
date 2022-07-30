@@ -9,7 +9,8 @@ general_parameters = [
 
 training_parameters = [
     'do_train', 'do_valid',  # partial experiment
-    'optimizer', 'adafactor_kwargs', 'optimizer_kwargs', 'scheduler', 'scheduler_kwargs'  # optimizer
+    'optimizer', 'adafactor_kwargs', 'optimizer_kwargs', 'scheduler', 'scheduler_kwargs',  # optimizer
+    'valid_intervals', 'valid_strategy',
     'max_save',  # checkpoint saving
     'stopping_steps',  # early stopping
     'epochs', 'max_steps', 'learning_rate', 'train_batch_size', 'grad_clip', 'weight_decay',  # common parameters

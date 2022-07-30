@@ -14,7 +14,8 @@ epochs: 50
 train_batch_size: 16
 optimizer: adamw
 learning_rate: 3e-5
-eval_epoch: 1
+valid_strategy: epoch
+valid_intervals: 1
 stopping_steps: 2
 grad_clip: 0.1
 optimizer_kwargs: {}

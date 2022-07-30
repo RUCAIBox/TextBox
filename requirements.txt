@@ -1,6 +1,5 @@
 numpy
 matplotlib
-fast-bleu
 tqdm
 nltk
 pyyaml
@@ -18,4 +17,4 @@ wandb
 setuptools
 six
 accelerate
-transformers
+hyperopt>=0.2.6

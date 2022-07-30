@@ -21,14 +21,14 @@ class HyperTuning:
     """
     Hyperparameters optimizing.
 
-    To extend the class, you can re-implement
+    You can inherit and re-implement `fn()` to modify the process.
 
     Args:
-        model:
-        dataset:
-        base_config_file_list:
-        base_config_dict:
-        space:
+        model: The name of model.
+        dataset: The name of dataset.
+        base_config_file_list: A list of filenames of base configuration files
+        base_config_dict: A list of dictionary of base configuration
+        space: The search space.
         algo: The algorithm to be adapted.
     """
 

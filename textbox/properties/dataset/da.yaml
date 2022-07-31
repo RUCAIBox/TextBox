@@ -8,6 +8,6 @@ rouge_type: pycocoevalcap
 meteor_type: pycocoevalcap
 
 train_batch_size: 6
-update_freq: 32
+accumulation_steps: 32
 eval_batch_size: 16
 prefix: 'Given the dialog: '

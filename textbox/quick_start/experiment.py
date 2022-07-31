@@ -34,17 +34,12 @@ class Experiment:
             config_file_list: Optional[List[str]] = None,
             config_dict: Optional[Dict[str, Any]] = None,
     ):
+        self.__base_config = Config(model, dataset, config_file_list, config_dict)
+        self.__extended_config = None
 
         self.accelerator = Accelerator()
-
-        if not isinstance(config_dict, dict):
-            config_dict = dict()
-        config_dict.update({
-            '_is_local_main_process': self.accelerator.is_local_main_process,
-        })
-        self.__base_config = self.init_config(model, dataset, config_file_list, config_dict)
-        self.__extended_config = None
-        self.logger = getLogger(__name__)
+        self.__base_config.update({'_is_local_main_process': self.accelerator.is_local_main_process})
+        self.logger = self.init_logger(self.__base_config)
         init_dashboard(self.get_config())
         self.train_data, self.valid_data, self.test_data, self.tokenizer = \
             self._init_data(self.get_config(), self.accelerator)
@@ -56,15 +51,7 @@ class Experiment:
         return config
 
     @staticmethod
-    def init_config(
-            model: Optional[str] = None,
-            dataset: Optional[str] = None,
-            config_file_list: Optional[List[str]] = None,
-            config_dict: Optional[Dict[str, Any]] = None,
-    ) -> Config:
-
-        # configurations initialization
-        config = Config(model=model, dataset=dataset, config_file_list=config_file_list, config_dict=config_dict)
+    def init_logger(config: Config) -> logging.Logger:
 
         # logger initialization
         init_logger(
@@ -76,7 +63,7 @@ class Experiment:
         logger = getLogger(__name__)
         logger.info(config)
 
-        return config
+        return logger
 
     @staticmethod
     def _init_data(config: Config, accelerator: Accelerator) -> Tuple[DataLoader, DataLoader, DataLoader, Any]:

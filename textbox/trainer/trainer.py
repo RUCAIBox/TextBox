@@ -213,20 +213,18 @@ class Trainer(AbstractTrainer):
             if self.timestamp.train_step == self.max_steps:
                 self.stopped = True
                 break
-            self.optimizer.zero_grad()
 
             loss = self.model(data, epoch_idx=epoch_idx)
-
-            self._summary_tracker.append_loss(loss)
-
-            if self.grad_clip is not None:
-                self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
+            # loss = self.accelerator.gather(loss).mean().item()
+            self._summary_tracker.append_loss(loss.item())
             self.accelerator.backward(loss / self.accumulation_steps)
+            
             if (step + 1) % self.accumulation_steps == 0 or (step + 1) == len(train_tqdm):
+                if self.grad_clip is not None:
+                    self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
                 self.optimizer.step()
-
-            losses = self.accelerator.gather(loss)
-
+                self.optimizer.zero_grad()
+            
             if not self.disable_tqdm:
                 train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
 
@@ -278,7 +276,7 @@ class Trainer(AbstractTrainer):
                 self._summary_tracker.new_step()
                 loss = self.model(data)
                 losses = self.accelerator.gather(loss)
-                loss = losses.mean().item()
+                loss = losses.mean()
                 self._summary_tracker.append_loss(loss)
                 if not self.disable_tqdm:
                     valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)

@@ -5,7 +5,7 @@ metrics_for_best_model: ['bleu-1', 'bleu-2', 'bleu-3', 'bleu-4']
 corpus_bleu: true
 
 train_batch_size: 48
-update_freq: 4
+accumulation_steps: 4
 eval_batch_size: 32
 prefix: 'Given the story title: '
 generation_kwargs: {'num_beams': 1, 'do_sample': True, 'top_p': 0.9, 'temperature': 0.7}

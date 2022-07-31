@@ -11,7 +11,7 @@
 [![Documentation Status](https://readthedocs.org/projects/textbox/badge/?version=latest)](https://textbox.readthedocs.io/en/latest/?badge=latest)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-[Docs]https://textbox.readthedocs.io/en/latest/ | [Model]#Model | [Dataset]#Datase
+[Docs] | [Model] | [Dataset]
 
 [Docs]: https://textbox.readthedocs.io/en/latest/
 [Model]: #Model

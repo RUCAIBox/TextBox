@@ -7,6 +7,6 @@ rouge_type: rouge-score
 meteor_type: pycocoevalcap
 
 train_batch_size: 16
-update_freq: 12
+accumulation_steps: 12
 eval_batch_size: 40
 prefix: 'Simplify: '

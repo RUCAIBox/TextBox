@@ -1,0 +1,13 @@
+# A line starts with `#` is a comment
+# Hyper-parameter Optimization Format:
+#
+# <param> <method> <space>
+#
+# <param>: Parameter name to be optimize. A list of supported parameter can be found in argument_list.py
+# <method>: Supports "choice", "uniform", "quniform", "loguniform"
+# <space>: Search space. Any Python object within one line is supported.
+#
+# For more information, visit out tutorial.
+
+model choice ['BART']
+epochs choice [1, 2]

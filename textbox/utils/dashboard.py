@@ -39,7 +39,7 @@ class Timestamp:
         if isinstance(value, int):
             setattr(self, axe, value+1)
         else:
-            getLogger().warning(f'Failed when updating axe {axe}')
+            getLogger(__name__).warning(f'Failed when updating axe {axe}')
 
     def as_dict(self) -> dict:
         """Get the timestamp as a dictionary. The entries are also metrics labels shown in W&B."""
@@ -61,6 +61,8 @@ class SummaryTracker:
 
     Examples:
         >>> init_dashboard(config)
+        >>> ...
+        >>> start_dashboard()
         >>> summary_tracker = get_dashboard()
         >>> ...
         >>> # at the beginning of a validation epoch
@@ -83,23 +85,34 @@ class SummaryTracker:
             metrics_for_best_model: Set[str],
             email: bool = True,
     ):
-        self.axes = Timestamp()
         self._email = email
         self._is_local_main_process = is_local_main_process
         self.tracker_finished = False
         self.metrics_for_best_model: Set[str] = metrics_for_best_model
+        self._tables: Dict[str, wandb.data_types.Table] = dict()
+        self.kwargs = kwargs
 
+        self._run = None
+        self.axes = None
+
+        self.current_epoch: Optional[EpochTracker] = None
+        self.current_mode: Optional[str] = None
+
+        self.best_valid_score = None
+        self.best_valid_timestamp = None
+        self.current_best = None
+
+    def on_experiment_start(self):
+        r"""Call at the beginning of experiment."""
         if self._is_local_main_process:
-            self._run = wandb.init(**kwargs)
+            self._run = wandb.init(reinit=True, **self.kwargs)
             for axe in metrics_labels:
                 wandb.define_metric(axe)
             wandb.define_metric("loss/train", step_metric=train_step)
             wandb.define_metric("loss/valid", step_metric=train_step)
             wandb.define_metric("metrics/*", step_metric=train_step)
-            self._tables: Dict[str, wandb.data_types.Table] = dict()
 
-        self.current_epoch: Optional[EpochTracker] = None
-        self.current_mode: Optional[str] = None
+        self.axes = Timestamp()
 
         self.best_valid_score = -math.inf
         self.best_valid_timestamp = Timestamp()
@@ -121,8 +134,12 @@ class SummaryTracker:
             raise RuntimeError('`new_epoch()` should be called before `new_step()`')
         self.axes.update_axe(self.current_mode, 'step')
 
-    def append_loss(self, loss: Union[float, torch.Tensor]):
-        r"""Append loss of current step to tracker and update current step."""
+    def append_loss(self, loss: float):
+        r"""Append loss of current step to tracker and update current step.
+
+        Notes:
+            `loss` should be a float! (like `loss.item()`)
+        """
         if isinstance(loss, torch.Tensor):
             loss = loss.item()
         if math.isnan(loss):
@@ -194,7 +211,7 @@ class SummaryTracker:
         info = {tag: scalar_value}
         info.update(self.axes.as_dict())
         if self._is_local_main_process and not self.tracker_finished:
-            wandb.log(info, step=self.axes.train_step)
+            wandb.log(info, step=self.axes.train_step, commit=False)
 
     def add_any(self, tag: str, any_value: Union[str, float, int]):
         r"""Add a metric of any type (`float`, `int` and `str` supported) to summary."""
@@ -232,7 +249,7 @@ class EpochTracker:
 
     def __init__(
             self,
-            metrics_for_best_model: Set[str],
+            metrics_for_best_model: Optional[Set[str]] = None,
             mode: Optional[str] = None,
             axes: Optional[Timestamp] = None,
     ):
@@ -242,17 +259,17 @@ class EpochTracker:
         self._accumulate_step: int = 0
 
         # metrics
-        self._valid_metrics_results: MetricsDict = dict()
+        self._metrics_results: MetricsDict = dict()
 
         # result: loss & metrics
         self._score: Optional[float] = None
 
-        self._logger: Logger = getLogger()
+        self._logger: Logger = getLogger(__name__)
         self._start_time: Optional[float] = None
         self._end_time: Optional[float] = None
         self.mode = mode or 'Epoch'
         self.axes = axes
-        self.metrics_for_best_model = metrics_for_best_model
+        self.metrics_for_best_model = metrics_for_best_model or set()
         if self.mode == 'train':
             self.desc = 'Train epoch '
             self.serial = self.axes.train_epoch
@@ -261,6 +278,9 @@ class EpochTracker:
             self.serial = self.axes.valid_epoch
         else:
             self.desc = 'Epoch '
+            self.serial = ''
+        self._has_score = False
+        self._has_loss = False
 
     def on_epoch_start(self):
         """Call at epoch start."""
@@ -269,13 +289,14 @@ class EpochTracker:
     def on_epoch_end(self, current_best: bool):
         """Call at epoch end. This function will output information of this epoch."""
         self._end_time = time()
-        self._epoch_info(self._end_time - self._start_time, current_best)
+        self.epoch_info(self._end_time - self._start_time, current_best)
 
     def append_loss(self, loss: float):
         """Append the loss of one step."""
         self._avg_loss *= self._accumulate_step / (self._accumulate_step + 1)
         self._avg_loss += loss / (self._accumulate_step + 1)
         self._accumulate_step += 1
+        self._has_loss = True
 
     @property
     def avg_loss(self) -> float:
@@ -287,18 +308,19 @@ class EpochTracker:
 
     def update_metrics(self, results: Optional[dict] = None, **kwargs):
         """Update metrics result of this epoch."""
-        if results is not None:
-            self._valid_metrics_results.update(results)
-        self._valid_metrics_results.update(kwargs)
+        for results_dict in (results, kwargs):
+            if results_dict is not None:
+                self._metrics_results.update(results_dict)
+                self._has_score = True
 
     def as_dict(self) -> dict:
         """Return the epoch result as a dict"""
-        if self._valid_metrics_results:
-            results = self._valid_metrics_results
-        else:
-            results = {}
-        if self._accumulate_step != 0:
+        results = {}
+        if self._has_loss:
             results.update(loss=self.avg_loss)
+        if self._has_score:
+            results.update(score=self.calc_score())
+            results.update(self._metrics_results)
         return results
 
     def calc_score(self) -> float:
@@ -310,45 +332,57 @@ class EpochTracker:
 
         if 'loss' in self.metrics_for_best_model:
             return -self.avg_loss
+        if 'score' in self._metrics_results:
+            return self._metrics_results['score']
 
         score = 0.
-        for metric, result in self._valid_metrics_results.items():
+        for metric, result in self._metrics_results.items():
             if metric in self.metrics_for_best_model and isinstance(result, float):
                 score += result
 
         return score
 
-    def _epoch_info(self, time_duration: float, current_best: bool):
-        r"""Output loss with epoch and time information."""
-        def add_metric(_k: str, _v: Union[str, float]) -> str:
-            if isinstance(_v, str):
-                return ''
-            _o = ', '
-            if _k.lower() in self.metrics_for_best_model:
-                _o += '<'
-            if isinstance(_v, float):
-                _o += f'{_k}: {_v:.4f}'
-            if _k.lower() in self.metrics_for_best_model:
-                _o += '>'
-            return _o
+    def _add_metric(self, _k: str, _v: Union[str, float], indent, sep) -> str:
+        if isinstance(_v, str):
+            return ''
+        _o = indent
+        if _k.lower() in self.metrics_for_best_model:
+            _o += '<'
+        if isinstance(_v, float):
+            _o += f'{_k}: {_v:.4f}'
+        if _k.lower() in self.metrics_for_best_model:
+            _o += '>'
+        return _o + sep
 
-        output = "{} {} ".format(self.desc, self.serial)
+    def metrics_info(self, sep=', ', indent=''):
+        output = ''
+        for metric, result in self.as_dict().items():
+            output += self._add_metric(metric, result, indent, sep)
+        return output[:-len(sep)]
+
+    def epoch_info(
+            self,
+            time_duration: float,
+            current_best: bool = False,
+            desc: Optional[str] = None,
+            serial: Optional[int] = None,
+            logger: Optional[Logger] = None
+    ):
+        r"""Output loss with epoch and time information."""
+
+        if serial is None:
+            serial = self.serial
+        output = "{} {} ".format(desc or self.desc, serial)
         if current_best:
             output += '(best) '
-        output += "[time: {:.2f}s".format(time_duration)
-        if self.mode == 'valid':
-            output += add_metric('score', self.calc_score())
+        output += f"[time: {time_duration:.2f}s, {self.metrics_info()}]"
 
-        for metric, result in self.as_dict().items():
-            if isinstance(result, dict):
-                for key, value in result.items():
-                    output += add_metric(key, value)
-            else:
-                output += add_metric(metric, result)
+        if logger is None:
+            logger = self._logger
+        logger.info(output)
 
-        output += "]"
-
-        self._logger.info(output)
+    def __repr__(self):
+        return self.metrics_info()
 
 
 root: Optional[SummaryTracker] = None
@@ -362,8 +396,14 @@ def init_dashboard(
     Args:
         config: Configuration.
 
+    Notes:
+        After initialize configuration, call `start_dashboard()` and `finish_dashboard()`
+        to start and finish one run.
+
     Examples:
         >>> init_dashboard(config)
+        >>> ...
+        >>> start_dashboard()
         >>> summary_tracker = get_dashboard()
         >>> ...
         >>> # at the beginning of a validation epoch
@@ -379,6 +419,7 @@ def init_dashboard(
         >>> finish_dashboard()
     """
     os.environ["WANDB_SILENT"] = "true"
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
     global root
     if root is not None:
@@ -389,7 +430,7 @@ def init_dashboard(
 
     root = SummaryTracker(
         email=config['email'],
-        is_local_main_process=config['is_local_main_process'],
+        is_local_main_process=config['_is_local_main_process'],
         metrics_for_best_model=config['metrics_for_best_model'],
         kwargs=dict(
             dir=config['logdir'],
@@ -401,6 +442,10 @@ def init_dashboard(
     )
 
     return root
+
+
+def start_dashboard():
+    root.on_experiment_start()
 
 
 def finish_dashboard():

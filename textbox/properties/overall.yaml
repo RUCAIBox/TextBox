@@ -14,7 +14,8 @@ epochs: 50
 train_batch_size: 16
 optimizer: adamw
 learning_rate: 3e-5
-eval_epoch: 1
+valid_strategy: epoch
+valid_intervals: 1
 stopping_steps: 2
 grad_clip: 0.1
 optimizer_kwargs: {}
@@ -29,7 +30,7 @@ eval_batch_size: 64
 config_kwargs: {}
 truncate: tail
 tokenizer_kwargs: {'use_fast': True} #'additional_special_tokens': None
-generation_kwargs: {'num_beams': 5, 'early_stopping': True}
+generation_kwargs: {'num_beams': 5, 'no_repeat_ngram_size': 3, 'early_stopping': True}
 # efficient_methods: ['lora']
 # efficient_kwargs: {'lora_r': 4, 'lora_dropout': 0.1, 'lora_alpha': 32}
 # efficient_methods: ['prefix-tuning'] # ['p-tuning-v2']

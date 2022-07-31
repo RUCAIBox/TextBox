@@ -7,6 +7,6 @@ rouge_type: rouge-score
 meteor_type: pycocoevalcap
 
 train_batch_size: 20
-update_freq: 10
+accumulation_steps: 10
 eval_batch_size: 36
 prefix: 'Describe the following data: '

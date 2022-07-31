@@ -28,7 +28,7 @@ class BaseEvaluator():
         self.lower = config['lower_evaluation']
         self.metrics = metrics
 
-    def evaluate(self, generate_corpus, reference_corpus, avg=False):
+    def evaluate(self, generate_corpus, reference_corpus, avg=True):
         r"""get metrics result
 
         Args:

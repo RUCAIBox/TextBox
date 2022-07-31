@@ -20,8 +20,11 @@ from typing import Callable, Iterable, List, Optional, Tuple, Dict
 import numpy as np
 import torch
 from torch import nn
-from torch.autograd import Function 
-import ngram_repeat_block_cuda
+from torch.autograd import Function
+try:
+    import ngram_repeat_block_cuda
+except ModuleNotFoundError:
+    ngram_repeat_block_cuda = None
 
 from .utils import add_start_docstrings
 from .utils.logging import get_logger

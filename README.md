@@ -16,6 +16,7 @@
 [Docs]: https://textbox.readthedocs.io/en/latest/
 [Model]: #Model
 [Dataset]: #Datase
+
 TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 21 text generation algorithms, covering two major tasks:
 
 - Unconditional (input-free) Generation
@@ -58,7 +59,7 @@ python run_textbox.py --model_path=facebook/bart-base
 
 ### Specify Model, Dataset, and Evaluation Metrics
 
-Substitute `<xxx>` with your choices. See [Model](#Model), [Dataset](#Dataset), and [Metrics](#Metrics) for a full support list.  <!-- TODO -->
+Substitute `<xxx>` with your choices. See [Model](#Model), [Dataset](#Dataset), and [Metrics](#Metrics) for a full support list.
 
 ```bash
 python run_textbox.py ... --model=<model-name> --dataset=<dataset-name> --metrics=<list-of-metrics>
@@ -182,7 +183,7 @@ corpus_bleu: False
 distinct_max_ngrams: 4
 ```
 
-Other evaluation metrics ([full list](#Evaluation)) observe the same naming rules.  <!-- TODO -->
+Other evaluation metrics ([full list](#Evaluation)) observe the same naming rules.
 
 ### Prompting
 
@@ -428,14 +429,63 @@ We also support you to run our model using your own dataset. Just follow the thr
 
    For sequence-to-sequence generation, please name the corpus files `train.[xx/yy], valid.[xx/yy], dev.[xx/yy]`, and the `xx` or `yy` is the suffix of the source or target file which should be consistent with `source_suffix` and `target_suffix` in the YAML.
 
+
+<!-- ===================== Evaluation ===================== -->
+
+
+## Evaluation
+
+15 mainstream evaluation metrics are intergrated:
+
+<div class="tg-wrap"><table>
+<thead>
+  <tr>
+    <th colspan="5" align="center">Evaluation</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td align="center">bert_score</td>
+    <td align="center">bleu</td>
+    <td align="center">chrf</td>
+    <td align="center">chrf+</td>
+    <td align="center">chrf++</td>
+  </tr>
+  <tr>
+    <td align="center">cider</td>
+    <td align="center">distinct</td>
+    <td align="center">meteor</td>
+    <td align="center">nist</td>
+    <td align="center">qa</td>
+  </tr>
+  <tr>
+    <td align="center">rouge</td>
+    <td align="center">self_bleu</td>
+    <td align="center">spice</td>
+    <td align="center">ter</td>
+    <td align="center">unique</td>
+  </tr>
+</tbody>
+</table></div>
+
+<!-- ===================== Experiment Results ===================== -->
+
+
 ## Experiment Results
+
+<!-- TODO -->
+
+
+<!-- ===================== Other ===================== -->
+
 
 ## Releases
 
+<!-- TODO -->
 
-| Releases |    Date    |   Features   |
-| :--------: | :----------: | :-------------: |
-|  v1.0.0  | 30/06/2022 |     Test     |
+| Releases |    Date    |    Features   |
+| :------: | :--------: | :-----------: |
+|  v1.0.0  | 30/06/2022 |      Test     |
 |  v0.2.1  | 15/04/2021 |    TextBox    |
 |  v0.1.5  | 01/11/2021 | Basic TextBox |
 
@@ -474,6 +524,3 @@ TextBox is developed and maintained by [AI Box](http://aibox.ruc.edu.cn/).
 
 TextBox uses [MIT License](./LICENSE).
 
-[Docs]: https://textbox.readthedocs.io/en/latest/
-[Model]: #Model
-[Dataset]: #Dataset

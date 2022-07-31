@@ -62,7 +62,7 @@ Substitute `<xxx>` with your choices. See [Model](#Model), [Dataset](#Dataset), 
 
 ```bash
 python run_textbox.py ... --model=<model-name> --dataset=<dataset-name> --metrics=<list-of-metrics>
-# equivalent of default configuration:
+# Example (equivalent of default configuration):
 python run_textbox.py --model_path=facebook/bart-base --model=BART --dataset=samsum --metrics=['bleu']
 ```
 
@@ -117,13 +117,15 @@ stopping_steps: 8
 metrics_for_best_model: ['rouge-1', 'rouge-w']
 ```
 
-Other commonly used parameters includes `epochs=<int>`, `max_steps=<int>`, `learning_rate=<float>`, `train_batch_size=<int>`, `weight_decay=<bool>`, `grad_clip=<bool>`, and so on.
+Other commonly used parameters includes `epochs=<int>` and `max_steps=<int>` (indicating maximal iteration of epochs and batch steps), `learning_rate=<float>`, `train_batch_size=<int>`, `weight_decay=<bool>`, and `grad_clip=<bool>`.
 
 #### Pre-trained Model Parameters
 
 `model_path` receives a name of model on [huggingface](https://huggingface.co/models) like [`facebook/bart-base`](https://huggingface.co/models?search=facebook%2Fbart-base).
 
-Not only `model_path`, but `config_path` and `tokenizer_path` (same value with `model_path` by default) also receive a huggingface model or a local path. Besides, `config_kwargs` and `tokenizer_kwargs` are useful when additional parameters are required. For example, when building a Task-oriented Dialogue System, special tokens can be added with `additional_special_tokens`; fast tokenization can also be switched with `use_fast`:
+Not only `model_path`, but `config_path` and `tokenizer_path` (same value with `model_path` by default) also receive a huggingface model or a local path. Besides, `config_kwargs` and `tokenizer_kwargs` are useful when additional parameters are required.
+
+For example, when building a *Task-oriented Dialogue System*, special tokens can be added with `additional_special_tokens`; fast tokenization can also be switched with `use_fast`:
 
 ```yaml
 config_kwargs: {}
@@ -271,129 +273,129 @@ You can also disable **sync only** with `wandb offline` and enable it again with
 <!-- Thanks for table generatros https://www.tablesgenerator.com/html_tables -->
 
 
-<table>
+<div class="tg-wrap"><table align="center">
 <thead>
   <tr>
-    <th>Category</th>
-    <th>Model</th>
-    <th>Label Name</th>
-    <th>Reference</th>
+    <th align="center">Category</th>
+    <th align="center">Model</th>
+    <th align="center">Label Name</th>
+    <th align="center">Reference</th>
   </tr>
 </thead>
 <tbody>
   <tr>
-    <td rowspan="6">CLM</td>
-    <td>CPM</td>
-    <td>CPM</td>
-    <td><a href="https://arxiv.org/pdf/2012.00413">(Zhang et al., 2020)</a></td>
+    <td rowspan="6" align="center"><strong>CLM</strong></td>
+    <td align="center">CPM</td>
+    <td align="center">CPM</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2012.00413">(Zhang et al., 2020)</a></td>
   </tr>
   <tr>
-    <td>CTRL</td>
-    <td>CTRL</td>
-    <td><a href="https://arxiv.org/pdf/1909.05858">(Keskar et al., 2019)</a></td>
+    <td align="center">CTRL</td>
+    <td align="center">CTRL</td>
+    <td align="center"><a href="https://arxiv.org/pdf/1909.05858">(Keskar et al., 2019)</a></td>
   </tr>
   <tr>
-    <td>GPT</td>
-    <td>OpenAI-GPT</td>
-    <td><a href="https://s3-us-west-2.amazonaws.com/openai-assets/research-covers/language-unsupervised/language_understanding_paper.pdf">(Radford et al., 2018)</a></td>
+    <td align="center">GPT</td>
+    <td align="center">OpenAI-GPT</td>
+    <td align="center"><a href="https://s3-us-west-2.amazonaws.com/openai-assets/research-covers/language-unsupervised/language_understanding_paper.pdf">(Radford et al., 2018)</a></td>
   </tr>
   <tr>
-    <td>GPT Neo</td>
-    <td>GPT_neo</td>
-    <td><a href="https://arxiv.org/pdf/2101.00027">(Gao et al., 2021)</a></td>
+    <td align="center">GPT Neo</td>
+    <td align="center">GPT_neo</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2101.00027">(Gao et al., 2021)</a></td>
   </tr>
   <tr>
-    <td>GPT2</td>
-    <td>GPT2</td>
-    <td><a href="https://d4mucfpksywv.cloudfront.net/better-language-models/language-models.pdf">(Radford et al., 2019)</a></td>
+    <td align="center">GPT2</td>
+    <td align="center">GPT2</td>
+    <td align="center"><a href="https://d4mucfpksywv.cloudfront.net/better-language-models/language-models.pdf">(Radford et al., 2019)</a></td>
   </tr>
   <tr>
-    <td>OPT</td>
-    <td>OPT</td>
-    <td><a href="https://arxiv.org/pdf/2205.01068.pdf">(Artetxe et al., 2022)</a></td>
+    <td align="center">OPT</td>
+    <td align="center">OPT</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2205.01068.pdf">(Artetxe et al., 2022)</a></td>
   </tr>
   <tr>
-    <td rowspan="16">Seq2Seq</td>
-    <td>BART</td>
-    <td>BART</td>
-    <td><a href="https://arxiv.org/pdf/1910.13461">(Lewis et al., 2020)</a></td>
+    <td rowspan="16" align="center"><strong>Seq2Seq</strong></td>
+    <td align="center">BART</td>
+    <td align="center">BART</td>
+    <td align="center"><a href="https://arxiv.org/pdf/1910.13461">(Lewis et al., 2020)</a></td>
   </tr>
   <tr>
-    <td>Bert2Bert</td>
-    <td>Bert2Bert</td>
-    <td><a href="https://aclanthology.org/2020.tacl-1.18.pdf">(Rothe et al., 2020)</a></td>
+    <td align="center">Bert2Bert</td>
+    <td align="center">Bert2Bert</td>
+    <td align="center"><a href="https://aclanthology.org/2020.tacl-1.18.pdf">(Rothe et al., 2020)</a></td>
   </tr>
   <tr>
-    <td>BigBirdPegasus</td>
-    <td>BigBird Pegasus</td>
-    <td><a href="https://arxiv.org/pdf/2007.14062">(Zaheer et al., 2020)</a></td>
+    <td align="center">BigBirdPegasus</td>
+    <td align="center">BigBird-Pegasus</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2007.14062">(Zaheer et al., 2020)</a></td>
   </tr>
   <tr>
-    <td>Blenderbot</td>
-    <td>Blenderbot</td>
+    <td align="center">Blenderbot</td>
+    <td align="center">Blenderbot</td>
     <td rowspan="2"><a href="https://arxiv.org/pdf/2004.13637.pdf">(Roller et al., 2020)</a></td>
   </tr>
   <tr>
-    <td>Blenderbot Small</td>
-    <td>Blenderbot-Small</td>
+    <td align="center">Blenderbot Small</td>
+    <td align="center">Blenderbot-Small</td>
   </tr>
   <tr>
-    <td>LED</td>
-    <td>LED</td>
-    <td><a href="https://arxiv.org/pdf/2004.05150">(Beltagy et al., 2020)</a></td>
+    <td align="center">LED</td>
+    <td align="center">LED</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2004.05150">(Beltagy et al., 2020)</a></td>
   </tr>
   <tr>
-    <td>M2M100</td>
-    <td>M2M_100</td>
-    <td><a href="https://arxiv.org/pdf/2010.11125">(Fan et al., 2020)</a></td>
+    <td align="center">M2M100</td>
+    <td align="center">M2M_100</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2010.11125">(Fan et al., 2020)</a></td>
   </tr>
   <tr>
-    <td>MBart</td>
-    <td>MBart</td>
-    <td><a href="https://arxiv.org/pdf/2001.08210">(Liu et al., 2020)</a></td>
+    <td align="center">MBart</td>
+    <td align="center">MBart</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2001.08210">(Liu et al., 2020)</a></td>
   </tr>
   <tr>
-    <td>mT5</td>
-    <td>mT5</td>
-    <td><a href="https://arxiv.org/pdf/2010.11934">(Xue et al., 2020)</a></td>
+    <td align="center">mT5</td>
+    <td align="center">mT5</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2010.11934">(Xue et al., 2020)</a></td>
   </tr>
   <tr>
-    <td>MVP</td>
-    <td>MVP</td>
-    <td><a href="https://arxiv.org/pdf/2206.12131">(Tang et al., 2022)</a></td>
+    <td align="center">MVP</td>
+    <td align="center">MVP</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2206.12131">(Tang et al., 2022)</a></td>
   </tr>
   <tr>
-    <td>Pegasus</td>
-    <td>Pegasus</td>
-    <td><a href="https://arxiv.org/pdf/1912.08777">(Zhang et al., 2019)</a></td>
+    <td align="center">Pegasus</td>
+    <td align="center">Pegasus</td>
+    <td align="center"><a href="https://arxiv.org/pdf/1912.08777">(Zhang et al., 2019)</a></td>
   </tr>
   <tr>
-    <td>ProphetNet</td>
-    <td>ProphetNet</td>
-    <td><a href="https://arxiv.org/pdf/2001.04063">(Qi et al., 2020)</a></td>
+    <td align="center">ProphetNet</td>
+    <td align="center">ProphetNet</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2001.04063">(Qi et al., 2020)</a></td>
   </tr>
   <tr>
-    <td>T5</td>
-    <td>T5</td>
-    <td><a href="https://arxiv.org/pdf/1910.10683.pdf">(Raffel et al., 2020)</a></td>
+    <td align="center">T5</td>
+    <td align="center">T5</td>
+    <td align="center"><a href="https://arxiv.org/pdf/1910.10683.pdf">(Raffel et al., 2020)</a></td>
   </tr>
   <tr>
-    <td>Chinese BART</td>
-    <td>Chinese-BART</td>
-    <td></td>
+    <td align="center">Chinese BART</td>
+    <td align="center">Chinese-BART</td>
+    <td align="center"></td>
   </tr>
   <tr>
-    <td>Chinese Pegasus</td>
-    <td>Chinese-Pegasus</td>
-    <td></td>
+    <td align="center">Chinese Pegasus</td>
+    <td align="center">Chinese-Pegasus</td>
+    <td align="center"></td>
   </tr>
   <tr>
-    <td>CPT</td>
-    <td>CPT</td>
-    <td><a href="https://arxiv.org/pdf/2109.05729">(Shao et al., 2021)</a></td>
+    <td align="center">CPT</td>
+    <td align="center">CPT</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2109.05729">(Shao et al., 2021)</a></td>
   </tr>
 </tbody>
-</table>
+</table></div>
 
 
 <!-- ===================== Dataset ===================== -->

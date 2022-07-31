@@ -1,7 +1,7 @@
 # A line starts with `#` is a comment
 # Hyper-parameter Optimization Format:
 #
-# <param> <method> <space>
+# <label> <algorithm> <space>
 #
 # <param>: Parameter name to be optimize. A list of supported parameter can be found in argument_list.py
 # <method>: Supports "choice", "uniform", "quniform", "loguniform"

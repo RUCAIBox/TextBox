@@ -115,9 +115,7 @@ class AbstractDataset(object):
         """
         for prefix in ['train', 'valid', 'test']:
             filename = os.path.join(self.dataset_path, f'{prefix}.tgt')
-            text_data = load_data(
-                filename, self.tokenize_strategy, self.target_max_length, self.target_language,
-            )
+            text_data = load_data(filename, self.target_max_length)
             self.target_text.append(text_data)
 
     def _detect_restored(self):

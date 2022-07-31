@@ -11,8 +11,11 @@
 [![Documentation Status](https://readthedocs.org/projects/textbox/badge/?version=latest)](https://textbox.readthedocs.io/en/latest/?badge=latest)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-[Docs]https://textbox.readthedocs.io/en/latest/https://textbox.readthedocs.io/en/latest/https://textbox.readthedocs.io/en/latest/https://textbox.readthedocs.io/en/latest/https://textbox.readthedocs.io/en/latest/https://textbox.readthedocs.io/en/latest/ | [Model]#Model#Model#Model#Model#Model#Model | [Dataset]#Dataset#Dataset#Dataset#Dataset#Dataset#Dataset
+[Docs]https://textbox.readthedocs.io/en/latest/ | [Model]#Model | [Dataset]#Datase
 
+[Docs]: https://textbox.readthedocs.io/en/latest/
+[Model]: #Model
+[Dataset]: #Datase
 TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 21 text generation algorithms, covering two major tasks:
 
 - Unconditional (input-free) Generation
@@ -263,13 +266,153 @@ You can also disable **sync only** with `wandb offline` and enable it again with
 <!-- ===================== Model ===================== -->
 
 
-### Model
+## Model
+
+<!-- Thanks for table generatros https://www.tablesgenerator.com/html_tables -->
+
+
+<table>
+<thead>
+  <tr>
+    <th>Category</th>
+    <th>Model</th>
+    <th>Label Name</th>
+    <th>Reference</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td rowspan="6">CLM</td>
+    <td>CPM</td>
+    <td>CPM</td>
+    <td><a href="https://arxiv.org/pdf/2012.00413">(Zhang et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td>CTRL</td>
+    <td>CTRL</td>
+    <td><a href="https://arxiv.org/pdf/1909.05858">(Keskar et al., 2019)</a></td>
+  </tr>
+  <tr>
+    <td>GPT</td>
+    <td>OpenAI-GPT</td>
+    <td><a href="https://s3-us-west-2.amazonaws.com/openai-assets/research-covers/language-unsupervised/language_understanding_paper.pdf">(Radford et al., 2018)</a></td>
+  </tr>
+  <tr>
+    <td>GPT Neo</td>
+    <td>GPT_neo</td>
+    <td><a href="https://arxiv.org/pdf/2101.00027">(Gao et al., 2021)</a></td>
+  </tr>
+  <tr>
+    <td>GPT2</td>
+    <td>GPT2</td>
+    <td><a href="https://d4mucfpksywv.cloudfront.net/better-language-models/language-models.pdf">(Radford et al., 2019)</a></td>
+  </tr>
+  <tr>
+    <td>OPT</td>
+    <td>OPT</td>
+    <td><a href="https://arxiv.org/pdf/2205.01068.pdf">(Artetxe et al., 2022)</a></td>
+  </tr>
+  <tr>
+    <td rowspan="16">Seq2Seq</td>
+    <td>BART</td>
+    <td>BART</td>
+    <td><a href="https://arxiv.org/pdf/1910.13461">(Lewis et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td>Bert2Bert</td>
+    <td>Bert2Bert</td>
+    <td><a href="https://aclanthology.org/2020.tacl-1.18.pdf">(Rothe et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td>BigBirdPegasus</td>
+    <td>BigBird Pegasus</td>
+    <td><a href="https://arxiv.org/pdf/2007.14062">(Zaheer et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td>Blenderbot</td>
+    <td>Blenderbot</td>
+    <td rowspan="2"><a href="https://arxiv.org/pdf/2004.13637.pdf">(Roller et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td>Blenderbot Small</td>
+    <td>Blenderbot-Small</td>
+  </tr>
+  <tr>
+    <td>LED</td>
+    <td>LED</td>
+    <td><a href="https://arxiv.org/pdf/2004.05150">(Beltagy et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td>M2M100</td>
+    <td>M2M_100</td>
+    <td><a href="https://arxiv.org/pdf/2010.11125">(Fan et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td>MBart</td>
+    <td>MBart</td>
+    <td><a href="https://arxiv.org/pdf/2001.08210">(Liu et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td>mT5</td>
+    <td>mT5</td>
+    <td><a href="https://arxiv.org/pdf/2010.11934">(Xue et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td>MVP</td>
+    <td>MVP</td>
+    <td><a href="https://arxiv.org/pdf/2206.12131">(Tang et al., 2022)</a></td>
+  </tr>
+  <tr>
+    <td>Pegasus</td>
+    <td>Pegasus</td>
+    <td><a href="https://arxiv.org/pdf/1912.08777">(Zhang et al., 2019)</a></td>
+  </tr>
+  <tr>
+    <td>ProphetNet</td>
+    <td>ProphetNet</td>
+    <td><a href="https://arxiv.org/pdf/2001.04063">(Qi et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td>T5</td>
+    <td>T5</td>
+    <td><a href="https://arxiv.org/pdf/1910.10683.pdf">(Raffel et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td>Chinese BART</td>
+    <td>Chinese-BART</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Chinese Pegasus</td>
+    <td>Chinese-Pegasus</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>CPT</td>
+    <td>CPT</td>
+    <td><a href="https://arxiv.org/pdf/2109.05729">(Shao et al., 2021)</a></td>
+  </tr>
+</tbody>
+</table>
 
 
 <!-- ===================== Dataset ===================== -->
 
 
-### Dataset
+## Dataset
+
+Now we support 11 generation tasks and corresponding datasets:
+- Text summarization: CNN/Daily Mail (cnndm), XSum (xsum), SAMSum (samsum), and WLE (wle).
+- Open-ended dialogue system: PersonaChat (pc), DailyDialog (dd), DSTC7-AVSD (da), and SGD (sgd).
+- Data-to-text generation: WebNLG v2.1 (webnlg), WebNLG v3.0 (webnlg2), WikiBio (wikibio), E2E (e2e), DART (dart), and ToTTo (totto).
+- Question generation: SQuAD (squadqg) and CoQA (coqaqg).
+- Story generation: ROCStories (roc) and WritingPrompts (wp).
+- Question answering: SQuAD (squad) and CoQA (coqa).
+- Task-oriented dialogue system: MultiWOZ 2.0 (multiwoz).
+- Commonsense generation: CommonGen (cg).
+- Text simplification: WikiAuto + Turk/ASSET (wia).
+- Paraphrase generation: Quora (comming soon).
+- Text style transfer: GYAFC-E&M and F&R (comming soon).
 
 We also support you to run our model using your own dataset. Just follow the three steps:
 
@@ -287,9 +430,10 @@ We also support you to run our model using your own dataset. Just follow the thr
 
 ## Releases
 
-| Releases |    Date    |   Features    |
-|:--------:|:----------:|:-------------:|
-|  v1.0.0  | 30/06/2022 |     Test      |
+
+| Releases |    Date    |   Features   |
+| :--------: | :----------: | :-------------: |
+|  v1.0.0  | 30/06/2022 |     Test     |
 |  v0.2.1  | 15/04/2021 |    TextBox    |
 |  v0.1.5  | 01/11/2021 | Basic TextBox |
 

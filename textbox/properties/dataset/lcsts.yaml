@@ -3,11 +3,9 @@ tgt_len: 512
 metrics: ['rouge']
 metrics_for_best_model: ['rouge-1', 'rouge-2', 'rouge-l']
 is_chinese_task: True
-label_smoothing: 0.1
 rouge_type: 'rouge'
-tokenizer_kwargs: {'use_fast': True}
 
-epochs: 10
+label_smoothing: 0.1
 train_batch_size: 4
 accumulation_steps: 48
 eval_batch_size: 16

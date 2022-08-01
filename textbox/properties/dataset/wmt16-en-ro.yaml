@@ -5,11 +5,9 @@ tgt_lang: ro_RO
 metrics: ['bleu']
 metrics_for_best_model: ['bleu']
 bleu_type: sacrebleu
-tokenizer_kwargs: {'use_fast': True, 'src_lang': 'en_XX', 'tgt_lang': 'ro_RO'}
+tokenizer_kwargs: {'src_lang': 'en_XX', 'tgt_lang': 'ro_RO'}
 is_EN2RO_task: True
 
-epochs: 3
-learning_rate: 3e-5
 label_smoothing: 0.1
 train_batch_size: 4
 accumulation_steps: 48

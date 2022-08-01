@@ -3,10 +3,10 @@ tgt_len: 64
 metrics: ['rouge']
 metrics_for_best_model: ['rouge-l']
 is_chinese_task: True
-label_smoothing: 0.1
 rouge_type: 'rouge'
 
 epochs: 10
+label_smoothing: 0.1
 stopping_steps: 10
 learning_rate: 1e-5
 train_batch_size: 16

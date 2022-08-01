@@ -3,12 +3,11 @@ tgt_len: 512
 metrics: ['bleu']
 metrics_for_best_model: ['bleu-4']
 is_chinese_task: True
-label_smoothing: 0.1
 bleu_type: 'nltk'
 corpus_bleu: True
-tokenizer_kwargs: {'use_fast': True}
 
 epochs: 10
+label_smoothing: 0.1
 learning_rate: 1e-5
 train_batch_size: 16
 eval_batch_size: 16

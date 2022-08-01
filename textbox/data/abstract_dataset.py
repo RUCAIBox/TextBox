@@ -138,11 +138,12 @@ class AbstractDataset(Dataset):
                     if self.config["model_name"] in ["bert2bert", "opt"]:
                         ids = ids[1:]
                     self.target_ids.append(torch.tensor(ids, dtype=torch.long))
-        tmp_target_ids = [tokenizer.encode(sentence) for sentence in self.target_text]
-        self.target_tokens = [
-            tokenizer.decode(sentence, skip_special_tokens=True)
-            for sentence in tmp_target_ids
-        ]
+        if self.set != "train":
+            tmp_target_ids = [tokenizer.encode(sentence) for sentence in self.target_text]
+            self.target_tokens = [
+                tokenizer.decode(sentence, skip_special_tokens=True)
+                for sentence in tmp_target_ids
+            ]
 
 
 class AbstractCollate:

@@ -10,6 +10,7 @@ general_parameters = [
     'quick_test',  # partial experiment
     'space', 'algo', '_hyper_tuning',  # hyper tuning
     'multi_seed',  # multiple random seed
+    'romanian_postprocessing',
 ]
 
 training_parameters = [

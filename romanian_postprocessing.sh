@@ -2,12 +2,12 @@
 
 set -eu
 
-REPLACE_UNICODE_PUNCT=mosesdecoder/scripts/tokenizer/replace-unicode-punctuation.perl
-NORM_PUNC=mosesdecoder/scripts/tokenizer/normalize-punctuation.perl
-REM_NON_PRINT_CHAR=mosesdecoder/scripts/tokenizer/remove-non-printing-char.perl
-REMOVE_DIACRITICS=wmt16-scripts/preprocess/remove-diacritics.py
-NORMALIZE_ROMANIAN=wmt16-scripts/preprocess/normalise-romanian.py
-TOKENIZER=mosesdecoder/scripts/tokenizer/tokenizer.perl
+REPLACE_UNICODE_PUNCT=asset/romanian_postprocess/scripts/tokenizer/replace-unicode-punctuation.perl
+NORM_PUNC=asset/romanian_postprocess/scripts/tokenizer/normalize-punctuation.perl
+REM_NON_PRINT_CHAR=asset/romanian_postprocess/scripts/tokenizer/remove-non-printing-char.perl
+REMOVE_DIACRITICS=asset/romanian_postprocess/preprocess/remove-diacritics.py
+NORMALIZE_ROMANIAN=asset/romanian_postprocess/preprocess/normalise-romanian.py
+TOKENIZER=asset/romanian_postprocess/scripts/tokenizer/tokenizer.perl
 
 sys=$1
 ref=$2

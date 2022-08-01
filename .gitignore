@@ -23,5 +23,3 @@ facebook/
 .env
 /wandb/
 *.swp
-/mosesdecoder/
-/wmt16-scripts/

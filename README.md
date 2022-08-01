@@ -71,7 +71,7 @@ python run_textbox.py ... --do_train=False --load_experiment=example.pth --quick
 
 You can choose optimizer and scheduler through `optimizer=<optimizer-name>` and `scheduler=<scheduler-name>`. We provide a wrapper around **pytorch optimizer**, which means parameters like `epsilon` or `warmup_steps` can be specified with keyword dictionaries `optimizer_kwargs={'epsilon': ... }` and `scheduler_kwargs={'warmup_steps': ... }`. See [pytorch optimizer](https://pytorch.org/docs/stable/optim.html#algorithms) and [scheduler]() for a complete tutorial.  <!-- TODO -->
 
-Validation frequence is introduced to validate the model **at each specific batch-steps or epochs**. Specify `valid_strategy` (either `'step'` or `'epoch'`) and `valid_intervals=<int>` to adjust the pace. Specifically, traditional train-validate paradigm is a special case with `valid_strategy=epoch` and `valid_intervals=1`.
+Validation frequency is introduced to validate the model **at each specific batch-steps or epochs**. Specify `valid_strategy` (either `'step'` or `'epoch'`) and `valid_intervals=<int>` to adjust the pace. Specifically, traditional train-validate paradigm is a special case with `valid_strategy=epoch` and `valid_intervals=1`.
 
 `max_save=<int>` indicates **the maximal amount of saved files** (checkpoint and generated corpus during evaluation). `-1`: save every file, `0`: do not save any file, `1`: only save the file with best score, and `n`: save both the best and the last $n−1$ files.
 
@@ -88,7 +88,7 @@ stopping_steps: 8
 metrics_for_best_model: ['rouge-1', 'rouge-w']
 ```
 
-Other commonly used parameters includes `epochs=<int>` and `max_steps=<int>` (indicating maximal iteration of epochs and batch steps), `learning_rate=<float>`, `train_batch_size=<int>`, `weight_decay=<bool>`, and `grad_clip=<bool>`.
+Other commonly used parameters includes `epochs=<int>` and `max_steps=<int>` (indicating maximum iteration of epochs and batch steps), `learning_rate=<float>`, `train_batch_size=<int>`, `weight_decay=<bool>`, and `grad_clip=<bool>`.
 
 ### Pre-trained Model Parameters
 
@@ -180,7 +180,7 @@ efficient_unfreeze_model: <bool>
 
 Pre-training models from scratch or continue pre-training from existing checkpoints is essential to achieving SOTA results. We support modularized pre-training tasks as individual collate functions to meet flexible pre-training demands. 
 
-Currently, we support pre-training tasks from BART paper, including Text-Infilling and Sentence Permutation (which is sufficient to reproduce BART results from the original paper according to this [Github Issue](https://github.com/facebookresearch/fairseq/issues/1899#issuecomment-1069429320) from BART author).
+Currently, we support pre-training tasks from BART paper, including Text Infilling and Sentence Permutation (which is sufficient to reproduce BART results from the original paper according to this [Github Issue](https://github.com/facebookresearch/fairseq/issues/1899#issuecomment-1069429320) from BART author).
 
 To enable pre-training, simply set `--pretrain_task` to `denoising` or `text_infilling`(by default, pre-training is disabled and thus set to `disabled`). We plan to add more pre-training tasks at `textbox/data/utils.py`.
 
@@ -188,6 +188,14 @@ To enable pre-training, simply set `--pretrain_task` to `denoising` or `text_inf
 python run_textbox.py ... --pretrain_task=<task-name>
 ```
 
+#### Pre-train Task To-Do
+
++ Experimental Tasks from BART (Token Deletion, Document Rotation)
++ Language Model
++ Masked Language Model (separate from Token Masking in BART)
++ Permuted Language Model
++ Multitask Masked Language Model
++ ...
 
 ### Efficient Training
 
@@ -209,7 +217,7 @@ python -m torch.distributed.launch --nproc_per_node=<gpu-num> \
 
 Configurate and test (not always necessary) [accelerate](https://github.com/huggingface/accelerate) with `accelerate config` and `accelerate test` in shell ([example](asset/accelerate.md)).
 
-To accelerate multi-gpu training with `accelerate`, run the script below. Note that `accelerate` occupies a communication port, to resolve port conflict, an available port have to be allocated with `main_process_port` manually.
+To accelerate multi-gpu training with `accelerate`, run the script below. Note that the main process of `accelerate` listen to port `main_process_port`. If you run multiple TextBox instances on a single machine with FSDP (Fully Sharded Data Parallel) enabled, please manually set to a different port.
 
 ```bash
 accelerate launch [--main_process_port <port-number>] run_textbox.py ...
@@ -225,7 +233,7 @@ A separate script `run_hyper.py` is provided for hyper-parameters tuning. Use `s
 
 ### Multiple Random Seeds
 
-Similar to hyper-parameters tuning, another python code with new parameter `multi_seed=<int>` indicating amount of seeds to be test, is introduced for multiple random seeds test:
+Similar to hyper-parameters tuning, another python code with new parameter `multi_seed=<int>` indicating the amount of seeds to be tested, is introduced for multiple random seeds test:
 
 ```bash
 python run_multi_seed.py --multi_seed=16  --model_path=facebook/bart-base --metrics=\[\'rouge\''\] --metrics_for_best_model=\[\'ROUGE-1\'\]

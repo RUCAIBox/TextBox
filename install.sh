@@ -43,7 +43,7 @@ pip install rouge
 
 echo "Installing transformers (modified) ..."
 cd transformers || exit
-pip install -e .
+pip install -e . > /dev/null
 cd ..
 
 wandb login

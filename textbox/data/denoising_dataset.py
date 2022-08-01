@@ -6,66 +6,10 @@ from logging import getLogger
 from textbox import SpecialTokens
 from typing import Optional, List, Union, Dict, Tuple
 from textbox import CLM_MODELS
-from torch.nn.utils.rnn import pad_sequence
+from textbox.data.misc import load_data, _pad_sequence, _collate_batch
 
 
-def _pad_sequence(
-    tensors: List[torch.Tensor], padding_value: int, padding_side: str = "right"
-):
-    """
-    Pad encoded inputs (on left/right and up to max length in the batch)
-    """
-    max_len = max(tensor.size(0) for tensor in tensors)
-    padded_tensors = []
-    if padding_side == "right":
-        return pad_sequence(tensors, batch_first=True, padding_value=padding_value)
-    elif padding_side == "left":
-        for tensor in tensors:
-            padding_length = max_len - len(tensor)
-            padded_tensor = torch.cat(
-                [
-                    torch.full([padding_length], padding_value, dtype=tensor.dtype),
-                    tensor,
-                ],
-                dim=-1,
-            )
-            padded_tensors.append(padded_tensor)
-    padded_tensors = torch.stack(padded_tensors, dim=0)
-    return padded_tensors
 
-
-def _collate_batch(samples, tokenizer, pad_to_multiple_of: Optional[int] = None):
-    """Collate `samples` into a batch, using the information in `tokenizer` for padding if necessary."""
-    # Tensorize if necessary.
-    if isinstance(samples[0], (list, tuple)):
-        samples = [torch.tensor(e, dtype=torch.long) for e in samples]
-
-    # Check if padding is necessary.
-    length_of_first = samples[0].size(0)
-    are_tensors_same_length = all(x.size(0) == length_of_first for x in samples)
-    if are_tensors_same_length and (
-        pad_to_multiple_of is None or length_of_first % pad_to_multiple_of == 0
-    ):
-        return torch.stack(samples, dim=0)
-
-    # If yes, check if we have a `pad_token`.
-    if tokenizer._pad_token is None:
-        raise ValueError(
-            "You are attempting to pad samples but the tokenizer you are using"
-            f" ({tokenizer.__class__.__name__}) does not have a pad token."
-        )
-
-    # Creating the full tensor and filling it with our data.
-    max_length = max(x.size(0) for x in samples)
-    if pad_to_multiple_of is not None and (max_length % pad_to_multiple_of != 0):
-        max_length = ((max_length // pad_to_multiple_of) + 1) * pad_to_multiple_of
-    result = samples[0].new_full([len(samples), max_length], tokenizer.pad_token_id)
-    for i, example in enumerate(samples):
-        if tokenizer.padding_side == "right":
-            result[i, : example.shape[0]] = example
-        else:
-            result[i, -example.shape[0] :] = example
-    return result
 
 
 class DenoisingCollate:
@@ -86,6 +30,10 @@ class DenoisingCollate:
         self.tokenizer = tokenizer
         self.set = set
         self.is_casual_model = bool(config["model_name"] in CLM_MODELS)
+
+    @classmethod
+    def get_type(cls) -> str:
+        return 'denoising(BART)'
 
     def __post_init__(self):
         if self.tokenizer.mask_token is None or self.tokenizer.eos_token is None:
@@ -267,6 +215,10 @@ class TextInfillingCollate:
     mlm_probability: float = 0.3
     poisson_lambda: float = 3.5
     pad_to_multiple_of: Optional[int] = None
+
+    @classmethod
+    def get_type(cls) -> str:
+        return 'text infilling only'
 
     def __init__(self, config, tokenizer, set):
         self.config = config

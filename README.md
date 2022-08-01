@@ -6,17 +6,6 @@
 
 *“李太白少时，梦所用之笔头上生花后天才赡逸，名闻天下。”——王仁裕《开元天宝遗事·梦笔头生花》*
 
-[![PyPi Latest Release](https://img.shields.io/pypi/v/textbox)](https://pypi.org/project/textbox/)
-[![Release](https://img.shields.io/github/v/release/rucaibox/textbox.svg)](https://github.com/rucaibox/textbox/releases)
-[![Documentation Status](https://readthedocs.org/projects/textbox/badge/?version=latest)](https://textbox.readthedocs.io/en/latest/?badge=latest)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-
-[Docs] | [Model] | [Dataset]
-
-[Docs]: https://textbox.readthedocs.io/en/latest/
-[Model]: #Model
-[Dataset]: #Datase
-
 TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 21 text generation algorithms, covering two major tasks:
 
 - Unconditional (input-free) Generation
@@ -27,16 +16,6 @@ We provide the support for 9 benchmark text generation datasets. A user can appl
 <!-- ===================== Installation ===================== -->
 
 ## Installation
-
-```python
-pip install textbox
-```
-
-> **Note**
->
-> **TroubleShooting**: If you face a problem when installing `fast-bleu`, for Linux, please ensure `GCC >= 5.1.0`. For Windows, you can use the wheels in [fast_bleu_wheel4windows](https://github.com/RUCAIBox/TextBox/tree/main/fast_bleu_wheel4windows) for installation. For MacOS, you can install with the following command: `pip install fast-bleu --install-option="--CC=$(which gcc-11)" --install-option="--CXX=$(which g++-11)"`.
-
-### Install from Source
 
 ```bash
 git clone https://github.com/RUCAIBox/TextBox.git && cd TextBox
@@ -51,44 +30,35 @@ Weights&Biases dashboard is intergrated. For the first run, follow the prompt to
 
 ## Quick Start
 
-The script below will run the `BART` model on the `samsum` dataset. The yielded files mainly include a log file like [example.log](asset/example.log) in `log` and checkpoint files in `saved`. See [Model Parameters](#model-parameters) for more detail of model_path.
+The script below will run the facebook `BART-base` model on the `samsum` dataset. The yielded files mainly include a log file like [example.log](asset/example.log) in `log` and checkpoint files in `saved`. See [Model Parameters](#model-parameters) for more detail of `model_path`.
 
 ```bash
 python run_textbox.py --model_path=facebook/bart-base
 ```
 
-### Specify Model, Dataset, and Evaluation Metrics
+### Specify Model and Dataset
 
-Substitute `<xxx>` with your choices. See [Model](#Model), [Dataset](#Dataset), and [Metrics](#Metrics) for a full support list.
+Substitute `<xxx>` with your choices. See [Model](#Model), [Dataset](#Dataset) for a full support list.
 
 ```bash
-python run_textbox.py ... --model=<model-name> --dataset=<dataset-name> --metrics=<list-of-metrics>
+python run_textbox.py --model=<model-name> --dataset=<dataset-name> --model_path=<hf-or-local-path> ...
 # Example (equivalent of default configuration):
-python run_textbox.py --model_path=facebook/bart-base --model=BART --dataset=samsum --metrics=['bleu']
+python run_textbox.py --model=BART --dataset=samsum --model_path=facebook/bart-base
 ```
 
-> **Warning**
-> Backslashes and no-extra-space are required when inputting a list of string like `\[\'bleu\',\'rouge\'\]` in command line. As a result, a preset run configuration as is follows is more recommended.
+### Load from Config Files
 
-### Load From YAML and Python Scripts
-
-You may also want to load configuration with `--config_files` from YAML files like [overall.yaml](textbox/properties/overall.yaml), which will be loaded automatically as default values of most of parameters below:
+You may also want to load your own configurations in the local files:
 
 ```bash
-python run_textbox.py ... --config_files <yaml-file-one> <yaml-file-two>
-```
-
-Or start from python scripts:
-
-```python
-from textbox.quick_start import run_textbox
-run_textbox(config_dict={ 'model': 'BART', 'dataset': 'samsum', ... })
+python run_textbox.py ... --config_files <config-file-one> <config-file-two>
 ```
 
 ### Partial Experiment
 
-Running partial experiment with `do_train`, `do_valid`, `do_test`, and `quick_test=<amount-of-data-to-load>` may help with specialized application, like debugging. In some cases, `load_experiment=<path-to-checkpoint>` is needed to load model beforehand.
+You can run partial experiment with `do_train`, `do_valid`, `do_test`. Yan test your pipeline and debug with `quick_test=<amount-of-data-to-load>` to load just a few examples. In some cases, `load_experiment=<path-to-checkpoint>` is needed to load model beforehand.
 
+The following script loads the trained model `example.pth` and conducts generation and evaluation.
 ```bash
 python run_textbox.py ... --do_train=False --load_experiment=example.pth --quick_test=16
 ```
@@ -99,9 +69,9 @@ python run_textbox.py ... --do_train=False --load_experiment=example.pth --quick
 
 ### Basics
 
-`optimizer=<optimizer-name>` and `scheduler=<scheduler-name>` provides a wrapper around **pytorch optimizer**, which means parameters like `epsilon` or `warmup_steps` can be specified with keyword dictionaries `optimizer_kwargs={ 'epsilon': ... }` and `scheduler_kwargs={ 'warmup_steps': ... }`. See [pytorch optimizer](https://pytorch.org/docs/stable/optim.html#algorithms) and [scheduler]() for a complete tutorial.  <!-- TODO -->
+You can choose optimizer and scheduler through `optimizer=<optimizer-name>` and `scheduler=<scheduler-name>`. We provide a wrapper around **pytorch optimizer**, which means parameters like `epsilon` or `warmup_steps` can be specified with keyword dictionaries `optimizer_kwargs={'epsilon': ... }` and `scheduler_kwargs={'warmup_steps': ... }`. See [pytorch optimizer](https://pytorch.org/docs/stable/optim.html#algorithms) and [scheduler]() for a complete tutorial.  <!-- TODO -->
 
-Variable validation pace is introduced to validate the model **at each specific batch-steps or epochs**. Specify `valid_strategy` (either `'step'` or `'epoch'`) and `valid_intervals=<int>` to adjust the pace. Specifically, traditional train-validate paradigm is a special case with `valid_strategy=epoch` and `valid_intervals=1`.
+Validation frequence is introduced to validate the model **at each specific batch-steps or epochs**. Specify `valid_strategy` (either `'step'` or `'epoch'`) and `valid_intervals=<int>` to adjust the pace. Specifically, traditional train-validate paradigm is a special case with `valid_strategy=epoch` and `valid_intervals=1`.
 
 `max_save=<int>` indicates **the maximal amount of saved files** (checkpoint and generated corpus during evaluation). `-1`: save every file, `0`: do not save any file, `1`: only save the file with best score, and `n`: save both the best and the last $n−1$ files.
 
@@ -120,9 +90,9 @@ metrics_for_best_model: ['rouge-1', 'rouge-w']
 
 Other commonly used parameters includes `epochs=<int>` and `max_steps=<int>` (indicating maximal iteration of epochs and batch steps), `learning_rate=<float>`, `train_batch_size=<int>`, `weight_decay=<bool>`, and `grad_clip=<bool>`.
 
-#### Pre-trained Model Parameters
+### Pre-trained Model Parameters
 
-`model_path` receives a name of model on [huggingface](https://huggingface.co/models) like [`facebook/bart-base`](https://huggingface.co/models?search=facebook%2Fbart-base).
+`model_path` receives a name of model on [huggingface](https://huggingface.co/models) like [`facebook/bart-base`](https://huggingface.co/models?search=facebook%2Fbart-base) or just a local path.
 
 Not only `model_path`, but `config_path` and `tokenizer_path` (same value with `model_path` by default) also receive a huggingface model or a local path. Besides, `config_kwargs` and `tokenizer_kwargs` are useful when additional parameters are required.
 
@@ -141,7 +111,7 @@ label_smoothing: <smooth-loss-weight>
 
 The full keyword arguments should be found in [PreTrainedTokenizer](https://huggingface.co/docs/transformers/v4.21.0/en/main_classes/tokenizer#transformers.PreTrainedTokenizer) or documents of corresponding tokenizer.
 
-##### Generation Parameters
+### Generation Parameters
 
 Pre-trained model is able to perform generation using various methods by combining different [parameters](https://huggingface.co/docs/transformers/main/en/main_classes/text_generation#transformers.generation_utils.GenerationMixin.generate). By default, beam search is adapted:
 
@@ -149,16 +119,13 @@ Pre-trained model is able to perform generation using various methods by combini
 generation_kwargs: {'num_beams': 5, 'early_stopping': True}
 ```
 
-> **Note**
-> This `early_stopping` is different from [the one](#Basics) in training.
-
 Nucleus sampling is also supported by pre-trained model:
 
 ```yaml
 generation_kwargs: {'do_sample': True, 'top_k': 10, 'top_p': 0.9}
 ```
 
-#### Dataset Parameters
+### Dataset Parameters
 
 `src_len`, `tgt_len`, and `truncate` restricts the maximal length of source/target sentence and the positional to be truncated (`head` or `tail`). For some models used for translation task like m2m100, you need to specify source language and target language:
 
@@ -168,7 +135,7 @@ src_lang: 'en'
 tgt_lang: 'zh'
 ```
 
-#### Evaluation Parameters
+### Evaluation Parameters
 
 After specifying several evaluation metrics, further configuration on them is as follows:
 
@@ -290,123 +257,170 @@ You can also disable **sync only** with `wandb offline` and enable it again with
 <div class="tg-wrap"><table align="center">
 <thead>
   <tr>
-    <th align="center">Category</th>
-    <th align="center">Model</th>
-    <th align="center">Label Name</th>
+    <th align="center" colspan="2">Category</th>
+    <th align="center">Model Name</th>
     <th align="center">Reference</th>
   </tr>
 </thead>
 <tbody>
   <tr>
-    <td rowspan="6" align="center"><strong>CLM</strong></td>
-    <td align="center">CPM</td>
-    <td align="center">CPM</td>
-    <td align="center"><a href="https://arxiv.org/pdf/2012.00413">(Zhang et al., 2020)</a></td>
-  </tr>
-  <tr>
-    <td align="center">CTRL</td>
-    <td align="center">CTRL</td>
-    <td align="center"><a href="https://arxiv.org/pdf/1909.05858">(Keskar et al., 2019)</a></td>
-  </tr>
-  <tr>
-    <td align="center">GPT</td>
+    <td rowspan="15" align="center"><strong>General</strong></td>
+    <td rowspan="4" align="center"><strong>CLM</strong></td>
     <td align="center">OpenAI-GPT</td>
-    <td align="center"><a href="https://s3-us-west-2.amazonaws.com/openai-assets/research-covers/language-unsupervised/language_understanding_paper.pdf">(Radford et al., 2018)</a></td>
+    <td align="center"><a href="https://cdn.openai.com/research-covers/language-unsupervised/language_understanding_paper.pdf">(Radford et al., 2018)</a></td>
   </tr>
   <tr>
-    <td align="center">GPT Neo</td>
-    <td align="center">GPT_neo</td>
+    <td align="center">GPT2</td>
+    <td align="center"><a href="https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf">(Radford et al., 2019)</a></td>
+  </tr>
+  <tr>
+    <td align="center">GPT_Neo</td>
     <td align="center"><a href="https://arxiv.org/pdf/2101.00027">(Gao et al., 2021)</a></td>
   </tr>
   <tr>
-    <td align="center">GPT2</td>
-    <td align="center">GPT2</td>
-    <td align="center"><a href="https://d4mucfpksywv.cloudfront.net/better-language-models/language-models.pdf">(Radford et al., 2019)</a></td>
+    <td align="center">OPT</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2205.01068">(Artetxe et al., 2022)</a></td>
   </tr>
   <tr>
-    <td align="center">OPT</td>
-    <td align="center">OPT</td>
-    <td align="center"><a href="https://arxiv.org/pdf/2205.01068.pdf">(Artetxe et al., 2022)</a></td>
-  </tr>
-  <tr>
-    <td rowspan="16" align="center"><strong>Seq2Seq</strong></td>
-    <td align="center">BART</td>
+    <td rowspan="11" align="center"><strong>Seq2Seq</strong></td>
     <td align="center">BART</td>
     <td align="center"><a href="https://arxiv.org/pdf/1910.13461">(Lewis et al., 2020)</a></td>
   </tr>
   <tr>
-    <td align="center">Bert2Bert</td>
-    <td align="center">Bert2Bert</td>
-    <td align="center"><a href="https://aclanthology.org/2020.tacl-1.18.pdf">(Rothe et al., 2020)</a></td>
+    <td align="center">T5</td>
+    <td align="center"><a href="https://arxiv.org/pdf/1910.10683">(Raffel et al., 2020)</a></td>
   </tr>
   <tr>
-    <td align="center">BigBirdPegasus</td>
-    <td align="center">BigBird-Pegasus</td>
-    <td align="center"><a href="https://arxiv.org/pdf/2007.14062">(Zaheer et al., 2020)</a></td>
+    <td align="center">UniLM</td>
+    <td align="center"><a href="https://arxiv.org/pdf/1905.03197">(Dong et al., 2019)</a></td>
   </tr>
   <tr>
-    <td align="center">Blenderbot</td>
-    <td align="center">Blenderbot</td>
-    <td rowspan="2"><a href="https://arxiv.org/pdf/2004.13637.pdf">(Roller et al., 2020)</a></td>
+    <td align="center">MASS</td>
+    <td align="center"><a href="https://arxiv.org/pdf/1905.02450">(Song et al., 2019)</a></td>
   </tr>
   <tr>
-    <td align="center">Blenderbot Small</td>
-    <td align="center">Blenderbot-Small</td>
-  </tr>
-  <tr>
-    <td align="center">LED</td>
-    <td align="center">LED</td>
-    <td align="center"><a href="https://arxiv.org/pdf/2004.05150">(Beltagy et al., 2020)</a></td>
-  </tr>
-  <tr>
-    <td align="center">M2M100</td>
-    <td align="center">M2M_100</td>
-    <td align="center"><a href="https://arxiv.org/pdf/2010.11125">(Fan et al., 2020)</a></td>
-  </tr>
-  <tr>
-    <td align="center">MBart</td>
-    <td align="center">MBart</td>
-    <td align="center"><a href="https://arxiv.org/pdf/2001.08210">(Liu et al., 2020)</a></td>
-  </tr>
-  <tr>
-    <td align="center">mT5</td>
-    <td align="center">mT5</td>
-    <td align="center"><a href="https://arxiv.org/pdf/2010.11934">(Xue et al., 2020)</a></td>
-  </tr>
-  <tr>
-    <td align="center">MVP</td>
-    <td align="center">MVP</td>
-    <td align="center"><a href="https://arxiv.org/pdf/2206.12131">(Tang et al., 2022)</a></td>
-  </tr>
-  <tr>
-    <td align="center">Pegasus</td>
     <td align="center">Pegasus</td>
     <td align="center"><a href="https://arxiv.org/pdf/1912.08777">(Zhang et al., 2019)</a></td>
   </tr>
   <tr>
     <td align="center">ProphetNet</td>
-    <td align="center">ProphetNet</td>
     <td align="center"><a href="https://arxiv.org/pdf/2001.04063">(Qi et al., 2020)</a></td>
   </tr>
   <tr>
-    <td align="center">T5</td>
-    <td align="center">T5</td>
-    <td align="center"><a href="https://arxiv.org/pdf/1910.10683.pdf">(Raffel et al., 2020)</a></td>
+    <td align="center">MVP</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2206.12131">(Tang et al., 2022)</a></td>
   </tr>
   <tr>
-    <td align="center">Chinese BART</td>
+    <td align="center">BERT2BERT</td>
+    <td align="center"><a href="https://aclanthology.org/2020.tacl-1.18.pdf">(Rothe et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td align="center">BigBird-Pegasus</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2007.14062">(Zaheer et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td align="center">LED</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2004.05150">(Beltagy et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td align="center">LongT5</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2112.07916">(Guo et al., 2021)</a></td>
+  </tr>
+
+
+  <tr>
+    <td rowspan="8" colspan="2" align="center"><strong>Multilingual Models</strong></td>
+    <td align="center">mBART</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2001.08210">(Liu et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td align="center">mT5</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2010.11934">(Xue et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td align="center">Marian</td>
+    <td align="center"><a href="https://aclanthology.org/2020.eamt-1.61.pdf">(Tiedemann et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td align="center">M2M_100</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2010.11125">(Fan et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td align="center">NLLB</td>
+    <td align="center"><a href="https://arxiv.org/ftp/arxiv/papers/2207/2207.04672.pdf">(NLLB Team, 2022)</a></td>
+  </tr>
+  <tr>
+    <td align="center">XLM</td>
+    <td align="center"><a href="https://arxiv.org/pdf/1901.07291">(Lample et al., 2019)</a></td>
+  </tr>
+  <tr>
+    <td align="center">XLM-RoBERTa</td>
+    <td align="center"><a href="https://arxiv.org/pdf/1911.02116">(Conneau et al., 2019)</a></td>
+  </tr>
+  <tr>
+    <td align="center">XLM-ProphetNet</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2001.04063">(Qi et al., 2020)</a></td>
+  </tr>
+
+
+  <tr>
+  <td rowspan="6" colspan="2" align="center"><strong>Chinese Models</strong></td>
+    <td align="center">CPM</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2012.00413">(Zhang et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td align="center">CPT</td>
+    <td align="center" rowspan="2"><a href="https://arxiv.org/pdf/2109.05729">(Shao et al., 2021)</a></td>
+  </tr>
+  <tr>
     <td align="center">Chinese-BART</td>
+  </tr>
+  <tr>
+    <td align="center">Chinese-GPT2</td>
+    <td align="center" rowspan="3"><a href="https://arxiv.org/pdf/1909.05658">(Zhao et al., 2019)</a></td>
+  </tr>
+  <tr>
+    <td align="center">Chinese-T5</td>
     <td align="center"></td>
   </tr>
   <tr>
-    <td align="center">Chinese Pegasus</td>
     <td align="center">Chinese-Pegasus</td>
     <td align="center"></td>
   </tr>
+
+
   <tr>
-    <td align="center">CPT</td>
-    <td align="center">CPT</td>
-    <td align="center"><a href="https://arxiv.org/pdf/2109.05729">(Shao et al., 2021)</a></td>
+    <td rowspan="3" colspan="2" align="center"><strong>Dialogue Models</strong></td>
+    <td align="center">Blenderbot</td>
+    <td align="center" rowspan="2"><a href="https://arxiv.org/pdf/2004.13637">(Roller et al., 2020)</a></td>
+  </tr>
+  <tr>
+    <td align="center">Blenderbot-Small</td>
+  </tr>
+  <tr>
+    <td align="center">DialoGPT</td>
+    <td align="center"><a href="https://arxiv.org/pdf/1911.00536">(Zhang et al., 2019)</a></td>
+  </tr>
+
+
+  <tr>
+    <td rowspan="2" colspan="2" align="center"><strong>Conditional Models</strong></td>
+    <td align="center">CTRL</td>
+    <td align="center"><a href="https://arxiv.org/pdf/1909.05858">(Keskar et al., 2019)</a></td>
+  </tr>
+  <tr>
+    <td align="center">PPLM</td>
+    <td align="center"><a href="https://arxiv.org/pdf/1912.02164">(Dathathri et al., 2019)</a></td>
+  </tr>
+
+  <tr>
+    <td rowspan="2" colspan="2" align="center"><strong>Distilled Models</strong></td>
+    <td align="center">DistilGPT2</td>
+    <td align="center"><a href="https://arxiv.org/pdf/1910.01108">(Sanh et al., 2019)</a></td>
+  </tr>
+  <tr>
+    <td align="center">DistilBART</td>
+    <td align="center"><a href="https://arxiv.org/pdf/2010.13002">(Shleifer et al., 2020)</a></td>
   </tr>
 </tbody>
 </table></div>
@@ -417,34 +431,30 @@ You can also disable **sync only** with `wandb offline` and enable it again with
 
 ## Dataset
 
-Now we support 11 generation tasks and corresponding datasets:
-- Text summarization: CNN/Daily Mail (cnndm), XSum (xsum), SAMSum (samsum), and WLE (wle).
-- Open-ended dialogue system: PersonaChat (pc), DailyDialog (dd), DSTC7-AVSD (da), and SGD (sgd).
-- Data-to-text generation: WebNLG v2.1 (webnlg), WebNLG v3.0 (webnlg2), WikiBio (wikibio), E2E (e2e), DART (dart), and ToTTo (totto).
-- Question generation: SQuAD (squadqg) and CoQA (coqaqg).
-- Story generation: ROCStories (roc) and WritingPrompts (wp).
-- Question answering: SQuAD (squad) and CoQA (coqa).
-- Task-oriented dialogue system: MultiWOZ 2.0 (multiwoz).
+Now we support 13 generation tasks and corresponding datasets (the item in the bracket is the name used in `--dataset`):
+- Text summarization: CNN/Daily Mail (cnndm), XSum (xsum), SAMSum (samsum),WLE (wle), Newsroom (nr), WikiHow (wikihow), MicroSoft News (msn), MediaSum
+ (mediasum), and English Gigaword (eg).
+- Machine Translation: WMT16 Romanian-English (ro-en16), WMT14 English-French (en-fr14), WMT16 German-English (ge-en16), WMT Czech-English (cs-en), WMT Spanish-English (es-en), WMT Chinese-English (zh-en), WMT German-English (de-en), WMT Russian-English (ru-en), WMT French-English (fr-en).
+- Open-ended dialogue system: PersonaChat (pc), DailyDialog (dd), DSTC7-AVSD (da), SGD (sgd), Topical-Chat (tc), Wizard of Wikipedia (wow), Movie Dialog (md), Cleaned OpenSubtitles Dialogs (cos), Empathetic Dialogues (ed), Curiosity (curio), CMU Document Grounded Conversations (cmudog), MuTual (mutual), OpenDialKG (odkg), and DREAM (dream).
+- Data-to-text generation: WebNLG v2.1 (webnlg), WebNLG v3.0 (webnlg2), WikiBio (wikibio), E2E (e2e), DART (dart), ToTTo (totto), ENT-DESC (ent), AGENDA (agenda), GenWiki (genwiki), TEKGEN (tekgen), LogicNLG (logicnlg), WikiTableT (wikit), and WEATHERGOV (wg).
+- Question generation: SQuAD (squadqg), CoQA (coqaqg), NewsQA (newsqa), HotpotQA (hotpotqa), MS MARCO (marco), MSQG (msqg), NarrativeQA (nqa), and QuAC (quac).
+- Story generation: ROCStories (roc), WritingPrompts (wp), Hippocorpus (hc), WikiPlots (wikip), and ChangeMyView (cmv).
+- Question answering: SQuAD (squad), CoQA (coqa), Natural Questions (nq), TriviaQA (tqa), WebQuestions (webq), NarrativeQA (nqa), MS MARCO (marco), NewsQA (newsqa), HotpotQA (hotpotqa), MSQG (msqg), and QuAC (quac).
+- Task-oriented dialogue system: MultiWOZ 2.0 (multiwoz), MetaLWOZ (metalwoz), KVRET (kvret), WOZ (woz), CamRest676 (camres676), Frames (frames), TaskMaster (taskmaster), Schema-Guided (schema), and MSR-E2E (e2e_msr).
+- Chinese generation: LCSTS (lcsts), CSL (csl), and ADGEN (adgen).
 - Commonsense generation: CommonGen (cg).
-- Text simplification: WikiAuto + Turk/ASSET (wia).
-- Paraphrase generation: Quora (comming soon).
-- Text style transfer: GYAFC-E&M and F&R (comming soon).
+- Paraphrase generation: Quora (quora) and ParaNMT-small (paranmt).
+- Text style transfer: GYAFC-E&M and F&R (gyafc-em, gyafc-fr).
+- Text simplification: WikiAuto + Turk/ASSET (wia-t).
 
 We also support you to run our model using your own dataset. Just follow the three steps:
 
 1. Create a new folder under the `dataset` folder to put your own corpus file which includes a sequence per line, e.g. `dataset/YOUR_DATASET`;
 2. Write a YAML configuration file using the same file name to set the hyper-parameters of your dataset, e.g. `textbox/properties/dataset/YOUR_DATASET.yaml`.
 
-   If you want to splitted the dataset, please set `split_strategy: "load_split"` in the yaml, just as the [COCO yaml](/textbox/properties/dataset/COCO.yaml) or [IWSLT14_DE_EN yaml](/textbox/properties/dataset/IWSLT14_DE_EN.yaml).
-
-   If you want to split the dataset by ratio automaticly, please set `split_strategy: "by_ratio"` and your desired `split_ratio` in the yaml, just as the [IMDB yaml](/textbox/properties/dataset/IMDB.yaml).
-3. For unconditional generation, name the corpus file `corpus.txt` if you set`"by_ratio"`, name the corpus files `train.txt, valid.txt, dev.txt` if you set `"load_split"`.
-
-   For sequence-to-sequence generation, please name the corpus files `train.[xx/yy], valid.[xx/yy], dev.[xx/yy]`, and the `xx` or `yy` is the suffix of the source or target file which should be consistent with `source_suffix` and `target_suffix` in the YAML.
 
 
 <!-- ===================== Evaluation ===================== -->
-
 
 ## Evaluation
 
@@ -481,15 +491,9 @@ We also support you to run our model using your own dataset. Just follow the thr
 </tbody>
 </table></div>
 
-<!-- ===================== Experiment Results ===================== -->
 
-
-## Experiment Results
-
-<!-- TODO -->
-
-
-<!-- ===================== Other ===================== -->
+> **Warning**
+> Backslashes and no-extra-space are required when inputting a list of string like `\[\'bleu\',\'rouge\'\]` in command line. As a result, a preset run configuration as is follows is more recommended.
 
 
 ## Releases

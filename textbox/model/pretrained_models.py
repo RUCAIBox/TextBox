@@ -30,6 +30,7 @@ from textbox import CLM_MODELS, SEQ2SEQ_MODELS
 
 from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForSeq2SeqLM, EncoderDecoderModel
 from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
+from ..utils.argument_list import efficient_kwargs_dict
 
 '''
 # Model for Causal LM mapping
@@ -43,7 +44,9 @@ from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
 ("xlm-prophetnet", "XLMProphetNetForConditionalGeneration"),
 '''
 
+
 class Pretrained_Models(AbstractModel):
+
     def __init__(self, config, tokenizer):
         super(Pretrained_Models, self).__init__(config, tokenizer)
         self.source_max_length = config['src_len']
@@ -64,7 +67,12 @@ class Pretrained_Models(AbstractModel):
             if hard_efficient_methods and self.model_name not in ['bart', 'gpt2', 't5']:
                 raise NotImplementedError(f'{self.model_name} does not currently support {hard_efficient_methods} method.')
             self.configuration.efficient_methods = config['efficient_methods']
-            self.configuration.update(config['efficient_kwargs'] or {})
+            efficient_kwargs = {}
+            for method in config['efficient_methods']:
+                efficient_kwargs.update(efficient_kwargs_dict[method])
+            if config['efficient_kwargs']:
+                efficient_kwargs.update(config['efficient_kwargs'])
+            self.configuration.update(efficient_kwargs)
 
         self._init_params()
 

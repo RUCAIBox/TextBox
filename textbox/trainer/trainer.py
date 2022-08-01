@@ -283,7 +283,7 @@ class Trainer(AbstractTrainer):
                 self._summary_tracker.new_step()
                 loss = self.model(data)
                 losses = self.accelerator.gather(loss)
-                loss = losses.mean()
+                loss = losses.mean().item()
                 self._summary_tracker.append_loss(loss)
                 if not self.disable_tqdm:
                     valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)

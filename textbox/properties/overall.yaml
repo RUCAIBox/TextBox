@@ -29,7 +29,6 @@ eval_batch_size: 64
 
 # Pretrained model settings
 config_kwargs: {}
-truncate: tail
 tokenizer_kwargs: {'use_fast': True} #'additional_special_tokens': None
 generation_kwargs: {'num_beams': 5, 'no_repeat_ngram_size': 3, 'early_stopping': True}
 # efficient_methods: ['lora']
@@ -69,4 +68,6 @@ unique_max_ngrams: 4
 
 self_bleu_max_ngrams: 4
 
+# Dataset Parameters
 tgt_lang: 'en'
+truncate: tail

@@ -2,7 +2,9 @@ import math
 import torch
 import random
 from logging import getLogger
-from textbox.data.utils import pad_sequence
+from textbox.data.misc import _pad_sequence
+from torch.nn.utils.rnn import pad_sequence
+
 
 
 class AbstractDataLoader(object):

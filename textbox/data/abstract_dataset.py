@@ -1,165 +1,212 @@
 import os
-import torch
-from logging import getLogger
-from textbox import SpecialTokens
-from .utils import load_data
+import torch, warnings
+from torch.utils.data import DataLoader, Dataset
+from textbox import CLM_MODELS
+from typing import List
+from torch.nn.utils.rnn import pad_sequence
+from textbox.data.misc import load_data, _pad_sequence
 
 
-class AbstractDataset(object):
-    """:class:`AbstractDataset` is an abstract object which stores the original dataset in memory.
-        And it is also the ancestor of all other dataset.
-
-    Args:
-        config (Config): Global configuration object.
-    """
-
-    def __init__(self, config):
+class AbstractDataset(Dataset):
+    def __init__(self, config, set):
+        super().__init__()
         self.config = config
-        self.dataset_path = config['data_path']
-        self.source_language = (config['src_lang'] or 'english').lower()
-        self.target_language = (config['tgt_lang'] or 'english').lower()
-        self.source_vocab_size = int(config['src_vocab_size'] or config['vocab_size'] or 1e8)
-        self.target_vocab_size = int(config['tgt_vocab_size'] or config['vocab_size'] or 1e8)
-        self.source_max_length = int(config['src_len'] or config['seq_len'] or 1e4)
-        self.target_max_length = int(config['tgt_len'] or config['seq_len'] or 1e4)
-        self.tokenize_strategy = config['tokenize_strategy'] or 'by_space'
+        self.quick_test = config["quick_test"]
+        if isinstance(self.quick_test, bool):
+            self.quick_test = 32 if self.quick_test else 0
+        self.set = set
+        source_filename = os.path.join(config["data_path"], f"{set}.src")
+        target_filename = os.path.join(config["data_path"], f"{set}.tgt")
+        self.source_text = load_data(source_filename, max_length=self.quick_test)
+        self.target_text = load_data(target_filename, max_length=self.quick_test)
+        self.source_length = self.config["src_len"]
+        self.target_length = self.config["tgt_len"]
+        if set != "test":
+            assert len(self.source_text) == len(self.target_text)
 
-        self.logger = getLogger(__name__)
-        self._init_special_token()
-        self._get_preset()
-        self.restored_exist = self._detect_restored()
-        '''
-        if self.restored_exist:
-            self._from_restored()
-        else:
-            self._from_scratch()
-        '''
-        self._from_scratch()
-        self._info()
+    def __len__(self):
+        return len(self.source_text)
 
-    def _get_preset(self):
-        """Initialization useful inside attributes.
-        """
-        for prefix in ['train', 'valid', 'test']:
-            setattr(self, f'{prefix}_data', dict())
-
-    def _init_special_token(self):
-        self.padding_token = SpecialTokens.PAD
-        self.unknown_token = SpecialTokens.UNK
-        self.bos_token = SpecialTokens.BOS
-        self.eos_token = SpecialTokens.EOS
-        self.padding_token_idx = 0
-        self.unknown_token_idx = 1
-        self.bos_token_idx = 2
-        self.eos_token_idx = 3
-        self.special_token_list = [self.padding_token, self.unknown_token, self.bos_token, self.eos_token]
-        if 'user_token_list' in self.config:
-            self.user_token_list = self.config['user_token_list']
-            self.special_token_list += self.user_token_list
-            self.user_token_idx = [4 + i for i, _ in enumerate(self.user_token_list)]
-
-    def _from_scratch(self):
-        """Load dataset from scratch. Firstly load data from atomic files, then build vocabulary, dump data lastly.
-        """
-        self.logger.info('Loading data from scratch')
-        self._load_target_data()
-        self._load_source_data()
-        if self.tokenize_strategy != 'none':
-            self._build_vocab()
-            self._text2idx()
-            if self.config['vocab_size'] is not None or self.source_vocab_size == 1e8:
-                self.vocab_size = self.target_vocab_size
-                self.idx2token = self.target_idx2token
-                self.token2idx = self.target_token2idx
-            if self.config['seq_len'] is not None or self.source_max_length == 1e4:
-                self.max_length = self.target_max_length
-        self._build_data()
-        self._dump_data()
-
-    def _from_restored(self):
-        """Load dataset from restored binary files.
-        """
-        self.logger.info('Loading data from restored')
-        self._load_restored()
-
-    def _load_source_data(self):
-        r"""Load dataset from source file (train, valid, test).
-        """
-        raise NotImplementedError('Method [_load_source_data] should be implemented.')
-
-    def _build_vocab(self):
-        r"""Build the vocabulary of text data.
-        """
-        raise NotImplementedError('Method [_build_vocab] should be implemented.')
-
-    def _text2idx(self):
-        r"""Map each token into idx.
-        """
-        raise NotImplementedError('Method [_text2idx] should be implemented.')
-
-    def _build_data(self):
-        r"""Prepare splitted data elements for dataloader.
-        """
-        for key, value in self.__dict__.items():
-            if key.startswith(('source', 'target')) or key in ['vocab_size', 'max_length', 'idx2token', 'token2idx']:
-                if isinstance(value, list) and isinstance(value[0], (list, str, int)) and len(value) in [2, 3]:
-                    for i, (prefix, v) in enumerate(zip(['train', 'valid', 'test'], value)):
-                        getattr(self, f'{prefix}_data')[key] = v
-                else:
-                    for prefix in ['train', 'valid', 'test']:
-                        getattr(self, f'{prefix}_data')[key] = value
-
-    def _load_target_data(self):
-        """Load dataset from target file (train, valid, test).
-        This is designed for single sentence format.
-        """
-        for prefix in ['train', 'valid', 'test']:
-            filename = os.path.join(self.dataset_path, f'{prefix}.tgt')
-            text_data = load_data(
-                filename, self.tokenize_strategy, self.target_max_length, self.target_language,
+    def __getitem__(self, idx):
+        sample = {
+            "source_text": self.source_text[idx],
+            "source_ids": self.source_ids[idx],
+            "target_text": self.target_text[idx],
+        }
+        if self.set != "test":
+            sample.update(
+                {
+                    "target_ids": self.target_ids[idx],
+                }
             )
-            self.target_text.append(text_data)
+        return sample
 
-    def _detect_restored(self):
-        r"""Detect whether binary files is already restored.
+    def _init_process(self):
+        if self.source_length > self.tokenizer.model_max_length:
+            warnings.warn(
+                f"The max length of source text {self.source_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and will be set to {self.tokenizer.model_max_length}."
+            )
+            self.source_length = self.tokenizer.model_max_length
 
-        Returns:
-            bool: whether files are already restored.
-        """
-        absent_file_flag = False
-        for prefix in ['train', 'valid', 'test']:
-            filename = os.path.join(self.dataset_path, f'{prefix}.bin')
-            if not os.path.isfile(filename):
-                absent_file_flag = True
-                break
-        return not absent_file_flag
+        if self.target_length > self.tokenizer.model_max_length:
+            warnings.warn(
+                f"The max length of target text {self.target_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and will be set to {self.tokenizer.model_max_length}."
+            )
+            self.target_length = self.tokenizer.model_max_length
 
-    def _dump_data(self):
-        r"""dump dataset with processed dataset.
-        """
-        for prefix in ['train', 'valid', 'test']:
-            filename = os.path.join(self.dataset_path, f'{prefix}.bin')
-            data = getattr(self, f'{prefix}_data')
-            torch.save(data, filename)
+        if (
+            self.config["efficient_methods"]
+            and "prompt-tuning" in self.config["efficient_methods"]
+        ):
+            prompt_length = self.config["efficient_kwargs"]["prompt_length"]
+            if self.config["model_name"] in CLM_MODELS:
+                if (
+                    self.source_length + self.target_length + prompt_length
+                    > self.tokenizer.model_max_length
+                ):
+                    warnings.warn(
+                        f"The length of source text {self.source_length}, target text {self.target_length} and prompt {prompt_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and the max length of source sentence will be set to {self.tokenizer.model_max_length - prompt_length - self.target_length}."
+                    )
+                    self.source_length = (
+                        self.tokenizer.model_max_length
+                        - prompt_length
+                        - self.target_length
+                    )
+            elif self.source_length + prompt_length > self.tokenizer.model_max_length:
+                warnings.warn(
+                    f"The length of source text {self.source_length} and prompt {prompt_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and the max length of source sentence will be set to {self.tokenizer.model_max_length - prompt_length}."
+                )
+                self.source_length = self.tokenizer.model_max_length - prompt_length
 
-    def _load_restored(self):
-        """Load dataset from restored binary files (train, valid, test).
-        """
-        for prefix in ['train', 'valid', 'test']:
-            filename = os.path.join(self.dataset_path, f'{prefix}.bin')
-            data = torch.load(filename)
-            setattr(self, f'{prefix}_data', data)
+    def _process_prompt(self):
+        prefix = self.config["prefix_prompt"] or ""
+        suffix = self.config["suffix_prompt"] or ""
 
-        for key, value in self.test_data.items():
-            if not isinstance(value, list):
-                setattr(self, key, value)
+        self.prefix_ids = self.tokenizer.encode(prefix, add_special_tokens=False)
+        self.suffix_ids = self.tokenizer.encode(suffix, add_special_tokens=False)
 
-    def _info(self):
-        """Print the basic infomation of dataset.
-        """
-        info_str = ''
-        self.logger.info("Vocab size: source {}, target {}".format(self.source_vocab_size, self.target_vocab_size))
-        for prefix in ['train', 'valid', 'test']:
-            data = getattr(self, f'{prefix}_data')['target_text']
-            info_str += f'{prefix}: {len(data)} cases, '
-        self.logger.info(info_str[:-2] + '\n')
+        self.source_max_length = (
+            self.source_length
+            - self.tokenizer.num_special_tokens_to_add()
+            - len(self.prefix_ids)
+            - len(self.suffix_ids)
+        )
+        self.target_max_length = (
+            self.target_length - self.tokenizer.num_special_tokens_to_add()
+        )
+
+        if self.config["model_name"] in ["bert2bert", "opt"]:
+            self.target_max_length += 1
+
+    def tokenize(self, tokenizer):
+        self.tokenizer = tokenizer
+        self._init_process()
+        self._process_prompt()
+        self.source_ids = []
+        source_ids = tokenizer(
+            self.source_text,
+            add_special_tokens=False,
+            return_token_type_ids=False,
+            return_attention_mask=False,
+        )["input_ids"]
+        for ids in source_ids:
+            ids = (
+                ids[: self.source_max_length]
+                if self.config["truncate"] == "tail"
+                else ids[-self.source_max_length :]
+            )
+            ids = self.tokenizer.build_inputs_with_special_tokens(
+                self.prefix_ids + ids + self.suffix_ids
+            )
+            self.source_ids.append(torch.tensor(ids, dtype=torch.long))
+        if self.set != "test":
+            self.target_ids = []
+            with tokenizer.as_target_tokenizer():
+                target_ids = tokenizer(
+                    self.target_text,
+                    add_special_tokens=False,
+                    return_token_type_ids=False,
+                    return_attention_mask=False,
+                )["input_ids"]
+                for ids in target_ids:
+                    ids = (
+                        ids[: self.target_max_length]
+                        if self.config["truncate"] == "tail"
+                        else ids[-self.target_max_length :]
+                    )
+                    ids = self.tokenizer.build_inputs_with_special_tokens(ids)
+                    if self.config["model_name"] in ["bert2bert", "opt"]:
+                        ids = ids[1:]
+                    self.target_ids.append(torch.tensor(ids, dtype=torch.long))
+        if self.set != "train":
+            tmp_target_ids = [tokenizer.encode(sentence) for sentence in self.target_text]
+            self.target_tokens = [
+                tokenizer.decode(sentence, skip_special_tokens=True)
+                for sentence in tmp_target_ids
+            ]
+
+
+class AbstractCollate:
+    def __init__(self, config, tokenizer, set):
+        self.config = config
+        self.tokenizer = tokenizer
+        self.set = set
+        self.is_casual_model = bool(config["model_name"] in CLM_MODELS)
+    
+    @classmethod
+    def get_type(cls) -> str:
+        return 'pretrain disabled'
+
+    def __call__(self, samples):
+        batch = {}
+        source_text = []
+        source_ids = []
+        source_mask = []
+        source_length = []
+        target_text = []
+        source_padding_side = (
+            "left"
+            if self.set == "test" and self.is_casual_model
+            else self.tokenizer.padding_side
+        )
+
+        for sample in samples:
+            source_text.append(sample["source_text"])
+            src_id = (
+                torch.cat([sample["source_ids"], sample["target_ids"]])
+                if self.set != "test" and self.is_casual_model
+                else sample["source_ids"]
+            )
+            source_ids.append(src_id)
+            source_mask.append(torch.ones(len(src_id), dtype=torch.long))
+            source_length.append(len(src_id))
+            target_text.append(sample["target_text"])
+
+        batch["source_text"] = source_text
+        batch["source_ids"] = _pad_sequence(
+            source_ids, self.tokenizer.pad_token_id, source_padding_side
+        )
+        batch["source_mask"] = _pad_sequence(source_mask, 0, source_padding_side)
+        batch["source_length"] = torch.tensor(source_length, dtype=torch.long)
+        batch["target_text"] = target_text
+
+        if self.set != "test":
+            target_ids = []
+            for sample in samples:
+                tgt_id = (
+                    torch.cat(
+                        [
+                            torch.full(
+                                [len(sample["source_ids"])], -100, dtype=torch.long
+                            ),
+                            sample["target_ids"],
+                        ]
+                    )
+                    if self.is_casual_model
+                    else sample["target_ids"]
+                )
+                target_ids.append(tgt_id)
+            batch["target_ids"] = _pad_sequence(
+                target_ids, -100, self.tokenizer.padding_side
+            )
+        return batch

@@ -8,7 +8,6 @@ rouge_type: 'rouge'
 tokenizer_kwargs: {'use_fast': True}
 
 epochs: 10
-# eval_step: 100000
 train_batch_size: 4
 accumulation_steps: 48
 eval_batch_size: 16

@@ -50,18 +50,19 @@ Descending order by ROUGE-2.
 | [GAN](https://arxiv.org/abs/1711.09357)                      | $39.92$ | $17.65$ | $36.71$ |                                                              |                                                              |
 
 ## Citation
-
->@inproceedings{cnndm,
->    title = "Get To The Point: Summarization with Pointer-Generator Networks",
->    author = "See, Abigail  and
->      Liu, Peter J.  and
->      Manning, Christopher D.",
->    booktitle = "Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)",
->    month = jul,
->    year = "2017",
->    address = "Vancouver, Canada",
->    publisher = "Association for Computational Linguistics",
->    url = "https://aclanthology.org/P17-1099",
->    doi = "10.18653/v1/P17-1099",
->    pages = "1073--1083",
->}
+```
+@inproceedings{cnndm, 
+   title = "Get To The Point: Summarization with Pointer-Generator Networks", 
+    author = "See, Abigail  and 
+      Liu, Peter J.  and 
+      Manning, Christopher D.", 
+    booktitle = "Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long apers)", 
+    month = jul, 
+    year = "2017", 
+    address = "Vancouver, Canada", 
+    publisher = "Association for Computational Linguistics", 
+    url = "https://aclanthology.org/P17-1099", 
+    doi = "10.18653/v1/P17-1099", 
+    pages = "1073--1083", 
+}
+```

@@ -44,18 +44,19 @@ Descending order by ROUGE-2.
 | [PTGEN](https://aclanthology.org/D18-1206.pdf)            | $29.70$ | $9.21$  | $23.24$ | [Official](https://github.com/EdinburghNLP/XSum)             |                                                              |
 
 ## Citation
-
->@inproceedings{xsum,
->    title = "Don{'}t Give Me the Details, Just the Summary! Topic-Aware Convolutional Neural Networks for Extreme Summarization",
->    author = "Narayan, Shashi  and
->      Cohen, Shay B.  and
->      Lapata, Mirella",
->    booktitle = "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
->    month = oct # "-" # nov,
->    year = "2018",
->    address = "Brussels, Belgium",
->    publisher = "Association for Computational Linguistics",
->    url = "https://aclanthology.org/D18-1206",
->    doi = "10.18653/v1/D18-1206",
->    pages = "1797--1807",
->}
+```
+@inproceedings{xsum,
+    title = "Don{'}t Give Me the Details, Just the Summary! Topic-Aware Convolutional Neural Networks for Extreme Summarization",
+    author = "Narayan, Shashi  and
+      Cohen, Shay B.  and
+      Lapata, Mirella",
+    booktitle = "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+    month = oct # "-" # nov,
+    year = "2018",
+    address = "Brussels, Belgium",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/D18-1206",
+    doi = "10.18653/v1/D18-1206",
+    pages = "1797--1807",
+}
+```

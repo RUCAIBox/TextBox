@@ -4,7 +4,7 @@ Parameters start with underscore are internal parameters and might be modified b
 general_parameters = [
     'gpu_id', 'use_gpu', 'seed', 'reproducibility', 'state', 'data_path', 'checkpoint_dir', 'generated_text_dir',
     'email', 'filename', 'DDP', 'logdir', 'quick_test', '_is_local_main_process', 'device', 'config_files', 'space',
-    'multi_seed', 'algo', '_hyper_tuning'
+    'multi_seed', 'algo', '_hyper_tuning', 'romanian_postprocessing'
 ]
 
 training_parameters = [

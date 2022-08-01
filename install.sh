@@ -19,6 +19,9 @@ fi
 
 pip install git+https://github.com/microsoft/fastseq.git > /dev/null
 
+git clone https://github.com/moses-smt/mosesdecoder.git
+git clone https://github.com/rsennrich/wmt16-scripts.git
+
 cd transformers || exit
 pip install -e .
 cd ..

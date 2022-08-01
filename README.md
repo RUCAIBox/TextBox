@@ -75,6 +75,13 @@ Validation frequence is introduced to validate the model **at each specific batc
 
 `max_save=<int>` indicates **the maximal amount of saved files** (checkpoint and generated corpus during evaluation). `-1`: save every file, `0`: do not save any file, `1`: only save the file with best score, and `n`: save both the best and the last $n−1$ files.
 
+Evaluation metrics can be specified with `metrics` ([full list](#Evaluation)), and produce a dictionaries of results:
+
+```bash
+python run_textbox.py ... --metrics=\[\'rouge\'\]
+# results: { 'rouge-1': xxx, 'rouge-2': xxx, 'rouge-l': xxx, 'rouge-w': xxx, ... }
+```
+
 **Early stopping** can be configured with `metrics_for_best_model=<list-of-metrics-entries>`, which is used to calculate score, and `stopping_steps=<int>`, which specifies the amount of validation steps:
 
 ```bash
@@ -377,7 +384,7 @@ You can also disable **sync only** with `wandb offline` and enable it again with
   </tr>
   <tr>
     <td align="center">Chinese-GPT2</td>
-    <td align="center" rowspan="3"><a href="https://arxiv.org/pdf/1909.05658">(Zhao et al., 2019)</a></td>
+    <td align="center" rowspan="2"><a href="https://arxiv.org/pdf/1909.05658">(Zhao et al., 2019)</a></td>
   </tr>
   <tr>
     <td align="center">Chinese-T5</td>

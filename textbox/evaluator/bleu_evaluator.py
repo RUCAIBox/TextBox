@@ -79,7 +79,7 @@ class BleuEvaluator(AbstractEvaluator):
                 for gen, refs in zip(generate_corpus, reference_corpus):
                     for ngram, weights in zip(self.ngrams, self.ngram_weights):
                         score = sentence_bleu(refs, gen, weights, getattr(SmoothingFunction(), f"method{self.smoothing_function}"))
-                        results[ngram] = score * 100
+                        results[ngram].append(score * 100)
         
         elif self.bleu_type == 'mt-eval':
             from .utils.pymteval import BLEUScore

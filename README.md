@@ -176,13 +176,13 @@ efficient_kwargs: { 'adapter_mid_dim': <int>, 'prompt_length': <int> }
 efficient_unfreeze_model: <bool>
 ```
 
-### Pretraining
+### Pre-training
 
-Pretraining models from scratch or continue pretraining from existing checkpoints is essential to achieving SOTA results. We support modularized pretraining tasks as individual collate functions to meet flexible pretraining demands. 
+Pre-training models from scratch or continue pre-training from existing checkpoints is essential to achieving SOTA results. We support modularized pre-training tasks as individual collate functions to meet flexible pre-training demands. 
 
-Currently, we support pretraining tasks from BART paper, including Text-Infilling and Sentence Permutation (which is sufficient to reproduce BART results from the original paper according to this [Github Issue](https://github.com/facebookresearch/fairseq/issues/1899#issuecomment-1069429320) from BART author).
+Currently, we support pre-training tasks from BART paper, including Text-Infilling and Sentence Permutation (which is sufficient to reproduce BART results from the original paper according to this [Github Issue](https://github.com/facebookresearch/fairseq/issues/1899#issuecomment-1069429320) from BART author).
 
-To enable pretraining, simply set `--pretrain_task` to `denoising` or `text_infilling`(by default, pretraining is disabled and thus set to `disabled`). We plan to add more pretraining tasks at `textbox/data/utils.py`.
+To enable pre-training, simply set `--pretrain_task` to `denoising` or `text_infilling`(by default, pre-training is disabled and thus set to `disabled`). We plan to add more pre-training tasks at `textbox/data/utils.py`.
 
 ```bash
 python run_textbox.py ... --pretrain_task=<task-name>

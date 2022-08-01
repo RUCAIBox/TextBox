@@ -421,13 +421,14 @@ You can also disable **sync only** with `wandb offline` and enable it again with
 Now we support 13 generation tasks and corresponding datasets (the item in the bracket is the name used in `--dataset`):
 - Text summarization: CNN/Daily Mail (cnndm), XSum (xsum), SAMSum (samsum),WLE (wle), Newsroom (nr), WikiHow (wikihow), MicroSoft News (msn), MediaSum
  (mediasum), and English Gigaword (eg).
-- Machine Translation: WMT16 Romanian-English (ro-en), WMT14 English-French (en-fr), and WMT16 German-English (ge-en).
+- Machine Translation: WMT16 Romanian-English (ro-en16), WMT14 English-French (en-fr14), WMT16 German-English (ge-en16), WMT Czech-English (cs-en), WMT Spanish-English (es-en), WMT Chinese-English (zh-en), WMT German-English (de-en), WMT Russian-English (ru-en), WMT French-English (fr-en).
 - Open-ended dialogue system: PersonaChat (pc), DailyDialog (dd), DSTC7-AVSD (da), SGD (sgd), Topical-Chat (tc), Wizard of Wikipedia (wow), Movie Dialog (md), Cleaned OpenSubtitles Dialogs (cos), Empathetic Dialogues (ed), Curiosity (curio), CMU Document Grounded Conversations (cmudog), MuTual (mutual), OpenDialKG (odkg), and DREAM (dream).
 - Data-to-text generation: WebNLG v2.1 (webnlg), WebNLG v3.0 (webnlg2), WikiBio (wikibio), E2E (e2e), DART (dart), ToTTo (totto), ENT-DESC (ent), AGENDA (agenda), GenWiki (genwiki), TEKGEN (tekgen), LogicNLG (logicnlg), WikiTableT (wikit), and WEATHERGOV (wg).
 - Question generation: SQuAD (squadqg), CoQA (coqaqg), NewsQA (newsqa), HotpotQA (hotpotqa), MS MARCO (marco), MSQG (msqg), NarrativeQA (nqa), and QuAC (quac).
 - Story generation: ROCStories (roc), WritingPrompts (wp), Hippocorpus (hc), WikiPlots (wikip), and ChangeMyView (cmv).
 - Question answering: SQuAD (squad), CoQA (coqa), Natural Questions (nq), TriviaQA (tqa), WebQuestions (webq), NarrativeQA (nqa), MS MARCO (marco), NewsQA (newsqa), HotpotQA (hotpotqa), MSQG (msqg), and QuAC (quac).
 - Task-oriented dialogue system: MultiWOZ 2.0 (multiwoz), MetaLWOZ (metalwoz), KVRET (kvret), WOZ (woz), CamRest676 (camres676), Frames (frames), TaskMaster (taskmaster), Schema-Guided (schema), and MSR-E2E (e2e_msr).
+- Chinese generation: LCSTS (lcsts), CSL (csl), and ADGEN (adgen).
 - Commonsense generation: CommonGen (cg).
 - Paraphrase generation: Quora (quora) and ParaNMT-small (paranmt).
 - Text style transfer: GYAFC-E&M and F&R (gyafc-em, gyafc-fr).

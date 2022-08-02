@@ -6,15 +6,24 @@
 
 *“李太白少时，梦所用之笔头上生花后天才赡逸，名闻天下。”——王仁裕《开元天宝遗事·梦笔头生花》*
 
-TextBox 2.0 is an up-to-date text generation library based on Python and PyTorch focusing on building a unified and standardized pipeline for applying Pre-trained language models to text generation.
+TextBox 2.0 is an up-to-date text generation library based on Python and PyTorch focusing on building a unified and standardized pipeline for applying Pre-trained language models to text generation:
 
-From a task perspective, we consider 13 common text generation tasks such as translation, story generation and style transfer, and their corresponding 83 widely-used datasets. From a model perspective, we incorporate 36 PLMs covering the categories of general, translation, dialogue, controllable, distilled, Chinese, and light-weight PLMs.
+- From a **task** perspective, we consider 13 common text generation tasks such as translation, story generation and style transfer, and their corresponding 83 widely-used datasets. 
+- From a **model** perspective, we incorporate 36 PLMs covering the categories of general, translation, dialogue, controllable, distilled, Chinese, and light-weight PLMs.
+- From a **training** perspective, we support 4 pre-training objectives and 4 efficient and robust training strategies, such as distributed data parallel and efficient generation.
+
 
 Compared with previous version of TextBox, this extension mainly focuses on building a unified, flexible and standardized framework for better supporting PLM-based text generation models. There are three advantages in TextBox 2.0:
 
-- it is designed to be unified in implementation and interface.
-- it is a significant innovation focusing on comprehensive tasks and PLMs.
-- it is flexible and easy to use.
+- It is a significant innovation focusing on comprehensive tasks and PLMs.
+- It is designed to be unified in implementation and interface.
+- It produces very similar performance with original or official implementations.
+
+<p align="center">
+  <img src="asset/framework.png" alt="TextBox 2.0 framework">
+  <br>
+  The Overall Framework of TextBox 2.0
+</p>
 
 <!-- ===================== Installation ===================== -->
 

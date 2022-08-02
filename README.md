@@ -384,15 +384,13 @@ You can also disable **sync only** with `wandb offline` and enable it again with
   </tr>
   <tr>
     <td align="center">Chinese-GPT2</td>
-    <td align="center" rowspan="2"><a href="https://arxiv.org/pdf/1909.05658">(Zhao et al., 2019)</a></td>
+    <td align="center" rowspan="3"><a href="https://arxiv.org/pdf/1909.05658">(Zhao et al., 2019)</a></td>
   </tr>
   <tr>
     <td align="center">Chinese-T5</td>
-    <td align="center"></td>
   </tr>
   <tr>
     <td align="center">Chinese-Pegasus</td>
-    <td align="center"></td>
   </tr>
 
 

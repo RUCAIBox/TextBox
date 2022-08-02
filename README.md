@@ -20,7 +20,7 @@ Compared with previous version of TextBox, this extension mainly focuses on buil
 - It produces very similar performance with original or official implementations.
 
 <p align="center">
-  <img src="asset/framework.png" alt="TextBox 2.0 framework" width="20%" height="20%">
+  <img src="asset/framework.png" alt="TextBox 2.0 framework" width="50%" height="50%">
   <br>
   The Overall Framework of TextBox 2.0
 </p>

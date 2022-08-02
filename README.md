@@ -6,12 +6,15 @@
 
 *“李太白少时，梦所用之笔头上生花后天才赡逸，名闻天下。”——王仁裕《开元天宝遗事·梦笔头生花》*
 
-TextBox is developed based on Python and PyTorch for reproducing and developing text generation algorithms in a unified, comprehensive and efficient framework for research purpose. Our library includes 21 text generation algorithms, covering two major tasks:
+TextBox 2.0 is an up-to-date text generation library based on Python and PyTorch focusing on building a unified and standardized pipeline for applying Pre-trained language models to text generation.
 
-- Unconditional (input-free) Generation
-- Conditional (Seq2Seq) Generation, including Machine Translation, Text Summarization, Attribute-to-Text, and Dialogue Systems
+From a task perspective, we consider 13 common text generation tasks such as translation, story generation and style transfer, and their corresponding 83 widely-used datasets. From a model perspective, we incorporate 36 PLMs covering the categories of general, translation, dialogue, controllable, distilled, Chinese, and light-weight PLMs.
 
-We provide the support for 9 benchmark text generation datasets. A user can apply our library to process the original data copy, or simply download the processed datasets by our team.
+Compared with previous version of TextBox, this extension mainly focuses on building a unified, flexible and standardized framework for better supporting PLM-based text generation models. There are three advantages in TextBox 2.0:
+
+- it is designed to be unified in implementation and interface.
+- it is a significant innovation focusing on comprehensive tasks and PLMs.
+- it is flexible and easy to use.
 
 <!-- ===================== Installation ===================== -->
 
@@ -206,29 +209,26 @@ python run_textbox.py ... --pretrain_task=<task-name>
 
 ### Efficient Training
 
-#### Distributed Data Parallel
+#### Multi-GPU Training & FP16
 
-TextBox supports to train models with multiple GPUs conveniently. You don't need to modify the model, just run the following command:
+TextBox supports to train models with multiple GPUs and FP16 method based on `accelerate`. Configurate and test (not always necessary) [accelerate](https://github.com/huggingface/accelerate) with `accelerate config` and `accelerate test` in shell ([example](asset/accelerate.md)). 
 
-```bash
-python -m torch.distributed.launch --nproc_per_node=<gpu-num> \
-       run_textbox.py ... --gpu_id=<gpu-ids> --DDP=True
-```
-
-`gpu_num` is the number of GPUs you want to train with (such as 4), and `gpu_ids` is the usable GPU id list (such as `\[0,1,2,3\]`).
-
-> **Note**
-> Only end-to-end model is supported for DDP by now. Non-end-to-end models such as GAN are coming soon.
-
-#### FP16 Accelerate
-
-Configurate and test (not always necessary) [accelerate](https://github.com/huggingface/accelerate) with `accelerate config` and `accelerate test` in shell ([example](asset/accelerate.md)).
+Once running `accelerate config`, you can run code in the same configuration without setting config again. If you want to change the configuration of `accelerate`, just re-run `accelerate config` to reset the configuration. If you don't want to use `accelerate`, run code using `python` command as .
 
 To accelerate multi-gpu training with `accelerate`, run the script below. Note that the main process of `accelerate` listen to port `main_process_port`. If you run multiple TextBox instances on a single machine with FSDP (Fully Sharded Data Parallel) enabled, please manually set to a different port.
 
 ```bash
 accelerate launch [--main_process_port <port-number>] run_textbox.py ...
 ```
+
+In multi-GPU training, you should set the hyper-parameter `gpu_id` to decide the devices in training. And the number of GPUs set in `gpu_id` is necessary greater or equal to the number of GPUs set in `accelerate`. 
+
+```bash
+accelerate launch [--main_process_port <port-number>] \
+        run_textbox.py ... --gpu_id=<gpu-ids>
+```
+
+Note that `gpu_ids` is the usable GPU id list (such as `0,1,2,3`).
 
 ### Hyper-Parameters Tuning
 

@@ -17,8 +17,8 @@ read -p "A modified version of transformers will be installed to python environm
 case $yn in
 	[yY] ) echo "Creating conda environment (python=3.8) ..."
 	       conda create -n TextBox python=3.8
-	       break;;
-        [nN] ) break;;
+	       ;;
+        [nN] ) ;;
 esac
 
 echo "Installation may take a few minutes."
@@ -59,6 +59,7 @@ cd transformers || exit
 pip install -e . > /dev/null
 cd ..
 
-wandb login
+wandb disabled
+echo "To enable wandb, use:\n  wandb enabled && wandb login"
 
 exit 0

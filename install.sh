@@ -11,6 +11,7 @@ function brewinstall () {
 }
 
 BASEDIR=$(dirname "$0")
+F2RDIR=~/.files2rouge/data
 cd "$BASEDIR" || exit
 
 echo "
@@ -27,6 +28,7 @@ read -p "A modified version of transformers will be installed to python environm
 case $yn in
     [yY] ) echo "Creating conda environment named TextBox (python=3.8) ..."
        conda create -n TextBox python=3.8
+       conda activate TextBox
        ;;
     [nN] ) ;;
 esac
@@ -56,8 +58,17 @@ pip install -U git+https://github.com/pltrdy/pyrouge > /dev/null
 git clone https://github.com/pltrdy/files2rouge.git  > /dev/null
 cd files2rouge || exit
 echo -e '\n' | python setup_rouge.py > /dev/null
+[ -d "~/.files2rouge" ] && mv ~/.files2rouge ~/.files2rouge.bak\
+	&& echo "Renaming ~/.files2rouge to ~/.files2rouge.bak"
 python setup.py install > /dev/null
 cd ..
+F2RExpDIR=$F2RDIR/WordNet-2.0-Exceptions
+rm $F2RDIR/WordNet-2.0.exc.db
+rm $F2RExpDIR/WordNet-2.0.exc.db
+perl $F2RExpDIR/buildExeptionDB.pl $F2RExpDIR exc $F2RExpDIR/WordNet-2.0.exc.db 
+ln -s $F2RExpDIR/WordNet-2.0.exc.db $F2RDIR/WordNet-2.0.exc.db
+chmod +rx $F2RDIR/WordNet-2.0.exc.db
+chmod +rx $F2RExpDIR/WordNet-2.0.exc.db
 
 pip uninstall py-rouge
 pip install rouge > /dev/null

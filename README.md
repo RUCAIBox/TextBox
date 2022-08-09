@@ -269,6 +269,8 @@ If you are debugging your model, you may want to **disable W&B** with `wandb dis
 
 You can also disable **sync only** with `wandb offline` and enable it again with `wandb online`. The local files can be uploaded by executing `wandb sync`.
 
+After configuration, you can throttle wandb prompts by defining environment variable `export WANDB_SILENT=false`. For more information, see [documentation](docs.wandb.ai).
+
 
 <!-- ===================== Model ===================== -->
 

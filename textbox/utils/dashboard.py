@@ -418,7 +418,6 @@ def init_dashboard(
         >>> ...
         >>> finish_dashboard()
     """
-    os.environ["WANDB_SILENT"] = "true"
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
     global root

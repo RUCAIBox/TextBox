@@ -10,14 +10,33 @@ textbox.utils.logger
 import logging
 import os
 from textbox.utils.utils import ensure_dir
+from collections import defaultdict
+from colorama import init, Fore, Style
+init(autoreset=True)
 
 from typing import Optional
 
 
-FILE_FMT = "%(asctime)-15s %(levelname)s %(message)s"
-FILE_DATE_FMT = "%a %d %b %Y %H:%M:%S"
-STREAM_FMT = "%(asctime)-15s %(levelname)s %(message)s"
-STREAM_DATE_FMT = "%d %b %H:%M"
+class ColorFormatter(logging.Formatter):
+
+    FILE_FMT = "%(asctime)-15s %(levelname)s %(message)s"
+    FILE_DATE_FMT = "%a %d %b %Y %H:%M:%S"
+    STREAM_FMT = "%(asctime)-15s %(levelname)s %(message)s"
+    STREAM_DATE_FMT = "%d %b %H:%M"
+
+    def __init__(self, formatter_type, **kwargs):
+        super().__init__(**kwargs)
+        if formatter_type == 'file':
+            self._formatters = defaultdict(lambda: logging.Formatter(self.FILE_FMT, self.FILE_DATE_FMT))
+        else:
+            self._formatters = defaultdict(lambda: logging.Formatter(self.STREAM_FMT, self.STREAM_DATE_FMT), {
+                logging.WARNING: logging.Formatter(Fore.YELLOW + self.STREAM_FMT + Fore.RESET, self.STREAM_DATE_FMT),
+                logging.ERROR: logging.Formatter(Fore.RED + self.STREAM_FMT + Fore.RESET, self.STREAM_DATE_FMT),
+                logging.CRITICAL: logging.Formatter(Fore.RED + Style.BRIGHT+ self.STREAM_FMT + Fore.RESET, self.STREAM_DATE_FMT),
+            })
+        
+    def format(self, record):
+        return self._formatters[record.levelno].format(record)
 
 
 def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, logdir: str = './log/'):
@@ -46,20 +65,17 @@ def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, l
     log_filename = filename + '.log'
     log_filepath = os.path.join(logdir, log_filename)
 
-    file_formatter = logging.Formatter(FILE_FMT, FILE_DATE_FMT)
-    stream_formatter = logging.Formatter(STREAM_FMT, STREAM_DATE_FMT)
-
     if log_level is None:
         log_level = "warning"
-    log_level = getattr(logging, log_level.upper(), None)
+    log_level = getattr(logging, log_level.upper())
 
     file_handler = logging.FileHandler(log_filepath)
     file_handler.setLevel(log_level)
-    file_handler.setFormatter(file_formatter)
+    file_handler.setFormatter(ColorFormatter('file'))
 
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(log_level)
-    stream_handler.setFormatter(stream_formatter)
+    stream_handler.setFormatter(ColorFormatter('stream'))
 
     logging.basicConfig(level=log_level, handlers=[file_handler, stream_handler])
     textbox_logger = logging.getLogger('textbox')

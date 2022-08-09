@@ -4,8 +4,10 @@ import sys
 import yaml
 import torch
 from logging import getLogger
+from colorama import init, Fore
+init(autoreset=True)
 
-from typing import List, Dict, Optional, Union, Iterable, Any
+from typing import List, Dict, Optional, Iterable, Any
 
 from textbox.utils.utils import get_local_time
 from textbox.utils.argument_list import general_parameters, training_parameters, evaluation_parameters, model_parameters, \
@@ -316,13 +318,15 @@ class Config(object):
 
     def __str__(self):
         args_info = f'{len(self.final_config_dict)} parameters found.\n'
-        args_info += '=' * 80 + '\n\n'
+        args_info += '=' * 80 + '\n'
         unrecognized = set(self.final_config_dict.keys()) - self.all_parameters
         if len(unrecognized) > 0:
             self.parameters['Unrecognized'] = unrecognized
 
         for category in self.parameters:
-            args_info += '# ' + category + ' Hyper Parameters: \n\n'
+            if category == 'Unrecognized':
+                args_info += Fore.YELLOW
+            args_info += '\n# ' + category + ' Hyper Parameters: \n\n'
             for arg in self.parameters[category]:
                 if arg.startswith('_'):
                     continue
@@ -330,9 +334,11 @@ class Config(object):
                     if arg in self.final_config_dict['_hyper_tuning']:
                         args_info += '#[HYPER_TUNING] '
                     args_info += f'{arg}: {self.final_config_dict[arg]}\n'
-            args_info += '\n\n'
+            if category == 'Unrecognized':
+                args_info += Fore.RESET
+            args_info += '\n'
 
-        args_info = args_info[:-1] + '=' * 80
+        args_info += '=' * 80
         return args_info
 
     def __repr__(self):

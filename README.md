@@ -242,10 +242,10 @@ Note that `gpu_ids` is the usable GPU id list (such as `0,1,2,3`).
 ### Hyper-Parameters Tuning
 
 ```bash
-python run_hyper.py --space=textbox/properties/hyperopt_example.test --algo='exhaustive'  --model_path=facebook/bart-base --metrics=\[\'rouge\''\] --metrics_for_best_model=\[\'ROUGE-1\'\]
+python run_hyper.py --space=textbox/properties/hyperopt_example.test --algo='exhaustive'  --model_path=facebook/bart-base --metrics=\[\'rouge\'\] --metrics_for_best_model=\[\'ROUGE-1\'\]
 ```
 
-A separate script `run_hyper.py` is provided for hyper-parameters tuning. Use `space=<path-to-space-file>` and `algo=<algo-name>` to select from different configurations ([tutorial](textbox/asset/hyper_tuning.md).
+A separate script `run_hyper.py` is provided for hyper-parameters tuning. Use `space=<path-to-space-file>` and `algo=<algo-name>` to select from different configurations ([tutorial](asset/hyper_tuning.md)).
 
 ### Multiple Random Seeds
 
@@ -268,6 +268,8 @@ If you are running your code in jupyter environments, you may want to login by s
 If you are debugging your model, you may want to **disable W&B** with `wandb disabled` in the command line and **none of the metrics** will be recorded. To re-enable it, use `wandb enabled`.
 
 You can also disable **sync only** with `wandb offline` and enable it again with `wandb online`. The local files can be uploaded by executing `wandb sync`.
+
+After configuration, you can throttle wandb prompts by defining environment variable `export WANDB_SILENT=false`. For more information, see [documentation](docs.wandb.ai).
 
 
 <!-- ===================== Model ===================== -->
@@ -515,7 +517,7 @@ We also support you to run our model using your own dataset. Just follow the thr
 
 
 > **Warning**
-> Backslashes and no-extra-space are required when inputting a list of string like `\[\'bleu\',\'rouge\'\]` in command line. As a result, a preset run configuration as is follows is more recommended.
+> Backslashes and no-extra-space are required when inputting a list of string like `\[\'bleu\',\'rouge\'\]` in command line. As a result, a preset run configuration is more recommended.
 
 
 ## Releases
@@ -524,7 +526,7 @@ We also support you to run our model using your own dataset. Just follow the thr
 
 | Releases |    Date    |    Features   |
 | :------: | :--------: | :-----------: |
-|  v1.0.0  | 30/06/2022 |      Test     |
+|  v2.0.0  | 20/08/2022 |    TextBox    |
 |  v0.2.1  | 15/04/2021 |    TextBox    |
 |  v0.1.5  | 01/11/2021 | Basic TextBox |
 

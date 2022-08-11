@@ -91,5 +91,8 @@ cd ..
 
 wandb enabled
 wandb login
+if [[ $? -ne 0 ]]; then
+    wandb disabled
+fi
 
 exit 0

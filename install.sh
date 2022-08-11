@@ -6,7 +6,7 @@ function brewinstall () {
             brew install $pkg
         done
     else
-        echo "Failed to install packages because homebrew not found."
+        echo -e "\033[0;31mFailed to install packages because homebrew not found.\033[0m"
     fi
 }
 
@@ -34,13 +34,13 @@ case $yn in
 esac
 
 echo "Installation may take a few minutes."
-echo "Installing torch ..."
+echo -e "\033[0;32mInstalling torch ...\033[0m"
 conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
 
-echo "Installing requirements ..."
+echo -e "\033[0;32mInstalling requirements ...\033[0m"
 pip install -r requirements.txt
 
-echo "Installing requirements (fast-bleu) ..."
+echo -e "\033[0;32mInstalling requirements (fast-bleu) ...\033[0m"
 if [[ "$OSTYPE" == "darwin"* ]]; then
     if [ -x "$(command -v gcc-11 &> /dev/null)" ]; then
         brewinstall 'gcc@11'
@@ -50,16 +50,16 @@ else
     pip install fast-bleu > /dev/null
 fi
 
-echo "Installing requirements (fastseq) ..."
+echo -e "\033[0;32mInstalling requirements (fastseq) ...\033[0m"
 pip install git+https://github.com/microsoft/fastseq.git > /dev/null
 
-echo "Installing requirements (rouge) ..."
+echo -e "\033[0;32mInstalling requirements (rouge) ...\033[0m"
 pip install -U git+https://github.com/pltrdy/pyrouge > /dev/null
 git clone https://github.com/pltrdy/files2rouge.git  > /dev/null
 cd files2rouge || exit
-echo -e '\n' | python setup_rouge.py > /dev/null
 [ -d "~/.files2rouge" ] && mv ~/.files2rouge ~/.files2rouge.bak\
-	&& echo "Renaming ~/.files2rouge to ~/.files2rouge.bak"
+	&& echo -e "\033[1;33mRenaming ~/.files2rouge to ~/.files2rouge.bak\033[0m"
+echo -e '\n' | python setup_rouge.py > /dev/null
 python setup.py install > /dev/null
 cd ..
 F2RExpDIR=$F2RDIR/WordNet-2.0-Exceptions
@@ -73,18 +73,18 @@ chmod +rx $F2RExpDIR/WordNet-2.0.exc.db
 pip uninstall py-rouge
 pip install rouge > /dev/null
 
-echo "Installing requirements (libxml) ..."
+echo -e "\033[0;32mInstalling requirements (libxml) ...\033[0m"
 if [[ "$OSTYPE" == "darwin"* ]]; then
     brewinstall libxml2 cpanminus
     cpanm --force XML::Parser
 else
     if [ -x "$(command -v apt-get)" ];  then sudo apt-get install libxml-parser-perl
     elif [ -x "$(command -v yum)" ];    then sudo yum install -y "perl(XML::LibXML)"
-    else echo 'Failed to install libxml. See https://github.com/pltrdy/files2rouge/issues/9 for more information.' && exit;
+    else echo -e '\033[0;31mFailed to install libxml. See https://github.com/pltrdy/files2rouge/issues/9 for more information.\033[0m' && exit;
     fi
 fi
 
-echo "Installing requirements (transformers) ..."
+echo -e "\033[0;32mInstalling requirements (transformers) ...\033[0m"
 cd transformers || exit
 pip install -e . > /dev/null
 cd ..

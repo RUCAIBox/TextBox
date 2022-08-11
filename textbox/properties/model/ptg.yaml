@@ -1,0 +1,7 @@
+model_name: bart
+bert_model_path: 'bert-large-uncased'
+prompt_source_path: 'prompt_source.pth'
+source_task: 'cross-dataset2'
+efficient_methods: ['prompt-tuning']
+efficient_kwargs: {'prompt_length': 200}
+ptg_lambda: 0.5

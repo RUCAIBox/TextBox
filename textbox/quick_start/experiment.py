@@ -81,7 +81,7 @@ class Experiment:
         config = self.get_config()
         init_seed(config['seed'], config['reproducibility'])
 
-        self.model = get_model(config['model_name'])(config, self.tokenizer).to(config['device'])
+        self.model = get_model(config['model'])(config, self.tokenizer).to(config['device'])
         self.logger.info(self.model)
         self.trainer: Trainer = get_trainer(config['model'])(config, self.model, self.accelerator)
 

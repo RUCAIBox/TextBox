@@ -101,6 +101,11 @@ class Pretrained_Models(AbstractModel):
             self.model.config.decoder_start_token_id = self.tokenizer.cls_token_id
             self.model.config.pad_token_id = self.tokenizer.pad_token_id
 
+        self.is_prompt_tuning = 'prompt-tuning' in config['efficient_methods']
+        if self.is_prompt_tuning:
+            self.prompt_length = self.model.config.prompt_length
+            self.prompt_embedding = nn.Embedding(self.prompt_length, self.model.config.hidden_size)
+
         if config['efficient_methods'] and not config['efficient_unfreeze_model']:
             if hard_efficient_methods:
                 self.model.set_efficient_tuning()
@@ -110,9 +115,6 @@ class Pretrained_Models(AbstractModel):
                         para.requires_grad_(False)
             elif 'prompt-tuning' in config['efficient_methods']:
                 self.model.requires_grad_(False)
-                self.prompt_length = self.model.config.prompt_length
-                self.prompt_embedding = nn.Embedding(self.prompt_length, self.model.config.hidden_size)
-        self.is_prompt_tuning = 'prompt-tuning' in config['efficient_methods']
 
         self.label_smoothing = config['label_smoothing'] if config['label_smoothing'] else 0.
 
@@ -163,7 +165,7 @@ class Pretrained_Models(AbstractModel):
             jieba.dt.tmp_dir = "/tmp/jieba"
             os.makedirs(jieba.dt.tmp_dir, exist_ok=True)
 
-    def _process_prompt_tuning_input(self, inputs):
+    def _process_prompt_tuning_input(self, inputs, batch):
         input_ids = inputs['input_ids']
         inputs_embeds = self.model.get_input_embeddings()(input_ids) # b, l, e
         prompt_embeds = self.prompt_embedding.weight.repeat(input_ids.size(0), 1, 1) # b, pl, e
@@ -184,7 +186,7 @@ class Pretrained_Models(AbstractModel):
             'labels': batch['target_ids'].to(self.device)
         }
         if self.is_prompt_tuning:
-            inputs = self._process_prompt_tuning_input(inputs)
+            inputs = self._process_prompt_tuning_input(inputs, batch)
         outputs = self.model(**inputs)
         
         if self.label_smoothing:
@@ -201,7 +203,7 @@ class Pretrained_Models(AbstractModel):
         }
 
         if self.is_prompt_tuning:
-            inputs = self._process_prompt_tuning_input(inputs)
+            inputs = self._process_prompt_tuning_input(inputs, batch)
         
         if self.is_casual_model:
             input_ids_len = inputs['input_ids'].shape[1] if 'input_ids' in inputs else inputs['inputs_embeds'].shape[1]

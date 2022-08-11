@@ -205,8 +205,8 @@ class Config(object):
 
     def _load_internal_config_dict(self, model, dataset):
         current_path = os.path.dirname(os.path.realpath(__file__))
-        model_init_file = os.path.join(current_path, '../properties/model/' + model + '.yaml')
-        dataset_init_file = os.path.join(current_path, '../properties/dataset/' + dataset + '.yaml')
+        model_init_file = os.path.join(current_path, '../properties/model/' + model.lower() + '.yaml')
+        dataset_init_file = os.path.join(current_path, '../properties/dataset/' + dataset.lower() + '.yaml')
         if not os.path.exists(dataset_init_file):
             raise ValueError("dataset {} can't be found".format(dataset_init_file))
 
@@ -245,7 +245,7 @@ class Config(object):
     def _set_default_parameters(self):
         self.final_config_dict['dataset'] = self.dataset
         self.final_config_dict['model'] = self.model
-        self.final_config_dict['model_name'] = self.model.lower()
+        self.final_config_dict['model_name'] = self.final_config_dict.get('model_name', self.model.lower())
         self.final_config_dict['data_path'] = os.path.join(self.final_config_dict['data_path'], self.dataset)
         self.setdefault('filename', f'{self.final_config_dict["model"]}'
                                     f'-{self.final_config_dict["dataset"]}'

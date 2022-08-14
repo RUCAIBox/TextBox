@@ -1,14 +1,14 @@
-# TextBox 1.0.0    Go! Go! Go!
+# TextBox 2.0.0    Go! Go! Go!
 
 ## Overall
 - [ ] Perfectly reproduce and recover, save and load random seed state. Work with dataloader and trainer checkpoint
 - [ ] Resume training (default) Loading existing parameters? (add an options) Work with trainer checkpoint
-- [ ] Only generation and only evaluation. (`--do_train --do_test --do_eval`)
-- [ ] Quick test the whole pipeline (and `max_length`). Work with dataloader. (`--quick_test` with lazy load using `fseek`)
+- [x] Only generation and only evaluation. (`--do_train --do_test --do_eval`)
+- [x] Quick test the whole pipeline (and `max_length`). Work with dataloader. (`--quick_test` with lazy load using `fseek`)
 - [x] Logger with DDP
 - [ ] Reminder through email (wandb)
-- [ ] Hyper-parameter tuning (e.g. batch-size 16, 32, 64) (https://github.com/RUCAIBox/RecBole/blob/master/run_hyper.py, https://recbole.io/docs/user_guide/usage/parameter_tuning.html) (without saving model)
-- [ ] Run on several random seeds and average their results (without saving model)
+- [x] Hyper-parameter tuning (e.g. batch-size 16, 32, 64) (https://github.com/RUCAIBox/RecBole/blob/master/run_hyper.py, https://recbole.io/docs/user_guide/usage/parameter_tuning.html) (without saving model)
+- [x] Run on several random seeds and average their results (without saving model)
 - [ ] Model deployment (https://clip-as-service.jina.ai/)
 - [ ] Check `print` and `logger.info`
 - [ ] Check `get_model`, `get_trainer`, `get_dataset` and `get_dataloader`
@@ -17,9 +17,9 @@
 - **Do not use `import *`**
 
 ## Config
-- [ ] Config check (user should add their own config in a file, eg `argument_list`)
-- [ ] Print all the config and command line (is `argument_list.py` necessary?) (maybe 3 classes `general`, `model` and `dataset`)
-- [ ] Simplify `init_logger`, remove `is_logger` and support user-defined filename
+- [x] Config check (user should add their own config in a file, eg `argument_list`)
+- [x] Print all the config and command line (is `argument_list.py` necessary?) (maybe 3 classes `general`, `model` and `dataset`)
+- [x] Simplify `init_logger`, remove `is_logger` and support user-defined filename
 - [ ] Case of model class, model file and model yaml (same for dataset)
 
 ## Dataset / Dataloader
@@ -33,7 +33,7 @@
 - [ ] valid target setting if not metric for best is not loss
 - [ ] Add attribute `tokenized`?
 ### Pre-training tasks (construct new `target_id` and `source_id` according to old `source_id`)
-- [ ] DAE (like BART)
+- [x] DAE (like BART)
 - [ ] Masked Seq2Seq (like MASS)
 - [ ] Masked span prediction (like T5)
 - [ ] LM (like GPT-2) Decoder? Encoder-decoder?
@@ -45,8 +45,8 @@
 ## Trainer
 ### Efficiency
 - [x] Multi-GPU with `accelerate`? Need to research! (PyTorch or accelerate)
-    - [ ] check `find_unused_parameters`
-    - [ ] will our scheduler be impacted
+    - [x] check `find_unused_parameters`
+    - [x] will our scheduler be impacted
 ```
 data parallel (model can fit in one GPU)
 single node or several nodes
@@ -58,7 +58,7 @@ see HF how to solve it:
 https://github.com/huggingface/transformers/blob/main/examples/pytorch/summarization/run_summarization.py)
 https://github.com/huggingface/transformers/blob/main/examples/pytorch/summarization/run_summarization_no_trainer.py
 ```
-- [ ] Fast generation (with https://github.com/microsoft/fastseq or https://github.com/bytedance/lightseq/tree/master/lightseq/training )
+- [x] Fast generation (with https://github.com/microsoft/fastseq or https://github.com/bytedance/lightseq/tree/master/lightseq/training )
 - [x] Multi-GPU generation (divide data to multiple GPUs for generation.) Is it possible? Under DDP?
 - [x] *FP16 (HF? or Pytorch?)
 ### Useful features
@@ -97,11 +97,11 @@ https://github.com/huggingface/transformers/blob/main/examples/pytorch/summariza
 ### Models not in HF
 - [ ] Add UniLM (reproduce results on SQuAD)
 - [ ] Add MASS (reproduce results on SQuAD)
-- [ ] Add CPT and chinese BART (Add one Chinese dataset and reproduce results)
+- [x] Add CPT and chinese BART (Add one Chinese dataset and reproduce results)
 ### Translation
 - [ ] Add XLM (Add one translation dataset and reproduce results)
 - [ ] Add MarianMT (the same)
-- [ ] Test mBART, mT5 using the tranlastion dataset
+- [x] Test mBART, mT5 using the tranlastion dataset
 ### Non-pretrained models
 - [ ] Refactor RNN Seq2Seq (merge `Attention`)
 - [ ] Refactor Copied Seq2Seq
@@ -141,8 +141,8 @@ https://github.com/huggingface/transformers/blob/main/examples/pytorch/summariza
     - [ ] Task-oriented dialogue system: MultiWOZ 2.0 (multiwoz).
     - [x] Commonsense generation: CommonGen (cg).
     - [x] Text simplification: WikiAuto + Turk/ASSET (wia).
-    - [ ] Paraphrase generation: Quora (comming soon).
-    - [ ] Text style transfer: GYAFC-E&M and F&R (comming soon).
+    - [x] Paraphrase generation: Quora (quora) and ParaNMT (paranmt).
+    - [x] Text style transfer: GYAFC-E&M (gyafc_em) and F&R (gyafc_fr).
 
 
 ## Leaderboard
@@ -158,6 +158,3 @@ https://github.com/huggingface/transformers/blob/main/examples/pytorch/summariza
     - [ ] Text simplification: WikiAuto + Turk/ASSET (wia). https://arxiv.org/pdf/2005.00352v2.pdf https://arxiv.org/pdf/2110.08329v2.pdf
     - [ ] Paraphrase generation: Quora (comming soon).
     - [ ] Text style transfer: GYAFC-E&M and F&R (comming soon).
-
-## Data statistics
-- [ ] Further research

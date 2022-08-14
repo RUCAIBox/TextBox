@@ -58,6 +58,7 @@ rouge_max_ngrams: 2
 rouge_type: files2rouge
 
 meteor_type: pycocoevalcap
+corpus_meteor: True
 
 chrf_type: m-popovic
 

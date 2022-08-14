@@ -207,14 +207,10 @@ To enable pre-training, simply set `--pretrain_task` to `denoising` or `text_inf
 python run_textbox.py ... --pretrain_task=<task-name>
 ```
 
-#### Pre-train Task To-Do
-
 + Experimental Tasks from BART (Token Deletion, Document Rotation)
 + Language Model
 + Masked Language Model (separate from Token Masking in BART)
 + Permuted Language Model
-+ Multitask Masked Language Model
-+ ...
 
 ### Efficient Training
 
@@ -456,9 +452,8 @@ After configuration, you can throttle wandb prompts by defining environment vari
 ## Dataset
 
 Now we support 13 generation tasks and corresponding datasets (the item in the bracket is the name used in `--dataset`):
-- Text summarization: CNN/Daily Mail (cnndm), XSum (xsum), SAMSum (samsum),WLE (wle), Newsroom (nr), WikiHow (wikihow), MicroSoft News (msn), MediaSum
- (mediasum), and English Gigaword (eg).
-- Machine Translation: WMT16 Romanian-English (ro-en16), WMT14 English-French (en-fr14), WMT16 German-English (ge-en16), WMT Czech-English (cs-en), WMT Spanish-English (es-en), WMT Chinese-English (zh-en), WMT German-English (de-en), WMT Russian-English (ru-en), WMT French-English (fr-en).
+- Text summarization: CNN/Daily Mail (cnndm), XSum (xsum), SAMSum (samsum), WLE (wle), Newsroom (nr), WikiHow (wikihow), MicroSoft News (msn), MediaSum (mediasum), and English Gigaword (eg).
+- Machine Translation: WMT14 English-French (wmt14-fr-en), WMT16 Romanian-English (wmt16-ro-en), WMT16 German-English (wmt16-de-en), WMT19 Czech-English (wmt19-cs-en), WMT13 Spanish-English (wmt13-es-en), WMT19 Chinese-English (wmt19-zh-en), and WMT19 Russian-English (wmt19-ru-en).
 - Open-ended dialogue system: PersonaChat (pc), DailyDialog (dd), DSTC7-AVSD (da), SGD (sgd), Topical-Chat (tc), Wizard of Wikipedia (wow), Movie Dialog (md), Cleaned OpenSubtitles Dialogs (cos), Empathetic Dialogues (ed), Curiosity (curio), CMU Document Grounded Conversations (cmudog), MuTual (mutual), OpenDialKG (odkg), and DREAM (dream).
 - Data-to-text generation: WebNLG v2.1 (webnlg), WebNLG v3.0 (webnlg2), WikiBio (wikibio), E2E (e2e), DART (dart), ToTTo (totto), ENT-DESC (ent), AGENDA (agenda), GenWiki (genwiki), TEKGEN (tekgen), LogicNLG (logicnlg), WikiTableT (wikit), and WEATHERGOV (wg).
 - Question generation: SQuAD (squadqg), CoQA (coqaqg), NewsQA (newsqa), HotpotQA (hotpotqa), MS MARCO (marco), MSQG (msqg), NarrativeQA (nqa), and QuAC (quac).

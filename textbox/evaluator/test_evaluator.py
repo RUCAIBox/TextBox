@@ -1,17 +1,17 @@
-from distutils.command.config import config
-from bleu_evaluator import BleuEvaluator
-from nist_evaluator import NistEvaluator
-from spice_evaluator import SpiceEvaluator
-from cider_evaluator import CiderEvaluator
+# from distutils.command.config import config
+# from bleu_evaluator import BleuEvaluator
+# from nist_evaluator import NistEvaluator
+# from spice_evaluator import SpiceEvaluator
+# from cider_evaluator import CiderEvaluator
 from meteor_evaluator import MeteorEvaluator
 from rouge_evaluator import RougeEvaluator
-from chrf_evaluator import ChrfEvaluator
-from ter_evaluator import TerEvaluator
-from distinct_evaluator import DistinctEvaluator
-from unique_evaluator import UniqueEvaluator
-from selfbleu_evaluator import SelfBleuEvaluator
-from bertscore_evaluator import BertScoreEvaluator
-from qa_evaluator import QaEvaluator
+# from chrf_evaluator import ChrfEvaluator
+# from ter_evaluator import TerEvaluator
+# from distinct_evaluator import DistinctEvaluator
+# from unique_evaluator import UniqueEvaluator
+# from selfbleu_evaluator import SelfBleuEvaluator
+# from bertscore_evaluator import BertScoreEvaluator
+# from qa_evaluator import QaEvaluator
 
 def _proc(l):
     if len(l) >= 2 and ((l[0] == '"' and l[-1] == '"') or (l[0] == "'" and l[-1] == "'") or (l[0] == '[' and l[-1] == ']')):
@@ -26,13 +26,14 @@ def _proc(l):
 config = {
     'bleu_max_ngrams': 4,
     'bleu_type': 'multi-bleu',
-    'rouge_type': 'pycocoevalcap',
+    'rouge_type': 'py-rouge',
     'multiref_strategy': 'leave_one_out',
-    'rouge_max_ngrams': 4,
-    'meteor_type': 'nltk',
+    'rouge_max_ngrams': 2,
+    'meteor_type': 'pycocoevalcap',
     'chrf_type': 'sacrebleu',
     'smoothing_function': 0,
     'corpus_bleu': True,
+    'corpus_meteor': True,
     'dataset': 'pc',
     'lower': True,
     'filename': 'tty',
@@ -45,18 +46,18 @@ config = {
     'device': 'cuda',
     'eval_batch_size': 64
 }
-bleu = BleuEvaluator(config)
-spice = SpiceEvaluator(config)
-cider = CiderEvaluator(config)
+# bleu = BleuEvaluator(config)
+# spice = SpiceEvaluator(config)
+# cider = CiderEvaluator(config)
 meteor = MeteorEvaluator(config)
 rouge = RougeEvaluator(config)
-chrf = ChrfEvaluator(config, 'chrf++')
-ter = TerEvaluator(config)
-distinct = DistinctEvaluator(config)
-unique = UniqueEvaluator(config)
-self_bleu = SelfBleuEvaluator(config)
-bert_score = BertScoreEvaluator(config)
-qa = QaEvaluator(config)
+# chrf = ChrfEvaluator(config, 'chrf++')
+# ter = TerEvaluator(config)
+# distinct = DistinctEvaluator(config)
+# unique = UniqueEvaluator(config)
+# self_bleu = SelfBleuEvaluator(config)
+# bert_score = BertScoreEvaluator(config)
+# qa = QaEvaluator(config)
 
 gen = ['It is a guide to action which ensures that the military always obeys the commands of the party', 'he read the book because he was interested in world history']
 ref = [['It is a guide to action that ensures that the military will forever heed Party commands'], ['he was interested in world history because he read the book']]
@@ -99,8 +100,8 @@ print(len(gen), len(ref))
 # ref = [[r.strip().lower()] for r in open('/home/tangtianyi/ICML/dataset/samsum/test.tgt')]
 
 # gen = [r.strip().lower() for r in open('/home/tangtianyi/ICML/generated/BART-PC-May-31-2022_22-56-56.txtbest')]
-gen = [r.strip() for r in open('/home/tangtianyi/ICML/generated/BART-coqa-May-03-2022_23-25-33.txtbest')]
-ref = [_proc(r.strip()) for r in open('/home/tangtianyi/ICML/dataset/coqa/test.tgt').readlines()]
+gen = [r.strip() for r in open('/mnt/tangtianyi/AESOP/evaluation/bart0-14_sep_extract')]
+ref = [[_proc(r.strip())] for r in open('/mnt/tangtianyi/AESOP/evaluation/quora/test.ref').readlines()]
 # gen = [r.strip() for r in open('/home/tangtianyi/ICML/generated/BART-squad-May-25-2022_22-15-11.txtbest')]
 # ref = [_proc(r.strip()) for r in open('/home/tangtianyi/ICML/dataset/squad/test.tgt').readlines()]
-print(qa.evaluate(gen, ref))
+print(meteor.evaluate(gen, ref))

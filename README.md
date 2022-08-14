@@ -207,14 +207,10 @@ To enable pre-training, simply set `--pretrain_task` to `denoising` or `text_inf
 python run_textbox.py ... --pretrain_task=<task-name>
 ```
 
-#### Pre-train Task To-Do
-
 + Experimental Tasks from BART (Token Deletion, Document Rotation)
 + Language Model
 + Masked Language Model (separate from Token Masking in BART)
 + Permuted Language Model
-+ Multitask Masked Language Model
-+ ...
 
 ### Efficient Training
 

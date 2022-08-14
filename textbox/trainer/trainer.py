@@ -69,6 +69,7 @@ class Trainer(AbstractTrainer):
         self.filename = self.config['filename']
         self.is_chinese_task = self.config['is_chinese_task']
         self.is_EN2RO_task = self.config['is_EN2RO_task']
+        self.post_processing = self.config['post_processing']
         self.accelerator = accelerator
 
         # Optimization strategy
@@ -517,12 +518,26 @@ class Trainer(AbstractTrainer):
             reference_corpus = eval_data.dataset.target_tokens
         else:
             reference_corpus = eval_data.dataset.target_text
+
         generate_corpus = generate_corpus[:len(reference_corpus)]
+
+        if self.post_processing == 'paraphrase':
+            for i, gen in enumerate(generate_corpus):
+                if gen.find('<sep>') >= 0:
+                    gen = gen.split('<sep>')[1].strip()
+                else:
+                    last = max(gen.rfind('('), gen.rfind(')'))
+                    last = gen.find(' ', last)
+                    gen = gen[last:].strip()
+                generate_corpus[i] = gen
+
         if self.is_save() or (self.is_EN2RO_task == True and is_valid == False):
             self.save_generated_text(generate_corpus, is_valid)
+        
         result = self.evaluator.evaluate(generate_corpus, reference_corpus)
+        
         if (self.is_EN2RO_task == True and is_valid == False):
-            self.logger.info('Running post-processing on Romanian to get higher bleu score.')
+            self.logger.info('Running post-processing on Romanian.')
             os.system(f'bash {self.shell_command} {self.generated_file} {self.reference_file} > {self.tmp_file}')
             with open(self.tmp_file, 'r') as fin:
                 result['fix_bleu'] = float(fin.readline().strip())

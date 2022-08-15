@@ -12,7 +12,7 @@ The dataset is constructed from Chinese Scientific Literature Dataset for summar
 
 | Dataset | Num Train | Num Valid | Num Test | Source Length (Avg) | Target Length (Avg) |
 | ------- | --------- | --------- | -------- | ------------------- | ------------------- |
-| CSL     | 3000      | 500       | -        | -                   | -                   |
+| CSL     | $3000$    | $500$     | -        | -                   | -                   |
 
 ### Data Sample
 

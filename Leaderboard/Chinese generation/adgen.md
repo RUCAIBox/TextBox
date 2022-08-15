@@ -14,7 +14,7 @@ The dataset is constructed from a Chinese e-commerce platform. The dataset consi
 
 | Dataset | Num Train | Num Valid | Num Test | Source Length (Avg) | Target Length (Avg) |
 | ------- | --------- | --------- | -------- | ------------------- | ------------------- |
-| ADGEN   | 114599    | 1070      | 3127     | -                   | -                   |
+| ADGEN   | $114599$  | $1070$    | $3127$   | -                   | -                   |
 
 ### Data Sample
 

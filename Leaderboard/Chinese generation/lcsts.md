@@ -19,13 +19,13 @@ It is a large corpus of Chinese short text summarization dataset constructed fro
 ### Data Sample
 
 Input
-
->本文总结了十个可穿戴产品的设计原则，而这些原则，同样也是笔者认为是这个行业最吸引人的地方：1.为人们解决重复性问题；2.从人开始，而不是从机器开始；3.要引起注意，但不要刻意；4.提升用户能力，而不是取代人
-
+```
+本文总结了十个可穿戴产品的设计原则，而这些原则，同样也是笔者认为是这个行业最吸引人的地方：1.为人们解决重复性问题；2.从人开始，而不是从机器开始；3.要引起注意，但不要刻意；4.提升用户能力，而不是取代人
+```
 Output
-
->可穿戴技术十大设计原则
-
+```
+可穿戴技术十大设计原则
+```
 ## LeaderBoard
 
 Descending order by ROUGE-L.

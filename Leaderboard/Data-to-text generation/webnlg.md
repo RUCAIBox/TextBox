@@ -59,7 +59,7 @@ Initially, the dataset was used for the WebNLG natural language generation chall
 
 Descending order by BLEU.
 
-| Model                                                        | Metric  | Repository                                                | Generated Text |
+| Model                                                        | BLEU    | Repository                                                | Generated Text |
 | ------------------------------------------------------------ | ------- | --------------------------------------------------------- | -------------- |
 | [ Control Prefixes](https://paperswithcode.com/paper/control-prefixes-for-text-generation) | $67.32$ | [Official](https://github.com/jordiclive/ControlPrefixes) |                |
 | [ Multiview-G2S](https://paperswithcode.com/paper/structural-information-preserving-for-graph-1) | $62.89$ | [Official](https://github.com/Soistesimmer/AMR-multiview) |                |

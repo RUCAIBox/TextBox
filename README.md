@@ -466,7 +466,7 @@ Now we support 13 generation tasks and corresponding datasets (the item in the b
 - Text style transfer: GYAFC-E&M and F&R (gyafc-em, gyafc-fr).
 - Text simplification: WikiAuto + Turk/ASSET (wia-t).
 
-These datasets can be downloaded in [https://huggingface.co/RUCAIBox](https://huggingface.co/RUCAIBox). The leaderboard of each dataset can be found in [our respository](Leaderboard).
+These datasets can be downloaded at [https://huggingface.co/RUCAIBox](https://huggingface.co/RUCAIBox). The leaderboard of each dataset can be found in [our respository](Leaderboard).
 
 We also support you to run our model using your own dataset. Just follow the three steps:
 

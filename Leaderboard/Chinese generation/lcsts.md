@@ -12,9 +12,9 @@ It is a large corpus of Chinese short text summarization dataset constructed fro
 
 ### Overview
 
-| Dataset | Num Train | Num Valid | Num Test | Source Length (Avg) | Target Length (Avg) |
-| ------- | --------- | --------- | -------- | ------------------- | ------------------- |
-| LCSTS   | $2160531$ | $240060$  | $725$    | -                   | -                   |
+| Dataset | Num Train   | Num Valid | Num Test | Source Length (Avg) | Target Length (Avg) |
+| ------- | ----------- | --------- | -------- | ------------------- | ------------------- |
+| LCSTS   | $2,160,531$ | $240,060$ | $725$    | -                   | -                   |
 
 ### Data Sample
 

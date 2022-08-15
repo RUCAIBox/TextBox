@@ -16,7 +16,7 @@ CommonGen is challenging because it inherently requires 1) relational reasoning 
 
 | Dataset   | Num Train | Num Valid | Num Test | Source Length (Avg) | Target Length (Avg) |
 | --------- | --------- | --------- | -------- | ------------------- | ------------------- |
-| CommonGen | $67389$   | $4018$    | $1497$   | -                   | -                   |
+| CommonGen | $67,389$  | $4,018$   | $1,497$  | -                   | -                   |
 
 ### Data Sample
 

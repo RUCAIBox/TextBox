@@ -21,13 +21,13 @@ CommonGen is challenging because it inherently requires 1) relational reasoning 
 ### Data Sample
 
 Input
-
->  [ "ski", "mountain", "skier" ]
-
+```
+[ "ski", "mountain", "skier" ]
+```
 Output
-
->  Skier skis down the mountain
-
+```
+Skier skis down the mountain
+```
 ## LeaderBoard
 
 Descending order by SPICE.

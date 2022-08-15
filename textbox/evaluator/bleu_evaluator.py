@@ -5,6 +5,7 @@ import warnings
 import traceback
 from itertools import zip_longest
 from packaging import version
+from nltk.tokenize import word_tokenize
 from .abstract_evaluator import AbstractEvaluator
 
 
@@ -49,8 +50,6 @@ class BleuEvaluator(AbstractEvaluator):
             for ngram in self.ngrams:
                 results[ngram] = []
         if self.bleu_type in ['nltk', 'fast-bleu']:
-            from nltk.tokenize import word_tokenize
-
             for i, gen in enumerate(generate_corpus):
                 generate_corpus[i] = word_tokenize(gen)
             for refs in reference_corpus:
@@ -113,10 +112,10 @@ class BleuEvaluator(AbstractEvaluator):
                 gen_file = f"{tmpdir}/gen.txt"
                 ref_file = f"{tmpdir}/ref.txt"
                 with open(f"{gen_file}", "w") as f:
-                    f.write("\n".join(generate_corpus))
+                    f.write("\n".join([' '.join(word_tokenize(gen)) for gen in generate_corpus]))
                 for i in range(max_ref_num):
                     with open(f"{ref_file}{i}", "w") as f:
-                        f.write('\n'.join([ref or '' for ref in reference_corpus[i]]))
+                        f.write('\n'.join([' '.join(word_tokenize(ref)) if ref is not None else '' for ref in reference_corpus[i]]))
                 try:
                     ref_file = f"{ref_file}[{','.join([str(i) for i in range(max_ref_num)])}]"
                     scores = subprocess.check_output(f"perl textbox/evaluator/utils/multi-bleu.perl {ref_file} < {gen_file}", stderr=subprocess.STDOUT, shell=True)

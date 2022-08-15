@@ -1,0 +1,14 @@
+src_len: 1024
+tgt_len: 128
+metrics: ['bleu', 'rouge', 'meteor']
+post_processing: paraphrase
+bleu_type: multi-bleu
+rouge_type: py-rouge
+corpus_meteor: False
+metrics_for_best_model: ['bleu', 'rouge-1', 'rouge-2', 'rouge-l', 'meteor']
+
+train_batch_size: 16
+accumulation_steps: 12
+eval_batch_size: 64
+prefix: 'Paraphrase: '
+tokenizer_kwargs: {'additional_special_tokens': ['<sep>'] }

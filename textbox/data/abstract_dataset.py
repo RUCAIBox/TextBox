@@ -21,7 +21,7 @@ class AbstractDataset(Dataset):
         self.target_text = load_data(target_filename, max_length=self.quick_test)
         self.source_length = self.config["src_len"]
         self.target_length = self.config["tgt_len"]
-        if set != "test":
+        if set == "train":
             assert len(self.source_text) == len(self.target_text)
 
     def __len__(self):
@@ -33,7 +33,7 @@ class AbstractDataset(Dataset):
             "source_ids": self.source_ids[idx],
             "target_text": self.target_text[idx],
         }
-        if self.set != "test":
+        if self.set == "train":
             sample.update(
                 {
                     "target_ids": self.target_ids[idx],
@@ -119,7 +119,7 @@ class AbstractDataset(Dataset):
                 self.prefix_ids + ids + self.suffix_ids
             )
             self.source_ids.append(torch.tensor(ids, dtype=torch.long))
-        if self.set != "test":
+        if self.set == "train":
             self.target_ids = []
             with tokenizer.as_target_tokenizer():
                 target_ids = tokenizer(
@@ -138,7 +138,7 @@ class AbstractDataset(Dataset):
                     if self.config["model_name"] in ["bert2bert", "opt"]:
                         ids = ids[1:]
                     self.target_ids.append(torch.tensor(ids, dtype=torch.long))
-        if self.set != "train":
+        if self.set != "train" and isinstance(self.target_text[0], str):
             tmp_target_ids = [tokenizer.encode(sentence) for sentence in self.target_text]
             self.target_tokens = [
                 tokenizer.decode(sentence, skip_special_tokens=True)
@@ -166,7 +166,7 @@ class AbstractCollate:
         target_text = []
         source_padding_side = (
             "left"
-            if self.set == "test" and self.is_casual_model
+            if self.set != "train" and self.is_casual_model
             else self.tokenizer.padding_side
         )
 
@@ -174,7 +174,7 @@ class AbstractCollate:
             source_text.append(sample["source_text"])
             src_id = (
                 torch.cat([sample["source_ids"], sample["target_ids"]])
-                if self.set != "test" and self.is_casual_model
+                if self.set == "train" and self.is_casual_model
                 else sample["source_ids"]
             )
             source_ids.append(src_id)
@@ -190,7 +190,7 @@ class AbstractCollate:
         batch["source_length"] = torch.tensor(source_length, dtype=torch.long)
         batch["target_text"] = target_text
 
-        if self.set != "test":
+        if self.set == "train":
             target_ids = []
             for sample in samples:
                 tgt_id = (

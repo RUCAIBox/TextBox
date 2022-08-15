@@ -1,0 +1,14 @@
+src_len: 1024
+tgt_len: 1024
+src_lang: en_XX
+tgt_lang: de_DE
+metrics: ['bleu']
+metrics_for_best_model: ['bleu']
+bleu_type: sacrebleu
+tokenizer_kwargs: {'src_lang': 'en_XX', 'tgt_lang': 'de_DE'}
+
+label_smoothing: 0.1
+train_batch_size: 4
+accumulation_steps: 48
+eval_batch_size: 8
+prefix: 'translate English to Germany: '

@@ -1,0 +1,10 @@
+src_len: 128
+tgt_len: 128
+metrics: ['bleu']
+bleu_type: multi-bleu
+metrics_for_best_model: ['bleu']
+
+train_batch_size: 16
+accumulation_steps: 12
+eval_batch_size: 64
+prefix: 'Transfer style from informal to formal: '

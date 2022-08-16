@@ -32,13 +32,15 @@ Output
 
 ## LeaderBoard
 
-Descending order by METRIC.
+Ascending order by Perplexity.
 
-| Model | Metric | Repository | Generated Text |
-| ----- | ------ | ---------- | -------------- |
-|       |        |            |                |
-|       |        |            |                |
-|       |        |            |                |
+| Model                                                        | Perplexity | Repository | Generated Text |
+| ------------------------------------------------------------ | ---------- | ---------- | -------------- |
+| [Conv seq2seq + self-attention](https://aclanthology.org/P18-1082.pdf) | $36.56$    |            |                |
+| [Conv seq2seq](https://aclanthology.org/P18-1082.pdf)        | $45.54$    |            |                |
+| [LSTM seq2seq](https://aclanthology.org/P18-1082.pdf)        | $46.79$    |            |                |
+| [GCNN + self-attention LM](https://aclanthology.org/P18-1082.pdf) | $51.18$    |            |                |
+| [GCNN LM](https://aclanthology.org/P18-1082.pdf)             | $54.79$    |            |                |
 
 ## Citation
 

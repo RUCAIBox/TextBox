@@ -1,13 +1,4 @@
-import itertools
-import logging
-import os
-from numpy import pad
-import torch
-import warnings
-from torch import Tensor
-from typing import List
-from torch.utils.data import DataLoader, Dataset
-from textbox import CLM_MODELS
+from torch.utils.data import DataLoader
 from textbox.data.denoising_dataset import TextInfillingCollate, DenoisingCollate
 from textbox.data.abstract_dataset import AbstractDataset, AbstractCollate
 from logging import getLogger
@@ -32,8 +23,8 @@ def data_preparation(config, tokenizer):
     logger = getLogger(__name__)
     logger.info(f'Pretrain type: {collate_fn.get_type()}')
 
-    train_dataloader = DataLoader(train_dataset, batch_size=config['train_batch_size'], shuffle=True, collate_fn=collate_fn(config, tokenizer, 'train'))
-    valid_dataloader = DataLoader(valid_dataset, batch_size=config['eval_batch_size'], shuffle=False, collate_fn=collate_fn(config, tokenizer, 'valid'))
-    test_dataloader = DataLoader(test_dataset, batch_size=config['eval_batch_size'], shuffle=False, collate_fn=collate_fn(config, tokenizer, 'test'))
+    train_dataloader = DataLoader(train_dataset, batch_size=config['train_batch_size'], shuffle=True, pin_memory=True, collate_fn=collate_fn(config, tokenizer, 'train'))
+    valid_dataloader = DataLoader(valid_dataset, batch_size=config['eval_batch_size'], shuffle=False, pin_memory=True, collate_fn=collate_fn(config, tokenizer, 'valid'))
+    test_dataloader = DataLoader(test_dataset, batch_size=config['eval_batch_size'], shuffle=False, pin_memory=True, collate_fn=collate_fn(config, tokenizer, 'test'))
     return train_dataloader, valid_dataloader, test_dataloader
 

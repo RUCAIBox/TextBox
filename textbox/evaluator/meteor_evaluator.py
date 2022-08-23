@@ -24,8 +24,8 @@ class MeteorEvaluator(AbstractEvaluator):
         if self.meteor_type == 'pycocoevalcap':
             from pycocoevalcap.meteor.meteor import Meteor
             
-            refs = {idx: r for idx, r in enumerate(reference_corpus)}
-            gen = {idx: [g] for idx, g in enumerate(generate_corpus)}
+            refs = {idx: r for idx, r in enumerate(reference_corpus.tokenized_text)}
+            gen = {idx: [g] for idx, g in enumerate(generate_corpus.tokenized_text)}
             score = Meteor().compute_score(refs, gen)
             if self.corpus_meteor:
                 score = score[0]
@@ -36,7 +36,7 @@ class MeteorEvaluator(AbstractEvaluator):
             from nltk.translate.meteor_score import meteor_score
 
             results['meteor'] = []
-            for gen, refs in zip(generate_corpus, reference_corpus):
+            for gen, refs in zip(generate_corpus.tokens, reference_corpus.tokens):
                 score = meteor_score(refs, gen)
                 results['meteor'].append(score * 100)
         return results

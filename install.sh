@@ -54,11 +54,13 @@ echo -e "\033[0;32mInstalling requirements (fastseq) ...\033[0m"
 pip install git+https://github.com/microsoft/fastseq.git > /dev/null
 
 echo -e "\033[0;32mInstalling requirements (rouge) ...\033[0m"
-pip install -U git+https://github.com/pltrdy/pyrouge > /dev/null
+pip install -U git+https://github.com/pltrdy/pyrouge.git > /dev/null
 git clone https://github.com/pltrdy/files2rouge.git  > /dev/null
 cd files2rouge || exit
-[ -d "~/.files2rouge" ] && mv ~/.files2rouge ~/.files2rouge.bak\
-	&& echo -e "\033[1;33mRenaming ~/.files2rouge to ~/.files2rouge.bak\033[0m"
+if [[ -d ~/.files2rouge ]]; then
+    mv ~/.files2rouge ~/.files2rouge.bak
+    echo -e "\033[1;33mRenaming ~/.files2rouge to ~/.files2rouge.bak\033[0m"
+fi
 echo -e '\n' | python setup_rouge.py > /dev/null
 python setup.py install > /dev/null
 cd ..

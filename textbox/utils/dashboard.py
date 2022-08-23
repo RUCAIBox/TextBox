@@ -124,7 +124,8 @@ class SummaryTracker:
             mode: Literal of "train" or "valid"
         """
         self.current_mode = mode
-        self.axes.update_axe(mode, 'epoch')
+        if mode == 'train' or mode == 'valid':
+            self.axes.update_axe(mode, 'epoch')
         self.current_epoch = EpochTracker(self.metrics_for_best_model, mode=mode, axes=self.axes)
         self.current_epoch.on_epoch_start()
 
@@ -156,8 +157,9 @@ class SummaryTracker:
 
     def set_metrics_results(self, results: dict):
         r"""Record the metrics results."""
+        tag = 'metrics/' if self.current_mode != 'eval' else 'test/'
         for metric, result in results.items():
-            self.add_any('metrics/' + metric, result)
+            self.add_any(tag + metric, result)
             if not isinstance(result, str):
                 self.current_epoch.update_metrics({metric: result})
 
@@ -209,7 +211,7 @@ class SummaryTracker:
     def add_scalar(self, tag: str, scalar_value: Union[float, int]):
         r"""Add a scalar (`float` or `int`) to summary."""
         info = {tag: scalar_value}
-        info.update(self.axes.as_dict())
+        #info.update(self.axes.as_dict())
         if self._is_local_main_process and not self.tracker_finished:
             wandb.log(info, step=self.axes.train_step, commit=False)
 
@@ -436,7 +438,7 @@ def init_dashboard(
             project=project,
             name=name,
             config=config.final_config_dict,
-            mode='disabled' if config['quick_test'] else 'online'
+            mode='online'#'disabled' if config['quick_test'] else 'online'
         )
     )
 

@@ -545,5 +545,7 @@ class Trainer(AbstractTrainer):
         et.update_metrics(result)
         if not is_valid:
             self.logger.info('Evaluation result:\n{}'.format(et.metrics_info(sep=",\n", indent=" ")))
+            self._summary_tracker.new_epoch('eval')
+            self._summary_tracker.set_metrics(result)
 
         return et.as_dict()

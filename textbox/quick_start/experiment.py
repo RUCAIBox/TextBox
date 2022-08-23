@@ -107,6 +107,8 @@ class Experiment:
     def _do_test(self):
         if self.do_test:
             self.test_result = self.trainer.evaluate(self.test_data, model_file=self.__base_config['load_experiment'])
+            self._summary_tracker.new_epoch('eval')
+            self._summary_tracker.set_metrics_results(result)
 
     def _on_experiment_end(self):
         finish_dashboard()

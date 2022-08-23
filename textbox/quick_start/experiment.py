@@ -1,4 +1,8 @@
+import os
 import logging
+import traceback
+import wandb
+from wandb import AlertLevel
 from copy import copy
 from logging import getLogger
 from typing import Optional, Tuple, Any, List, Dict
@@ -109,15 +113,25 @@ class Experiment:
             self.test_result = self.trainer.evaluate(self.test_data, model_file=self.__base_config['load_experiment'])
 
     def _on_experiment_end(self):
-        finish_dashboard()
+        if self.__base_config['max_save'] == 0:
+            saved_filename = os.path.abspath(os.path.join(self.__base_config['checkpoint_dir'], self.__base_config['filename']) + '.pth')
+            saved_link = os.readlink(saved_filename) if os.path.exists(saved_filename) else ''
+            from ..utils import safe_remove
+            safe_remove(saved_filename)
+            safe_remove(saved_link)
+        finish_dashboard(self.test_result)
         self.__extended_config = None
 
     def run(self, extended_config: Optional[dict] = None) -> Tuple[Optional[ResultType], Optional[ResultType]]:
-
-        self._on_experiment_start(extended_config)
-
-        self._do_train_and_valid()
-        self._do_test()
-
-        self._on_experiment_end()
-        return self.valid_result, self.test_result
+        try:
+            self._on_experiment_start(extended_config)
+            self._do_train_and_valid()
+            self._do_test()
+            self._on_experiment_end()
+        except Exception as e:
+            if self.__base_config['email']:
+                wandb.alert(title=f"Error {self.__base_config['model']}-{self.__base_config['dataset']}", 
+                            text=f"{self.__base_config['cmd']}\n{traceback.format_exc()}",
+                            level=AlertLevel.ERROR)
+            self.logger.error(traceback.format_exc())
+            # raise e

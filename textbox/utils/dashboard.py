@@ -106,11 +106,11 @@ class SummaryTracker:
         r"""Call at the beginning of experiment."""
         if self._is_local_main_process:
             self._run = wandb.init(reinit=True, **self.kwargs)
-            for axe in metrics_labels:
-                wandb.define_metric(axe)
-            wandb.define_metric("loss/train", step_metric=train_step)
-            wandb.define_metric("loss/valid", step_metric=train_step)
-            wandb.define_metric("metrics/*", step_metric=train_step)
+            # for axe in metrics_labels:
+            #     wandb.define_metric(axe)
+            wandb.define_metric("loss/train")
+            wandb.define_metric("loss/valid")
+            wandb.define_metric("metrics/*")
 
         self.axes = Timestamp()
 
@@ -209,7 +209,7 @@ class SummaryTracker:
     def add_scalar(self, tag: str, scalar_value: Union[float, int]):
         r"""Add a scalar (`float` or `int`) to summary."""
         info = {tag: scalar_value}
-        info.update(self.axes.as_dict())
+        # info.update(self.axes.as_dict())
         if self._is_local_main_process and not self.tracker_finished:
             wandb.log(info, step=self.axes.train_step, commit=False)
 
@@ -228,11 +228,11 @@ class SummaryTracker:
             corpus = wandb.Table(columns=[tag], data=pd.DataFrame(corpus))
             wandb.log({tag: corpus}, step=self.axes.train_step)
 
-    def on_experiment_end(self):
+    def on_experiment_end(self, test_result):
         """Call at the end of experiment. `finish_dashboard()` will automatically call this function."""
         if self._is_local_main_process:
             if self._email:
-                wandb.alert(title="Training Finished", text="The training is finished.")
+                wandb.alert(title=f"Finished {self.kwargs['project']}", text=f"{self.kwargs['config']['cmd']}\n{test_result}")
             self.flush_text()
             self._run.finish()
         self.tracker_finished = True
@@ -349,7 +349,7 @@ class EpochTracker:
         if _k.lower() in self.metrics_for_best_model:
             _o += '<'
         if isinstance(_v, float):
-            _o += f'{_k}: {_v:.4f}'
+            _o += f'{_k}: {_v:.2f}'
         if _k.lower() in self.metrics_for_best_model:
             _o += '>'
         return _o + sep
@@ -418,7 +418,7 @@ def init_dashboard(
         >>> ...
         >>> finish_dashboard()
     """
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
     global root
     if root is not None:
@@ -447,9 +447,9 @@ def start_dashboard():
     root.on_experiment_start()
 
 
-def finish_dashboard():
+def finish_dashboard(test_result):
     """Close dashboard tracking."""
-    root.on_experiment_end()
+    root.on_experiment_end(test_result)
 
 
 def get_dashboard() -> SummaryTracker:

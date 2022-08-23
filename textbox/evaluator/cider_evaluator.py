@@ -19,8 +19,8 @@ class CiderEvaluator(AbstractEvaluator):
             dict: a dict of metrics <metric> which record the results according to self.ngrams
         """
         results = {}
-        refs = {idx: r for idx, r in enumerate(reference_corpus)}
-        gen = {idx: [g] for idx, g in enumerate(generate_corpus)}
+        refs = {idx: r for idx, r in enumerate(reference_corpus.tokenized_text)}
+        gen = {idx: [g] for idx, g in enumerate(generate_corpus.tokenized_text)}
         score = Cider().compute_score(refs, gen)[0]
         results['CIDEr'] = score
         return results

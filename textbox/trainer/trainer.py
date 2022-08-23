@@ -16,7 +16,7 @@ from textbox.utils.dashboard import get_dashboard, Timestamp, EpochTracker
 from .scheduler import (
     AbstractScheduler, InverseSquareRootScheduler, CosineScheduler, LinearScheduler, ConstantScheduler
 )
-from ..data.abstract_dataloader import AbstractDataLoader
+from torch.utils.data import DataLoader
 from ..evaluator import BaseEvaluator
 from ..model.abstract_model import AbstractModel
 from ..utils import ensure_dir, serialized_save, init_seed
@@ -33,13 +33,13 @@ class AbstractTrainer:
         self.model = model
         self.logger = getLogger(__name__)
 
-    def fit(self, train_data: AbstractDataLoader):
+    def fit(self, train_data: DataLoader):
         r"""Train the model based on the train data.
         """
 
         raise NotImplementedError('Method `fit()` should be implemented.')
 
-    def evaluate(self, eval_data: AbstractDataLoader):
+    def evaluate(self, eval_data: DataLoader):
         r"""Evaluate the model based on the eval data.
         """
 
@@ -66,10 +66,9 @@ class Trainer(AbstractTrainer):
         super(Trainer, self).__init__(config, model)
 
         self.device: torch.device = config['device']
-        self.filename = self.config['filename']
-        self.is_chinese_task = self.config['is_chinese_task']
-        self.is_EN2RO_task = self.config['is_EN2RO_task']
-        self.post_processing = self.config['post_processing']
+        self.filename = config['filename']
+        self.is_EN2RO_task = config['is_EN2RO_task']
+        self.post_processing = config['post_processing']
         self.accelerator = accelerator
 
         # Optimization strategy
@@ -120,10 +119,7 @@ class Trainer(AbstractTrainer):
             self.reference_file = os.path.join(config['data_path'], 'test.tgt')
             self.tmp_file = '/tmp/romamian_postprocessing.txt'
 
-        self.max_save = config['max_save']
-        if self.quick_test and self.max_save is None:
-            self.max_save = 0
-        self.max_save = self.max_save or 2
+        self.max_save = config['max_save'] if config['max_save'] and not self.quick_test else 1
         self.disable_tqdm = config['disable_tqdm'] or not self.accelerator.is_local_main_process
         self._summary_tracker = get_dashboard()
 
@@ -477,7 +473,7 @@ class Trainer(AbstractTrainer):
         r"""Evaluate the model based on the `eval_data`.
 
         Args:
-            eval_data (AbstractDataLoader): the eval data
+            eval_data (DataLoader): the eval data
             load_best_model (bool, optional): whether load the best model in the training process, default: True.
                                               It should be set True, if users want to test the model after training.
             model_file (str, optional): the saved model file, default: None. If users want to test the previously
@@ -514,11 +510,8 @@ class Trainer(AbstractTrainer):
         for batch_data in eval_tqdm:
             generated = self.accelerator.unwrap_model(self.model).generate(batch_data, eval_data, self.accelerator)
             generate_corpus.extend(generated)
-        if self.is_chinese_task:
-            reference_corpus = eval_data.dataset.target_tokens
-        else:
-            reference_corpus = eval_data.dataset.target_text
 
+        reference_corpus = eval_data.dataset.target_text
         generate_corpus = generate_corpus[:len(reference_corpus)]
 
         if self.post_processing == 'paraphrase':
@@ -534,7 +527,7 @@ class Trainer(AbstractTrainer):
         if self.is_save() or (self.is_EN2RO_task == True and is_valid == False):
             self.save_generated_text(generate_corpus, is_valid)
         
-        result = self.evaluator.evaluate(generate_corpus, reference_corpus)
+        result = self.evaluator.evaluate(generate_corpus, eval_data.dataset)
         
         if (self.is_EN2RO_task == True and is_valid == False):
             self.logger.info('Running post-processing on Romanian.')

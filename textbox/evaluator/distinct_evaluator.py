@@ -1,6 +1,5 @@
 from collections import Counter
 from .abstract_evaluator import AbstractEvaluator
-from nltk.tokenize import word_tokenize
 
 
 class DistinctEvaluator(AbstractEvaluator):
@@ -15,15 +14,12 @@ class DistinctEvaluator(AbstractEvaluator):
     def _calc_metrics_info(self, generate_corpus, reference_corpus=None):
         results = {}
 
-        for i, gen in enumerate(generate_corpus):
-            generate_corpus[i] = word_tokenize(gen)
-
         if self.inter_distinct:
             ngrams_all = [Counter() for _ in range(self.distinct_max_ngrams)]
         else:
             scores = [[] for _ in range(self.distinct_max_ngrams)]
         
-        for gen in generate_corpus:
+        for gen in generate_corpus.tokens:
             ngrams = []
             for i in range(self.distinct_max_ngrams):
                 ngrams.append(gen[i:])

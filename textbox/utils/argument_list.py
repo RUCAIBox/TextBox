@@ -2,11 +2,11 @@
 Parameters start with underscore are internal variables and might be modified by program."""
 
 general_parameters = [
-    'gpu_id', 'use_gpu', 'DDP',  # GPU
+    'gpu_id', 'use_gpu',  # GPU
     'device', '_is_local_main_process',  # internal variables
     'seed', 'reproducibility',  # reproducibility
-    'config_files',  # input
-    'filename', 'generated_text_dir', 'checkpoint_dir', 'logdir', 'state', 'email',   # output
+    'config_files', 'cmd',  # input
+    'filename', 'generated_text_dir', 'checkpoint_dir', 'logdir', 'saved', 'state', 'email',   # output
     'quick_test',  # partial experiment
     'space', 'algo', '_hyper_tuning',  # hyper tuning
     'multi_seed',  # multiple random seed
@@ -30,13 +30,14 @@ evaluation_parameters = [
     'lower_evaluation', 'multiref_strategy', 'bleu_max_ngrams', 'bleu_type', 'beam_size',
     'smoothing_function', 'corpus_bleu', 'rouge_max_ngrams', 'rouge_type', 'meteor_type', 'chrf_type',
     'distinct_max_ngrams', 'inter_distinct', 'unique_max_ngrams', 'self_bleu_max_ngrams', 'tgt_lang',
-    'decoding_strategy', 'metrics', 'n_grams', 'eval_batch_size',
+    'decoding_strategy', 'metrics', 'n_grams', 'eval_batch_size', 'corpus_meteor'
 ]
 
 model_parameters = [
     'model', 'model_name',  # model name
     'model_path', 'config_path', 'config_kwargs', 'tokenizer_path', 'tokenizer_kwargs', 'generation_kwargs',  # hf
     'efficient_kwargs', 'efficient_methods', 'efficient_unfreeze_model',  # efficient methods
+    'label_smoothing',
 ]
 
 dataset_parameters = [

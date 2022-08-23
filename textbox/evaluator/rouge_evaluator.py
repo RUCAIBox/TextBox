@@ -30,17 +30,16 @@ class RougeEvaluator(AbstractEvaluator):
             from files2rouge import settings
             from files2rouge import utils
             from pyrouge import Rouge155
-            from nltk.tokenize import word_tokenize
             
             with tempfile.TemporaryDirectory() as tmpdir:
                 gen_file = f"{tmpdir}/gen.txt"
                 ref_file = f"{tmpdir}/ref.txt"
                 with open(gen_file, 'w') as f:
-                    f.write('\n'.join([' '.join(word_tokenize(g)) for g in generate_corpus]))
+                    f.write('\n'.join(generate_corpus.tokenized_text))
                 with open(ref_file, 'w') as f:
-                    for refs in reference_corpus:
+                    for refs in reference_corpus.tokenized_text:
                         assert len(refs) == 1, "`files2rouge` only supports single reference."
-                        f.write(' '.join(word_tokenize(refs[0])) + '\n')
+                        f.write(refs[0] + '\n')
                 sys_root, model_root = [os.path.join(tmpdir, _) for _ in ["system", "model"]]
                 os.mkdir(sys_root)
                 os.mkdir(model_root)
@@ -65,10 +64,10 @@ class RougeEvaluator(AbstractEvaluator):
         elif self.rouge_type == 'rouge':
             from rouge import Rouge 
 
-            reference_corpus = [ref[0] for ref in reference_corpus]
+            reference_corpus = [ref[0] for ref in reference_corpus.tokenized_text]
             metrics = [f'rouge-{i}' for i in range(1, self.rouge_max_ngrams + 1)] + ['rouge-l']
             rouge = Rouge(metrics=metrics)
-            scores = rouge.get_scores(generate_corpus, reference_corpus, avg=True)
+            scores = rouge.get_scores(generate_corpus.tokenized_text, reference_corpus, avg=True)
             for i in range(1, self.rouge_max_ngrams + 1):
                 results[f'rouge-{i}'] = scores[f'rouge-{i}']['f'] * 100
             results['rouge-l'] = scores['rouge-l']['f'] * 100
@@ -77,7 +76,7 @@ class RougeEvaluator(AbstractEvaluator):
             from rouge import Rouge 
 
             rouge = Rouge(metrics=['rouge-n', 'rouge-l'], max_n=self.rouge_max_ngrams, limit_length=False, apply_avg=False, apply_best=True, weight_factor=1.2)
-            scores = rouge.get_scores(generate_corpus, reference_corpus)
+            scores = rouge.get_scores(generate_corpus.text, reference_corpus.text)
             for i in range(1, self.rouge_max_ngrams + 1):
                 results[f'rouge-{i}'] = scores[f'rouge-{i}']['f'] * 100
             results['rouge-l'] = scores['rouge-l']['f'] * 100
@@ -88,7 +87,7 @@ class RougeEvaluator(AbstractEvaluator):
             rouge_types = [f'rouge{i}' for i in range(1, self.rouge_max_ngrams + 1)] + ["rougeLsum"]
             rouge = rouge_scorer.RougeScorer(rouge_types=rouge_types, split_summaries=True, use_stemmer=True)
             results = {k: [] for k in [f'rouge-{i}' for i in range(1, self.rouge_max_ngrams + 1)] + ['rouge-l']}
-            for gen, refs in zip(generate_corpus, reference_corpus):
+            for gen, refs in zip(generate_corpus.text, reference_corpus.text):
                 scores = [rouge.score(ref, gen) for ref in refs]
                 if len(scores) > 1 and self.multiref_strategy == 'leave_one_out':
                     func = lambda x: (max(x) * (len(x) - 1) + np.partition(x, -2)[-2]) / len(x)
@@ -102,8 +101,8 @@ class RougeEvaluator(AbstractEvaluator):
         elif self.rouge_type == 'pycocoevalcap':
             from pycocoevalcap.rouge.rouge import Rouge
 
-            refs = {idx: r for idx, r in enumerate(reference_corpus)}
-            gen = {idx: [g] for idx, g in enumerate(generate_corpus)}
+            refs = {idx: r for idx, r in enumerate(reference_corpus.tokenized_text)}
+            gen = {idx: [g] for idx, g in enumerate(generate_corpus.tokenized_text)}
             score = Rouge().compute_score(refs, gen)[0]
             results['rouge-l'] = score * 100
         return results

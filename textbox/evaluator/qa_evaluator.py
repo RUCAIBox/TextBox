@@ -60,7 +60,7 @@ class QaEvaluator(AbstractEvaluator):
     def _calc_metrics_info(self, generate_corpus, reference_corpus):
         results = {'em': [], 'f1': []}
         
-        for gen, refs in zip(generate_corpus, reference_corpus):
+        for gen, refs in zip(generate_corpus.tokenized_text, reference_corpus.tokenized_text):
             em = self._metric_max_over_ground_truths(self._exact_match_score, gen, refs)
             f1 = self._metric_max_over_ground_truths(self._f1_score, gen, refs)
             results['em'].append(em * 100)

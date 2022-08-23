@@ -5,7 +5,6 @@ import warnings
 import traceback
 from itertools import zip_longest
 from packaging import version
-from nltk.tokenize import word_tokenize
 from .abstract_evaluator import AbstractEvaluator
 
 
@@ -44,26 +43,18 @@ class BleuEvaluator(AbstractEvaluator):
             dict: a dict of metrics <metric> which record the results according to self.ngrams
         """
         results = {}
-
-        # word_tokenize = lambda x: x.split()
         if self.bleu_type in ['nltk', 'fast-bleu', 'pycocoevalcap']:
             for ngram in self.ngrams:
                 results[ngram] = []
-        if self.bleu_type in ['nltk', 'fast-bleu']:
-            for i, gen in enumerate(generate_corpus):
-                generate_corpus[i] = word_tokenize(gen)
-            for refs in reference_corpus:
-                for i, ref in enumerate(refs):
-                    refs[i] = word_tokenize(ref)
         
         if self.bleu_type == 'fast-bleu':
             from fast_bleu import bleu
 
-            for i, refs in enumerate(reference_corpus):
+            for i, refs in enumerate(reference_corpus.tokens):
                 assert len(refs) == 1, "`fast-bleu` only supports single reference."
                 reference_corpus[i] = refs[0]
-            bleu = bleu(reference_corpus, dict(zip(self.ngrams, self.ngram_weights)))
-            scores = bleu.get_score(generate_corpus)
+            bleu = bleu(reference_corpus.tokens, dict(zip(self.ngrams, self.ngram_weights)))
+            scores = bleu.get_score(generate_corpus.tokens)
             for ngram in self.ngrams:
                 results[ngram] = [s * 100 for s in scores[ngram]]
         
@@ -72,10 +63,10 @@ class BleuEvaluator(AbstractEvaluator):
 
             if self.corpus_bleu:
                 for ngram, weights in zip(self.ngrams, self.ngram_weights):
-                    score = corpus_bleu(reference_corpus, generate_corpus, weights, getattr(SmoothingFunction(), f"method{self.smoothing_function}"))
+                    score = corpus_bleu(reference_corpus.tokens, generate_corpus.tokens, weights, getattr(SmoothingFunction(), f"method{self.smoothing_function}"))
                     results[ngram] = score * 100
             else: # sentence_bleu
-                for gen, refs in zip(generate_corpus, reference_corpus):
+                for gen, refs in zip(generate_corpus.tokens, reference_corpus.tokens):
                     for ngram, weights in zip(self.ngrams, self.ngram_weights):
                         score = sentence_bleu(refs, gen, weights, getattr(SmoothingFunction(), f"method{self.smoothing_function}"))
                         results[ngram].append(score * 100)
@@ -84,7 +75,7 @@ class BleuEvaluator(AbstractEvaluator):
             from .utils.pymteval import BLEUScore
 
             bleu = BLEUScore()
-            for gen, refs in zip(generate_corpus, reference_corpus):
+            for gen, refs in zip(generate_corpus.text, reference_corpus.text):
                 bleu.append(gen, refs)
             results['bleu'] = bleu.score() * 100
         
@@ -92,30 +83,30 @@ class BleuEvaluator(AbstractEvaluator):
             import sacrebleu
 
             reference_corpus = list(zip_longest(*reference_corpus))
-            bleu = sacrebleu.corpus_bleu(generate_corpus, reference_corpus)
+            bleu = sacrebleu.corpus_bleu(generate_corpus.text, reference_corpus.text)
             results['bleu'] = bleu.score
             results['bleu-precisions'] = bleu.prec_str
         
         elif self.bleu_type == 'pycocoevalcap':
             from pycocoevalcap.bleu.bleu import Bleu
-            refs = {idx: r for idx, r in enumerate(reference_corpus)}
-            gen = {idx: [g] for idx, g in enumerate(generate_corpus)}
+            refs = {idx: r for idx, r in enumerate(reference_corpus.tokenized_text)}
+            gen = {idx: [g] for idx, g in enumerate(generate_corpus.tokenized_text)}
             scores = Bleu(4).compute_score(refs, gen, verbose=0)[0]
             for ngram, score in zip(self.ngrams, scores):
                 results[ngram] = score * 100
         
         elif self.bleu_type == 'multi-bleu':
-            reference_corpus = list(zip_longest(*reference_corpus))
+            reference_corpus = list(zip_longest(*reference_corpus.tokenized_text))
             max_ref_num = len(reference_corpus)
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 gen_file = f"{tmpdir}/gen.txt"
                 ref_file = f"{tmpdir}/ref.txt"
                 with open(f"{gen_file}", "w") as f:
-                    f.write("\n".join([' '.join(word_tokenize(gen)) for gen in generate_corpus]))
+                    f.write("\n".join(generate_corpus.tokenized_text))
                 for i in range(max_ref_num):
                     with open(f"{ref_file}{i}", "w") as f:
-                        f.write('\n'.join([' '.join(word_tokenize(ref)) if ref is not None else '' for ref in reference_corpus[i]]))
+                        f.write('\n'.join([ref or '' for ref in reference_corpus[i]]))
                 try:
                     ref_file = f"{ref_file}[{','.join([str(i) for i in range(max_ref_num)])}]"
                     scores = subprocess.check_output(f"perl textbox/evaluator/utils/multi-bleu.perl {ref_file} < {gen_file}", stderr=subprocess.STDOUT, shell=True)

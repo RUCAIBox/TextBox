@@ -22,7 +22,7 @@ class NistEvaluator(AbstractEvaluator):
         results = {}
 
         nist = NISTScore()
-        for gen, refs in zip(generate_corpus, reference_corpus):
+        for gen, refs in zip(generate_corpus.text, reference_corpus.text):
             nist.append(gen, refs)
         results['nist'] = nist.score()
         return results

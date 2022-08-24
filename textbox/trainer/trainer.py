@@ -120,9 +120,8 @@ class Trainer(AbstractTrainer):
             self.tmp_file = '/tmp/romamian_postprocessing.txt'
 
         self.max_save = config['max_save']
-        if self.quick_test and self.max_save is None:
-            self.max_save = 0
-        self.max_save = self.max_save or 2
+        if self.max_save is None:
+            self.max_save = 1 if self.quick_test else 2
         self.disable_tqdm = config['disable_tqdm'] or not self.accelerator.is_local_main_process
         self._summary_tracker = get_dashboard()
 

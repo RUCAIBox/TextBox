@@ -25,7 +25,7 @@ class Text:
         self.text = text.lower() if lower else text
         if tokenizer:
             self.text = tokenizer.decode(tokenizer.encode(self.text), skip_special_tokens=True)
-        self.tokens = word_tokenize(text)
+        self.tokens = word_tokenize(self.text)
         self.tokenized_text = ' '.join(self.tokens)
     
 

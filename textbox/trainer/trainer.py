@@ -92,7 +92,6 @@ class Trainer(AbstractTrainer):
         `range(self.start_epoch, self.epochs)`"""
         self.max_steps = config['max_steps']  # max training batch step
 
-        self.best_valid_timestamp = Timestamp()
         self.valid_intervals = self.config['valid_intervals']
         self.valid_strategy = self.config['valid_strategy']
         self._valid_count = 0
@@ -188,6 +187,11 @@ class Trainer(AbstractTrainer):
         """Retrieve best result dict from `self.valid_result_list`."""
         return self.valid_result_dict[self.best_valid_timestamp.valid_epoch]
 
+    @property
+    def best_valid_timestamp(self) -> Timestamp:
+        """Retrieve timestamp of best valid result."""
+        return self._summary_tracker.best_valid_timestamp
+
     def is_save(self) -> bool:
         return self.accelerator.is_local_main_process
 
@@ -241,9 +245,10 @@ class Trainer(AbstractTrainer):
             if self.stopped:
                 break
 
+        result = self._summary_tracker.epoch_dict()
         self._summary_tracker.on_epoch_end()
 
-        return self._summary_tracker.epoch_dict()
+        return result
 
     @torch.no_grad()
     def _valid(
@@ -294,10 +299,9 @@ class Trainer(AbstractTrainer):
         
         self.model.train()
 
-        self.valid_result_dict[self._summary_tracker.axes.valid_epoch] = self._summary_tracker.current_epoch
+        self.valid_result_dict[self.timestamp.valid_epoch] = self._summary_tracker.current_epoch
 
-        self.best_valid_timestamp, current_best = self._summary_tracker.get_best_valid()
-        stopped = bool(self.stopping_steps) and self._early_stopping(current_best)
+        stopped = bool(self.stopping_steps) and self._early_stopping(self._summary_tracker.is_best_valid)
 
         if self.is_save():
             self.save_checkpoint()
@@ -346,7 +350,7 @@ class Trainer(AbstractTrainer):
             'timestamp': self.timestamp,
             'config': self.config,
             # parameters for recording only
-            'summary': self.valid_result_dict[self._summary_tracker.axes.valid_epoch],
+            'summary': self.valid_result_dict[self.timestamp.valid_epoch],
         }
         self.logger.debug(checkpoint)
         return checkpoint
@@ -440,8 +444,8 @@ class Trainer(AbstractTrainer):
         self.accelerator.wait_for_everyone()
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
-            self._train_epoch(train_data, epoch_idx, valid_data)
-            self.train_loss_list.append(self._summary_tracker.epoch_loss)
+            loss = self._train_epoch(train_data, epoch_idx, valid_data)['loss']
+            self.train_loss_list.append(loss)
 
             # valid
             if valid_data:
@@ -541,11 +545,5 @@ class Trainer(AbstractTrainer):
             os.system(f'bash {self.shell_command} {self.generated_file} {self.reference_file} > {self.tmp_file}')
             with open(self.tmp_file, 'r') as fin:
                 result['fix_bleu'] = float(fin.readline().strip())
-        et = EpochTracker(self.metrics_for_best_model)
-        et.update_metrics(result)
-        if not is_valid:
-            self.logger.info('Evaluation result:\n{}'.format(et.metrics_info(sep=",\n", indent=" ")))
-            self._summary_tracker.new_epoch('eval')
-            self._summary_tracker.set_metrics(result)
 
-        return et.as_dict()
+        return result

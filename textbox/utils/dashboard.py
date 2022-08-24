@@ -95,19 +95,27 @@ class SummaryTracker:
         self._run = None
         self.axes = None
 
-        self.current_epoch: Optional[EpochTracker] = None
-        self.current_mode: Optional[str] = None
+        self._current_epoch: List[EpochTracker] = []
+        self._current_mode: List[str] = []
+        self.is_best_valid: Optional[bool] = None
 
         self.best_valid_score = None
         self.best_valid_timestamp = None
-        self.current_best = None
+        
+    @property
+    def current_epoch(self):
+        return self._current_epoch[-1]
+
+    @property
+    def current_mode(self):
+        return self._current_mode[-1]
 
     def on_experiment_start(self):
         r"""Call at the beginning of experiment."""
         if self._is_local_main_process:
             self._run = wandb.init(reinit=True, **self.kwargs)
-            for axe in metrics_labels:
-                wandb.define_metric(axe)
+            # for axe in metrics_labels:
+            #    wandb.define_metric(axe)
             wandb.define_metric("loss/train", step_metric=train_step)
             wandb.define_metric("loss/valid", step_metric=train_step)
             wandb.define_metric("metrics/*", step_metric=train_step)
@@ -116,17 +124,17 @@ class SummaryTracker:
 
         self.best_valid_score = -math.inf
         self.best_valid_timestamp = Timestamp()
-        self.current_best = False
+        self.is_best_valid = None
 
     def new_epoch(self, mode: str):
         r""" Call at the beginning of one epoch.
         Args:
             mode: Literal of "train" or "valid"
         """
-        self.current_mode = mode
+        self._current_mode.append(mode)
         if mode == 'train' or mode == 'valid':
             self.axes.update_axe(mode, 'epoch')
-        self.current_epoch = EpochTracker(self.metrics_for_best_model, mode=mode, axes=self.axes)
+        self._current_epoch.append(EpochTracker(self.metrics_for_best_model, mode=mode, axes=self.axes))
         self.current_epoch.on_epoch_start()
 
     def new_step(self):
@@ -163,6 +171,12 @@ class SummaryTracker:
             if not isinstance(result, str):
                 self.current_epoch.update_metrics({metric: result})
 
+        self.is_best_valid = False
+        if self.epoch_score > self.best_valid_score:
+            self.best_valid_score = self.epoch_score
+            self.best_valid_timestamp = copy(self.axes)
+            self.is_best_valid = True
+
     @property
     def epoch_score(self) -> float:
         r"""Get the score of current epoch calculated by `metrics_for_best_model`.
@@ -172,28 +186,15 @@ class SummaryTracker:
         """
         return self.current_epoch.calc_score()
 
-    def get_best_valid(self) -> Tuple[Timestamp, bool]:
-        r"""Get the epoch index of the highest score.
-
-        Returns:
-            Tuple[Timestamp, bool]: A tuple of the best epoch timestamp and a boolean indicating
-                whether the current epoch is the best
-        """
-        self.current_best = False
-        if self.epoch_score > self.best_valid_score:
-            self.best_valid_score = self.epoch_score
-            self.best_valid_timestamp = copy(self.axes)
-            self.current_best = True
-        return self.best_valid_timestamp, self.current_best
-
     def epoch_dict(self) -> dict:
         r"""Get result of current epoch."""
         return self.current_epoch.as_dict()
 
     def on_epoch_end(self):
         r"""Call at the end of one epoch."""
-        self.current_epoch.on_epoch_end(self.current_best if self.current_mode == 'valid' else False)
-        self.current_mode = None
+        self.current_epoch.on_epoch_end(self.is_best_valid if self.current_mode == 'valid' else False)
+        del self._current_mode[-1]
+        del self._current_epoch[-1]
 
     def add_text(self, tag: str, text_string: str):
         r"""Add text to summary. The text will automatically upload to W&B at the end of experiment

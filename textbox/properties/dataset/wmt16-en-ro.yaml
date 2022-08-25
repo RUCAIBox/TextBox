@@ -5,6 +5,7 @@ tgt_lang: ro_RO
 metrics: ['bleu']
 metrics_for_best_model: ['bleu']
 bleu_type: sacrebleu-romanian
+sacrebleu_romanian: 'asset/sacrebleu-romanian/sacrebleu-romanian.sh'
 tokenizer_kwargs: {'src_lang': 'en_XX', 'tgt_lang': 'ro_RO'}
 
 label_smoothing: 0.1

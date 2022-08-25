@@ -20,7 +20,7 @@ class BleuEvaluator(AbstractEvaluator):
         self.ngrams = ['bleu-{}'.format(n) for n in range(1, self.max_ngrams + 1)]
         self.smoothing_function = config['smoothing_function']
         self.corpus_bleu = config['corpus_bleu']
-        self.sacrebleu_romanian = self.config['romanian_postprocessing']
+        self.sacrebleu_romanian = self.config['sacrebleu_romanian']
         if self.bleu_type == 'nltk' and self.smoothing_function > 0 and config['dataset'] in ['pc', 'dd']:
             nltk_version = version.parse(nltk.__version__)
             if nltk_version < version.parse('3.2.2') or nltk_version > version.parse('3.4.5'):

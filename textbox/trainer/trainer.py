@@ -508,8 +508,9 @@ class Trainer(AbstractTrainer):
             generated = self.accelerator.unwrap_model(self.model).generate(batch_data, eval_data, self.accelerator)
             generate_corpus.extend(generated)
 
-        reference_corpus = eval_data.dataset.target_text
-        generate_corpus = generate_corpus[:len(reference_corpus)]
+        corpus_len = len(eval_data.dataset.target_text)
+        reference_dataset = eval_data.dataset
+        generate_corpus = generate_corpus[:corpus_len]
 
         if self.post_processing == 'paraphrase':
             for i, gen in enumerate(generate_corpus):
@@ -524,6 +525,6 @@ class Trainer(AbstractTrainer):
         if self.is_save():
             self.save_generated_text(generate_corpus, is_valid)
         
-        result = self.evaluator.evaluate(generate_corpus, reference_corpus)
+        result = self.evaluator.evaluate(generate_corpus, reference_dataset)
         
         return result

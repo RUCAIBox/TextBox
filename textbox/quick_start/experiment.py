@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from ..config.configurator import Config
 from ..data.utils import data_preparation
 from ..trainer.trainer import Trainer
-from ..utils.dashboard import init_dashboard, finish_dashboard, start_dashboard
+from ..utils.dashboard import init_dashboard, finish_dashboard, start_dashboard, get_dashboard
 from ..utils.logger import init_logger
 from ..utils.utils import get_model, get_tokenizer, get_trainer, init_seed
 
@@ -110,7 +110,12 @@ class Experiment:
 
     def _do_test(self):
         if self.do_test:
+            summary_tracker = get_dashboard()
+            summary_tracker.new_epoch('eval')
             self.test_result = self.trainer.evaluate(self.test_data, model_file=self.__base_config['load_experiment'])
+            summary_tracker.set_metrics_results(self.test_result)
+            self.logger.info('Evaluation result:\n{}'.format(summary_tracker.current_epoch.metrics_info(sep=",\n", indent=" ")))
+            summary_tracker.on_epoch_end()
 
     def _on_experiment_end(self):
         if self.__base_config['max_save'] == 0:

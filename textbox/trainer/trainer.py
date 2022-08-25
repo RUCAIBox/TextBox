@@ -67,7 +67,6 @@ class Trainer(AbstractTrainer):
 
         self.device: torch.device = config['device']
         self.filename = config['filename']
-        self.is_EN2RO_task = config['is_EN2RO_task']
         self.post_processing = config['post_processing']
         self.accelerator = accelerator
 
@@ -112,12 +111,6 @@ class Trainer(AbstractTrainer):
 
         ensure_dir(config['generated_text_dir'])
         self.saved_text_filename: str = os.path.join(config['generated_text_dir'], self.filename)
-
-        if (self.is_EN2RO_task == True):
-            self.shell_command = self.config['romanian_postprocessing']
-            self.generated_file = self.saved_text_filename + '.txt'
-            self.reference_file = os.path.join(config['data_path'], 'test.tgt')
-            self.tmp_file = '/tmp/romamian_postprocessing.txt'
 
         self.max_save = config['max_save'] if config['max_save'] and not self.quick_test else 1
         self.disable_tqdm = config['disable_tqdm'] or not self.accelerator.is_local_main_process
@@ -524,16 +517,10 @@ class Trainer(AbstractTrainer):
                     gen = gen[last:].strip()
                 generate_corpus[i] = gen
 
-        if self.is_save() or (self.is_EN2RO_task == True and is_valid == False):
+        if self.is_save():
             self.save_generated_text(generate_corpus, is_valid)
         
         result = self.evaluator.evaluate(generate_corpus, eval_data.dataset)
-        
-        if (self.is_EN2RO_task == True and is_valid == False):
-            self.logger.info('Running post-processing on Romanian.')
-            os.system(f'bash {self.shell_command} {self.generated_file} {self.reference_file} > {self.tmp_file}')
-            with open(self.tmp_file, 'r') as fin:
-                result['fix_bleu'] = float(fin.readline().strip())
         et = EpochTracker(self.metrics_for_best_model)
         et.update_metrics(result)
         if not is_valid:

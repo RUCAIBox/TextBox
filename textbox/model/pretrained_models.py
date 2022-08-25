@@ -219,7 +219,7 @@ class Pretrained_Models(AbstractModel):
         if self.is_casual_model:
             sample_outputs = sample_outputs[:, input_ids_len:]
         
-        decode_kwargs = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': True}
+        decode_kwargs = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': False}
         generated_text = self.tokenizer.batch_decode(sample_outputs, **decode_kwargs)
         generated_text = [g.strip() or 'NULL' for g in generated_text]
         return generated_text

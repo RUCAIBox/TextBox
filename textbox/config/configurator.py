@@ -247,6 +247,7 @@ class Config(object):
         self.final_config_dict['model'] = self.model
         self.final_config_dict['model_name'] = self.final_config_dict.get('model_name', self.model.lower())
         self.final_config_dict['data_path'] = os.path.join(self.final_config_dict['data_path'], self.dataset)
+        self.final_config_dict['cmd'] = ' '.join(sys.argv)
         self.setdefault('filename', f'{self.final_config_dict["model"]}'
                                     f'-{self.final_config_dict["dataset"]}'
                                     f'-{get_local_time()}')  # warning: filename is not replicable

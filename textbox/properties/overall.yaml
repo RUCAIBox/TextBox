@@ -1,14 +1,12 @@
 # general
 gpu_id: 0
 use_gpu: True
-DDP: False
 seed: 2020
 state: INFO
 reproducibility: True
 data_path: 'dataset/'
 checkpoint_dir: 'saved/'
 generated_text_dir: 'generated/'
-romanian_postprocessing: 'romanian_postprocessing.sh'
 
 # training settings
 epochs: 50
@@ -44,6 +42,7 @@ generation_kwargs: {'num_beams': 5, 'no_repeat_ngram_size': 3, 'early_stopping':
 efficient_methods: []
 efficient_kwargs: {}
 efficient_unfreeze_model: False
+label_smoothing: 0.1
 
 # Evaluation settings
 lower_evaluation: True

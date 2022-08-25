@@ -141,7 +141,7 @@ class SummaryTracker:
             raise RuntimeError('`new_epoch()` should be called before `new_step()`')
         self.axes.update_axe(self.current_mode, 'step')
 
-    def append_loss(self, loss: float):
+    def append_loss(self, loss: Union[float, torch.Tensor]):
         r"""Append loss of current step to tracker and update current step.
 
         Notes:
@@ -437,7 +437,7 @@ def init_dashboard(
             project=project,
             name=name,
             config=config.final_config_dict,
-            mode='online'#'disabled' if config['quick_test'] else 'online'
+            mode='disabled' if config['quick_test'] else 'online'
         )
     )
 

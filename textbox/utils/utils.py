@@ -245,6 +245,7 @@ from .enum_type import PLM_MODELS
 
 
 def get_local_time() -> str:
+    # 时间
     r"""Get current time
 
     Returns:
@@ -384,7 +385,9 @@ def get_model(model_name):
     if importlib.util.find_spec(module_path, __name__):
         model_module = importlib.import_module(module_path, __name__)
         model_class = getattr(model_module, model_name)
+        # 返回一个对象的属性值
     else:
+        # 没有找到
         raise ValueError("{} can't be found".format(model_name))
     return model_class
 
@@ -410,41 +413,45 @@ def get_trainer(model_name):
 def get_tokenizer(config):
     model_name = config['model_name']
     if model_name in PLM_MODELS:
+        print(model_name)
         tokenizer_kwargs = config['tokenizer_kwargs'] or {}
         tokenizer_path = config['tokenizer_path'] or config['model_path']
-        if (config['model_name'] in ['chinese-bart', 'chinese-pegasus', 'cpt']):
-            tokenizer = BertTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
-        else:
-            tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
+        # 获得tokenizer的参数和位置
+        # if (config['model_name'] in ['chinese-bart', 'chinese-pegasus', 'cpt']):
+        #     tokenizer = BertTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
+        # else:
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
+            # 选中不同的tokenizer
+        #  没有一个是bart
+        # # (1): tokenizer needs to add eos token
+        # if model_name in ['ctrl', 'openai-gpt']:
+        #     tokenizer.add_special_tokens(({'eos_token': '</s>'}))
 
-        # (1): tokenizer needs to add eos token
-        if model_name in ['ctrl', 'openai-gpt']:
-            tokenizer.add_special_tokens(({'eos_token': '</s>'}))
+        # # (2): tokenizer needs to add pad token
+        # if model_name in ['ctrl', 'gpt2', 'gpt_neo', 'openai-gpt']:
+        #     tokenizer.pad_token = tokenizer.eos_token
 
-        # (2): tokenizer needs to add pad token
-        if model_name in ['ctrl', 'gpt2', 'gpt_neo', 'openai-gpt']:
-            tokenizer.pad_token = tokenizer.eos_token
+        # # (3): tokenizer needs to change replace eos token with sep token
+        # if model_name in ['cpm']:
+        #     tokenizer.eos_token = tokenizer.sep_token
 
-        # (3): tokenizer needs to change replace eos token with sep token
-        if model_name in ['cpm']:
-            tokenizer.eos_token = tokenizer.sep_token
+        # # (4): tokenizer needs to modify `build_inputs_with_special_tokens()` and `num_special_tokens_to_add()`
+        # if model_name in ['blenderbot-small', 'cpm', 'ctrl', 'gpt2', 'gpt_neo', 'openai-gpt']:
+        #     tokenizer.build_inputs_with_special_tokens = lambda t0, t1=None: t0 + [tokenizer.eos_token_id]
+        #     # 为单句或者上下句添加特殊符号
+        #     tokenizer.num_special_tokens_to_add = lambda: 1
+        # elif model_name in ['opt']:
+        #     tokenizer.build_inputs_with_special_tokens = \
+        #         lambda t0, t1=None: [tokenizer.bos_token_id] + t0 + [tokenizer.eos_token_id]
+        #     tokenizer.num_special_tokens_to_add = lambda: 2
 
-        # (4): tokenizer needs to modify `build_inputs_with_special_tokens()` and `num_special_tokens_to_add()`
-        if model_name in ['blenderbot-small', 'cpm', 'ctrl', 'gpt2', 'gpt_neo', 'openai-gpt']:
-            tokenizer.build_inputs_with_special_tokens = lambda t0, t1=None: t0 + [tokenizer.eos_token_id]
-            tokenizer.num_special_tokens_to_add = lambda: 1
-        elif model_name in ['opt']:
-            tokenizer.build_inputs_with_special_tokens = \
-                lambda t0, t1=None: [tokenizer.bos_token_id] + t0 + [tokenizer.eos_token_id]
-            tokenizer.num_special_tokens_to_add = lambda: 2
-
-        # (5): tokenizer needs to set src_lang, tgt_lang (used in translation task)
-        if model_name in ['m2m_100', 'mbart']:
-            assert config['src_lang'] and config['tgt_lang'], \
-                model_name + ' needs to specify source language and target language ' \
-                             'with `--src_lang=xx` and `--tgt_lang=xx`'
-            tokenizer.src_lang = config['src_lang']
-            tokenizer.tgt_lang = config['tgt_lang']
+        # # (5): tokenizer needs to set src_lang, tgt_lang (used in translation task)
+        # if model_name in ['m2m_100', 'mbart']:
+        #     assert config['src_lang'] and config['tgt_lang'], \
+        #         model_name + ' needs to specify source language and target language ' \
+        #                      'with `--src_lang=xx` and `--tgt_lang=xx`'
+        #     tokenizer.src_lang = config['src_lang']
+        #     tokenizer.tgt_lang = config['tgt_lang']
 
     return tokenizer
 

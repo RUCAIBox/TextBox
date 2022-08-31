@@ -271,29 +271,6 @@ from ..utils.argument_list import efficient_kwargs_dict
 '''
 
 
-import torch
-import torch.nn as nn
-import warnings
-from .abstract_model import AbstractModel
-from textbox import CLM_MODELS, SEQ2SEQ_MODELS
-
-from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForSeq2SeqLM, EncoderDecoderModel
-# from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
-from ..utils.argument_list import efficient_kwargs_dict
-
-'''
-# Model for Causal LM mapping
-("xlm", "XLMWithLMHeadModel"),
-("xlm-roberta", "XLMRobertaForCausalLM"),
-("xlnet", "XLNetLMHeadModel"),
-
-# Model for Seq2Seq Causal LM mapping
-("longt5", "LongT5ForConditionalGeneration"),
-("marian", "MarianMTModel"),
-("xlm-prophetnet", "XLMProphetNetForConditionalGeneration"),
-'''
-
-
 class Pretrained_Models(AbstractModel):
 
     def __init__(self, config, tokenizer):
@@ -305,11 +282,8 @@ class Pretrained_Models(AbstractModel):
         # check model
         self.model_name = config['model_name']
         model_path = config['model_path']
-        # self.is_casual_model = bool(self.model_name in CLM_MODELS)
-        # 排除casual model
-
-
-        self.is_seq2seq_model = bool(self.model_name in SEQ2SEQ_MODELS)#BART是seq2seq
+        self.is_casual_model = bool(self.model_name in CLM_MODELS)
+        self.is_seq2seq_model = bool(self.model_name in SEQ2SEQ_MODELS)
         # 检测模型是否存在以及属于哪种模型
 
         # loading config
@@ -317,86 +291,78 @@ class Pretrained_Models(AbstractModel):
         config_kwargs = config['config_kwargs'] or {}
         self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
         # 配置文件加载
-        # if config['efficient_methods']:
-        #     hard_efficient_methods = [m for m in ['prefix-tuning', 'p-tuning-v2', 'adapter', 'lora'] if m in config['efficient_methods']]
-        #     if hard_efficient_methods and self.model_name not in ['bart', 'gpt2', 't5']:
-        #         raise NotImplementedError(f'{self.model_name} does not currently support {hard_efficient_methods} method.')
-        #     self.configuration.efficient_methods = config['efficient_methods']
-        #     efficient_kwargs = {}
-        #     for method in config['efficient_methods']:
-        #         efficient_kwargs.update(efficient_kwargs_dict[method])
-        #     if config['efficient_kwargs']:
-        #         efficient_kwargs.update(config['efficient_kwargs'])
-        #     self.configuration.update(efficient_kwargs)
+        if config['efficient_methods']:
+            hard_efficient_methods = [m for m in ['prefix-tuning', 'p-tuning-v2', 'adapter', 'lora'] if m in config['efficient_methods']]
+            if hard_efficient_methods and self.model_name not in ['bart', 'gpt2', 't5']:
+                raise NotImplementedError(f'{self.model_name} does not currently support {hard_efficient_methods} method.')
+            self.configuration.efficient_methods = config['efficient_methods']
+            efficient_kwargs = {}
+            for method in config['efficient_methods']:
+                efficient_kwargs.update(efficient_kwargs_dict[method])
+            if config['efficient_kwargs']:
+                efficient_kwargs.update(config['efficient_kwargs'])
+            self.configuration.update(efficient_kwargs)
 
         self._init_params()
 
         # loading model
         # 根据model_name 加载模型
-        # if self.model_name == 'bert2bert':
-        #     self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(model_path, model_path, config=self.configuration)
-        # elif self.model_name == 'cpt':
-        #     self.model = CPTForConditionalGeneration.from_pretrained(model_path, config=self.configuration)
-        # elif self.is_casual_model:
-        #     # 如果是casual语言模型，直接加载
-        #     self.configuration.is_decoder = True
-        #     if model_path:
-        #         # 有预训练模型的
-        #         self.model = AutoModelForCausalLM.from_pretrained(model_path, config=self.configuration)
-        #     else:
-        #         # 没有预训练模型的
-        #         warnings.warn(f"Initialize {self.model_name} from scratch")
-        #         self.model = AutoModelForCausalLM.from_config(self.configuration)
-        # else:
-        # 上面都不可能是BART
-
+        if self.model_name == 'bert2bert':
+            self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(model_path, model_path, config=self.configuration)
+        elif self.model_name == 'cpt':
+            self.model = CPTForConditionalGeneration.from_pretrained(model_path, config=self.configuration)
+        elif self.is_casual_model:
+            # 如果是casual语言模型，直接加载
+            self.configuration.is_decoder = True
+            if model_path:
+                # 有预训练模型的
+                self.model = AutoModelForCausalLM.from_pretrained(model_path, config=self.configuration)
+            else:
+                # 没有预训练模型的
+                warnings.warn(f"Initialize {self.model_name} from scratch")
+                self.model = AutoModelForCausalLM.from_config(self.configuration)
+        else:
             # Seq2Seq
-        # if model_path:
-            # bart有预训练模型
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_path, config=self.configuration)
-        # else:
-        #     warnings.warn(f"Initialize {self.model_name} from scratch")
-        #     self.model = AutoModelForSeq2SeqLM.from_config(self.configuration)
+            if model_path:
+                self.model = AutoModelForSeq2SeqLM.from_pretrained(model_path, config=self.configuration)
+            else:
+                warnings.warn(f"Initialize {self.model_name} from scratch")
+                self.model = AutoModelForSeq2SeqLM.from_config(self.configuration)
 
-        # if self.model_name != 'bert2bert':
-        self.model.resize_token_embeddings(len(self.tokenizer))
-        # bart不是bert2bert
+        if self.model_name != 'bert2bert':
+            self.model.resize_token_embeddings(len(self.tokenizer))
             # 如果是bert2bert需要增加token的数量
-        # else:
-        #     self.model.config.decoder_start_token_id = self.tokenizer.cls_token_id
-        #     self.model.config.pad_token_id = self.tokenizer.pad_token_id
+        else:
+            self.model.config.decoder_start_token_id = self.tokenizer.cls_token_id
+            self.model.config.pad_token_id = self.tokenizer.pad_token_id
             # 设置decoder的生成id和pad_token_id
 
-        # self.is_prompt_tuning = 'prompt-tuning' in config['efficient_methods']
-        # # 是否是prompt_tuning
-        # if self.is_prompt_tuning:
-        #     # 如果是prompt_tuning,设置参数
-        #     # bart论文中没有prompt tuning，但是后续不知道有没有新的方法应用prompt tuning
-        #     self.prompt_length = self.model.config.prompt_length
-        #     self.prompt_embedding = nn.Embedding(self.prompt_length, self.model.config.hidden_size)
+        self.is_prompt_tuning = 'prompt-tuning' in config['efficient_methods']
+        # 是否是prompt_tuning
+        if self.is_prompt_tuning:
+            # 如果是prompt_tuning,设置参数
+            self.prompt_length = self.model.config.prompt_length
+            self.prompt_embedding = nn.Embedding(self.prompt_length, self.model.config.hidden_size)
 
-        # if config['efficient_methods'] and not config['efficient_unfreeze_model']:
-        #     if hard_efficient_methods:
-        #         # hard_efficient_method设置
-        #         self.model.set_efficient_tuning()
-        #     elif 'bitfit' in config['efficient_methods']:
-        #         # bitfit的设置
-        #         for para in self.model.parameters():
-        #             if len(para.shape) > 1:
-        #                 para.requires_grad_(False)
-        #     elif 'prompt-tuning' in config['efficient_methods']:
-        #         self.model.requires_grad_(False)
+        if config['efficient_methods'] and not config['efficient_unfreeze_model']:
+            if hard_efficient_methods:
+                # hard_efficient_method设置
+                self.model.set_efficient_tuning()
+            elif 'bitfit' in config['efficient_methods']:
+                # bitfit的设置
+                for para in self.model.parameters():
+                    if len(para.shape) > 1:
+                        para.requires_grad_(False)
+            elif 'prompt-tuning' in config['efficient_methods']:
+                self.model.requires_grad_(False)
 
         self.label_smoothing = config['label_smoothing'] if config['label_smoothing'] else 0.
-        # bart使用了label smooth
 
         # geneation settings
         # 设置generation的参数
         self.generation_kwargs = {}
         self.generation_kwargs['max_length'] = self.target_max_length
-        # self.generation_kwargs['decoder_start_token_id'] = self.configuration.decoder_start_token_id if self.model_name != 'mbart' else self.tokenizer.lang_code_to_id[self.tokenizer.tgt_lang]
-        self.generation_kwargs['decoder_start_token_id'] = self.configuration.decoder_start_token_id
-        # 不是 mbart
+        self.generation_kwargs['decoder_start_token_id'] = self.configuration.decoder_start_token_id if self.model_name != 'mbart' else self.tokenizer.lang_code_to_id[self.tokenizer.tgt_lang]
         self.generation_kwargs.update(config['generation_kwargs'] or {})
 
     def _init_params(self):
@@ -421,49 +387,46 @@ class Pretrained_Models(AbstractModel):
         """
         # 输入的格式
         # configuration needs to add pad token
-        # if self.model_name in ['ctrl', 'gpt2', 'gpt_neo', 'openai-gpt']:
-        #     self.configuration.pad_token_id = self.tokenizer.eos_token_id
+        if self.model_name in ['ctrl', 'gpt2', 'gpt_neo', 'openai-gpt']:
+            self.configuration.pad_token_id = self.tokenizer.eos_token_id
         
         # init `forced_bos_token_id` token
-        # if self.model_name in ['bart', 'led', 'mvp']:
-        self.configuration.forced_bos_token_id = self.tokenizer.bos_token_id
-        # bos_token_id是句子开头标志的token id
-        # bart
-        # elif self.model_name == 'm2m_100':
-        #     self.configuration.forced_bos_token_id = self.tokenizer.get_lang_id(self.config['tgt_lang'])
+        if self.model_name in ['bart', 'led', 'mvp']:
+            self.configuration.forced_bos_token_id = self.tokenizer.bos_token_id
+        elif self.model_name == 'm2m_100':
+            self.configuration.forced_bos_token_id = self.tokenizer.get_lang_id(self.config['tgt_lang'])
         
-        # # used in generate() for casual models
-        # if self.is_casual_model:
-        #     self.configuration.eos_token_id = self.tokenizer.eos_token_id
-        # # 设置token_id
-        # # special settings for cpm
-        # if self.model_name == 'cpm':
-        #     # 模型是中文cpm，加载jieba
-        #     import jieba
-        #     import os
-        #     jieba.dt.tmp_dir = "/tmp/jieba"
-        #     os.makedirs(jieba.dt.tmp_dir, exist_ok=True)
-        # bart非中文，非casual LM 
+        # used in generate() for casual models
+        if self.is_casual_model:
+            self.configuration.eos_token_id = self.tokenizer.eos_token_id
+        # 设置token_id
+        # special settings for cpm
+        if self.model_name == 'cpm':
+            # 模型是中文cpm，加载jieba
+            import jieba
+            import os
+            jieba.dt.tmp_dir = "/tmp/jieba"
+            os.makedirs(jieba.dt.tmp_dir, exist_ok=True)
 
-    # def _process_prompt_tuning_input(self, inputs, batch):
-    #     r"""在输入前面加上label"""
-    #     input_ids = inputs['input_ids']
-    #     # 获取input_ids
-    #     inputs_embeds = self.model.get_input_embeddings()(input_ids) # b, l, e
-    #     prompt_embeds = self.prompt_embedding.weight.repeat(input_ids.size(0), 1, 1) # b, pl, e
-    #     inputs_embeds = torch.cat([prompt_embeds, inputs_embeds], dim=1)
-    #     # 在输入前面加上prompt
-    #     inputs['inputs_embeds'] = inputs_embeds
-    #     del inputs['input_ids']
-    #     # 修改输入的内容
-    #     mask = torch.ones(input_ids.size(0), self.prompt_length, dtype=torch.long).to(self.device)
-    #     inputs['attention_mask'] = torch.cat([mask, inputs['attention_mask']], dim=1)
-    #     # 补齐mask
-    #     if self.is_casual_model and 'labels' in inputs:
-    #         labels = torch.full_like(mask, -100)
-    #         inputs['labels'] = torch.cat([labels, inputs['labels']], dim=1)
-    #         # 补齐labels
-    #     return inputs
+    def _process_prompt_tuning_input(self, inputs, batch):
+        r"""在输入前面加上label"""
+        input_ids = inputs['input_ids']
+        # 获取input_ids
+        inputs_embeds = self.model.get_input_embeddings()(input_ids) # b, l, e
+        prompt_embeds = self.prompt_embedding.weight.repeat(input_ids.size(0), 1, 1) # b, pl, e
+        inputs_embeds = torch.cat([prompt_embeds, inputs_embeds], dim=1)
+        # 在输入前面加上prompt
+        inputs['inputs_embeds'] = inputs_embeds
+        del inputs['input_ids']
+        # 修改输入的内容
+        mask = torch.ones(input_ids.size(0), self.prompt_length, dtype=torch.long).to(self.device)
+        inputs['attention_mask'] = torch.cat([mask, inputs['attention_mask']], dim=1)
+        # 补齐mask
+        if self.is_casual_model and 'labels' in inputs:
+            labels = torch.full_like(mask, -100)
+            inputs['labels'] = torch.cat([labels, inputs['labels']], dim=1)
+            # 补齐labels
+        return inputs
 
     def forward(self, batch, epoch_idx=-1):
         inputs = {
@@ -472,8 +435,8 @@ class Pretrained_Models(AbstractModel):
             'labels': batch['target_ids'].to(self.device)
         }
         # 输入
-        # if self.is_prompt_tuning:
-        #     inputs = self._process_prompt_tuning_input(inputs, batch)
+        if self.is_prompt_tuning:
+            inputs = self._process_prompt_tuning_input(inputs, batch)
         # 如果是prompt_tuning，对输入修改
         outputs = self.model(**inputs)
         # 放入模型中
@@ -492,15 +455,15 @@ class Pretrained_Models(AbstractModel):
             'attention_mask': batch['source_mask'].to(self.device),
         }
 
-        # if self.is_prompt_tuning:
-        #     inputs = self._process_prompt_tuning_input(inputs, batch)
+        if self.is_prompt_tuning:
+            inputs = self._process_prompt_tuning_input(inputs, batch)
         # prompt_tuning改变输入
-        # if self.is_casual_model:
-        #     # 如果是因果语言模型
-        #     input_ids_len = inputs['input_ids'].shape[1] if 'input_ids' in inputs else inputs['inputs_embeds'].shape[1]
-        #     # 获得输入长度
-        #     self.generation_kwargs['max_length'] = self.target_max_length + input_ids_len
-        #     # 设置最大文本长度
+        if self.is_casual_model:
+            # 如果是因果语言模型
+            input_ids_len = inputs['input_ids'].shape[1] if 'input_ids' in inputs else inputs['inputs_embeds'].shape[1]
+            # 获得输入长度
+            self.generation_kwargs['max_length'] = self.target_max_length + input_ids_len
+            # 设置最大文本长度
         
         # sample_outputs = self.model.generate(**inputs, **self.generation_kwargs)
         sample_outputs = accelerator.unwrap_model(self.model).generate(**inputs, **self.generation_kwargs)
@@ -511,11 +474,10 @@ class Pretrained_Models(AbstractModel):
         sample_outputs = accelerator.gather((sample_outputs))
         # 在所有过程中收集张量中的值，并将它们在第一个维度上串联。进行评估时所有过程的预测有用。
         
-        # if self.is_casual_model:
-        #     sample_outputs = sample_outputs[:, input_ids_len:]
+        if self.is_casual_model:
+            sample_outputs = sample_outputs[:, input_ids_len:]
         
         decode_kwargs = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': True}
         generated_text = self.tokenizer.batch_decode(sample_outputs, **decode_kwargs)
         generated_text = [g.strip() or 'NULL' for g in generated_text]
         return generated_text
-

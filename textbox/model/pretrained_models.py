@@ -31,7 +31,6 @@ from textbox import CLM_MODELS, SEQ2SEQ_MODELS
 from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForSeq2SeqLM, EncoderDecoderModel
 from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
 from ..utils.argument_list import efficient_kwargs_dict
-
 '''
 # Model for Causal LM mapping
 ("xlm", "XLMWithLMHeadModel"),
@@ -59,9 +58,16 @@ class Pretrained_Models(AbstractModel):
         self.is_seq2seq_model = bool(self.model_name in SEQ2SEQ_MODELS)
 
         # loading config
-        config_path = config['config_path'] or model_path
+        config_path = config['config_path'] or model_path or None
         config_kwargs = config['config_kwargs'] or {}
-        self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
+        if config_path is None:
+        #   No pretrained config. loading config from yaml
+            model_type=config["model_type"]
+            print(config.final_config_dict)
+            self.configuration=AutoConfig.for_model(**config.final_config_dict)
+        else:
+        #   loading config from config_path          
+            self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
         if config['efficient_methods']:
             hard_efficient_methods = [m for m in ['prefix-tuning', 'p-tuning-v2', 'adapter', 'lora'] if m in config['efficient_methods']]
             if hard_efficient_methods and self.model_name not in ['bart', 'gpt2', 't5']:

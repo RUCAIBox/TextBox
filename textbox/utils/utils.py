@@ -212,8 +212,6 @@ def get_tokenizer(config):
                              'with `--src_lang=xx` and `--tgt_lang=xx`'
             tokenizer.src_lang = config['src_lang']
             tokenizer.tgt_lang = config['tgt_lang']
-    elif model_name=='transformer':
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
 
 
     return tokenizer

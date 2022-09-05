@@ -213,7 +213,6 @@ def get_tokenizer(config):
             tokenizer.src_lang = config['src_lang']
             tokenizer.tgt_lang = config['tgt_lang']
     elif model_name=='transformer':
-        # transformer从头训练的情况，可以实现各种类型的
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
 
 

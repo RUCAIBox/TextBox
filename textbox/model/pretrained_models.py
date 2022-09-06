@@ -60,13 +60,12 @@ class Pretrained_Models(AbstractModel):
         # loading config
         config_path = config['config_path'] or model_path or None
         config_kwargs = config['config_kwargs'] or {}
+        # No pretrained config. loading config from yaml
         if config_path is None:
-        #   No pretrained config. loading config from yaml
             model_type=config["model_type"]
-            print(config.final_config_dict)
             self.configuration=AutoConfig.for_model(**config.final_config_dict)
-        else:
-        #   loading config from config_path          
+        # loading config from config_path
+        else:          
             self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
         if config['efficient_methods']:
             hard_efficient_methods = [m for m in ['prefix-tuning', 'p-tuning-v2', 'adapter', 'lora'] if m in config['efficient_methods']]

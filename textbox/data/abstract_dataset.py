@@ -54,54 +54,61 @@ class AbstractDataset(Dataset):
             )
             self.target_length = self.tokenizer.model_max_length
 
-        if (
-            self.config["efficient_methods"]
-            and "prompt-tuning" in self.config["efficient_methods"]
-        ):
-            prompt_length = self.config["efficient_kwargs"]["prompt_length"]
-            if self.config["model_name"] in CLM_MODELS:
-                if (
-                    self.source_length + self.target_length + prompt_length
-                    > self.tokenizer.model_max_length
-                ):
-                    warnings.warn(
-                        f"The length of source text {self.source_length}, target text {self.target_length} and prompt {prompt_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and the max length of source sentence will be set to {self.tokenizer.model_max_length - prompt_length - self.target_length}."
-                    )
-                    self.source_length = (
-                        self.tokenizer.model_max_length
-                        - prompt_length
-                        - self.target_length
-                    )
-            elif self.source_length + prompt_length > self.tokenizer.model_max_length:
-                warnings.warn(
-                    f"The length of source text {self.source_length} and prompt {prompt_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and the max length of source sentence will be set to {self.tokenizer.model_max_length - prompt_length}."
-                )
-                self.source_length = self.tokenizer.model_max_length - prompt_length
+        # if (
+        #     self.config["efficient_methods"]
+        #     and "prompt-tuning" in self.config["efficient_methods"]
+        # ):
+        #     prompt_length = self.config["efficient_kwargs"]["prompt_length"]
+        #     if self.config["model_name"] in CLM_MODELS:
+        #         if (
+        #             self.source_length + self.target_length + prompt_length
+        #             > self.tokenizer.model_max_length
+        #         ):
+        #             warnings.warn(
+        #                 f"The length of source text {self.source_length}, target text {self.target_length} and prompt {prompt_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and the max length of source sentence will be set to {self.tokenizer.model_max_length - prompt_length - self.target_length}."
+        #             )
+        #             self.source_length = (
+        #                 self.tokenizer.model_max_length
+        #                 - prompt_length
+        #                 - self.target_length
+        #             )
+        #     elif self.source_length + prompt_length > self.tokenizer.model_max_length:
+        #         warnings.warn(
+        #             f"The length of source text {self.source_length} and prompt {prompt_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and the max length of source sentence will be set to {self.tokenizer.model_max_length - prompt_length}."
+        #         )
+        #         self.source_length = self.tokenizer.model_max_length - prompt_length
 
-    def _process_prompt(self):
-        prefix = self.config["prefix_prompt"] or ""
-        suffix = self.config["suffix_prompt"] or ""
+    # def _process_prompt(self):
+    #     prefix = self.config["prefix_prompt"] or ""
+    #     suffix = self.config["suffix_prompt"] or ""
 
-        self.prefix_ids = self.tokenizer.encode(prefix, add_special_tokens=False)
-        self.suffix_ids = self.tokenizer.encode(suffix, add_special_tokens=False)
+    #     self.prefix_ids = self.tokenizer.encode(prefix, add_special_tokens=False)
+    #     self.suffix_ids = self.tokenizer.encode(suffix, add_special_tokens=False)
 
-        self.source_max_length = (
-            self.source_length
-            - self.tokenizer.num_special_tokens_to_add()
-            - len(self.prefix_ids)
-            - len(self.suffix_ids)
-        )
-        self.target_max_length = (
-            self.target_length - self.tokenizer.num_special_tokens_to_add()
-        )
+    #     self.source_max_length = (
+    #         self.source_length
+    #         - self.tokenizer.num_special_tokens_to_add()
+            # - len(self.prefix_ids)
+            # - len(self.suffix_ids)
+        # )
+        # self.target_max_length = (
+        #     self.target_length - self.tokenizer.num_special_tokens_to_add()
+        # )
 
-        if self.config["model_name"] in ["bert2bert", "opt"]:
-            self.target_max_length += 1
+        # if self.config["model_name"] in ["bert2bert", "opt"]:
+        #     self.target_max_length += 1
 
     def tokenize(self, tokenizer):
         self.tokenizer = tokenizer
         self._init_process()
-        self._process_prompt()
+        # self._process_prompt()
+        self.source_max_length = (
+            self.source_length
+            - self.tokenizer.num_special_tokens_to_add()
+        )
+        self.target_max_length = (
+            self.target_length - self.tokenizer.num_special_tokens_to_add()
+        )
         self.source_ids = []
         source_ids = tokenizer(
             self.source_text,
@@ -116,7 +123,8 @@ class AbstractDataset(Dataset):
                 else ids[-self.source_max_length :]
             )
             ids = self.tokenizer.build_inputs_with_special_tokens(
-                self.prefix_ids + ids + self.suffix_ids
+                # self.prefix_ids + ids + self.suffix_ids
+                ids
             )
             self.source_ids.append(torch.tensor(ids, dtype=torch.long))
         if self.set == "train":
@@ -135,8 +143,8 @@ class AbstractDataset(Dataset):
                         else ids[-self.target_max_length :]
                     )
                     ids = self.tokenizer.build_inputs_with_special_tokens(ids)
-                    if self.config["model_name"] in ["bert2bert", "opt"]:
-                        ids = ids[1:]
+                    # if self.config["model_name"] in ["bert2bert", "opt"]:
+                    #     ids = ids[1:]
                     self.target_ids.append(torch.tensor(ids, dtype=torch.long))
 
 
@@ -145,8 +153,9 @@ class AbstractCollate:
         self.config = config
         self.tokenizer = tokenizer
         self.set = set
-        self.is_casual_model = bool(config["model_name"] in CLM_MODELS)
-    
+        # self.is_casual_model = bool(config["model_name"] in CLM_MODELS)
+        self.is_casual_model = False
+
     @classmethod
     def get_type(cls) -> str:
         return 'pretrain disabled'
@@ -159,17 +168,19 @@ class AbstractCollate:
         source_length = []
         target_text = []
         source_padding_side = (
-            "left"
-            if self.set != "train" and self.is_casual_model
-            else self.tokenizer.padding_side
+            # "left"
+            # if self.set != "train" and self.is_casual_model
+            # else self.tokenizer.padding_side
+            self.tokenizer.padding_side
         )
 
         for sample in samples:
             source_text.append(sample["source_text"])
             src_id = (
-                torch.cat([sample["source_ids"], sample["target_ids"]])
-                if self.set == "train" and self.is_casual_model
-                else sample["source_ids"]
+                # torch.cat([sample["source_ids"], sample["target_ids"]])
+                # if self.set == "train" and self.is_casual_model
+                # else sample["source_ids"]
+                sample["source_ids"]
             )
             source_ids.append(src_id)
             source_mask.append(torch.ones(len(src_id), dtype=torch.long))
@@ -188,16 +199,17 @@ class AbstractCollate:
             target_ids = []
             for sample in samples:
                 tgt_id = (
-                    torch.cat(
-                        [
-                            torch.full(
-                                [len(sample["source_ids"])], -100, dtype=torch.long
-                            ),
-                            sample["target_ids"],
-                        ]
-                    )
-                    if self.is_casual_model
-                    else sample["target_ids"]
+                    # torch.cat(
+                    #     [
+                    #         torch.full(
+                    #             [len(sample["source_ids"])], -100, dtype=torch.long
+                    #         ),
+                    #         sample["target_ids"],
+                    #     ]
+                    # )
+                    # if self.is_casual_model
+                    # else 
+                    sample["target_ids"]
                 )
                 target_ids.append(tgt_id)
             batch["target_ids"] = _pad_sequence(

@@ -48,8 +48,7 @@ class RougeEvaluator(AbstractEvaluator):
                 s._load()
 
                 utils.split_files(ref_file, gen_file, model_root, sys_root)
-                # r = Rouge155(rouge_dir=os.path.dirname(s.data['ROUGE_path']), log_level=logging.ERROR, stemming=True)
-                r = Rouge155(rouge_dir=os.path.dirname(s.data['ROUGE_path']))
+                r = Rouge155(rouge_dir=os.path.dirname(s.data['ROUGE_path']), log_level=logging.ERROR, stemming=True)
                 r.system_dir = sys_root
                 r.model_dir = model_root
                 r.system_filename_pattern = r's.(\d+).txt'

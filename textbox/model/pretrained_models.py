@@ -30,6 +30,8 @@ from textbox import CLM_MODELS, SEQ2SEQ_MODELS
 
 from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForSeq2SeqLM, EncoderDecoderModel
 from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
+# from transformers.models.unilm_v1.modeling import BertForPreTrainingLossMask
+from textbox.model.unilm_v1.modeling import BertForPreTrainingLossMask
 from ..utils.argument_list import efficient_kwargs_dict
 
 '''
@@ -81,6 +83,8 @@ class Pretrained_Models(AbstractModel):
             self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(model_path, model_path, config=self.configuration)
         elif self.model_name == 'cpt':
             self.model = CPTForConditionalGeneration.from_pretrained(model_path, config=self.configuration)
+        elif self.model_name == "unilm":
+            model = BertForPreTrainingLossMask.from_pretrained(model_path, config=self.configuration)
         elif self.is_casual_model:
             self.configuration.is_decoder = True
             if model_path:

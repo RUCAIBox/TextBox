@@ -31,6 +31,8 @@ from textbox import CLM_MODELS, SEQ2SEQ_MODELS
 from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForSeq2SeqLM, EncoderDecoderModel
 from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
 from ..utils.argument_list import efficient_kwargs_dict
+import inspect
+
 '''
 # Model for Causal LM mapping
 ("xlm", "XLMWithLMHeadModel"),
@@ -60,12 +62,17 @@ class Pretrained_Models(AbstractModel):
         # loading config
         config_path = config['config_path'] or model_path or None
         config_kwargs = config['config_kwargs'] or {}
-        # No pretrained config. loading config from yaml
         if config_path is None:
-            model_type=config["model_type"]
-            self.configuration=AutoConfig.for_model(**config.final_config_dict)
-        # loading config from config_path
+            # No pretrained config. loading config from yaml
+            model_type = config["model_type"]
+            _name_or_path = config["_name_or_path"]
+            params_list = (list(inspect.signature(AutoConfig.for_model(model_type).__init__).parameters.keys()))
+            config_dict = {key:val for key,val in config.final_config_dict.items() if key in params_list}
+            config_dict['model_type'] = model_type
+            config_dict['_name_or_path'] = _name_or_path
+            self.configuration=AutoConfig.for_model(**config_dict)
         else:          
+            # loading config from config_path
             self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
         if config['efficient_methods']:
             hard_efficient_methods = [m for m in ['prefix-tuning', 'p-tuning-v2', 'adapter', 'lora'] if m in config['efficient_methods']]

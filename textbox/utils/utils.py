@@ -213,7 +213,6 @@ def get_tokenizer(config):
             tokenizer.src_lang = config['src_lang']
             tokenizer.tgt_lang = config['tgt_lang']
 
-
     return tokenizer
 
 

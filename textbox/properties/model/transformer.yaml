@@ -2,10 +2,10 @@
 model_type: bart
 
 # control the type of model
-_name_or_path: bart - base
+_name_or_path: bart-base
 
 # tokenizer_path
-tokenizer_path: facebook / bart - base
+tokenizer_path: facebook/bart-base
 
 # config args
 activation_dropout: 0.1

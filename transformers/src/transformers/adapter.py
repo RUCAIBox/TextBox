@@ -36,8 +36,12 @@ class PrefixTuning(nn.Module):
         prefix = self.dropout(prefix)
         prefix = prefix.permute([1, 2, 0, 3]) # 2, h_n, p_l, h_e
 
-        key_states = torch.cat([prefix[0].expand(bsz, -1, -1, -1), key_states], dim=2) # 2, h_n, p_l+t_l, h_e
-        value_states = torch.cat([prefix[1].expand(bsz, -1, -1, -1), value_states], dim=2)
+        if key_states.dim() == 4:
+            key_states = torch.cat([prefix[0].expand(bsz, -1, -1, -1), key_states], dim=-2) # 2, h_n, p_l+t_l, h_e
+            value_states = torch.cat([prefix[1].expand(bsz, -1, -1, -1), value_states], dim=-2)
+        elif key_states.dim() == 5:
+            key_states = torch.cat([prefix[0].expand(bsz, key_states.size(1), -1, -1, -1), key_states], dim=-2) # 2, beam_num, h_n, p_l+t_l, h_e
+            value_states = torch.cat([prefix[1].expand(bsz, value_states.size(1), -1, -1, -1), value_states], dim=-2)
         if attention_mask is not None:
             prompt_mask = torch.zeros(bsz, 1, attention_mask.size(2), prefix.size(2)).to(device)
             attention_mask = torch.cat([prompt_mask, attention_mask], dim=(-1))

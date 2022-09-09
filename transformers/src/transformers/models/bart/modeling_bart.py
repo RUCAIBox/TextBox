@@ -382,9 +382,11 @@ class BartAttention(BartAttention_origin):
         else:
             # if encoder bi-directional self-attention `past_key_value` is always `None`
             assert past_key_value is None
-
         proj_shape = (bsz * self.num_heads, -1, self.head_dim)
         query_states = self._shape(query_states, tgt_len, bsz).view(*proj_shape)
+
+        if 'prefix-tuning' in self.efficient_methods or 'p-tuning-v2' in self.efficient_methods:
+            key_states, value_states, attention_mask = self.prefix_tuning(key_states, value_states, attention_mask)
 
         if is_cross_attention:
             query_states = query_states.view(cache_bsz, self.num_beams, self.num_heads, tgt_len,

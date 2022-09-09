@@ -67,7 +67,6 @@ class Trainer(AbstractTrainer):
 
         self.device: torch.device = config['device']
         self.filename = config['filename']
-        self.is_EN2RO_task = config['is_EN2RO_task']
         self.post_processing = config['post_processing']
         self.accelerator = accelerator
 
@@ -91,7 +90,6 @@ class Trainer(AbstractTrainer):
         `range(self.start_epoch, self.epochs)`"""
         self.max_steps = config['max_steps']  # max training batch step
 
-        self.best_valid_timestamp = Timestamp()
         self.valid_intervals = self.config['valid_intervals']
         self.valid_strategy = self.config['valid_strategy']
         self._valid_count = 0
@@ -113,13 +111,7 @@ class Trainer(AbstractTrainer):
         ensure_dir(config['generated_text_dir'])
         self.saved_text_filename: str = os.path.join(config['generated_text_dir'], self.filename)
 
-        if (self.is_EN2RO_task == True):
-            self.shell_command = self.config['romanian_postprocessing']
-            self.generated_file = self.saved_text_filename + '.txt'
-            self.reference_file = os.path.join(config['data_path'], 'test.tgt')
-            self.tmp_file = '/tmp/romamian_postprocessing.txt'
-
-        self.max_save = config['max_save'] if config['max_save'] and not self.quick_test else 1
+        self.max_save = config['max_save'] if config['max_save'] is not None else 2
         self.disable_tqdm = config['disable_tqdm'] or not self.accelerator.is_local_main_process
         self._summary_tracker = get_dashboard()
 
@@ -184,6 +176,11 @@ class Trainer(AbstractTrainer):
         """Retrieve best result dict from `self.valid_result_list`."""
         return self.valid_result_dict[self.best_valid_timestamp.valid_epoch]
 
+    @property
+    def best_valid_timestamp(self) -> Timestamp:
+        """Retrieve timestamp of best valid result."""
+        return self._summary_tracker.best_valid_timestamp
+
     def is_save(self) -> bool:
         return self.accelerator.is_local_main_process
 
@@ -237,9 +234,10 @@ class Trainer(AbstractTrainer):
             if self.stopped:
                 break
 
+        result = self._summary_tracker.epoch_dict()
         self._summary_tracker.on_epoch_end()
 
-        return self._summary_tracker.epoch_dict()
+        return result
 
     @torch.no_grad()
     def _valid(
@@ -290,10 +288,9 @@ class Trainer(AbstractTrainer):
         
         self.model.train()
 
-        self.valid_result_dict[self._summary_tracker.axes.valid_epoch] = self._summary_tracker.current_epoch
+        self.valid_result_dict[self.timestamp.valid_epoch] = self._summary_tracker.current_epoch
 
-        self.best_valid_timestamp, current_best = self._summary_tracker.get_best_valid()
-        stopped = bool(self.stopping_steps) and self._early_stopping(current_best)
+        stopped = bool(self.stopping_steps) and self._early_stopping(self._summary_tracker.is_best_valid)
 
         if self.is_save():
             self.save_checkpoint()
@@ -342,7 +339,7 @@ class Trainer(AbstractTrainer):
             'timestamp': self.timestamp,
             'config': self.config,
             # parameters for recording only
-            'summary': self.valid_result_dict[self._summary_tracker.axes.valid_epoch],
+            'summary': self.valid_result_dict[self.timestamp.valid_epoch],
         }
         self.logger.debug(checkpoint)
         return checkpoint
@@ -436,8 +433,8 @@ class Trainer(AbstractTrainer):
         self.accelerator.wait_for_everyone()
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
-            self._train_epoch(train_data, epoch_idx, valid_data)
-            self.train_loss_list.append(self._summary_tracker.epoch_loss)
+            loss = self._train_epoch(train_data, epoch_idx, valid_data)['loss']
+            self.train_loss_list.append(loss)
 
             # valid
             if valid_data:
@@ -511,8 +508,9 @@ class Trainer(AbstractTrainer):
             generated = self.accelerator.unwrap_model(self.model).generate(batch_data, eval_data, self.accelerator)
             generate_corpus.extend(generated)
 
-        reference_corpus = eval_data.dataset.target_text
-        generate_corpus = generate_corpus[:len(reference_corpus)]
+        corpus_len = len(eval_data.dataset.target_text)
+        reference_dataset = eval_data.dataset
+        generate_corpus = generate_corpus[:corpus_len]
 
         if self.post_processing == 'paraphrase':
             for i, gen in enumerate(generate_corpus):
@@ -524,19 +522,9 @@ class Trainer(AbstractTrainer):
                     gen = gen[last:].strip()
                 generate_corpus[i] = gen
 
-        if self.is_save() or (self.is_EN2RO_task == True and is_valid == False):
+        if self.is_save():
             self.save_generated_text(generate_corpus, is_valid)
         
-        result = self.evaluator.evaluate(generate_corpus, eval_data.dataset)
+        result = self.evaluator.evaluate(generate_corpus, reference_dataset)
         
-        if (self.is_EN2RO_task == True and is_valid == False):
-            self.logger.info('Running post-processing on Romanian.')
-            os.system(f'bash {self.shell_command} {self.generated_file} {self.reference_file} > {self.tmp_file}')
-            with open(self.tmp_file, 'r') as fin:
-                result['fix_bleu'] = float(fin.readline().strip())
-        et = EpochTracker(self.metrics_for_best_model)
-        et.update_metrics(result)
-        if not is_valid:
-            self.logger.info('Evaluation result:\n{}'.format(et.metrics_info(sep=",\n", indent=" ")))
-
-        return et.as_dict()
+        return result

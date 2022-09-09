@@ -1,3 +1,4 @@
+import os
 import subprocess
 import nltk
 import tempfile
@@ -19,6 +20,7 @@ class BleuEvaluator(AbstractEvaluator):
         self.ngrams = ['bleu-{}'.format(n) for n in range(1, self.max_ngrams + 1)]
         self.smoothing_function = config['smoothing_function']
         self.corpus_bleu = config['corpus_bleu']
+        self.sacrebleu_romanian = self.config['sacrebleu_romanian']
         if self.bleu_type == 'nltk' and self.smoothing_function > 0 and config['dataset'] in ['pc', 'dd']:
             nltk_version = version.parse(nltk.__version__)
             if nltk_version < version.parse('3.2.2') or nltk_version > version.parse('3.4.5'):
@@ -117,4 +119,20 @@ class BleuEvaluator(AbstractEvaluator):
                     traceback.print_exc()
                     print(call_e.output.decode().strip())
                     exit(0)
+        
+        elif self.bleu_type == 'sacrebleu-romanian':
+            with tempfile.TemporaryDirectory() as tmpdir:
+                gen_file = f"{tmpdir}/gen.txt"
+                ref_file = f"{tmpdir}/ref.txt"
+                tmp_file = f"{tmpdir}/tmp.txt"
+                with open(f"{gen_file}", "w") as f:
+                    f.write("\n".join(generate_corpus.tokenized_text))
+                with open(f"{ref_file}", "w") as f:
+                    for refs in reference_corpus.tokenized_text:
+                        assert len(refs) == 1, "`sacrebleu-romanian` only supports single reference."
+                        f.write(refs[0] + '\n')
+                os.system(f'bash {self.sacrebleu_romanian} {gen_file} {ref_file} > {tmp_file}')
+                with open(tmp_file, 'r') as fin:
+                    results['bleu'] = float(fin.readline().strip())
+
         return results

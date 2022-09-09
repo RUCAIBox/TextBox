@@ -7,7 +7,6 @@ reproducibility: True
 data_path: 'dataset/'
 checkpoint_dir: 'saved/'
 generated_text_dir: 'generated/'
-romanian_postprocessing: 'romanian_postprocessing.sh'
 
 # training settings
 epochs: 50

@@ -191,8 +191,14 @@ class Pretrained_Models(AbstractModel):
         
         if self.label_smoothing:
             loss_fct = nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
-            vocab_size = outputs.logits.size()[-1]
-            return loss_fct(outputs.logits.view(-1, vocab_size), inputs['labels'].view(-1))
+            vocab_size = outputs.logits.size(-1)
+            if self.is_casual_model:
+                logits = outputs.logits[..., :-1, :].contiguous()
+                labels = inputs['labels'][..., 1:].contiguous()
+            else:
+                logits = outputs.logits
+                labels = inputs['labels']
+            return loss_fct(logits.view(-1, vocab_size), labels.view(-1))
         else:
             return outputs.loss
 

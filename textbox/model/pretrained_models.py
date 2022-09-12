@@ -63,7 +63,10 @@ class Pretrained_Models(AbstractModel):
         # loading config
         config_path = config['config_path'] or model_path
         config_kwargs = config['config_kwargs'] or {}
-        self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
+        if self.model_name in ['unilm']:
+            self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
+        else:
+            self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
         if config['efficient_methods']:
             hard_efficient_methods = [m for m in ['prefix-tuning', 'p-tuning-v2', 'adapter', 'lora'] if m in config['efficient_methods']]
             if hard_efficient_methods and self.model_name not in ['bart', 'gpt2', 't5']:
@@ -84,7 +87,7 @@ class Pretrained_Models(AbstractModel):
         elif self.model_name == 'cpt':
             self.model = CPTForConditionalGeneration.from_pretrained(model_path, config=self.configuration)
         elif self.model_name == "unilm":
-            model = BertForPreTrainingLossMask.from_pretrained(model_path, config=self.configuration)
+            self.model = BertForPreTrainingLossMask.from_pretrained(model_path, config=self.configuration)
         elif self.is_casual_model:
             self.configuration.is_decoder = True
             if model_path:
@@ -99,7 +102,8 @@ class Pretrained_Models(AbstractModel):
                 warnings.warn(f"Initialize {self.model_name} from scratch")
                 self.model = AutoModelForSeq2SeqLM.from_config(self.configuration)
 
-        if self.model_name != 'bert2bert':
+        if self.model_name not in ['bert2bert']:
+            print(type(self.model))
             self.model.resize_token_embeddings(len(self.tokenizer))
         else:
             self.model.config.decoder_start_token_id = self.tokenizer.cls_token_id

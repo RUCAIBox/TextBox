@@ -6,8 +6,7 @@ from typing import Union, Optional
 
 import torch
 from accelerate.utils import set_seed
-from transformers import AutoTokenizer, BertTokenizer#, BertTokenierForUnilm
-from ..model.unilm_v1.tokenization_unilm import BertTokenizerForUnilm
+from transformers import AutoTokenizer, BertTokenizer
 from .enum_type import PLM_MODELS
 
 
@@ -178,11 +177,10 @@ def get_tokenizer(config):
     model_name = config['model_name']
     if model_name in PLM_MODELS:
         tokenizer_kwargs = config['tokenizer_kwargs'] or {}
+        tokenizer_kwargs["isUniLM"] = model_name == 'unilm'
         tokenizer_path = config['tokenizer_path'] or config['model_path']
-        if (config['model_name'] in ['chinese-bart', 'chinese-pegasus', 'cpt']):
+        if config['model_name'] in ['chinese-bart', 'chinese-pegasus', 'cpt', 'unilm']:
             tokenizer = BertTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
-        elif config['model_name'] in ['unilm']:
-            tokenizer = BertTokenizerForUnilm.from_pretrained(tokenizer_path, **tokenizer_kwargs)
         else:
             tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
 

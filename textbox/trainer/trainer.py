@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 from ..evaluator import BaseEvaluator
 from ..model.abstract_model import AbstractModel
 from ..utils import ensure_dir, serialized_save, init_seed
-
+from textbox.model.unilm_v1.optimization import BertAdam
 
 class AbstractTrainer:
     r"""Trainer Class is used to manage the training and evaluation processes of text generation system models.
@@ -130,6 +130,8 @@ class Trainer(AbstractTrainer):
             'adagrad': optim.Adagrad,
             'rmsprop': optim.RMSprop,
             'adafactor': transformers.Adafactor,
+            # 'bertadam': transformers.BertAdam
+            'bertadam': BertAdam
         })
         scheduler_class = {
             'inverse': InverseSquareRootScheduler,
@@ -149,10 +151,23 @@ class Trainer(AbstractTrainer):
 
         # get optimizer (use default value of pytorch if self.optimizer_kwargs is empty)
         self.logger.debug(f'Using optimizer {optimizer}')
-        optimizer = optimizer_class[optimizer](
-            params=self._trainable_parameters,
-            **self.optimizer_kwargs
-        )
+
+        # dealing with BertAdam
+        if optimizer == 'bertadam':
+            param_optimizer = list(self.model.named_parameters())
+            no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
+            optimizer_grouped_parameters = [
+                {'params': [p for n, p in param_optimizer if not any(
+                    nd in n for nd in no_decay)], 'weight_decay': 0.01},
+                {'params': [p for n, p in param_optimizer if any(
+                    nd in n for nd in no_decay)], 'weight_decay': 0.0}
+            ]
+            optimizer = BertAdam(optimizer_grouped_parameters, **self.optimizer_kwargs)
+        else:
+            optimizer = optimizer_class[optimizer](
+                params=self._trainable_parameters,
+                **self.optimizer_kwargs
+            )
 
         # scheduling
         if scheduler is not None and scheduler in scheduler_class:

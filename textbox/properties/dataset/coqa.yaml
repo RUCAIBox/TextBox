@@ -7,4 +7,4 @@ multiref_strategy: 'leave_one_out'
 train_batch_size: 4
 accumulation_steps: 48
 eval_batch_size: 16
-prefix: 'Answer the following question: '
+prefix_prompt: 'Answer the following question: '

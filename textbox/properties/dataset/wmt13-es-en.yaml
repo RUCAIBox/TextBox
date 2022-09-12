@@ -11,4 +11,4 @@ label_smoothing: 0.1
 train_batch_size: 4
 accumulation_steps: 48
 eval_batch_size: 8
-prefix: 'translate Spanish to English: '
+prefix_prompt: 'translate Spanish to English: '

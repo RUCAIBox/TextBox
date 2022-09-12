@@ -9,4 +9,4 @@ meteor_type: pycocoevalcap
 train_batch_size: 8
 accumulation_steps: 24
 eval_batch_size: 16
-prefix: 'Generate the question based on the answer: '
+prefix_prompt: 'Generate the question based on the answer: '

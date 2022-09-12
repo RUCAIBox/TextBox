@@ -6,4 +6,4 @@ metrics_for_best_model: ['overall']
 train_batch_size: 4
 accumulation_steps: 48
 eval_batch_size: 16
-prefix: 'Given the task dialog: '
+prefix_prompt: 'Given the task dialog: '

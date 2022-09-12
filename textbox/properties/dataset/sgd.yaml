@@ -10,4 +10,4 @@ meteor_type: pycocoevalcap
 train_batch_size: 12
 accumulation_steps: 16
 eval_batch_size: 24
-prefix: 'Given the dialog: '
+prefix_prompt: 'Given the dialog: '

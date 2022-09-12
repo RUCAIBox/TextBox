@@ -21,10 +21,10 @@ r"""
     prophetnet: ProphetNet: Predicting Future N-gram for Sequence-to-Sequence Pre-training
 """
 
-
 import torch
 import torch.nn as nn
 import warnings
+import inspect
 from .abstract_model import AbstractModel
 from textbox import CLM_MODELS, SEQ2SEQ_MODELS
 
@@ -33,7 +33,6 @@ from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
 # from transformers.models.unilm_v1.modeling import BertForPreTrainingLossMask
 from textbox.model.unilm_v1.modeling import BertForPreTrainingLossMask
 from ..utils.argument_list import efficient_kwargs_dict
-
 '''
 # Model for Causal LM mapping
 ("xlm", "XLMWithLMHeadModel"),
@@ -61,16 +60,28 @@ class Pretrained_Models(AbstractModel):
         self.is_seq2seq_model = bool(self.model_name in SEQ2SEQ_MODELS)
 
         # loading config
-        config_path = config['config_path'] or model_path
+        config_path = config['config_path'] or model_path or None
         config_kwargs = config['config_kwargs'] or {}
-        if self.model_name in ['unilm']:
-            self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
+        if config_path is None:
+            # No pretrained config. loading config from yaml
+            model_type = config["model_type"]
+            _name_or_path = config["_name_or_path"]
+            params_list = (list(inspect.signature(AutoConfig.for_model(model_type).__init__).parameters.keys()))
+            config_dict = {key: val for key, val in config.final_config_dict.items() if key in params_list}
+            config_dict['model_type'] = model_type
+            config_dict['_name_or_path'] = _name_or_path
+            self.configuration = AutoConfig.for_model(**config_dict)
         else:
+            # loading config from config_path
             self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
         if config['efficient_methods']:
-            hard_efficient_methods = [m for m in ['prefix-tuning', 'p-tuning-v2', 'adapter', 'lora'] if m in config['efficient_methods']]
+            hard_efficient_methods = [
+                m for m in ['prefix-tuning', 'p-tuning-v2', 'adapter', 'lora'] if m in config['efficient_methods']
+            ]
             if hard_efficient_methods and self.model_name not in ['bart', 'gpt2', 't5']:
-                raise NotImplementedError(f'{self.model_name} does not currently support {hard_efficient_methods} method.')
+                raise NotImplementedError(
+                    f'{self.model_name} does not currently support {hard_efficient_methods} method.'
+                )
             self.configuration.efficient_methods = config['efficient_methods']
             efficient_kwargs = {}
             for method in config['efficient_methods']:
@@ -83,7 +94,9 @@ class Pretrained_Models(AbstractModel):
 
         # loading model
         if self.model_name == 'bert2bert':
-            self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(model_path, model_path, config=self.configuration)
+            self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(
+                model_path, model_path, config=self.configuration
+            )
         elif self.model_name == 'cpt':
             self.model = CPTForConditionalGeneration.from_pretrained(model_path, config=self.configuration)
         elif self.model_name == "unilm":
@@ -103,7 +116,6 @@ class Pretrained_Models(AbstractModel):
                 self.model = AutoModelForSeq2SeqLM.from_config(self.configuration)
 
         if self.model_name not in ['bert2bert']:
-            print(type(self.model))
             self.model.resize_token_embeddings(len(self.tokenizer))
         else:
             self.model.config.decoder_start_token_id = self.tokenizer.cls_token_id
@@ -129,7 +141,10 @@ class Pretrained_Models(AbstractModel):
         # geneation settings
         self.generation_kwargs = {}
         self.generation_kwargs['max_length'] = self.target_max_length
-        self.generation_kwargs['decoder_start_token_id'] = self.configuration.decoder_start_token_id if self.model_name != 'mbart' else self.tokenizer.lang_code_to_id[self.tokenizer.tgt_lang]
+        self.generation_kwargs[
+            'decoder_start_token_id'
+        ] = self.configuration.decoder_start_token_id if self.model_name != 'mbart' else self.tokenizer.lang_code_to_id[
+            self.tokenizer.tgt_lang]
         self.generation_kwargs.update(config['generation_kwargs'] or {})
 
     def _init_params(self):
@@ -155,17 +170,17 @@ class Pretrained_Models(AbstractModel):
         # configuration needs to add pad token
         if self.model_name in ['ctrl', 'gpt2', 'gpt_neo', 'openai-gpt']:
             self.configuration.pad_token_id = self.tokenizer.eos_token_id
-        
+
         # init `forced_bos_token_id` token
         if self.model_name in ['bart', 'led', 'mvp']:
             self.configuration.forced_bos_token_id = self.tokenizer.bos_token_id
         elif self.model_name == 'm2m_100':
             self.configuration.forced_bos_token_id = self.tokenizer.get_lang_id(self.config['tgt_lang'])
-        
+
         # used in generate() for casual models
         if self.is_casual_model:
             self.configuration.eos_token_id = self.tokenizer.eos_token_id
-        
+
         # special settings for cpm
         if self.model_name == 'cpm':
             import jieba
@@ -175,8 +190,8 @@ class Pretrained_Models(AbstractModel):
 
     def _process_prompt_tuning_input(self, inputs, batch):
         input_ids = inputs['input_ids']
-        inputs_embeds = self.model.get_input_embeddings()(input_ids) # b, l, e
-        prompt_embeds = self.prompt_embedding.weight.repeat(input_ids.size(0), 1, 1) # b, pl, e
+        inputs_embeds = self.model.get_input_embeddings()(input_ids)  # b, l, e
+        prompt_embeds = self.prompt_embedding.weight.repeat(input_ids.size(0), 1, 1)  # b, pl, e
         inputs_embeds = torch.cat([prompt_embeds, inputs_embeds], dim=1)
         inputs['inputs_embeds'] = inputs_embeds
         del inputs['input_ids']
@@ -196,11 +211,17 @@ class Pretrained_Models(AbstractModel):
         if self.is_prompt_tuning:
             inputs = self._process_prompt_tuning_input(inputs, batch)
         outputs = self.model(**inputs)
-        
+
         if self.label_smoothing:
             loss_fct = nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
-            vocab_size = outputs.logits.size()[-1]
-            return loss_fct(outputs.logits.view(-1, vocab_size), inputs['labels'].view(-1))
+            vocab_size = outputs.logits.size(-1)
+            if self.is_casual_model:
+                logits = outputs.logits[..., :-1, :].contiguous()
+                labels = inputs['labels'][..., 1:].contiguous()
+            else:
+                logits = outputs.logits
+                labels = inputs['labels']
+            return loss_fct(logits.view(-1, vocab_size), labels.view(-1))
         else:
             return outputs.loss
 
@@ -212,21 +233,19 @@ class Pretrained_Models(AbstractModel):
 
         if self.is_prompt_tuning:
             inputs = self._process_prompt_tuning_input(inputs, batch)
-        
+
         if self.is_casual_model:
             input_ids_len = inputs['input_ids'].shape[1] if 'input_ids' in inputs else inputs['inputs_embeds'].shape[1]
             self.generation_kwargs['max_length'] = self.target_max_length + input_ids_len
-        
+
         # sample_outputs = self.model.generate(**inputs, **self.generation_kwargs)
         sample_outputs = accelerator.unwrap_model(self.model).generate(**inputs, **self.generation_kwargs)
-        sample_outputs = accelerator.pad_across_processes(
-            sample_outputs, dim=1, pad_index=self.tokenizer.pad_token_id
-        )
+        sample_outputs = accelerator.pad_across_processes(sample_outputs, dim=1, pad_index=self.tokenizer.pad_token_id)
         sample_outputs = accelerator.gather((sample_outputs))
-        
+
         if self.is_casual_model:
             sample_outputs = sample_outputs[:, input_ids_len:]
-        
+
         decode_kwargs = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': False}
         generated_text = self.tokenizer.batch_decode(sample_outputs, **decode_kwargs)
         generated_text = [g.strip() or 'NULL' for g in generated_text]

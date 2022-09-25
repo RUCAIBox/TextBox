@@ -1,0 +1,16 @@
+input_size: 768
+hidden_size: 768
+vocab_size: 50265
+num_layers: 1
+nonlinearity: relu
+bias: False
+batch_first: False
+dropout: 0
+encoder_bidirectional: True
+
+vocab_path: facebook/bart-base
+tokenizer_path: facebook/bart-base
+pad_token_id: 1
+eos_token_id: 2
+bos_token_id: 0
+decoder_start_token_id: 2

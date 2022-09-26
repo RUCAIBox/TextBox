@@ -87,6 +87,7 @@ def serialized_save(
         tag: Optional[str] = None,
         extension_name: Optional[str] = None,
         overwrite: bool = True,
+        serial_intervals: int = 1,
         max_save: int = -1,
 ):
     r"""
@@ -104,6 +105,7 @@ def serialized_save(
         extension_name: (default = None) The extension name of file. This can also
             be specific automatically if leave blank.
         overwrite: (default = True) Whether to overwrite the file to be saved.
+        serial_interval: (default = 1) The interval of serial indices.
         max_save: (default = -1) The maximal amount of files. If -1, every file
             will be saved. 1: only the file with serial number same as `serial_
             of_soft_link` will be saved. 2: both the last one and linked files.
@@ -133,12 +135,14 @@ def serialized_save(
         torch.save(source, path_to_save)
 
     # delete the file beyond the max_save
-    if serial is not None and max_save != -1 and 0 <= serial - max_save + 1 < serial:
-        path_to_delete = os.path.abspath(
-            path_without_extension + get_tag(tag, serial - max_save + 1) + '.' + extension_name
-        )
-        if not file_exists(path_to_pre_best) or not same_files(path_to_delete, path_to_pre_best):
-            safe_remove(path_to_delete)
+    if serial is not None:
+        idx_to_delete = serial - (max_save - 1) * serial_intervals
+        if max_save != -1 and 0 <= idx_to_delete < serial:
+            path_to_delete = os.path.abspath(
+                    path_without_extension + get_tag(tag, idx_to_delete) + '.' + extension_name
+            )
+            if not file_exists(path_to_pre_best) or not same_files(path_to_delete, path_to_pre_best):
+                safe_remove(path_to_delete)
 
     # update soft link
     if serial_of_soft_link is not None and serial_of_soft_link == serial:

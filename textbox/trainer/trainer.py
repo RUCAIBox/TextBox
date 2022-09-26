@@ -338,9 +338,14 @@ class Trainer(AbstractTrainer):
         return checkpoint
 
     def save_checkpoint(self):
+        if self.valid_strategy == 'step':
+            serial_idx = self._valid_count // self.valid_intervals
+        else:
+            serial_idx = self.timestamp.train_epoch
+
         serialized_save(
             self._get_checkpoint(),
-            serial=self.timestamp.train_epoch,
+            serial=serial_idx,
             serial_of_soft_link=self.best_valid_timestamp.train_epoch,
             path_without_extension=self.saved_model_filename,
             tag='epoch',
@@ -351,7 +356,7 @@ class Trainer(AbstractTrainer):
     def save_generated_text(self, generated_corpus: List[str], is_valid: bool = False):
         r"""Store the generated text by our model into `self.saved_text_filename`."""
         if is_valid:
-            self._summary_tracker.add_corpus('valid-' + str(self.timestamp.valid_epoch), generated_corpus)
+            self._summary_tracker.add_corpus('valid-' + str(self._valid_count), generated_corpus)
         else:
             self._summary_tracker.add_corpus('test', generated_corpus)
             serialized_save(

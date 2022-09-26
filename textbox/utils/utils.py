@@ -52,6 +52,10 @@ def safe_remove(dir_path: Optional[str], overwrite: bool = True):
             dir_path += get_local_time()
 
 
+def check_file(dir_path: Optional[str]) -> bool:
+    return bool(dir_path) and os.path.exists(dir_path)
+
+
 def get_tag(_tag: Optional[str], _serial: Optional[int]):
     r"""
     Get the file tag with serial number.
@@ -95,6 +99,7 @@ def serialized_save(
             will be saved. 1: only the file with serial number same as `serial_
             of_soft_link` will be saved. 2: both the last one and linked files.
     """
+    # no new file to save
     if max_save == 0 or (max_save == 1 and serial_of_soft_link != serial):
         return
 
@@ -106,8 +111,8 @@ def serialized_save(
     getLogger(__name__).debug(f'Saving file to {path_to_save}')
 
     path_to_link = os.path.abspath(path_without_extension + '.' + extension_name)
-    path_to_pre_best = os.readlink(path_to_link) if os.path.exists(path_to_link) else ''
-    if not os.path.exists(path_to_pre_best):
+    path_to_pre_best = os.readlink(path_to_link) if check_file(path_to_link) else ''
+    if not check_file(path_to_pre_best):
         path_to_pre_best = None
 
     # save
@@ -118,15 +123,16 @@ def serialized_save(
     else:
         torch.save(source, path_to_save)
 
-    # delete the file before the max_save
-    if max_save != -1 and 0 <= serial - max_save + 1 < serial:
+    # delete the file beyond the max_save
+    if serial is not None and max_save != -1 and 0 <= serial - max_save + 1 < serial:
         path_to_delete = os.path.abspath(
             path_without_extension + get_tag(tag, serial - max_save + 1) + '.' + extension_name
         )
-        if not path_to_pre_best or not os.path.samefile(path_to_delete, path_to_pre_best):
+        if check_file(path_to_delete) and\
+                (not check_file(path_to_pre_best) or not os.path.samefile(path_to_delete, path_to_pre_best)):
             safe_remove(path_to_delete)
 
-    # create soft link
+    # update soft link
     if serial_of_soft_link is not None and serial_of_soft_link == serial:
         safe_remove(path_to_pre_best)
         safe_remove(path_to_link)

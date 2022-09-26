@@ -23,8 +23,6 @@ valid_step = 'valid/step'
 valid_epoch = 'valid/epoch'
 metrics_labels = (train_step, train_epoch, valid_step, valid_epoch)
 
-MetricsDict = Dict[str, Union[float, Dict[str, float], Collection[float]]]
-
 logger = getLogger(__name__)
 
 
@@ -69,6 +67,7 @@ class EpochTracker:
             metrics_for_best_model: Optional[Set[str]] = None,
             mode: Optional[str] = None,
             axes: Optional[Timestamp] = None,
+            metrics_results: Optional[dict] = None,
     ):
 
         # loss
@@ -76,7 +75,7 @@ class EpochTracker:
         self._accumulate_step: int = 0
 
         # metrics
-        self._metrics_results: MetricsDict = dict()
+        self._metrics_results: Dict[str, float] = dict()
 
         # result: loss & metrics
         self._score: Optional[float] = None
@@ -98,16 +97,19 @@ class EpochTracker:
         self._has_score = False
         self._has_loss = False
 
-    def on_epoch_start(self):
+        if metrics_results is not None:
+            self._update_metrics(metrics_results)
+
+    def _on_epoch_start(self):
         """Call at epoch start."""
         self._start_time = time()
 
-    def on_epoch_end(self, current_best: bool):
+    def _on_epoch_end(self, current_best: bool):
         """Call at epoch end. This function will output information of this epoch."""
         self._end_time = time()
         self.epoch_info(self._end_time - self._start_time, current_best)
 
-    def append_loss(self, loss: float):
+    def _append_loss(self, loss: float):
         """Append the loss of one step."""
         self._avg_loss *= self._accumulate_step / (self._accumulate_step + 1)
         self._avg_loss += loss / (self._accumulate_step + 1)
@@ -122,7 +124,7 @@ class EpochTracker:
             return math.inf
         return self._avg_loss
 
-    def update_metrics(self, results: Optional[dict] = None, **kwargs):
+    def _update_metrics(self, results: Optional[dict] = None, **kwargs):
         """Update metrics result of this epoch."""
         for results_dict in (results, kwargs):
             if results_dict is not None:
@@ -181,8 +183,8 @@ class EpochTracker:
             time_duration: float,
             current_best: bool = False,
             desc: Optional[str] = None,
-            serial: Optional[int] = None,
-            _logger: Optional[Logger] = None
+            serial: Union[int, str, None] = None,
+            source: Optional[Callable] = None
     ):
         r"""Output loss with epoch and time information."""
 
@@ -193,9 +195,9 @@ class EpochTracker:
             output += '(best) '
         output += f"[time: {time_duration:.2f}s, {self.metrics_info()}]"
 
-        if _logger is None:
-            _logger = logger
-        _logger.info(output)
+        if source is None:
+            source = logger.info
+        source(output)
 
     def __repr__(self):
         return self.metrics_info()
@@ -370,11 +372,11 @@ class SummaryTracker:
         if mode == 'train' or mode == 'valid':
             cls.axes.update_axe(mode, 'epoch')
         cls._current_epoch.append(EpochTracker(cls.metrics_for_best_model, mode=mode, axes=cls.axes))
-        cls._current_epoch[-1].on_epoch_start()
+        cls._current_epoch[-1]._on_epoch_start()
 
         yield True
 
-        cls._current_epoch[-1].on_epoch_end(cls.is_best_valid if cls.current_mode() == 'valid' else False)
+        cls._current_epoch[-1]._on_epoch_end(cls.is_best_valid if cls.current_mode() == 'valid' else False)
         del cls._current_mode[-1]
         del cls._current_epoch[-1]
 
@@ -399,7 +401,7 @@ class SummaryTracker:
             raise ValueError('Value is nan.')
         cls.add_scalar("loss/" + cls.current_mode(), loss)
 
-        cls.current_epoch().append_loss(loss)
+        cls.current_epoch()._append_loss(loss)
 
     @classmethod
     def epoch_loss(cls) -> float:
@@ -414,7 +416,7 @@ class SummaryTracker:
         for metric, result in results.items():
             cls.add_any(tag + metric, result)
             if not isinstance(result, str):
-                cls.current_epoch().update_metrics({metric: result})
+                cls.current_epoch()._update_metrics({metric: result})
 
         cls.is_best_valid = False
         if cls.epoch_score() > cls.best_valid_score:
@@ -471,7 +473,7 @@ class SummaryTracker:
     def add_corpus(cls, tag: str, corpus: Iterable[str]):
         r"""Add a corpus to summary."""
         if tag.startswith('valid'):
-            cls.current_epoch().update_metrics({'generated_corpus': '\n'.join(corpus)})
+            cls.current_epoch()._update_metrics({'generated_corpus': '\n'.join(corpus)})
         if cls._is_local_main_process and not cls.tracker_finished:
             corpus = wandb.Table(columns=[tag], data=pd.DataFrame(corpus))
             wandb.log({tag: corpus}, step=cls.axes.train_step)

@@ -43,17 +43,21 @@ def safe_remove(dir_path: Optional[str], overwrite: bool = True):
         overwrite: (default = True) If True, the file will be deleted.
             If False, the file will be renamed with the current time.
     """
-    if not dir_path:
-        return
-    if os.path.exists(dir_path) or os.path.islink(dir_path):
+    if file_exists(dir_path):
         if overwrite:
             os.remove(dir_path)
         else:
-            dir_path += get_local_time()
+            os.rename(dir_path, dir_path + get_local_time() + '.swp')
 
 
-def check_file(dir_path: Optional[str]) -> bool:
-    return bool(dir_path) and os.path.exists(dir_path)
+def file_exists(dir_path: Optional[str]) -> bool:
+    return dir_path is not None and os.path.exists(dir_path)
+
+def same_files(f1: Optional[str], f2: Optional[str]) -> bool:
+    if not file_exists(f1) or not file_exists(f2):
+        return False
+    else:
+        return os.path.samefile(f1, f2)
 
 
 def get_tag(_tag: Optional[str], _serial: Optional[int]):
@@ -111,8 +115,8 @@ def serialized_save(
     getLogger(__name__).debug(f'Saving file to {path_to_save}')
 
     path_to_link = os.path.abspath(path_without_extension + '.' + extension_name)
-    path_to_pre_best = os.readlink(path_to_link) if check_file(path_to_link) else ''
-    if not check_file(path_to_pre_best):
+    path_to_pre_best = os.readlink(path_to_link) if file_exists(path_to_link) else ''
+    if not file_exists(path_to_pre_best):
         path_to_pre_best = None
 
     # save
@@ -128,8 +132,7 @@ def serialized_save(
         path_to_delete = os.path.abspath(
             path_without_extension + get_tag(tag, serial - max_save + 1) + '.' + extension_name
         )
-        if check_file(path_to_delete) and\
-                (not check_file(path_to_pre_best) or not os.path.samefile(path_to_delete, path_to_pre_best)):
+        if not file_exists(path_to_pre_best) or not same_files(path_to_delete, path_to_pre_best):
             safe_remove(path_to_delete)
 
     # update soft link

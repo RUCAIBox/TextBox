@@ -6,7 +6,7 @@ from logging import Logger, getLogger
 import math
 import os
 from time import time
-from typing import Collection, Dict, Iterable, Optional, Set, Tuple, Union, List
+from typing import Collection, Dict, Iterable, Optional, Set, Tuple, Union, List, Callable
 import traceback
 
 import pandas as pd
@@ -479,7 +479,7 @@ class SummaryTracker:
             wandb.log({tag: corpus}, step=cls.axes.train_step)
 
 
-root: Optional[SummaryTracker] = None
+root = None
 
 def get_dashboard():
     """Return the root dashboard."""

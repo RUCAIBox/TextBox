@@ -43,7 +43,7 @@ def safe_remove(dir_path: Optional[str], overwrite: bool = True):
         overwrite: (default = True) If True, the file will be deleted.
             If False, the file will be renamed with the current time.
     """
-    if file_exists(dir_path):
+    if file_exists(dir_path) or link_exists(dir_path):
         if overwrite:
             os.remove(dir_path)
         else:
@@ -52,6 +52,11 @@ def safe_remove(dir_path: Optional[str], overwrite: bool = True):
 
 def file_exists(dir_path: Optional[str]) -> bool:
     return dir_path is not None and os.path.exists(dir_path)
+
+
+def link_exists(dir_path: Optional[str]) -> bool:
+    return dir_path is not None and os.path.islink(dir_path)
+
 
 def same_files(f1: Optional[str], f2: Optional[str]) -> bool:
     if not file_exists(f1) or not file_exists(f2):

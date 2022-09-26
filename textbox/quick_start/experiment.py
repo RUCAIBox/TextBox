@@ -1,8 +1,5 @@
 import os
 import logging
-import traceback
-import wandb
-from wandb import AlertLevel
 from copy import copy
 from logging import getLogger
 from typing import Optional, Tuple, Any, List, Dict
@@ -13,7 +10,7 @@ from torch.utils.data import DataLoader
 from ..config.configurator import Config
 from ..data.utils import data_preparation
 from ..trainer.trainer import Trainer
-from ..utils.dashboard import init_dashboard, finish_dashboard, start_dashboard, get_dashboard
+from ..utils.dashboard import SummaryTracker
 from ..utils.logger import init_logger
 from ..utils.utils import get_model, get_tokenizer, get_trainer, init_seed
 
@@ -44,7 +41,7 @@ class Experiment:
         self.accelerator = Accelerator()
         self.__base_config.update({'_is_local_main_process': self.accelerator.is_local_main_process})
         self.logger = self.init_logger(self.__base_config)
-        init_dashboard(self.get_config())
+        SummaryTracker.basicConfig(self.get_config())
         self.train_data, self.valid_data, self.test_data, self.tokenizer = \
             self._init_data(self.get_config(), self.accelerator)
 
@@ -80,7 +77,6 @@ class Experiment:
         """(Re-)initialize configuration. Since for now config and trainer is modifiable, this
         function is needed to ensure they were aligned to initial configuration.
         """
-        start_dashboard()
         self.__extended_config = extended_config
         config = self.get_config()
         init_seed(config['seed'], config['reproducibility'])
@@ -110,12 +106,10 @@ class Experiment:
 
     def _do_test(self):
         if self.do_test:
-            summary_tracker = get_dashboard()
-            summary_tracker.new_epoch('eval')
-            self.test_result = self.trainer.evaluate(self.test_data, model_file=self.__base_config['load_experiment'])
-            summary_tracker.set_metrics_results(self.test_result)
-            self.logger.info('Evaluation result:\n{}'.format(summary_tracker.current_epoch.metrics_info(sep=",\n", indent=" ")))
-            summary_tracker.on_epoch_end()
+            with SummaryTracker.new_epoch('eval'):
+                self.test_result = self.trainer.evaluate(self.test_data, model_file=self.__base_config['load_experiment'])
+                SummaryTracker.set_metrics_results(self.test_result)
+                self.logger.info('Evaluation result:\n{}'.format(SummaryTracker.current_epoch().metrics_info(sep=",\n", indent=" ")))
 
     def _on_experiment_end(self):
         if self.__base_config['max_save'] == 0:
@@ -124,19 +118,12 @@ class Experiment:
             from ..utils import safe_remove
             safe_remove(saved_filename)
             safe_remove(saved_link)
-        finish_dashboard(self.test_result)
         self.__extended_config = None
 
-    def run(self, extended_config: Optional[dict] = None) -> Tuple[Optional[ResultType], Optional[ResultType]]:
-        try:
+    def run(self, extended_config: Optional[dict] = None):
+        with SummaryTracker.new_experiment():
             self._on_experiment_start(extended_config)
             self._do_train_and_valid()
             self._do_test()
             self._on_experiment_end()
-        except Exception as e:
-            if self.__base_config['email']:
-                wandb.alert(title=f"Error {self.__base_config['model']}-{self.__base_config['dataset']}", 
-                            text=f"{self.__base_config['cmd']}\n{traceback.format_exc()}",
-                            level=AlertLevel.ERROR)
-            self.logger.error(traceback.format_exc())
-            # raise e
+

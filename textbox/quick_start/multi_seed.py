@@ -47,10 +47,9 @@ def run_multi_seed(
             best_score = valid_result['score']
         ed_time = time()
 
-        et = EpochTracker()
-        et.update_metrics(seed=trial_seed)
-        et.update_metrics(valid_result)
-        et.epoch_info(desc='Trial', serial=trial_idx, time_duration=ed_time-st_time, logger=logger)
+        et = EpochTracker(metrics_results=valid_result)
+        et._update_metrics(seed=trial_seed)
+        et.epoch_info(desc='Trial', serial=trial_idx, time_duration=ed_time-st_time, source=logger.info)
         for key, value in valid_result.items():
             avg_results[key] *= trial_idx / (trial_idx + 1)
             avg_results[key] += value / (trial_idx + 1)

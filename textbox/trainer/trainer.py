@@ -452,7 +452,7 @@ class Trainer(AbstractTrainer):
                          f'at train epoch {self.best_valid_timestamp.train_epoch} ======')
 
         self.model = self.accelerator.unwrap_model(self.model)
-        self.logger.info('Best valid result: {}'.format(self.best_valid_result.metrics_info()))
+        self.logger.info('Best valid result: {}'.format(self.best_valid_result.as_str()))
         return self.best_valid_result.as_dict()
 
     @torch.no_grad()

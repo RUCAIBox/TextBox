@@ -109,7 +109,7 @@ class Experiment:
             with SummaryTracker.new_epoch('eval'):
                 self.test_result = self.trainer.evaluate(self.test_data, model_file=self.__base_config['load_experiment'])
                 SummaryTracker.set_metrics_results(self.test_result)
-                self.logger.info('Evaluation result:\n{}'.format(SummaryTracker.current_epoch().metrics_info(sep=",\n", indent=" ")))
+                self.logger.info('Evaluation result:\n{}'.format(SummaryTracker.current_epoch().as_str(sep=",\n", indent=" ")))
 
     def _on_experiment_end(self):
         if self.__base_config['max_save'] == 0:

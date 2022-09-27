@@ -15,6 +15,7 @@ import torch
 import wandb
 from wandb import AlertLevel
 from wandb.data_types import Table
+from wandb.sdk.wandb_run import Run
 
 from textbox.config.configurator import Config
 
@@ -175,7 +176,7 @@ class EpochTracker:
             _o += '>'
         return _o + sep
 
-    def metrics_info(self, sep=', ', indent=''):
+    def as_str(self, sep=', ', indent='') -> str:
         output = ''
         for metric, result in self.as_dict().items():
             output += self._add_metric(metric, result, indent, sep)
@@ -196,14 +197,14 @@ class EpochTracker:
         output = "{} {} ".format(desc or self.desc, serial)
         if current_best:
             output += '(best) '
-        output += f"[time: {time_duration:.2f}s, {self.metrics_info()}]"
+        output += f"[time: {time_duration:.2f}s, {self.as_str()}]"
 
         if source is None:
             source = logger.info
         source(output)
 
     def __repr__(self):
-        return self.metrics_info()
+        return self.as_str()
 
 
 class SummaryTracker:
@@ -358,16 +359,19 @@ class SummaryTracker:
             if cls._email:
                 config = cls.kwargs['config']
                 wandb.alert(title=f"Error {config['model']}-{config['dataset']}", 
-                            text=f"{config['cmd']}\n{traceback.format_exc()}",
+                            text=f"{config['cmd']}\n\n{traceback.format_exc()}",
                             level=AlertLevel.ERROR)
             logger.error(traceback.format_exc())
             
-        finally:
+        else:
             if cls._is_local_main_process and _run is not None:
                 if cls._email:
-                    test_result = cls.epoch_dict(fallback=True)
+                    try:
+                        test_result = cls.current_epoch(fallback=True).as_str()
+                    except RuntimeError:
+                        test_result = 'None'
                     wandb.alert(title=f"Finished {cls.kwargs['project']}",
-                                text=f"{cls.kwargs['config']['cmd']}\n{test_result}")
+                                text=f"{cls.kwargs['config']['cmd']}\n\n{test_result}")
                 cls.flush_text()
                 _run.finish()
             cls.tracker_finished = True

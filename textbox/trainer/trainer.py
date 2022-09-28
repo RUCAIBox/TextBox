@@ -4,6 +4,7 @@ from logging import getLogger
 from typing import Optional, Union, List, Tuple, Dict
 
 import torch
+from torch.distributed import logger
 import torch.optim as optim
 import transformers
 from accelerate import Accelerator
@@ -112,6 +113,10 @@ class Trainer(AbstractTrainer):
         self.saved_text_filename: str = os.path.join(config['generated_text_dir'], self.filename)
 
         self.max_save = config['max_save'] if config['max_save'] is not None else 2
+        if self.max_save == 0:
+            # The saved checkpoint will be deleted at the end of experiment
+            self.logger.warning('max_save has been set to 0. None of the checkpoint will be saved.')
+            self.max_save = 1
         self.disable_tqdm = config['disable_tqdm'] or not self.accelerator.is_local_main_process
         self._summary_tracker = get_dashboard()
 
@@ -279,7 +284,7 @@ class Trainer(AbstractTrainer):
                     if not self.disable_tqdm:
                         valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss())
             else:
-                valid_results = self.evaluate(valid_data, is_valid=True, valid_count=self.timestamp.valid_epoch)
+                valid_results = self.evaluate(valid_data, is_valid=True)
                 self._summary_tracker.set_metrics_results(valid_results)
             self.valid_result_dict[self.timestamp.valid_epoch] = self._summary_tracker.current_epoch()
         
@@ -461,9 +466,7 @@ class Trainer(AbstractTrainer):
             eval_data: DataLoader,
             load_best_model: bool = True,
             model_file: Optional[str] = None,
-            _eval: bool = True,
             is_valid: bool = False,
-            valid_count: Optional[int] = None,
     ) -> Optional[dict]:
         r"""Evaluate the model based on the `eval_data`.
 
@@ -473,9 +476,7 @@ class Trainer(AbstractTrainer):
                                               It should be set True, if users want to test the model after training.
             model_file (str, optional): the saved model file, default: None. If users want to test the previously
                                         trained model file, they can set this parameter.
-            _eval: (default = True) True to evaluate and False to preview generation only.
             is_valid: (default = False) True if evaluate during validation
-            valid_count: (default = None) Validation index if `is_valid` is True.
 
         Returns:
             dict: eval result, key is the eval metric and value in the corresponding metric value
@@ -526,3 +527,4 @@ class Trainer(AbstractTrainer):
         result = self.evaluator.evaluate(generate_corpus, reference_dataset)
         
         return result
+

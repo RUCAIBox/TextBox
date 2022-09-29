@@ -343,15 +343,13 @@ class Trainer(AbstractTrainer):
         return checkpoint
 
     def save_checkpoint(self):
-        if self.valid_strategy == 'step':
-            serial_idx = self._valid_count // self.valid_intervals
-        else:
-            serial_idx = self.timestamp.train_epoch
+        serial_idx = self.timestamp.valid_epoch
+        serial_of_soft_link = self.best_valid_timestamp.valid_epoch
 
         serialized_save(
             self._get_checkpoint(),
             serial=serial_idx,
-            serial_of_soft_link=self.best_valid_timestamp.train_epoch,
+            serial_of_soft_link=serial_of_soft_link,
             path_without_extension=self.saved_model_filename,
             tag='epoch',
             extension_name='pth',

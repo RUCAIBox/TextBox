@@ -153,7 +153,6 @@ class Pretrained_Models(AbstractModel):
         opt: [</s>, src, </s>; tgt, </s>]
         xlm: [<s>, src, </s>; tgt, </s>]
         xlm-roberta: [<s>, src, </s>; </s>, tgt, </s>]
-        
 
         Encoder-decoder models:
         bart, led, mvp: [<s>, src, </s>], [<s>, tgt, </s>], decoder_start_token_id: </s>, forced_bos_token_id: <s>

@@ -24,3 +24,4 @@ facebook/
 .env
 /wandb/
 *.swp
+test/

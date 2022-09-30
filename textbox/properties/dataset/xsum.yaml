@@ -6,4 +6,4 @@ metrics_for_best_model: ['rouge-1', 'rouge-2', 'rouge-l']
 train_batch_size: 4
 accumulation_steps: 48
 eval_batch_size: 16
-prefix: 'Summarize: '
+prefix_prompt: 'Summarize: '

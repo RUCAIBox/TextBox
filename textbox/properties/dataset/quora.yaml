@@ -10,5 +10,5 @@ metrics_for_best_model: ['bleu', 'rouge-1', 'rouge-2', 'rouge-l', 'meteor']
 train_batch_size: 16
 accumulation_steps: 12
 eval_batch_size: 64
-prefix: 'Paraphrase: '
+prefix_prompt: 'Paraphrase: '
 tokenizer_kwargs: {'additional_special_tokens': ['<sep>'] }

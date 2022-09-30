@@ -43,13 +43,29 @@ def safe_remove(dir_path: Optional[str], overwrite: bool = True):
         overwrite: (default = True) If True, the file will be deleted.
             If False, the file will be renamed with the current time.
     """
-    if not dir_path:
-        return
-    if os.path.exists(dir_path) or os.path.islink(dir_path):
+    if file_exists(dir_path) or link_exists(dir_path):
         if overwrite:
+            getLogger(__name__).debug(f'Removing "{dir_path}"')
             os.remove(dir_path)
         else:
-            dir_path += get_local_time()
+            new_path = dir_path + get_local_time() + '.swp'
+            getLogger(__name__).debug(f'Renaming "{dir_path}" to "{new_path}"')
+            os.rename(dir_path, new_path)
+
+
+def file_exists(dir_path: Optional[str]) -> bool:
+    return dir_path is not None and os.path.exists(dir_path)
+
+
+def link_exists(dir_path: Optional[str]) -> bool:
+    return dir_path is not None and os.path.islink(dir_path)
+
+
+def same_files(f1: Optional[str], f2: Optional[str]) -> bool:
+    if not file_exists(f1) or not file_exists(f2):
+        return False
+    else:
+        return os.path.samefile(f1, f2)
 
 
 def get_tag(_tag: Optional[str], _serial: Optional[int]):
@@ -66,6 +82,15 @@ def get_tag(_tag: Optional[str], _serial: Optional[int]):
     return _tag
 
 
+def _save(source: Union[dict, list], path_to_save: str, extension_name: str):
+    if extension_name == 'txt':
+        with open(path_to_save, 'w') as fout:
+            for text in source:
+                fout.write(text + '\n')
+    else:
+        torch.save(source, path_to_save)
+
+
 def serialized_save(
         source: Union[dict, list],
         serial: Optional[int],
@@ -74,6 +99,7 @@ def serialized_save(
         tag: Optional[str] = None,
         extension_name: Optional[str] = None,
         overwrite: bool = True,
+        serial_intervals: int = 1,
         max_save: int = -1,
 ):
     r"""
@@ -91,44 +117,55 @@ def serialized_save(
         extension_name: (default = None) The extension name of file. This can also
             be specific automatically if leave blank.
         overwrite: (default = True) Whether to overwrite the file to be saved.
+        serial_interval: (default = 1) The interval of serial indices.
         max_save: (default = -1) The maximal amount of files. If -1, every file
             will be saved. 1: only the file with serial number same as `serial_
             of_soft_link` will be saved. 2: both the last one and linked files.
     """
-    if max_save == 0 or (max_save == 1 and serial_of_soft_link != serial):
-        return
 
     # deal with naming
     if extension_name not in ('txt', 'pth'):
         extension_name = 'txt' if isinstance(source, list) else 'pth'
     path_to_save = os.path.abspath(path_without_extension + get_tag(tag, serial) + '.' + extension_name)
     safe_remove(path_to_save, overwrite)  # behavior of torch.save is not clearly defined.
-    getLogger(__name__).debug(f'Saving file to {path_to_save}')
+    getLogger(__name__).debug(f'Saving file to "{path_to_save}"')
+    
+    # not serialized saving
+    if serial is None or serial_of_soft_link is None or max_save == -1:
+        _save(source, path_to_save, extension_name)
+        return
 
+    # no new file to save
+    if max_save == 0 or (max_save == 1 and serial_of_soft_link != serial):
+        return
+
+    # read soft link
     path_to_link = os.path.abspath(path_without_extension + '.' + extension_name)
-    path_to_pre_best = os.readlink(path_to_link) if os.path.exists(path_to_link) else ''
-    if not os.path.exists(path_to_pre_best):
+    path_to_pre_best = os.readlink(path_to_link) if file_exists(path_to_link) else ''
+    serial_of_pre_best = serial
+    if not file_exists(path_to_pre_best):
         path_to_pre_best = None
+    else:
+        serial_of_pre_best = int(path_to_pre_best[:-4].split('-')[-1])
 
     # save
-    if extension_name == 'txt':
-        with open(path_to_save, 'w') as fout:
-            for text in source:
-                fout.write(text + '\n')
-    else:
-        torch.save(source, path_to_save)
+    _save(source, path_to_save, extension_name)
 
-    # delete the file before the max_save
-    if max_save != -1 and 0 <= serial - max_save + 1 < serial:
+    # delete the file beyond the max_save
+    soft_link_goes_beyond = ((max_save - 1) * serial_intervals < serial - serial_of_soft_link)
+    serial_to_delete = serial - (max_save - int(soft_link_goes_beyond)) * serial_intervals
+    getLogger(__name__).debug(f'Soft link now are pointing to serial: "{serial_of_soft_link}"')
+    if 0 <= serial_to_delete < serial:
         path_to_delete = os.path.abspath(
-            path_without_extension + get_tag(tag, serial - max_save + 1) + '.' + extension_name
+            path_without_extension + get_tag(tag, serial_to_delete) + '.' + extension_name
         )
-        if not path_to_pre_best or not os.path.samefile(path_to_delete, path_to_pre_best):
-            safe_remove(path_to_delete)
+        safe_remove(path_to_delete)
 
-    # create soft link
-    if serial_of_soft_link is not None and serial_of_soft_link == serial:
-        safe_remove(path_to_pre_best)
+    # update soft link
+    pre_best_goes_beyond = ((max_save - 1) * serial_intervals < serial - serial_of_pre_best)
+    if serial_of_soft_link == serial:
+        if pre_best_goes_beyond:
+            safe_remove(path_to_pre_best)
         safe_remove(path_to_link)
         os.symlink(path_to_save, path_to_link)
 

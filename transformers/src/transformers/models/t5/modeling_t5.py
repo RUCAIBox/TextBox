@@ -666,6 +666,10 @@ class T5Attention(T5Attention_origin):
             present_key_value_state = (key_states, value_states)
         else:
             present_key_value_state = None
+        
+        if 'prefix-tuning' in self.efficient_methods or 'p-tuning-v2' in self.efficient_methods:
+            key_states, value_states, mask = self.prefix_tuning(key_states, value_states, mask)
+            key_length = key_states.size(2)
 
         if is_encoder_decoder_attn and use_cache:
             new_query_states = query_states.view(batch_size // self.num_beams, self.num_beams, self.n_heads,

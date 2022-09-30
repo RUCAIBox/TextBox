@@ -491,6 +491,9 @@ class GPT2Attention(GPT2Attention_origin):
         else:
             present = (None,)
         
+        if 'prefix-tuning' in self.efficient_methods or 'p-tuning-v2' in self.efficient_methods:
+            key, value, attention_mask = self.prefix_tuning(key, value, attention_mask)
+
         if self.reorder_and_upcast_attn:
             attn_output, attn_weights = self._upcast_and_reordered_attn(query, key, value, attention_mask, head_mask)
         else:

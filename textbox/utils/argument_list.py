@@ -50,8 +50,9 @@ dataset_parameters = [
 
 efficient_kwargs_dict = {
     'lora': {'lora_r': 4, 'lora_dropout': 0.1, 'lora_alpha': 32},
-    'prefix_tuning': {'prefix_length': 100, 'prefix_dropout': 0.1, 'prefix_mid_dim': 512},
+    'prefix-tuning': {'prefix_length': 100, 'prefix_dropout': 0.1, 'prefix_mid_dim': 512},
     'p-tuning-v2': {'prefix_length': 100, 'prefix_dropout': 0.1, 'prefix_mid_dim': 512},
     'adapter': {'adapter_mid_dim': 64},
     'prompt-tuning': {'prompt_length': 100},
+    'bitfit': {}
 }

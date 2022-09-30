@@ -53,7 +53,6 @@ class RNNConfig(PretrainedConfig):
             **kwargs,
         )
 
-        # ensure backward compatibility for BART CNN models
 
 
 class RNNPretrainedModel(PreTrainedModel):

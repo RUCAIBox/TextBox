@@ -1,14 +1,12 @@
 r"""
 ################################################
     Integration of casual models and encoder-decoder models in Transformers API
-
     Summary of Related Papers:
     gpt2: Language Models are Unsupervised Multitask Learners
     openai-gpt: Improving Language Understanding by Generative Pre-Training
     cpm: CPM: A Large-scale Generative Chinese Pre-trained Language Model
     ctrl: CTRL: A Conditional Transformer Language Model for Controllable Generation
     gpt_neo: The Pile: An 800GB Dataset of Diverse Text for Language Modeling
-
     t5: Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer
     mt5: mT5: A massively multilingual pre-trained text-to-text transformer
     bart: BART: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension
@@ -36,7 +34,6 @@ from ..utils.argument_list import efficient_kwargs_dict
 ("xlm", "XLMWithLMHeadModel"),
 ("xlm-roberta", "XLMRobertaForCausalLM"),
 ("xlnet", "XLNetLMHeadModel"),
-
 # Model for Seq2Seq Causal LM mapping
 ("longt5", "LongT5ForConditionalGeneration"),
 ("marian", "MarianMTModel"),
@@ -150,7 +147,6 @@ class Pretrained_Models(AbstractModel):
         ctrl, openai-gpt: [src, </s>; tgt, </s>]
         gpt2, gpt_neo: [src, <|endoftext|>; tgt, <|endoftext|>]
         opt: [</s>, src, </s>; tgt, </s>]
-
         Encoder-decoder models:
         bart, led, mvp: [<s>, src, </s>], [<s>, tgt, </s>], decoder_start_token_id: </s>, forced_bos_token_id: <s>
         bert2bert: [[CLS], src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [CLS]

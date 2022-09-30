@@ -145,12 +145,10 @@ def get_model(model_name):
     Returns:
         Generator: model class
     """
-    print(model_name)
     if model_name.lower() in PLM_MODELS:
         model_name = 'Pretrained_Models'
     elif model_name.lower() in RNN_MODELS:
         model_name = 'RNN_Models'
-    print(model_name)
     module_path = '.'.join(['...model', model_name.lower()])
     if importlib.util.find_spec(module_path, __name__):
         model_module = importlib.import_module(module_path, __name__)

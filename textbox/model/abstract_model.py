@@ -37,26 +37,45 @@ class AbstractModel(nn.Module):
             'attention_mask': batch['source_mask'].to(self.device),
             'labels': batch['target_ids'].to(self.device)
         }
+        if self.is_prompt_tuning:
+            inputs = self._process_prompt_tuning_input(inputs, batch)
         outputs = self.model(**inputs)
 
         if self.label_smoothing:
             loss_fct = nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
-            vocab_size = outputs.logits.size()[-1]
-            return loss_fct(outputs.logits.view(-1, vocab_size), inputs['labels'].view(-1))
+            vocab_size = outputs.logits.size(-1)
+            if self.is_casual_model:
+                logits = outputs.logits[..., :-1, :].contiguous()
+                labels = inputs['labels'][..., 1:].contiguous()
+            else:
+                logits = outputs.logits
+                labels = inputs['labels']
+            return loss_fct(logits.view(-1, vocab_size), labels.view(-1))
         else:
             return outputs.loss
 
-    def generate(self, batch, eval_data, accelerator=None):
+    def generate(self, batch, eval_data, accelerator):
         inputs = {
             'input_ids': batch['source_ids'].to(self.device),
             'attention_mask': batch['source_mask'].to(self.device),
         }
+
+        if self.is_prompt_tuning:
+            inputs = self._process_prompt_tuning_input(inputs, batch)
+
+        if self.is_casual_model:
+            input_ids_len = inputs['input_ids'].shape[1] if 'input_ids' in inputs else inputs['inputs_embeds'].shape[1]
+            self.generation_kwargs['max_length'] = self.target_max_length + input_ids_len
+
+        # sample_outputs = self.model.generate(**inputs, **self.generation_kwargs)
         sample_outputs = accelerator.unwrap_model(self.model).generate(**inputs, **self.generation_kwargs)
         sample_outputs = accelerator.pad_across_processes(sample_outputs, dim=1, pad_index=self.tokenizer.pad_token_id)
         sample_outputs = accelerator.gather((sample_outputs))
 
+        if self.is_casual_model:
+            sample_outputs = sample_outputs[:, input_ids_len:]
+
         decode_kwargs = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': False}
         generated_text = self.tokenizer.batch_decode(sample_outputs, **decode_kwargs)
         generated_text = [g.strip() or 'NULL' for g in generated_text]
-        # return generated_text
         return generated_text

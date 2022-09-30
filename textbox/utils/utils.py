@@ -185,7 +185,7 @@ def get_tokenizer(config):
             tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
 
         # (1): tokenizer needs to add eos token
-        if model_name in ['ctrl', 'openai-gpt']:
+        if model_name in ['ctrl', 'openai-gpt', 'xlm']:
             tokenizer.add_special_tokens(({'eos_token': '</s>'}))
 
         # (2): tokenizer needs to add pad token
@@ -200,13 +200,13 @@ def get_tokenizer(config):
         if model_name in ['blenderbot-small', 'cpm', 'ctrl', 'gpt2', 'gpt_neo', 'openai-gpt']:
             tokenizer.build_inputs_with_special_tokens = lambda t0, t1=None: t0 + [tokenizer.eos_token_id]
             tokenizer.num_special_tokens_to_add = lambda: 1
-        elif model_name in ['opt']:
+        elif model_name in ['opt', 'xlm-roberta']:
             tokenizer.build_inputs_with_special_tokens = \
                 lambda t0, t1=None: [tokenizer.bos_token_id] + t0 + [tokenizer.eos_token_id]
             tokenizer.num_special_tokens_to_add = lambda: 2
 
         # (5): tokenizer needs to set src_lang, tgt_lang (used in translation task)
-        if model_name in ['m2m_100', 'mbart']:
+        if model_name in ['m2m_100', 'mbart', 'xlm', 'marian', 'xlm-prephetnet', 'nllb']:
             assert config['src_lang'] and config['tgt_lang'], \
                 model_name + ' needs to specify source language and target language ' \
                              'with `--src_lang=xx` and `--tgt_lang=xx`'

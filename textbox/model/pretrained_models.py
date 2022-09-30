@@ -41,6 +41,7 @@ from ..utils.argument_list import efficient_kwargs_dict
 ("longt5", "LongT5ForConditionalGeneration"),
 ("marian", "MarianMTModel"),
 ("xlm-prophetnet", "XLMProphetNetForConditionalGeneration"),
+("nllb", "M2M100ForConditionalGeneration"),
 '''
 
 
@@ -150,6 +151,9 @@ class Pretrained_Models(AbstractModel):
         ctrl, openai-gpt: [src, </s>; tgt, </s>]
         gpt2, gpt_neo: [src, <|endoftext|>; tgt, <|endoftext|>]
         opt: [</s>, src, </s>; tgt, </s>]
+        xlm: [<s>, src, </s>; tgt, </s>]
+        xlm-roberta: [<s>, src, </s>; </s>, tgt, </s>]
+        
 
         Encoder-decoder models:
         bart, led, mvp: [<s>, src, </s>], [<s>, tgt, </s>], decoder_start_token_id: </s>, forced_bos_token_id: <s>
@@ -162,21 +166,25 @@ class Pretrained_Models(AbstractModel):
         pegasus: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
         prophetnet: [src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [SEP]
         t5, mt5: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
+        LongT5: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
+        marian: [src, </s>], [tgt, </s>], decoder_start_token_id: </s>
+        xlm-prophetnet: [src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [SEP]
+        nllb: [src_lang_id, src, </s>], [tgt_lang_id, tgt, </s>], decoder_start_token_id: </s>
         """
         # configuration needs to add pad token
         if self.model_name in ['ctrl', 'gpt2', 'gpt_neo', 'openai-gpt']:
             self.configuration.pad_token_id = self.tokenizer.eos_token_id
-
+        
         # init `forced_bos_token_id` token
         if self.model_name in ['bart', 'led', 'mvp']:
             self.configuration.forced_bos_token_id = self.tokenizer.bos_token_id
         elif self.model_name == 'm2m_100':
             self.configuration.forced_bos_token_id = self.tokenizer.get_lang_id(self.config['tgt_lang'])
-
+        
         # used in generate() for casual models
         if self.is_casual_model:
             self.configuration.eos_token_id = self.tokenizer.eos_token_id
-
+        
         # special settings for cpm
         if self.model_name == 'cpm':
             import jieba
@@ -207,7 +215,7 @@ class Pretrained_Models(AbstractModel):
         if self.is_prompt_tuning:
             inputs = self._process_prompt_tuning_input(inputs, batch)
         outputs = self.model(**inputs)
-
+        
         if self.label_smoothing:
             loss_fct = nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
             vocab_size = outputs.logits.size()[-1]
@@ -223,19 +231,19 @@ class Pretrained_Models(AbstractModel):
 
         if self.is_prompt_tuning:
             inputs = self._process_prompt_tuning_input(inputs, batch)
-
+        
         if self.is_casual_model:
             input_ids_len = inputs['input_ids'].shape[1] if 'input_ids' in inputs else inputs['inputs_embeds'].shape[1]
             self.generation_kwargs['max_length'] = self.target_max_length + input_ids_len
-
+        
         # sample_outputs = self.model.generate(**inputs, **self.generation_kwargs)
         sample_outputs = accelerator.unwrap_model(self.model).generate(**inputs, **self.generation_kwargs)
         sample_outputs = accelerator.pad_across_processes(sample_outputs, dim=1, pad_index=self.tokenizer.pad_token_id)
         sample_outputs = accelerator.gather((sample_outputs))
-
+        
         if self.is_casual_model:
             sample_outputs = sample_outputs[:, input_ids_len:]
-
+        
         decode_kwargs = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': False}
         generated_text = self.tokenizer.batch_decode(sample_outputs, **decode_kwargs)
         generated_text = [g.strip() or 'NULL' for g in generated_text]

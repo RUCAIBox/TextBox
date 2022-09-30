@@ -18,3 +18,4 @@ setuptools
 six
 accelerate
 hyperopt>=0.2.6
+sacremoses #for XLM

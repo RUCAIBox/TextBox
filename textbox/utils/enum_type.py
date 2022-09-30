@@ -9,8 +9,9 @@ class SpecialTokens:
     EOS = "[EOS]"
 
 
-CLM_MODELS = ["cpm", "ctrl", "gpt2", "gpt_neo", "openai-gpt", "opt"]
+CLM_MODELS = ["cpm", "ctrl", "gpt2", "gpt_neo", "openai-gpt", "opt", "xlm", "xlm-roberta"]
 SEQ2SEQ_MODELS = ["bart", "bert2bert", "bigbird_pegasus", "blenderbot", "blenderbot-small", "led", "m2m_100", "mbart",
-                  "mt5", "mvp", "pegasus", "prophetnet", "t5", "chinese-bart", "chinese-pegasus", "cpt", "transformer"]
+                  "mt5", "mvp", "pegasus", "prophetnet", "t5", "chinese-bart", "chinese-pegasus", "cpt", "transformer", 
+                  "longt5", "marian", "xlm-prophetnet", "nllb"]
 
 PLM_MODELS = CLM_MODELS + SEQ2SEQ_MODELS

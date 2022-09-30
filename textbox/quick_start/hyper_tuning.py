@@ -100,10 +100,9 @@ class HyperTuning:
             self.best_params = copy(params)
             current_best = True
 
-        et = EpochTracker(self.metrics_for_best_model)
-        et.update_metrics(test_result)
+        et = EpochTracker(self.metrics_for_best_model, metrics_results=test_result)
         et.epoch_info(desc='Trial', serial=self._trial_count, time_duration=ed_time-st_time, current_best=current_best,
-                      logger=self.logger)
+                      source=self.logger.info)
 
         test_result['loss'] = test_result['score']
         test_result['status'] = hyperopt.STATUS_OK

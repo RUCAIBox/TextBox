@@ -4,6 +4,7 @@ from logging import getLogger
 from typing import Optional, Union, List, Tuple, Dict
 
 import torch
+from torch.distributed import logger
 import torch.optim as optim
 import transformers
 from accelerate import Accelerator
@@ -12,7 +13,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from textbox import Config
-from textbox.utils.dashboard import get_dashboard, Timestamp, EpochTracker
+from textbox.utils.dashboard import SummaryTracker, get_dashboard, Timestamp, EpochTracker
 from .scheduler import (
     AbstractScheduler, InverseSquareRootScheduler, CosineScheduler, LinearScheduler, ConstantScheduler
 )
@@ -112,6 +113,10 @@ class Trainer(AbstractTrainer):
         self.saved_text_filename: str = os.path.join(config['generated_text_dir'], self.filename)
 
         self.max_save = config['max_save'] if config['max_save'] is not None else 2
+        if self.max_save == 0:
+            # The saved checkpoint will be deleted at the end of experiment
+            self.logger.warning('max_save has been set to 0. None of the checkpoint will be saved.')
+            self.max_save = 1
         self.disable_tqdm = config['disable_tqdm'] or not self.accelerator.is_local_main_process
         self._summary_tracker = get_dashboard()
 
@@ -201,7 +206,6 @@ class Trainer(AbstractTrainer):
             dict: Training losses.
         """
         self.model.train()
-        self._summary_tracker.new_epoch("train")
         if not self.disable_tqdm:
             train_tqdm = tqdm(
                 train_data, desc=f"train {epoch_idx:4}", dynamic_ncols=True, postfix={'loss': None}, unit='step'
@@ -209,35 +213,33 @@ class Trainer(AbstractTrainer):
         else:
             train_tqdm = train_data
 
-        for step, data in enumerate(train_tqdm):
-            self._summary_tracker.new_step()
-            if self.timestamp.train_step == self.max_steps:
-                self.stopped = True
-                break
+        with self._summary_tracker.new_epoch('train'):
+            for step, data in enumerate(train_tqdm):
+                self._summary_tracker.new_step()
+                if self.timestamp.train_step == self.max_steps:
+                    self.stopped = True
+                    break
 
-            loss = self.model(data, epoch_idx=epoch_idx)
-            # loss = self.accelerator.gather(loss).mean().item()
-            self._summary_tracker.append_loss(loss.item())
-            self.accelerator.backward(loss / self.accumulation_steps)
-            
-            if (step + 1) % self.accumulation_steps == 0 or (step + 1) == len(train_tqdm):
-                if self.grad_clip is not None:
-                    self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
-                self.optimizer.step()
-                self.optimizer.zero_grad()
-            
-            if not self.disable_tqdm:
-                train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
+                loss = self.model(data, epoch_idx=epoch_idx)
+                # loss = self.accelerator.gather(loss).mean().item()
+                self._summary_tracker.append_loss(loss.item())
+                self.accelerator.backward(loss / self.accumulation_steps)
+                
+                if (step + 1) % self.accumulation_steps == 0 or (step + 1) == len(train_tqdm):
+                    if self.grad_clip is not None:
+                        self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
+                    self.optimizer.step()
+                    self.optimizer.zero_grad()
+                
+                if not self.disable_tqdm:
+                    train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss())
 
-            if valid_data:
-                self.stopped |= self._valid(valid_data, 'step')
-            if self.stopped:
-                break
+                if valid_data:
+                    self.stopped |= self._valid(valid_data, 'step')
+                if self.stopped:
+                    break
 
-        result = self._summary_tracker.epoch_dict()
-        self._summary_tracker.on_epoch_end()
-
-        return result
+            return self._summary_tracker.epoch_dict()
 
     @torch.no_grad()
     def _valid(
@@ -265,38 +267,34 @@ class Trainer(AbstractTrainer):
         if self._valid_count % self.valid_intervals != 0:
             return False
 
-        self._summary_tracker.new_epoch('valid')
-
-        if 'loss' in self.metrics_for_best_model:
-            self.model.eval()
-            if not self.disable_tqdm:
-                valid_tqdm = tqdm(valid_data, desc=f"valid {self.timestamp.valid_epoch:4}", dynamic_ncols=True,
-                                  postfix={'loss': None}, unit='step')
-            else:
-                valid_tqdm = valid_data
-            for data in valid_tqdm:
-                self._summary_tracker.new_step()
-                loss = self.model(data)
-                losses = self.accelerator.gather(loss)
-                loss = losses.mean().item()
-                self._summary_tracker.append_loss(loss)
+        with self._summary_tracker.new_epoch('valid'):
+            if 'loss' in self.metrics_for_best_model:
+                self.model.eval()
                 if not self.disable_tqdm:
-                    valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
-        else:
-            valid_results = self.evaluate(valid_data, is_valid=True, valid_count=self.timestamp.valid_epoch)
-            self._summary_tracker.set_metrics_results(valid_results)
+                    valid_tqdm = tqdm(valid_data, desc=f"valid {self.timestamp.valid_epoch:4}", dynamic_ncols=True,
+                                      postfix={'loss': None}, unit='step')
+                else:
+                    valid_tqdm = valid_data
+                for data in valid_tqdm:
+                    self._summary_tracker.new_step()
+                    loss = self.model(data)
+                    losses = self.accelerator.gather(loss)
+                    loss = losses.mean().item()
+                    self._summary_tracker.append_loss(loss)
+                    if not self.disable_tqdm:
+                        valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss())
+            else:
+                valid_results = self.evaluate(valid_data, is_valid=True)
+                self._summary_tracker.set_metrics_results(valid_results)
+            self.valid_result_dict[self.timestamp.valid_epoch] = self._summary_tracker.current_epoch()
         
         self.model.train()
-
-        self.valid_result_dict[self.timestamp.valid_epoch] = self._summary_tracker.current_epoch
 
         stopped = bool(self.stopping_steps) and self._early_stopping(self._summary_tracker.is_best_valid)
 
         if self.is_save():
             self.save_checkpoint()
         self.accelerator.wait_for_everyone()
-
-        self._summary_tracker.on_epoch_end()
 
         return stopped
 
@@ -345,10 +343,13 @@ class Trainer(AbstractTrainer):
         return checkpoint
 
     def save_checkpoint(self):
+        serial_idx = self.timestamp.valid_epoch
+        serial_of_soft_link = self.best_valid_timestamp.valid_epoch
+
         serialized_save(
             self._get_checkpoint(),
-            serial=self.timestamp.train_epoch,
-            serial_of_soft_link=self.best_valid_timestamp.train_epoch,
+            serial=serial_idx,
+            serial_of_soft_link=serial_of_soft_link,
             path_without_extension=self.saved_model_filename,
             tag='epoch',
             extension_name='pth',
@@ -358,7 +359,7 @@ class Trainer(AbstractTrainer):
     def save_generated_text(self, generated_corpus: List[str], is_valid: bool = False):
         r"""Store the generated text by our model into `self.saved_text_filename`."""
         if is_valid:
-            self._summary_tracker.add_corpus('valid-' + str(self.timestamp.valid_epoch), generated_corpus)
+            self._summary_tracker.add_corpus('valid-' + str(self._valid_count), generated_corpus)
         else:
             self._summary_tracker.add_corpus('test', generated_corpus)
             serialized_save(
@@ -454,7 +455,7 @@ class Trainer(AbstractTrainer):
                          f'at train epoch {self.best_valid_timestamp.train_epoch} ======')
 
         self.model = self.accelerator.unwrap_model(self.model)
-        self.logger.info('Best valid result: {}'.format(self.best_valid_result.metrics_info()))
+        self.logger.info('Best valid result: {}'.format(self.best_valid_result.as_str()))
         return self.best_valid_result.as_dict()
 
     @torch.no_grad()
@@ -463,9 +464,7 @@ class Trainer(AbstractTrainer):
             eval_data: DataLoader,
             load_best_model: bool = True,
             model_file: Optional[str] = None,
-            _eval: bool = True,
             is_valid: bool = False,
-            valid_count: Optional[int] = None,
     ) -> Optional[dict]:
         r"""Evaluate the model based on the `eval_data`.
 
@@ -475,9 +474,7 @@ class Trainer(AbstractTrainer):
                                               It should be set True, if users want to test the model after training.
             model_file (str, optional): the saved model file, default: None. If users want to test the previously
                                         trained model file, they can set this parameter.
-            _eval: (default = True) True to evaluate and False to preview generation only.
             is_valid: (default = False) True if evaluate during validation
-            valid_count: (default = None) Validation index if `is_valid` is True.
 
         Returns:
             dict: eval result, key is the eval metric and value in the corresponding metric value
@@ -528,3 +525,4 @@ class Trainer(AbstractTrainer):
         result = self.evaluator.evaluate(generate_corpus, reference_dataset)
         
         return result
+

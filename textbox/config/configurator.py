@@ -5,6 +5,7 @@ import yaml
 import torch
 from logging import getLogger
 from colorama import init, Fore
+
 init(autoreset=True)
 
 from typing import List, Dict, Optional, Iterable, Any
@@ -248,9 +249,11 @@ class Config(object):
         self.final_config_dict['model_name'] = self.final_config_dict.get('model_name', self.model.lower())
         self.final_config_dict['data_path'] = os.path.join(self.final_config_dict['data_path'], self.dataset)
         self.final_config_dict['cmd'] = ' '.join(sys.argv)
-        self.setdefault('filename', f'{self.final_config_dict["model"]}'
-                                    f'-{self.final_config_dict["dataset"]}'
-                                    f'-{get_local_time()}')  # warning: filename is not replicable
+        self.setdefault(
+            'filename', f'{self.final_config_dict["model"]}'
+            f'-{self.final_config_dict["dataset"]}'
+            f'-{get_local_time()}'
+        )  # warning: filename is not replicable
         self.setdefault('logdir', './log/')
         self.setdefault('_hyper_tuning', [])
         self.setdefault('do_train', True)

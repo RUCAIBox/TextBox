@@ -29,7 +29,6 @@ logger = getLogger(__name__)
 
 
 class Timestamp:
-
     """A timestamp class including train step, train epoch, validation step and validation epoch."""
 
     def __init__(self):
@@ -43,15 +42,17 @@ class Timestamp:
         axe = '_'.join(name)
         value = getattr(self, axe)
         if isinstance(value, int):
-            setattr(self, axe, value+1)
+            setattr(self, axe, value + 1)
         else:
             getLogger(__name__).warning(f'Failed when updating axe {axe}')
 
     def as_dict(self) -> dict:
         """Get the timestamp as a dictionary. The entries are also metrics labels shown in W&B."""
         return {
-            train_step: self.train_step, train_epoch: self.train_epoch,
-            valid_step: self.valid_step, valid_epoch: self.train_epoch,
+            train_step: self.train_step,
+            train_epoch: self.train_epoch,
+            valid_step: self.valid_step,
+            valid_epoch: self.train_epoch,
         }
 
 
@@ -65,11 +66,11 @@ class EpochTracker:
     """
 
     def __init__(
-            self,
-            metrics_for_best_model: Optional[Set[str]] = None,
-            mode: Optional[str] = None,
-            axes: Optional[Timestamp] = None,
-            metrics_results: Optional[dict] = None,
+        self,
+        metrics_for_best_model: Optional[Set[str]] = None,
+        mode: Optional[str] = None,
+        axes: Optional[Timestamp] = None,
+        metrics_results: Optional[dict] = None,
     ):
 
         # loss
@@ -183,12 +184,12 @@ class EpochTracker:
         return output[:-len(sep)]
 
     def epoch_info(
-            self,
-            time_duration: float,
-            current_best: bool = False,
-            desc: Optional[str] = None,
-            serial: Union[int, str, None] = None,
-            source: Optional[Callable] = None
+        self,
+        time_duration: float,
+        current_best: bool = False,
+        desc: Optional[str] = None,
+        serial: Union[int, str, None] = None,
+        source: Optional[Callable] = None
     ):
         r"""Output loss with epoch and time information."""
 
@@ -250,11 +251,11 @@ class SummaryTracker:
     is_best_valid: Optional[bool] = None
 
     def __init__(
-            self,
-            kwargs: dict,
-            is_local_main_process: bool,
-            metrics_for_best_model: Set[str],
-            email: bool = True,
+        self,
+        kwargs: dict,
+        is_local_main_process: bool,
+        metrics_for_best_model: Set[str],
+        email: bool = True,
     ):
         self.__init_config(kwargs, is_local_main_process, metrics_for_best_model, email)
 
@@ -320,8 +321,10 @@ class SummaryTracker:
     def current_epoch(cls, fallback: bool = False) -> EpochTracker:
         if len(cls._current_epoch) <= 0:
             if not fallback or cls._fallback is None:
-                raise RuntimeError('No avaliable epoch information found. '
-                                   'Move your code into `with new_epoch()` context to fix it.')
+                raise RuntimeError(
+                    'No avaliable epoch information found. '
+                    'Move your code into `with new_epoch()` context to fix it.'
+                )
             else:
                 return cls._fallback[0]
         return cls._current_epoch[-1]
@@ -330,8 +333,10 @@ class SummaryTracker:
     def current_mode(cls, fallback: bool = False) -> str:
         if len(cls._current_epoch) <= 0:
             if not fallback or cls._fallback is None:
-                raise RuntimeError('No avaliable epoch information found. '
-                                   'Move your code into `with new_epoch()` context to fix it.')
+                raise RuntimeError(
+                    'No avaliable epoch information found. '
+                    'Move your code into `with new_epoch()` context to fix it.'
+                )
             else:
                 return cls._fallback[1]
         return cls._current_mode[-1]
@@ -358,11 +363,13 @@ class SummaryTracker:
         except Exception:
             if cls._email:
                 config = cls.kwargs['config']
-                wandb.alert(title=f"Error {config['model']}-{config['dataset']}", 
-                            text=f"{config['cmd']}\n\n{traceback.format_exc()}",
-                            level=AlertLevel.ERROR)
+                wandb.alert(
+                    title=f"Error {config['model']}-{config['dataset']}",
+                    text=f"{config['cmd']}\n\n{traceback.format_exc()}",
+                    level=AlertLevel.ERROR
+                )
             logger.error(traceback.format_exc())
-            
+
         else:
             if cls._is_local_main_process and _run is not None:
                 if cls._email:
@@ -370,8 +377,10 @@ class SummaryTracker:
                         test_result = cls.current_epoch(fallback=True).as_str()
                     except RuntimeError:
                         test_result = 'None'
-                    wandb.alert(title=f"Finished {cls.kwargs['project']}",
-                                text=f"{cls.kwargs['config']['cmd']}\n\n{test_result}")
+                    wandb.alert(
+                        title=f"Finished {cls.kwargs['project']}",
+                        text=f"{cls.kwargs['config']['cmd']}\n\n{test_result}"
+                    )
                 cls.flush_text()
                 _run.finish()
             cls.tracker_finished = True
@@ -402,7 +411,6 @@ class SummaryTracker:
         cls._fallback = (cls._current_epoch[-1], cls._current_mode[-1])
         del cls._current_mode[-1]
         del cls._current_epoch[-1]
-
 
     @classmethod
     def new_step(cls, fallback: bool = False):
@@ -504,7 +512,7 @@ class SummaryTracker:
 
 root = None
 
+
 def get_dashboard():
     """Return the root dashboard."""
     return root
-

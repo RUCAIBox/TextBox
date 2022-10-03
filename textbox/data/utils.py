@@ -3,11 +3,8 @@ from textbox.data.denoising_dataset import TextInfillingCollate, DenoisingCollat
 from textbox.data.abstract_dataset import AbstractDataset, AbstractCollate
 from logging import getLogger
 
-collate_options = {
-    'disabled': AbstractCollate,
-    'denoising': DenoisingCollate,
-    'text_infilling': TextInfillingCollate
-}
+collate_options = {'disabled': AbstractCollate, 'denoising': DenoisingCollate, 'text_infilling': TextInfillingCollate}
+
 
 def data_preparation(config, tokenizer):
     train_dataset = AbstractDataset(config, 'train')
@@ -23,8 +20,28 @@ def data_preparation(config, tokenizer):
     logger = getLogger(__name__)
     logger.info(f'Pretrain type: {collate_fn.get_type()}')
 
-    train_dataloader = DataLoader(train_dataset, batch_size=config['train_batch_size'], shuffle=True, pin_memory=True, collate_fn=collate_fn(config, tokenizer, 'train'))
-    valid_dataloader = DataLoader(valid_dataset, batch_size=config['eval_batch_size'], shuffle=False, pin_memory=True, collate_fn=collate_fn(config, tokenizer, 'valid'))
-    test_dataloader = DataLoader(test_dataset, batch_size=config['eval_batch_size'], shuffle=False, pin_memory=True, collate_fn=collate_fn(config, tokenizer, 'test'))
-    return train_dataloader, valid_dataloader, test_dataloader
+    if config['dataset'] == 'multiwoz':
+        assert config['eval_batch_size'] % 3 == 0
 
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size=config['train_batch_size'],
+        shuffle=True,
+        pin_memory=True,
+        collate_fn=collate_fn(config, tokenizer, 'train')
+    )
+    valid_dataloader = DataLoader(
+        valid_dataset,
+        batch_size=config['eval_batch_size'],
+        shuffle=False,
+        pin_memory=True,
+        collate_fn=collate_fn(config, tokenizer, 'valid')
+    )
+    test_dataloader = DataLoader(
+        test_dataset,
+        batch_size=config['eval_batch_size'],
+        shuffle=False,
+        pin_memory=True,
+        collate_fn=collate_fn(config, tokenizer, 'test')
+    )
+    return train_dataloader, valid_dataloader, test_dataloader

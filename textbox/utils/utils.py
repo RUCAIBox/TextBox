@@ -92,15 +92,15 @@ def _save(source: Union[dict, list], path_to_save: str, extension_name: str):
 
 
 def serialized_save(
-        source: Union[dict, list],
-        serial: Optional[int],
-        serial_of_soft_link: Optional[int],
-        path_without_extension: str,
-        tag: Optional[str] = None,
-        extension_name: Optional[str] = None,
-        overwrite: bool = True,
-        serial_intervals: int = 1,
-        max_save: int = -1,
+    source: Union[dict, list],
+    serial: Optional[int],
+    serial_of_soft_link: Optional[int],
+    path_without_extension: str,
+    tag: Optional[str] = None,
+    extension_name: Optional[str] = None,
+    overwrite: bool = True,
+    serial_intervals: int = 1,
+    max_save: int = -1,
 ):
     r"""
     Save a sequence of files with given serial numbers and create a soft link
@@ -129,7 +129,7 @@ def serialized_save(
     path_to_save = os.path.abspath(path_without_extension + get_tag(tag, serial) + '.' + extension_name)
     safe_remove(path_to_save, overwrite)  # behavior of torch.save is not clearly defined.
     getLogger(__name__).debug(f'Saving file to "{path_to_save}"')
-    
+
     # not serialized saving
     if serial is None or serial_of_soft_link is None or max_save == -1:
         _save(source, path_to_save, extension_name)
@@ -156,9 +156,7 @@ def serialized_save(
     serial_to_delete = serial - (max_save - int(soft_link_goes_beyond)) * serial_intervals
     getLogger(__name__).debug(f'Soft link now are pointing to serial: "{serial_of_soft_link}"')
     if 0 <= serial_to_delete < serial:
-        path_to_delete = os.path.abspath(
-            path_without_extension + get_tag(tag, serial_to_delete) + '.' + extension_name
-        )
+        path_to_delete = os.path.abspath(path_without_extension + get_tag(tag, serial_to_delete) + '.' + extension_name)
         safe_remove(path_to_delete)
 
     # update soft link
@@ -220,6 +218,8 @@ def get_tokenizer(config):
             tokenizer = BertTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
         else:
             tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
+
+        tokenizer.add_tokens(config['tokenizer_add_tokens'])
 
         # (1): tokenizer needs to add eos token
         if model_name in ['ctrl', 'openai-gpt']:

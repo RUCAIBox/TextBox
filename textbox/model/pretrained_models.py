@@ -137,10 +137,10 @@ class Pretrained_Models(AbstractModel):
         # geneation settings
         self.generation_kwargs = {}
         self.generation_kwargs['max_length'] = self.target_max_length
-        self.generation_kwargs[
-            'decoder_start_token_id'
-        ] = self.configuration.decoder_start_token_id if self.model_name != 'mbart' else self.tokenizer.lang_code_to_id[
-            self.tokenizer.tgt_lang]
+        self.generation_kwargs['decoder_start_token_id'] = \
+            self.configuration.decoder_start_token_id \
+            if self.model_name != 'mbart' else \
+            self.tokenizer.lang_code_to_id[self.tokenizer.tgt_lang]
         self.generation_kwargs.update(config['generation_kwargs'] or {})
 
     def _init_params(self):
@@ -186,8 +186,8 @@ class Pretrained_Models(AbstractModel):
 
     def _process_prompt_tuning_input(self, inputs, batch):
         input_ids = inputs['input_ids']
-        inputs_embeds = self.model.get_input_embeddings()(input_ids)  # b, l, e
-        prompt_embeds = self.prompt_embedding.weight.repeat(input_ids.size(0), 1, 1)  # b, pl, e
+        inputs_embeds = self.model.get_input_embeddings()(input_ids) # b, l, e
+        prompt_embeds = self.prompt_embedding.weight.repeat(input_ids.size(0), 1, 1) # b, pl, e
         inputs_embeds = torch.cat([prompt_embeds, inputs_embeds], dim=1)
         inputs['inputs_embeds'] = inputs_embeds
         del inputs['input_ids']
@@ -221,7 +221,7 @@ class Pretrained_Models(AbstractModel):
         else:
             return outputs.loss
 
-    def generate(self, batch, eval_data, accelerator):
+    def generate(self, batch, accelerator):
         inputs = {
             'input_ids': batch['source_ids'].to(self.device),
             'attention_mask': batch['source_mask'].to(self.device),

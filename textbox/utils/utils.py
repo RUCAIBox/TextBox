@@ -221,6 +221,8 @@ def get_tokenizer(config):
         else:
             tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
 
+        tokenizer.add_tokens(config['tokenizer_add_tokens'])
+
         # (1): tokenizer needs to add eos token
         if model_name in ['ctrl', 'openai-gpt']:
             tokenizer.add_special_tokens(({'eos_token': '</s>'}))

@@ -48,7 +48,7 @@ class BleuEvaluator(AbstractEvaluator):
         if self.bleu_type in ['nltk', 'fast-bleu', 'pycocoevalcap']:
             for ngram in self.ngrams:
                 results[ngram] = []
-        
+
         if self.bleu_type == 'fast-bleu':
             from fast_bleu import bleu
 
@@ -59,20 +59,25 @@ class BleuEvaluator(AbstractEvaluator):
             scores = bleu.get_score(generate_corpus.tokens)
             for ngram in self.ngrams:
                 results[ngram] = [s * 100 for s in scores[ngram]]
-        
+
         elif self.bleu_type == 'nltk':
             from nltk.translate.bleu_score import sentence_bleu, corpus_bleu, SmoothingFunction
 
             if self.corpus_bleu:
                 for ngram, weights in zip(self.ngrams, self.ngram_weights):
-                    score = corpus_bleu(reference_corpus.tokens, generate_corpus.tokens, weights, getattr(SmoothingFunction(), f"method{self.smoothing_function}"))
+                    score = corpus_bleu(
+                        reference_corpus.tokens, generate_corpus.tokens, weights,
+                        getattr(SmoothingFunction(), f"method{self.smoothing_function}")
+                    )
                     results[ngram] = score * 100
-            else: # sentence_bleu
+            else:  # sentence_bleu
                 for gen, refs in zip(generate_corpus.tokens, reference_corpus.tokens):
                     for ngram, weights in zip(self.ngrams, self.ngram_weights):
-                        score = sentence_bleu(refs, gen, weights, getattr(SmoothingFunction(), f"method{self.smoothing_function}"))
+                        score = sentence_bleu(
+                            refs, gen, weights, getattr(SmoothingFunction(), f"method{self.smoothing_function}")
+                        )
                         results[ngram].append(score * 100)
-        
+
         elif self.bleu_type == 'mt-eval':
             from .utils.pymteval import BLEUScore
 
@@ -80,7 +85,7 @@ class BleuEvaluator(AbstractEvaluator):
             for gen, refs in zip(generate_corpus.text, reference_corpus.text):
                 bleu.append(gen, refs)
             results['bleu'] = bleu.score() * 100
-        
+
         elif self.bleu_type == 'sacrebleu':
             import sacrebleu
 
@@ -88,7 +93,7 @@ class BleuEvaluator(AbstractEvaluator):
             bleu = sacrebleu.corpus_bleu(generate_corpus.text, reference_corpus.text)
             results['bleu'] = bleu.score
             results['bleu-precisions'] = bleu.prec_str
-        
+
         elif self.bleu_type == 'pycocoevalcap':
             from pycocoevalcap.bleu.bleu import Bleu
             refs = {idx: r for idx, r in enumerate(reference_corpus.tokenized_text)}
@@ -96,7 +101,7 @@ class BleuEvaluator(AbstractEvaluator):
             scores = Bleu(4).compute_score(refs, gen, verbose=0)[0]
             for ngram, score in zip(self.ngrams, scores):
                 results[ngram] = score * 100
-        
+
         elif self.bleu_type == 'multi-bleu':
             reference_corpus = list(zip_longest(*reference_corpus.tokenized_text))
             max_ref_num = len(reference_corpus)
@@ -111,7 +116,11 @@ class BleuEvaluator(AbstractEvaluator):
                         f.write('\n'.join([ref or '' for ref in reference_corpus[i]]))
                 try:
                     ref_file = f"{ref_file}[{','.join([str(i) for i in range(max_ref_num)])}]"
-                    scores = subprocess.check_output(f"perl textbox/evaluator/utils/multi-bleu.perl {ref_file} < {gen_file}", stderr=subprocess.STDOUT, shell=True)
+                    scores = subprocess.check_output(
+                        f"perl textbox/evaluator/utils/multi-bleu.perl {ref_file} < {gen_file}",
+                        stderr=subprocess.STDOUT,
+                        shell=True
+                    )
                     scores = scores.decode().strip().split('\n')[-1].split()
                     results['bleu'] = float(scores[2][:-1])
                     results['bleu-precisions'] = scores[3]
@@ -119,7 +128,7 @@ class BleuEvaluator(AbstractEvaluator):
                     traceback.print_exc()
                     print(call_e.output.decode().strip())
                     exit(0)
-        
+
         elif self.bleu_type == 'sacrebleu-romanian':
             with tempfile.TemporaryDirectory() as tmpdir:
                 gen_file = f"{tmpdir}/gen.txt"

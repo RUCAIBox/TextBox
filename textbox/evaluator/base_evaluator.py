@@ -1,14 +1,31 @@
 from nltk.tokenize import word_tokenize
 
-
 evaluator_list = {
-    'bert_score', 'bleu', 'chrf', 'chrf+', 'chrf++', 'cider', 'distinct', 'meteor', 'multiwoz', 'nist', 'qa', 'rouge', 'self_bleu', 'spice', 'ter', 'unique',
+    'bert_score',
+    'bleu',
+    'chrf',
+    'chrf+',
+    'chrf++',
+    'cider',
+    'distinct',
+    'meteor',
+    'multiwoz',
+    'nist',
+    'qa',
+    'rouge',
+    'self_bleu',
+    'spice',
+    'ter',
+    'unique',
 }
 
-PUNCTUATIONS = ["''", "'", "``", "`", "-LRB-", "-RRB-", "-LCB-", "-RCB-", ".", "?", "!", ",", ":", "-", "--", "...", ";"]
+PUNCTUATIONS = [
+    "''", "'", "``", "`", "-LRB-", "-RRB-", "-LCB-", "-RCB-", ".", "?", "!", ",", ":", "-", "--", "...", ";"
+]
 
 
 class Text:
+
     def __init__(self, text, lower, tokenizer=None, remove_punc=False):
         self.text = text.lower() if lower else text
         if tokenizer:
@@ -21,6 +38,7 @@ class Text:
 
 
 class Corpus:
+
     def __init__(self, corpus, lower, mode, tokenizer=None, remove_punc=False):
         self.mode = mode
         if mode == 'gen':
@@ -34,14 +52,14 @@ class Corpus:
             return [text.text for text in self.corpus]
         else:
             return [[text.text for text in texts] for texts in self.corpus]
-    
+
     @property
     def tokenized_text(self):
         if self.mode == 'gen':
             return [text.tokenized_text for text in self.corpus]
         else:
             return [[text.tokenized_text for text in texts] for texts in self.corpus]
-    
+
     @property
     def tokens(self):
         if self.mode == 'gen':
@@ -102,7 +120,7 @@ class BaseEvaluator():
             elif metric == 'unique':
                 from .unique_evaluator import UniqueEvaluator
                 evaluator = UniqueEvaluator(self.config)
-            
+
             self.evaluators.append(evaluator)
 
     def _process_corpus(self, generate_corpus, reference_dataset):

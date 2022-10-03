@@ -63,8 +63,7 @@ class NGramScore(object):
         """
         # tokenize if needed
         pred_sent = pred_sent if isinstance(pred_sent, list) else self.tokenize(pred_sent)
-        ref_sents = [ref_sent if isinstance(ref_sent, list) else self.tokenize(ref_sent)
-                     for ref_sent in ref_sents]
+        ref_sents = [ref_sent if isinstance(ref_sent, list) else self.tokenize(ref_sent) for ref_sent in ref_sents]
         return pred_sent, ref_sents
 
     def get_ngram_counts(self, n, sents):
@@ -176,8 +175,7 @@ class BLEUScore(NGramScore):
         # to avoid division by zero)
         bp = 1.0
         if (self.cand_lens[0] <= self.ref_len):
-            bp = math.exp(1.0 - old_div(self.ref_len,
-                          (float(self.cand_lens[0]) if self.cand_lens[0] else 1e-5)))
+            bp = math.exp(1.0 - old_div(self.ref_len, (float(self.cand_lens[0]) if self.cand_lens[0] else 1e-5)))
 
         return bp * self.ngram_precision()
 
@@ -189,7 +187,7 @@ class BLEUScore(NGramScore):
             n_hits += self.smoothing  # pre-set smoothing
             n_len += self.smoothing
             n_hits = max(n_hits, self.TINY)  # forced smoothing just a litle to make BLEU defined
-            n_len = max(n_len, self.SMALL)   # only applied for zeros
+            n_len = max(n_len, self.SMALL)  # only applied for zeros
             prec_log_sum += math.log(old_div(n_hits, n_len))
 
         return math.exp((1.0 / self.max_ngram) * prec_log_sum)
@@ -199,7 +197,7 @@ class NISTScore(NGramScore):
     """An accumulator object capable of computing NIST score using multiple references."""
 
     # NIST beta parameter setting (copied from mteval-13a.pl)
-    BETA = old_div(- math.log(0.5), math.log(1.5) ** 2)
+    BETA = old_div(-math.log(0.5), math.log(1.5) ** 2)
 
     def __init__(self, max_ngram=5, case_sensitive=False):
         """Create the scoring object.
@@ -253,8 +251,7 @@ class NISTScore(NGramScore):
         """Return the NIST informativeness of an n-gram."""
         if ngram not in self.ref_ngrams[len(ngram)]:
             return 0.0
-        return math.log(self.ref_ngrams[len(ngram) - 1][ngram[:-1]] /
-                        float(self.ref_ngrams[len(ngram)][ngram]), 2)
+        return math.log(self.ref_ngrams[len(ngram) - 1][ngram[:-1]] / float(self.ref_ngrams[len(ngram)][ngram]), 2)
 
     def nist_length_penalty(self, lsys, avg_lref):
         """Compute the NIST length penalty, based on system output length & average reference length.

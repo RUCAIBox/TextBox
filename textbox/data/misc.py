@@ -24,7 +24,8 @@ def load_data(dataset_path: str, max_length: int = 0):
             fin = itertools.islice(fin, max_length)
         for line in fin:
             l = line.strip()
-            if len(l) >= 2 and ((l[0] == '"' and l[-1] == '"') or (l[0] == "'" and l[-1] == "'") or (l[0] == '[' and l[-1] == ']')):
+            if len(l) >= 2 and ((l[0] == '"' and l[-1] == '"') or (l[0] == "'" and l[-1] == "'") or
+                                (l[0] == '[' and l[-1] == ']')):
                 try:
                     l = eval(l)
                     if not isinstance(l, list):
@@ -51,6 +52,7 @@ def _pad_sequence(tensors: List[torch.Tensor], padding_value: int, padding_side:
     padded_tensors = torch.stack(padded_tensors, dim=0)
     return padded_tensors
 
+
 def _collate_batch(samples, tokenizer, pad_to_multiple_of: Optional[int] = None):
     """Collate `samples` into a batch, using the information in `tokenizer` for padding if necessary."""
     # Tensorize if necessary.
@@ -60,9 +62,7 @@ def _collate_batch(samples, tokenizer, pad_to_multiple_of: Optional[int] = None)
     # Check if padding is necessary.
     length_of_first = samples[0].size(0)
     are_tensors_same_length = all(x.size(0) == length_of_first for x in samples)
-    if are_tensors_same_length and (
-        pad_to_multiple_of is None or length_of_first % pad_to_multiple_of == 0
-    ):
+    if are_tensors_same_length and (pad_to_multiple_of is None or length_of_first % pad_to_multiple_of == 0):
         return torch.stack(samples, dim=0)
 
     # If yes, check if we have a `pad_token`.
@@ -79,7 +79,7 @@ def _collate_batch(samples, tokenizer, pad_to_multiple_of: Optional[int] = None)
     result = samples[0].new_full([len(samples), max_length], tokenizer.pad_token_id)
     for i, example in enumerate(samples):
         if tokenizer.padding_side == "right":
-            result[i, : example.shape[0]] = example
+            result[i, :example.shape[0]] = example
         else:
-            result[i, -example.shape[0] :] = example
+            result[i, -example.shape[0]:] = example
     return result

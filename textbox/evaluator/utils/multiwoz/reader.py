@@ -6,6 +6,7 @@ from . import utils
 from . import ontology
 from .db_ops import MultiWozDB
 
+
 class _ReaderBase(object):
 
     def __init__(self):
@@ -48,6 +49,7 @@ class _ReaderBase(object):
 
 
 class MultiWozReader(_ReaderBase):
+
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
@@ -57,8 +59,7 @@ class MultiWozReader(_ReaderBase):
         self.vocab_size = self._build_vocab()
 
         self.domain_files = json.loads(open(self.cfg.domain_file_path, 'r').read())
-        self.slot_value_set = json.loads(
-            open(self.cfg.slot_value_set_path, 'r').read())
+        self.slot_value_set = json.loads(open(self.cfg.slot_value_set_path, 'r').read())
 
         self.exp_files = {}
         self._load_data()
@@ -74,8 +75,7 @@ class MultiWozReader(_ReaderBase):
         load processed data and encode, or load already encoded data
         """
         # directly read processed data and encode
-        self.data = json.loads(
-                open(self.cfg.data_path+self.cfg.data_file, 'r', encoding='utf-8').read().lower())
+        self.data = json.loads(open(self.cfg.data_path + self.cfg.data_file, 'r', encoding='utf-8').read().lower())
         self.train, self.dev, self.test = [], [], []
         for fn, dial in self.data.items():
             if '.json' in fn:
@@ -100,9 +100,8 @@ class MultiWozReader(_ReaderBase):
                 if cons == 'people':
                     # handle confusion of value name "people's portraits..." and slot people
                     try:
-                        ns = bspan[idx+1]
-                        ns = self.vocab.decode(ns) if type(
-                            ns) is not str else ns
+                        ns = bspan[idx + 1]
+                        ns = self.vocab.decode(ns) if type(ns) is not str else ns
                         if ns == "'s":
                             continue
                     except:
@@ -112,7 +111,7 @@ class MultiWozReader(_ReaderBase):
                 if bspn_mode == 'bsdx':
                     constraint_dict[domain][cons] = 1
                     continue
-                vidx = idx+1
+                vidx = idx + 1
                 if vidx == conslen:
                     break
                 vt_collect = []
@@ -139,4 +138,3 @@ class MultiWozReader(_ReaderBase):
         match = matnums[match_dom]
         vector = self.db.addDBIndicator(match_dom, match)
         return vector
-    

@@ -2,10 +2,12 @@
 import re
 from . import ontology
 
+
 def my_clean_text(text):
-    text = re.sub(r'([a-zT]+)\.([a-z])', r'\1 . \2', text)   # 'abc.xyz' -> 'abc . xyz'
-    text = re.sub(r'(\w+)\.\.? ', r'\1 . ', text)   # if 'abc. ' -> 'abc . '
+    text = re.sub(r'([a-zT]+)\.([a-z])', r'\1 . \2', text)  # 'abc.xyz' -> 'abc . xyz'
+    text = re.sub(r'(\w+)\.\.? ', r'\1 . ', text)  # if 'abc. ' -> 'abc . '
     return text
+
 
 def clean_text(text, mapping_pair_path):
     text = text.strip()
@@ -17,39 +19,40 @@ def clean_text(text, mapping_pair_path):
     text = text.replace('/', ' and ')
     text = text.replace("don't", "do n't")
     text = clean_time(text)
-    baddata = { r'c\.b (\d), (\d) ([a-z])\.([a-z])': r'cb\1\2\3\4',
-                        'c.b. 1 7 d.y': 'cb17dy',
-                        'c.b.1 7 d.y': 'cb17dy',
-                        'c.b 25, 9 a.q': 'cb259aq',
-                        'isc.b 25, 9 a.q': 'is cb259aq',
-                        'c.b2, 1 u.f': 'cb21uf',
-                        'c.b 1,2 q.a':'cb12qa',
-                        '0-122-336-5664': '01223365664',
-                        'postcodecb21rs': 'postcode cb21rs',
-                        r'i\.d': 'id',
-                        ' i d ': 'id',
-                        'Telephone:01223358966': 'Telephone: 01223358966',
-                        'depature': 'departure',
-                        'depearting': 'departing',
-                        '-type': ' type',
-                        r"b[\s]?&[\s]?b": "bed and breakfast",
-                        "b and b": "bed and breakfast",
-                        r"guesthouse[s]?": "guest house",
-                        r"swimmingpool[s]?": "swimming pool",
-                        "wo n\'t": "will not",
-                        " \'d ": " would ",
-                        " \'m ": " am ",
-                        " \'re' ": " are ",
-                        " \'ll' ": " will ",
-                        " \'ve ": " have ",
-                        r'^\'': '',
-                        r'\'$': '',
-                                }
+    baddata = {
+        r'c\.b (\d), (\d) ([a-z])\.([a-z])': r'cb\1\2\3\4',
+        'c.b. 1 7 d.y': 'cb17dy',
+        'c.b.1 7 d.y': 'cb17dy',
+        'c.b 25, 9 a.q': 'cb259aq',
+        'isc.b 25, 9 a.q': 'is cb259aq',
+        'c.b2, 1 u.f': 'cb21uf',
+        'c.b 1,2 q.a': 'cb12qa',
+        '0-122-336-5664': '01223365664',
+        'postcodecb21rs': 'postcode cb21rs',
+        r'i\.d': 'id',
+        ' i d ': 'id',
+        'Telephone:01223358966': 'Telephone: 01223358966',
+        'depature': 'departure',
+        'depearting': 'departing',
+        '-type': ' type',
+        r"b[\s]?&[\s]?b": "bed and breakfast",
+        "b and b": "bed and breakfast",
+        r"guesthouse[s]?": "guest house",
+        r"swimmingpool[s]?": "swimming pool",
+        "wo n\'t": "will not",
+        " \'d ": " would ",
+        " \'m ": " am ",
+        " \'re' ": " are ",
+        " \'ll' ": " will ",
+        " \'ve ": " have ",
+        r'^\'': '',
+        r'\'$': '',
+    }
     for tmpl, good in baddata.items():
         text = re.sub(tmpl, good, text)
 
-    text = re.sub(r'([a-zT]+)\.([a-z])', r'\1 . \2', text)   # 'abc.xyz' -> 'abc . xyz'
-    text = re.sub(r'(\w+)\.\.? ', r'\1 . ', text)   # if 'abc. ' -> 'abc . '
+    text = re.sub(r'([a-zT]+)\.([a-z])', r'\1 . \2', text)  # 'abc.xyz' -> 'abc . xyz'
+    text = re.sub(r'(\w+)\.\.? ', r'\1 . ', text)  # if 'abc. ' -> 'abc . '
 
     #mapping_path = r'../data/multiwoz/data/multi-woz/mapping.pair'
     with open(mapping_pair_path, 'r') as fin:
@@ -59,14 +62,16 @@ def clean_text(text, mapping_pair_path):
             text = text.replace(' ' + fromx + ' ', ' ' + tox + ' ')[1:-1]
     return text
 
+
 def clean_time(utter):
-    utter = re.sub(r'(\d+) ([ap]\.?m)', lambda x: x.group(1) + x.group(2), utter)   # 9 am -> 9am
+    utter = re.sub(r'(\d+) ([ap]\.?m)', lambda x: x.group(1) + x.group(2), utter)  # 9 am -> 9am
     utter = re.sub(r'((?<!\d)\d:\d+)(am)?', r'0\1', utter)
     utter = re.sub(r'((?<!\d)\d)am', r'0\1:00', utter)
-    utter = re.sub(r'((?<!\d)\d)pm', lambda x: str(int(x.group(1))+12)+':00', utter)
-    utter = re.sub(r'(\d+)(:\d+)pm', lambda x: str(int(x.group(1))+12)+x.group(2), utter)
-    utter = re.sub(r'(\d+)a\.?m',r'\1', utter)
+    utter = re.sub(r'((?<!\d)\d)pm', lambda x: str(int(x.group(1)) + 12) + ':00', utter)
+    utter = re.sub(r'(\d+)(:\d+)pm', lambda x: str(int(x.group(1)) + 12) + x.group(2), utter)
+    utter = re.sub(r'(\d+)a\.?m', r'\1', utter)
     return utter
+
 
 def clean_slot_values(domain, slot, value, mapping_pair_path):
     value = clean_text(value, mapping_pair_path)
@@ -79,7 +84,7 @@ def clean_slot_values(domain, slot, value, mapping_pair_path):
         if slot == 'name':
             if value == 't':
                 value = ''
-            if value=='trinity':
+            if value == 'trinity':
                 value = 'trinity college'
         elif slot == 'area':
             if value in ['town centre', 'cent', 'center', 'ce']:
@@ -172,7 +177,7 @@ def clean_slot_values(domain, slot, value, mapping_pair_path):
             elif value == 'three':
                 value = '3'
             elif value in ['4-star', '4 stars', '4 star', 'four star', 'four stars']:
-                value= '4'
+                value = '4'
         elif slot == 'type':
             if value == '0 star rarting':
                 value = ''
@@ -182,7 +187,10 @@ def clean_slot_values(domain, slot, value, mapping_pair_path):
                 value = ''
     elif domain == 'restaurant':
         if slot == "area":
-            if value in ["center", 'scentre', "center of town", "city center", "cb30aq", "town center", 'centre of cambridge', 'city centre']:
+            if value in [
+                "center", 'scentre', "center of town", "city center", "cb30aq", "town center", 'centre of cambridge',
+                'city centre'
+            ]:
                 value = "centre"
             elif value == "west part of town":
                 value = "west"
@@ -274,7 +282,7 @@ def clean_slot_values(domain, slot, value, mapping_pair_path):
                 value = ''
             value = value.replace(".", ":")
         elif slot == 'day':
-            if value =='doesnt care' or value == "doesn't care":
+            if value == 'doesnt care' or value == "doesn't care":
                 value = "do n't care"
         elif slot in ['leaveAt', 'leave at']:
             slot = 'leaveat'

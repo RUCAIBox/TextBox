@@ -19,17 +19,17 @@ class MultiwozEvaluator(AbstractEvaluator):
         with open('dataset/multiwoz/test.json', 'r') as f:
             self.test_data = json.load(f)
         self.turn_domains = [utt['turn_domain'] for utt in self.test_data]
-    
+
     def span_db(self, bspan, turn_domain):
         return self.reader.bspan_to_DBpointer(bspan, turn_domain)
-    
+
     def _calc_metrics_info(self, generate_corpus, reference_corpus):
         i = 0
         test_data = deepcopy(self.test_data)
         for utt in test_data:
-            utt['bspn_gen'] = generate_corpus.text[i*3]
-            utt['aspn_gen'] = generate_corpus.text[i*3+1]
-            utt['resp_gen'] = generate_corpus.text[i*3+2]
+            utt['bspn_gen'] = generate_corpus.text[i * 3]
+            utt['aspn_gen'] = generate_corpus.text[i * 3 + 1]
+            utt['resp_gen'] = generate_corpus.text[i * 3 + 2]
             i += 1
         bleu, success, inform = self.eval.validation_metric(test_data)
         results = {'bleu': bleu, 'success': success, 'inform': inform, 'overall': bleu + (success + inform) / 2}

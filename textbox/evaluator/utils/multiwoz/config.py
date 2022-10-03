@@ -1,6 +1,8 @@
 import logging, time, os
 
+
 class Config:
+
     def __init__(self):
         self._multiwoz_damd_init()
 
@@ -24,16 +26,15 @@ class Config:
         self.domain_file_path = self.data_prefix + '/multi-woz/domain_files.json'
         self.slot_value_set_path = self.data_prefix + '/db/value_set_processed.json'
 
-        self.exp_domains = ['all'] # hotel,train, attraction, restaurant, taxi
+        self.exp_domains = ['all']  # hotel,train, attraction, restaurant, taxi
 
         self.enable_aspn = True
         self.use_pvaspn = False
         self.enable_bspn = True
-        self.bspn_mode = 'bspn' # 'bspn' or 'bsdx'
-        self.enable_dspn = False # removed
+        self.bspn_mode = 'bspn'  # 'bspn' or 'bsdx'
+        self.enable_dspn = False  # removed
         self.enable_dst = False
 
-        self.exp_domains = ['all'] # hotel,train, attraction, restaurant, taxi
+        self.exp_domains = ['all']  # hotel,train, attraction, restaurant, taxi
         self.max_context_length = 900
         self.vocab_size = 3000
-

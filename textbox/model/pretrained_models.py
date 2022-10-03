@@ -186,8 +186,8 @@ class Pretrained_Models(AbstractModel):
 
     def _process_prompt_tuning_input(self, inputs, batch):
         input_ids = inputs['input_ids']
-        inputs_embeds = self.model.get_input_embeddings()(input_ids) # b, l, e
-        prompt_embeds = self.prompt_embedding.weight.repeat(input_ids.size(0), 1, 1) # b, pl, e
+        inputs_embeds = self.model.get_input_embeddings()(input_ids)  # b, l, e
+        prompt_embeds = self.prompt_embedding.weight.repeat(input_ids.size(0), 1, 1)  # b, pl, e
         inputs_embeds = torch.cat([prompt_embeds, inputs_embeds], dim=1)
         inputs['inputs_embeds'] = inputs_embeds
         del inputs['input_ids']

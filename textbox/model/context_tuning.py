@@ -11,7 +11,6 @@ class Context_Tuning(Pretrained_Models):
         super(Context_Tuning, self).__init__(config, tokenizer)
         self.prefix_prompt = config['prefix_prompt'] or ''
         self.suffix_prompt = config['suffix_prompt'] or ''
-        
 
         self.prompt_generator = config['prompt_generator']
         if self.prompt_generator == 'roberta':
@@ -26,12 +25,11 @@ class Context_Tuning(Pretrained_Models):
                 self.bert_model = BertModel.from_pretrained(config['bert_model_path'])
         elif self.prompt_generator == 'bart':
             self.bart_model = BartModel.from_pretrained(config['model_path']).get_encoder()
-        
+
         if config['bitfit']:
             for para in self.parameters():
                 if len(para.shape) > 1:
                     para.requires_grad_(False)
-
 
     def _process_prompt_tuning_input(self, inputs, batch):
         batch_size = len(batch['source_text'])
@@ -39,42 +37,55 @@ class Context_Tuning(Pretrained_Models):
         if self.prompt_generator == 'bert':
             masks = self.bert_tokenizer.mask_token * self.prompt_length
             texts = [masks + self.prefix_prompt + t + self.suffix_prompt + masks for t in batch['source_text']]
-            bert_inputs = self.bert_tokenizer(texts, max_length=self.bert_tokenizer.model_max_length, padding=True, truncation=True, return_tensors="pt")
-            input_ids = bert_inputs['input_ids'].to(self.device) 
+            bert_inputs = self.bert_tokenizer(
+                texts,
+                max_length=self.bert_tokenizer.model_max_length,
+                padding=True,
+                truncation=True,
+                return_tensors="pt"
+            )
+            input_ids = bert_inputs['input_ids'].to(self.device)
             attn_masks = bert_inputs['attention_mask'].to(self.device)
             outputs = self.bert_model(input_ids, attn_masks)
             if self.semantic_mapping:
-                outputs = F.softmax(outputs.logits, dim=-1) # b, l, v
-                hidden_states = outputs.matmul(self.bert_model.bert.get_input_embeddings().weight) # b, l, e
+                outputs = F.softmax(outputs.logits, dim=-1)  # b, l, v
+                hidden_states = outputs.matmul(self.bert_model.bert.get_input_embeddings().weight)  # b, l, e
             else:
                 hidden_states = outputs.last_hidden_state
-            prompt_embeds = hidden_states[input_ids == self.bert_tokenizer.mask_token_id] # b*2*pl, e
-            prompt_embeds = prompt_embeds.reshape(batch_size, 2, self.prompt_length, -1) # b, 2, pl, e
+            prompt_embeds = hidden_states[input_ids == self.bert_tokenizer.mask_token_id]  # b*2*pl, e
+            prompt_embeds = prompt_embeds.reshape(batch_size, 2, self.prompt_length, -1)  # b, 2, pl, e
         elif self.prompt_generator == 'roberta':
             masks = self.roberta_tokenizer.mask_token * self.prompt_length
             texts = [masks + self.prefix_prompt + t + self.suffix_prompt + masks for t in batch['source_text']]
-            roberta_inputs = self.roberta_tokenizer(texts, max_length=self.roberta_tokenizer.model_max_length, padding=True, truncation=True, return_tensors="pt")
-            input_ids = roberta_inputs['input_ids'].to(self.device) 
+            roberta_inputs = self.roberta_tokenizer(
+                texts,
+                max_length=self.roberta_tokenizer.model_max_length,
+                padding=True,
+                truncation=True,
+                return_tensors="pt"
+            )
+            input_ids = roberta_inputs['input_ids'].to(self.device)
             attn_masks = roberta_inputs['attention_mask'].to(self.device)
             outputs = self.roberta_model(input_ids, attn_masks)
-            outputs = F.softmax(outputs.logits, dim=-1) # b, l, v
-            hidden_states = outputs.matmul(self.roberta_model.roberta.get_input_embeddings().weight) # b, l, e
-            prompt_embeds = hidden_states[input_ids == self.roberta_tokenizer.mask_token_id] # b*2*pl, e
-            prompt_embeds = prompt_embeds.reshape(batch_size, 2, self.prompt_length, -1) # b, 2, pl, e
+            outputs = F.softmax(outputs.logits, dim=-1)  # b, l, v
+            hidden_states = outputs.matmul(self.roberta_model.roberta.get_input_embeddings().weight)  # b, l, e
+            prompt_embeds = hidden_states[input_ids == self.roberta_tokenizer.mask_token_id]  # b*2*pl, e
+            prompt_embeds = prompt_embeds.reshape(batch_size, 2, self.prompt_length, -1)  # b, 2, pl, e
         elif self.prompt_generator == 'bart':
             masks = self.tokenizer.mask_token * self.prompt_length
             texts = [masks + self.prefix_prompt + t + self.suffix_prompt + masks for t in batch['source_text']]
-            bart_inputs = self.tokenizer(texts, max_length=self.tokenizer.model_max_length, padding=True, truncation=True, return_tensors="pt")
-            input_ids = bart_inputs['input_ids'].to(self.device) 
+            bart_inputs = self.tokenizer(
+                texts, max_length=self.tokenizer.model_max_length, padding=True, truncation=True, return_tensors="pt"
+            )
+            input_ids = bart_inputs['input_ids'].to(self.device)
             attn_masks = bart_inputs['attention_mask'].to(self.device)
             outputs = self.bart_model(input_ids, attn_masks)
-            hidden_states = outputs.last_hidden_state # b, l, e
-            prompt_embeds = hidden_states[input_ids == self.tokenizer.mask_token_id] # b*2*pl, e
-            prompt_embeds = prompt_embeds.reshape(batch_size, 2, self.prompt_length, -1) # b, 2, pl, e
-        
+            hidden_states = outputs.last_hidden_state  # b, l, e
+            prompt_embeds = hidden_states[input_ids == self.tokenizer.mask_token_id]  # b*2*pl, e
+            prompt_embeds = prompt_embeds.reshape(batch_size, 2, self.prompt_length, -1)  # b, 2, pl, e
 
-        inputs_embeds = self.model.get_input_embeddings()(inputs['input_ids']) # b, l, e
-        inputs_embeds = torch.cat([prompt_embeds[:, 0], inputs_embeds, prompt_embeds[:, 1]], dim=1) # b, pl+l+pl, e
+        inputs_embeds = self.model.get_input_embeddings()(inputs['input_ids'])  # b, l, e
+        inputs_embeds = torch.cat([prompt_embeds[:, 0], inputs_embeds, prompt_embeds[:, 1]], dim=1)  # b, pl+l+pl, e
         inputs['inputs_embeds'] = inputs_embeds
         del inputs['input_ids']
         mask = torch.ones(batch_size, self.prompt_length, dtype=torch.long).to(self.device)

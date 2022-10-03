@@ -21,6 +21,8 @@ class BertScoreEvaluator(AbstractEvaluator):
         transformers.modeling_utils.logger.setLevel(logging.ERROR)
 
         results = {}
-        _, _, f_score = score(generate_corpus.text, reference_corpus.text, lang=self.lang, batch_size=self.batch_size, device=self.device)
+        _, _, f_score = score(
+            generate_corpus.text, reference_corpus.text, lang=self.lang, batch_size=self.batch_size, device=self.device
+        )
         results['bertscore'] = f_score.mean().item() * 100
         return results

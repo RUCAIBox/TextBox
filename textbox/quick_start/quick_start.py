@@ -2,10 +2,10 @@ from typing import Optional
 
 
 def run_textbox(
-        model: Optional[str] = None,
-        dataset: Optional[str] = None,
-        config_file_list: Optional[list] = None,
-        config_dict: Optional[dict] = None
+    model: Optional[str] = None,
+    dataset: Optional[str] = None,
+    config_file_list: Optional[list] = None,
+    config_dict: Optional[dict] = None
 ):
     r""" A fast running api, which includes the complete process of
     training and testing a model on a specified dataset

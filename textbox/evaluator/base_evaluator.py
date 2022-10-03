@@ -1,41 +1,32 @@
 from nltk.tokenize import word_tokenize
 
-from .bertscore_evaluator import BertScoreEvaluator
-from .bleu_evaluator import BleuEvaluator
-from .chrf_evaluator import ChrfEvaluator
-from .cider_evaluator import CiderEvaluator
-from .distinct_evaluator import DistinctEvaluator
-from .meteor_evaluator import MeteorEvaluator
-from .nist_evaluator import NistEvaluator
-from .qa_evaluator import QaEvaluator
-from .rouge_evaluator import RougeEvaluator
-from .selfbleu_evaluator import SelfBleuEvaluator
-from .spice_evaluator import SpiceEvaluator
-from .ter_evaluator import TerEvaluator
-from .unique_evaluator import UniqueEvaluator
-
 
 evaluator_list = {
-    'bert_score', 'bleu', 'chrf', 'chrf+', 'chrf++', 'cider', 'distinct', 'meteor', 'nist', 'qa', 'rouge', 'self_bleu', 'spice', 'ter', 'unique',
+    'bert_score', 'bleu', 'chrf', 'chrf+', 'chrf++', 'cider', 'distinct', 'meteor', 'multiwoz', 'nist', 'qa', 'rouge', 'self_bleu', 'spice', 'ter', 'unique',
 }
+
+PUNCTUATIONS = ["''", "'", "``", "`", "-LRB-", "-RRB-", "-LCB-", "-RCB-", ".", "?", "!", ",", ":", "-", "--", "...", ";"]
 
 
 class Text:
-    def __init__(self, text, lower, tokenizer=None):
+    def __init__(self, text, lower, tokenizer=None, remove_punc=False):
         self.text = text.lower() if lower else text
         if tokenizer:
             self.text = tokenizer.decode(tokenizer.encode(self.text), skip_special_tokens=True)
         self.tokens = word_tokenize(self.text)
-        self.tokenized_text = ' '.join(self.tokens)
-    
+        if remove_punc:
+            self.tokenized_text = ' '.join([token for token in self.tokens if token not in PUNCTUATIONS])
+        else:
+            self.tokenized_text = ' '.join(self.tokens)
+
 
 class Corpus:
-    def __init__(self, corpus, lower, mode, tokenizer=None):
+    def __init__(self, corpus, lower, mode, tokenizer=None, remove_punc=False):
         self.mode = mode
         if mode == 'gen':
-            self.corpus = [Text(text, lower, tokenizer) for text in corpus]
+            self.corpus = [Text(text, lower, tokenizer, remove_punc) for text in corpus]
         else:
-            self.corpus = [[Text(text, lower, tokenizer) for text in texts] for texts in corpus]
+            self.corpus = [[Text(text, lower, tokenizer, remove_punc) for text in texts] for texts in corpus]
 
     @property
     def text(self):
@@ -64,7 +55,55 @@ class BaseEvaluator():
     def __init__(self, config, metrics):
         self.config = config
         self.lower = config['lower_evaluation']
+        self.remove_punc = config['remove_punc']
         self.metrics = metrics
+
+        self.evaluators = []
+        for metric in self.metrics:
+            if metric == 'bert_score':
+                from .bertscore_evaluator import BertScoreEvaluator
+                evaluator = BertScoreEvaluator(self.config)
+            elif metric == 'bleu':
+                from .bleu_evaluator import BleuEvaluator
+                evaluator = BleuEvaluator(self.config)
+            elif metric in ['chrf', 'chrf+', 'chrf++']:
+                from .chrf_evaluator import ChrfEvaluator
+                evaluator = ChrfEvaluator(self.config, metric)
+            elif metric == 'cider':
+                from .cider_evaluator import CiderEvaluator
+                evaluator = CiderEvaluator(self.config)
+            elif metric == 'distinct':
+                from .distinct_evaluator import DistinctEvaluator
+                evaluator = DistinctEvaluator(self.config)
+            elif metric == 'meteor':
+                from .meteor_evaluator import MeteorEvaluator
+                evaluator = MeteorEvaluator(self.config)
+            elif metric == 'multiwoz':
+                from .multiwoz_evaluator import MultiwozEvaluator
+                evaluator = MultiwozEvaluator(self.config)
+            elif metric == 'nist':
+                from .nist_evaluator import NistEvaluator
+                evaluator = NistEvaluator(self.config)
+            elif metric == 'qa':
+                from .qa_evaluator import QaEvaluator
+                evaluator = QaEvaluator(self.config)
+            elif metric == 'rouge':
+                from .rouge_evaluator import RougeEvaluator
+                evaluator = RougeEvaluator(self.config)
+            elif metric == 'self_bleu':
+                from .selfbleu_evaluator import SelfBleuEvaluator
+                evaluator = SelfBleuEvaluator(self.config)
+            elif metric == 'spice':
+                from .spice_evaluator import SpiceEvaluator
+                evaluator = SpiceEvaluator(self.config)
+            elif metric == 'ter':
+                from .ter_evaluator import TerEvaluator
+                evaluator = TerEvaluator(self.config)
+            elif metric == 'unique':
+                from .unique_evaluator import UniqueEvaluator
+                evaluator = UniqueEvaluator(self.config)
+            
+            self.evaluators.append(evaluator)
 
     def _process_corpus(self, generate_corpus, reference_dataset):
         reference_corpus = reference_dataset.target_text
@@ -72,8 +111,8 @@ class BaseEvaluator():
             if isinstance(refs, str):
                 reference_corpus[i] = [refs]
         tokenizer = reference_dataset.tokenizer if self.config['is_chinese_task'] else None
-        generate_corpus = Corpus(generate_corpus, self.lower, 'gen', tokenizer)
-        reference_corpus = Corpus(reference_corpus, self.lower, 'ref', tokenizer)
+        generate_corpus = Corpus(generate_corpus, self.lower, 'gen', tokenizer, self.remove_punc)
+        reference_corpus = Corpus(reference_corpus, self.lower, 'ref', tokenizer, self.remove_punc)
         return generate_corpus, reference_corpus
 
     def evaluate(self, generate_corpus, reference_dataset, avg=True):
@@ -88,36 +127,9 @@ class BaseEvaluator():
             dict: such as ``{'bleu-1': xxx, 'bleu-2': yyy}``
         """
         generate_corpus, reference_corpus = self._process_corpus(generate_corpus, reference_dataset)
-        
+
         result_dict = {}
-        for metric in self.metrics:
-            if metric == 'bert_score':
-                evaluator = BertScoreEvaluator(self.config)
-            elif metric == 'bleu':
-                evaluator = BleuEvaluator(self.config)
-            elif metric in ['chrf', 'chrf+', 'chrf++']:
-                evaluator = ChrfEvaluator(self.config, metric)
-            elif metric == 'cider':
-                evaluator = CiderEvaluator(self.config)
-            elif metric == 'distinct':
-                evaluator = DistinctEvaluator(self.config)
-            elif metric == 'meteor':
-                evaluator = MeteorEvaluator(self.config)
-            elif metric == 'nist':
-                evaluator = NistEvaluator(self.config)
-            elif metric == 'qa':
-                evaluator = QaEvaluator(self.config)
-            elif metric == 'rouge':
-                evaluator = RougeEvaluator(self.config)
-            elif metric == 'self_bleu':
-                evaluator = SelfBleuEvaluator(self.config)
-            elif metric == 'spice':
-                evaluator = SpiceEvaluator(self.config)
-            elif metric == 'ter':
-                evaluator = TerEvaluator(self.config)
-            elif metric == 'unique':
-                evaluator = UniqueEvaluator(self.config)
-            
+        for evaluator in self.evaluators:
             metric_result = evaluator.evaluate(generate_corpus, reference_corpus, avg=avg)
             result_dict.update(metric_result)
         return result_dict

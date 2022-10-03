@@ -23,6 +23,9 @@ def data_preparation(config, tokenizer):
     logger = getLogger(__name__)
     logger.info(f'Pretrain type: {collate_fn.get_type()}')
 
+    if config['dataset'] == 'multiwoz':
+        assert config['eval_batch_size'] % 3 == 0
+
     train_dataloader = DataLoader(train_dataset, batch_size=config['train_batch_size'], shuffle=True, pin_memory=True, collate_fn=collate_fn(config, tokenizer, 'train'))
     valid_dataloader = DataLoader(valid_dataset, batch_size=config['eval_batch_size'], shuffle=False, pin_memory=True, collate_fn=collate_fn(config, tokenizer, 'valid'))
     test_dataloader = DataLoader(test_dataset, batch_size=config['eval_batch_size'], shuffle=False, pin_memory=True, collate_fn=collate_fn(config, tokenizer, 'test'))

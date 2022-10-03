@@ -1,10 +1,9 @@
 import collections
 import os
 from logging import getLogger
-from typing import Optional, Union, List, Tuple, Dict
+from typing import Optional, Union, List, Dict
 
 import torch
-from torch.distributed import logger
 import torch.optim as optim
 import transformers
 from accelerate import Accelerator
@@ -13,7 +12,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from textbox import Config
-from textbox.utils.dashboard import SummaryTracker, get_dashboard, Timestamp, EpochTracker
+from textbox.utils.dashboard import get_dashboard, Timestamp, EpochTracker
 from .scheduler import (
     AbstractScheduler, InverseSquareRootScheduler, CosineScheduler, LinearScheduler, ConstantScheduler
 )
@@ -498,11 +497,36 @@ class Trainer(AbstractTrainer):
         
         self.model.eval()
 
+        if self.config['dataset'] == 'multiwoz':
+            turn_domains = self.evaluator.evaluators[0].turn_domains
+
         # generate
         generate_corpus = []
         eval_tqdm = tqdm(eval_data, desc="generating", dynamic_ncols=True) if not self.disable_tqdm else eval_data
-        for batch_data in eval_tqdm:
-            generated = self.accelerator.unwrap_model(self.model).generate(batch_data, eval_data, self.accelerator)
+        for i, batch_data in enumerate(eval_tqdm):
+            if self.config['dataset'] != 'multiwoz':
+                generated = self.accelerator.unwrap_model(self.model).generate(batch_data, self.accelerator)
+            else:
+                batch_size = batch_data['source_ids'].size(0)
+                idx_mask = torch.zeros(batch_size).to(self.device).bool()
+                idx_mask[::3] = 1
+                bs_batch = {}
+                bs_batch['source_ids'] = batch_data['source_ids'][idx_mask]
+                bs_batch['source_mask'] = batch_data['source_mask'][idx_mask]
+                asrs_batch = {}
+                asrs_batch['source_ids'] = batch_data['source_ids'][~idx_mask]
+                asrs_batch['source_mask'] = batch_data['source_mask'][~idx_mask]
+                bs_outputs = self.accelerator.unwrap_model(self.model).generate(bs_batch, self.accelerator)
+
+                batch_size //= 3
+                db_texts = [self.evaluator.evaluators[0].span_db(bs, td) for bs, td in zip(bs_outputs, turn_domains[i*batch_size: (i+1)*batch_size])]
+                db_ids = torch.tensor(self.model.tokenizer.convert_tokens_to_ids(db_texts)).long()
+                db_ids = db_ids.repeat_interleave(2).to(self.device)
+                db_idx = torch.eq(asrs_batch['source_ids'], self.model.tokenizer.convert_tokens_to_ids('[db_nores]'))
+                asrs_batch['source_ids'][db_idx] = db_ids
+                asrs_outputs = self.accelerator.unwrap_model(self.model).generate(asrs_batch, self.accelerator)
+                generated = sum([[bs, aspn, rs] for bs, aspn, rs in zip(bs_outputs, asrs_outputs[::2], asrs_outputs[1::2])], [])
+
             generate_corpus.extend(generated)
 
         corpus_len = len(eval_data.dataset.target_text)

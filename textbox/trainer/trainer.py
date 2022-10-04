@@ -505,6 +505,7 @@ class Trainer(AbstractTrainer):
         self.model.eval()
 
         if self.config['dataset'] == 'multiwoz':
+            self.evaluator.evaluators[0].load_data('valid' if is_valid else 'test')
             turn_domains = self.evaluator.evaluators[0].turn_domains
 
         # generate

@@ -28,10 +28,10 @@ class AbstractModel(nn.Module):
         self.generation_kwargs['max_length'] = self.target_max_length
         if self.model_name in PLM_MODELS:
             # transformer models
-            self.generation_kwargs[
-                'decoder_start_token_id'
-            ] = self.configuration.decoder_start_token_id if self.model_name != 'mbart' else self.tokenizer.lang_code_to_id[
-                self.tokenizer.tgt_lang]
+            self.generation_kwargs['decoder_start_token_id'] = \
+                self.configuration.decoder_start_token_id \
+                if self.model_name != 'mbart' else \
+                self.tokenizer.lang_code_to_id[self.tokenizer.tgt_lang]
         self.generation_kwargs.update(config['generation_kwargs'] or {})
 
 

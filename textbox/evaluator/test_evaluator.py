@@ -13,8 +13,10 @@ from rouge_evaluator import RougeEvaluator
 # from bertscore_evaluator import BertScoreEvaluator
 # from qa_evaluator import QaEvaluator
 
+
 def _proc(l):
-    if len(l) >= 2 and ((l[0] == '"' and l[-1] == '"') or (l[0] == "'" and l[-1] == "'") or (l[0] == '[' and l[-1] == ']')):
+    if len(l) >= 2 and ((l[0] == '"' and l[-1] == '"') or (l[0] == "'" and l[-1] == "'") or
+                        (l[0] == '[' and l[-1] == ']')):
         try:
             l = eval(l)
             if not isinstance(l, list):
@@ -22,6 +24,7 @@ def _proc(l):
         except:
             pass
     return l
+
 
 config = {
     'bleu_max_ngrams': 4,
@@ -59,10 +62,17 @@ rouge = RougeEvaluator(config)
 # bert_score = BertScoreEvaluator(config)
 # qa = QaEvaluator(config)
 
-gen = ['It is a guide to action which ensures that the military always obeys the commands of the party', 'he read the book because he was interested in world history']
-ref = [['It is a guide to action that ensures that the military will forever heed Party commands'], ['he was interested in world history because he read the book']]
-ref = [['It is a guide to action that ensures that the military will forever heed Party commands','It is the guiding principle which guarantees the military forces always being under the command of the Party','It is the practical guide for the army always to heed the directions of the party'], ['he was interested in world history because he read the book']]
-
+gen = [
+    'It is a guide to action which ensures that the military always obeys the commands of the party',
+    'he read the book because he was interested in world history'
+]
+ref = [['It is a guide to action that ensures that the military will forever heed Party commands'],
+       ['he was interested in world history because he read the book']]
+ref = [[
+    'It is a guide to action that ensures that the military will forever heed Party commands',
+    'It is the guiding principle which guarantees the military forces always being under the command of the Party',
+    'It is the practical guide for the army always to heed the directions of the party'
+], ['he was interested in world history because he read the book']]
 '''
 gen = [r.strip().lower() for r in open('/home/tangtianyi/ICML/generated/BART-webnlg-Apr-18-2022_18-56-52.txtbest').readlines()]
 ref = [[]]

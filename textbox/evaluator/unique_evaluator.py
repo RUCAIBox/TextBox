@@ -13,7 +13,7 @@ class UniqueEvaluator(AbstractEvaluator):
     def _calc_metrics_info(self, generate_corpus, reference_corpus=None):
         results = {}
         ngrams_all = [Counter() for _ in range(self.unique_max_ngrams)]
-        
+
         for gen in generate_corpus.tokens:
             ngrams = []
             for i in range(self.unique_max_ngrams):
@@ -22,6 +22,7 @@ class UniqueEvaluator(AbstractEvaluator):
                 ngrams_all[i].update(ngram)
 
         for i in range(self.unique_max_ngrams):
-            results[f'unique-{i+1}'] = sum(filter(lambda x: x == 1, ngrams_all[i].values())) / sum(ngrams_all[i].values()) * 100
-                
+            results[f'unique-{i+1}'] = sum(filter(lambda x: x == 1, ngrams_all[i].values())
+                                           ) / sum(ngrams_all[i].values()) * 100
+
         return results

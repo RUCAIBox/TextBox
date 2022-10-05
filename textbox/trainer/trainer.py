@@ -1,10 +1,9 @@
 import collections
 import os
 from logging import getLogger
-from typing import Optional, Union, List, Tuple, Dict
+from typing import Optional, Union, List, Dict
 
 import torch
-from torch.distributed import logger
 import torch.optim as optim
 import transformers
 from accelerate import Accelerator
@@ -13,7 +12,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from textbox import Config
-from textbox.utils.dashboard import SummaryTracker, get_dashboard, Timestamp, EpochTracker
+from textbox.utils.dashboard import get_dashboard, Timestamp, EpochTracker
 from .scheduler import (
     AbstractScheduler, InverseSquareRootScheduler, CosineScheduler, LinearScheduler, ConstantScheduler
 )
@@ -128,14 +127,16 @@ class Trainer(AbstractTrainer):
             Union[optim.Optimizer, AbstractScheduler]: the optimizer
         """
 
-        optimizer_class = collections.defaultdict(lambda: optim.AdamW, {
-            'adam': optim.Adam,
-            'adamw': optim.AdamW,
-            'sgd': optim.SGD,
-            'adagrad': optim.Adagrad,
-            'rmsprop': optim.RMSprop,
-            'adafactor': transformers.Adafactor,
-        })
+        optimizer_class = collections.defaultdict(
+            lambda: optim.AdamW, {
+                'adam': optim.Adam,
+                'adamw': optim.AdamW,
+                'sgd': optim.SGD,
+                'adagrad': optim.Adagrad,
+                'rmsprop': optim.RMSprop,
+                'adafactor': transformers.Adafactor,
+            }
+        )
         scheduler_class = {
             'inverse': InverseSquareRootScheduler,
             'cosine': CosineScheduler,
@@ -148,26 +149,22 @@ class Trainer(AbstractTrainer):
             # using adafactor_kwargs in overall.yaml
             if self.grad_clip is not None:
                 self.grad_clip = None
-                self.logger.warning("Additional optimizer operations like gradient clipping "
-                                    "should not be used alongside Adafactor.")
+                self.logger.warning(
+                    "Additional optimizer operations like gradient clipping "
+                    "should not be used alongside Adafactor."
+                )
             self.optimizer_kwargs.update(self.adafactor_kwargs)
 
         # get optimizer (use default value of pytorch if self.optimizer_kwargs is empty)
         self.logger.debug(f'Using optimizer {optimizer}')
-        optimizer = optimizer_class[optimizer](
-            params=self._trainable_parameters,
-            **self.optimizer_kwargs
-        )
+        optimizer = optimizer_class[optimizer](params=self._trainable_parameters, **self.optimizer_kwargs)
 
         # scheduling
         if scheduler is not None and scheduler in scheduler_class:
             assert isinstance(self.scheduler_kwargs, dict), "Please specify scheduler_kwargs"
             self.logger.debug(f'Using scheduler {scheduler}.')
             self.scheduler_kwargs.setdefault("max_lr", self.learning_rate)
-            optimizer = scheduler_class[scheduler](
-                base_optimizer=optimizer,
-                **self.scheduler_kwargs
-            )
+            optimizer = scheduler_class[scheduler](base_optimizer=optimizer, **self.scheduler_kwargs)
 
         return optimizer
 
@@ -190,10 +187,10 @@ class Trainer(AbstractTrainer):
         return self.accelerator.is_local_main_process
 
     def _train_epoch(
-            self,
-            train_data: DataLoader,
-            epoch_idx: int,
-            valid_data: Optional[DataLoader] = None,
+        self,
+        train_data: DataLoader,
+        epoch_idx: int,
+        valid_data: Optional[DataLoader] = None,
     ) -> dict:
         r"""Train the model in an epoch
 
@@ -224,13 +221,13 @@ class Trainer(AbstractTrainer):
                 # loss = self.accelerator.gather(loss).mean().item()
                 self._summary_tracker.append_loss(loss.item())
                 self.accelerator.backward(loss / self.accumulation_steps)
-                
+
                 if (step + 1) % self.accumulation_steps == 0 or (step + 1) == len(train_tqdm):
                     if self.grad_clip is not None:
                         self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
                     self.optimizer.step()
                     self.optimizer.zero_grad()
-                
+
                 if not self.disable_tqdm:
                     train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss())
 
@@ -243,9 +240,9 @@ class Trainer(AbstractTrainer):
 
     @torch.no_grad()
     def _valid(
-            self,
-            valid_data: DataLoader,
-            valid_mode: str,
+        self,
+        valid_data: DataLoader,
+        valid_mode: str,
     ) -> bool:
         """Validate every `self.eval_interval` step or epoch if evaluation strategy matches attribute
         `self.eval_strategy`. Specifically, if `self.eval_interval` is set to `0`, validation will be skipped.
@@ -271,8 +268,13 @@ class Trainer(AbstractTrainer):
             if 'loss' in self.metrics_for_best_model:
                 self.model.eval()
                 if not self.disable_tqdm:
-                    valid_tqdm = tqdm(valid_data, desc=f"valid {self.timestamp.valid_epoch:4}", dynamic_ncols=True,
-                                      postfix={'loss': None}, unit='step')
+                    valid_tqdm = tqdm(
+                        valid_data,
+                        desc=f"valid {self.timestamp.valid_epoch:4}",
+                        dynamic_ncols=True,
+                        postfix={'loss': None},
+                        unit='step'
+                    )
                 else:
                     valid_tqdm = valid_data
                 for data in valid_tqdm:
@@ -287,7 +289,7 @@ class Trainer(AbstractTrainer):
                 valid_results = self.evaluate(valid_data, is_valid=True)
                 self._summary_tracker.set_metrics_results(valid_results)
             self.valid_result_dict[self.timestamp.valid_epoch] = self._summary_tracker.current_epoch()
-        
+
         self.model.train()
 
         stopped = bool(self.stopping_steps) and self._early_stopping(self._summary_tracker.is_best_valid)
@@ -414,9 +416,9 @@ class Trainer(AbstractTrainer):
         self.logger.info('Checkpoint loaded. Resume training from epoch {}'.format(self.start_epoch))
 
     def fit(
-            self,
-            train_data: DataLoader,
-            valid_data: Optional[DataLoader] = None,
+        self,
+        train_data: DataLoader,
+        valid_data: Optional[DataLoader] = None,
     ) -> dict:
         r"""Train the model based on the train data.
 
@@ -448,11 +450,13 @@ class Trainer(AbstractTrainer):
                     self.logger.info(f'Stopped at max_steps {self.max_steps}.')
                 break
 
-        file = self.saved_model_filename+".pth"
+        file = self.saved_model_filename + ".pth"
         if os.path.exists(file):
             self.logger.info(f'Soft link created: {file} -> {os.readlink(file)}')
-        self.logger.info(f'====== Finished training, best validation result '
-                         f'at train epoch {self.best_valid_timestamp.train_epoch} ======')
+        self.logger.info(
+            f'====== Finished training, best validation result '
+            f'at train epoch {self.best_valid_timestamp.train_epoch} ======'
+        )
 
         self.model = self.accelerator.unwrap_model(self.model)
         self.logger.info('Best valid result: {}'.format(self.best_valid_result.as_str()))
@@ -460,11 +464,11 @@ class Trainer(AbstractTrainer):
 
     @torch.no_grad()
     def evaluate(
-            self,
-            eval_data: DataLoader,
-            load_best_model: bool = True,
-            model_file: Optional[str] = None,
-            is_valid: bool = False,
+        self,
+        eval_data: DataLoader,
+        load_best_model: bool = True,
+        model_file: Optional[str] = None,
+        is_valid: bool = False,
     ) -> Optional[dict]:
         r"""Evaluate the model based on the `eval_data`.
 
@@ -485,24 +489,56 @@ class Trainer(AbstractTrainer):
         if load_best_model:
             checkpoint_file = model_file or self.saved_model_filename + '.pth'
             if not os.path.isfile(checkpoint_file):
-                self.logger.error(f'Failed to evaluate model: "{checkpoint_file}" not found. '
-                                  f'(You may specify it with `load_experiment`)')
+                self.logger.error(
+                    f'Failed to evaluate model: "{checkpoint_file}" not found. '
+                    f'(You may specify it with `load_experiment`)'
+                )
                 return None
             self.logger.info('Loading model structure and parameters from {} ...'.format(checkpoint_file))
             checkpoint = torch.load(checkpoint_file, map_location=self.device)
             self.model.load_state_dict(checkpoint['state_dict'])
             self.accelerator.wait_for_everyone()
-        
+
         if not is_valid:
             self.model = self.accelerator.prepare(self.model)
-        
+
         self.model.eval()
+
+        if self.config['dataset'] == 'multiwoz':
+            self.evaluator.evaluators[0].load_data('valid' if is_valid else 'test')
+            turn_domains = self.evaluator.evaluators[0].turn_domains
 
         # generate
         generate_corpus = []
         eval_tqdm = tqdm(eval_data, desc="generating", dynamic_ncols=True) if not self.disable_tqdm else eval_data
-        for batch_data in eval_tqdm:
-            generated = self.accelerator.unwrap_model(self.model).generate(batch_data, eval_data, self.accelerator)
+        for i, batch_data in enumerate(eval_tqdm):
+            if self.config['dataset'] != 'multiwoz':
+                generated = self.accelerator.unwrap_model(self.model).generate(batch_data, self.accelerator)
+            else:
+                batch_size = batch_data['source_ids'].size(0)
+                idx_mask = torch.zeros(batch_size).to(self.device).bool()
+                idx_mask[::3] = 1
+                bs_batch = {}
+                bs_batch['source_ids'] = batch_data['source_ids'][idx_mask]
+                bs_batch['source_mask'] = batch_data['source_mask'][idx_mask]
+                asrs_batch = {}
+                asrs_batch['source_ids'] = batch_data['source_ids'][~idx_mask]
+                asrs_batch['source_mask'] = batch_data['source_mask'][~idx_mask]
+                bs_outputs = self.accelerator.unwrap_model(self.model).generate(bs_batch, self.accelerator)
+
+                batch_size //= 3
+                db_texts = [
+                    self.evaluator.evaluators[0].span_db(bs, td)
+                    for bs, td in zip(bs_outputs, turn_domains[i * batch_size:(i + 1) * batch_size])
+                ]
+                db_ids = torch.tensor(self.model.tokenizer.convert_tokens_to_ids(db_texts)).long()
+                db_ids = db_ids.repeat_interleave(2).to(self.device)
+                db_idx = torch.eq(asrs_batch['source_ids'], self.model.tokenizer.convert_tokens_to_ids('[db_nores]'))
+                asrs_batch['source_ids'][db_idx] = db_ids
+                asrs_outputs = self.accelerator.unwrap_model(self.model).generate(asrs_batch, self.accelerator)
+                generated = sum([[bs, aspn, rs]
+                                 for bs, aspn, rs in zip(bs_outputs, asrs_outputs[::2], asrs_outputs[1::2])], [])
+
             generate_corpus.extend(generated)
 
         corpus_len = len(eval_data.dataset.target_text)
@@ -521,8 +557,7 @@ class Trainer(AbstractTrainer):
 
         if self.is_save():
             self.save_generated_text(generate_corpus, is_valid)
-        
-        result = self.evaluator.evaluate(generate_corpus, reference_dataset)
-        
-        return result
 
+        result = self.evaluator.evaluate(generate_corpus, reference_dataset)
+
+        return result

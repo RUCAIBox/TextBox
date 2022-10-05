@@ -25,6 +25,7 @@ class AbstractScheduler:
     r"""Abstract Base Class of Scheduler. To modify your new scheduler, simply inherit
     this class and implement `__init__()` and `lr()` with ``@property`` decorator.
     """
+
     def __init__(self, base_optimizer: Optimizer, init_lr: float):
         self.optimizer = base_optimizer
         self.init_lr = init_lr

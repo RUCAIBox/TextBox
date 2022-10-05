@@ -1,6 +1,7 @@
 from .abstract_evaluator import AbstractEvaluator
 from pycocoevalcap.cider.cider import Cider
 
+
 class CiderEvaluator(AbstractEvaluator):
     r"""Bleu Evaluator. Now, we support metrics `'bleu'`
     """

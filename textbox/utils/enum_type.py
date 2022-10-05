@@ -14,5 +14,6 @@ SEQ2SEQ_MODELS = [
     "bart", "bert2bert", "bigbird_pegasus", "blenderbot", "blenderbot-small", "led", "m2m_100", "mbart", "mt5", "mvp",
     "pegasus", "prophetnet", "t5", "chinese-bart", "chinese-pegasus", "cpt", "transformer"
 ]
+RNN_MODELS = ["rnn", "gru", "lstm"]
 
 PLM_MODELS = CLM_MODELS + SEQ2SEQ_MODELS

@@ -8,7 +8,7 @@ import torch
 from accelerate.utils import set_seed
 from transformers import AutoTokenizer, BertTokenizer
 
-from .enum_type import PLM_MODELS
+from .enum_type import PLM_MODELS, RNN_MODELS
 
 
 def get_local_time() -> str:
@@ -182,6 +182,8 @@ def get_model(model_name):
     """
     if model_name.lower() in PLM_MODELS:
         model_name = 'Pretrained_Models'
+    elif model_name.lower() in RNN_MODELS:
+        model_name = 'RNN_Models'
     module_path = '.'.join(['...model', model_name.lower()])
     if importlib.util.find_spec(module_path, __name__):
         model_module = importlib.import_module(module_path, __name__)
@@ -211,7 +213,7 @@ def get_trainer(model_name):
 
 def get_tokenizer(config):
     model_name = config['model_name']
-    if model_name in PLM_MODELS:
+    if model_name in PLM_MODELS or model_name in RNN_MODELS:
         tokenizer_kwargs = config['tokenizer_kwargs'] or {}
         tokenizer_path = config['tokenizer_path'] or config['model_path']
         if (config['model_name'] in ['chinese-bart', 'chinese-pegasus', 'cpt']):

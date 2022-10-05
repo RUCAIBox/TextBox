@@ -488,9 +488,7 @@ class RNN_Models(AbstractModel):
 
     def __init__(self, config, tokenizer):
         super().__init__(config, tokenizer)
-        self.model_name = config['model_name']
-        self.source_max_length = config['src_len']
-        self.target_max_length = config['tgt_len']
+
         # initialize model
         self.model_config = RNNConfig(
             model_name=self.model_name,
@@ -506,11 +504,5 @@ class RNN_Models(AbstractModel):
             bos_token_id=config['bos_token_id'],
         )
         self.model = RNNSeq2Seq(self.model_config)
+        self.generate_setting(config)
 
-        self.label_smoothing = config['label_smoothing'] if config['label_smoothing'] else 0.
-        # generation settings
-        self.generation_kwargs = {}
-        self.generation_kwargs['max_length'] = self.target_max_length
-        self.generation_kwargs.update(config['generation_kwargs'] or {})
-        self.is_prompt_tuning = False
-        self.is_casual_model = True

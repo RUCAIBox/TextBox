@@ -27,7 +27,6 @@ import warnings
 import inspect
 from .abstract_model import AbstractModel
 
-
 from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForSeq2SeqLM, EncoderDecoderModel
 from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
 from ..utils.argument_list import efficient_kwargs_dict

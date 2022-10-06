@@ -54,7 +54,6 @@ class RNNConfig(PretrainedConfig):
         )
 
 
-
 class RNNPretrainedModel(PreTrainedModel):
     config_class = RNNConfig
     base_model_prefix = "model"
@@ -505,4 +504,3 @@ class RNN_Models(AbstractModel):
         )
         self.model = RNNSeq2Seq(self.model_config)
         self.generate_setting(config)
-

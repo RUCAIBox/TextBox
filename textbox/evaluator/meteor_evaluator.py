@@ -36,7 +36,7 @@ class MeteorEvaluator(AbstractEvaluator):
             from nltk.translate.meteor_score import meteor_score
 
             results['meteor'] = []
-            for gen, refs in zip(generate_corpus.tokens, reference_corpus.tokens):
+            for gen, refs in zip(generate_corpus.tokenized_text, reference_corpus.tokenized_text):
                 score = meteor_score(refs, gen)
                 results['meteor'].append(score * 100)
         return results

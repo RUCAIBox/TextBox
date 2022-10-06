@@ -35,12 +35,11 @@ class AbstractModel(nn.Module):
         self.generation_kwargs.update(config['generation_kwargs'] or {})
 
 
-    def generate(self, batch_data, eval_data):
+    def generate(self, batch_data):
         r"""Predict the texts conditioned on a noise or sequence.
 
         Args:
             batch_data (Corpus): Corpus class of a single batch.
-            eval_data: Common data of all the batches.
 
         Returns:
             torch.Tensor: Generated text, shape: [batch_size, max_len]
@@ -80,7 +79,7 @@ class AbstractModel(nn.Module):
         else:
             return outputs.loss
 
-    def generate(self, batch, eval_data, accelerator):
+    def generate(self, batch, accelerator):
         inputs = {
             'input_ids': batch['source_ids'].to(self.device),
             'attention_mask': batch['source_mask'].to(self.device),

@@ -1,6 +1,7 @@
 import torch.nn as nn
 from textbox import CLM_MODELS, SEQ2SEQ_MODELS, RNN_MODELS, PLM_MODELS
 
+
 class AbstractModel(nn.Module):
     r"""Base class for all models
     """
@@ -33,7 +34,6 @@ class AbstractModel(nn.Module):
                 if self.model_name != 'mbart' else \
                 self.tokenizer.lang_code_to_id[self.tokenizer.tgt_lang]
         self.generation_kwargs.update(config['generation_kwargs'] or {})
-
 
     def generate(self, batch_data):
         r"""Predict the texts conditioned on a noise or sequence.

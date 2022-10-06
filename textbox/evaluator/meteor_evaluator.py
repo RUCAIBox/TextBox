@@ -23,7 +23,7 @@ class MeteorEvaluator(AbstractEvaluator):
         results = {}
         if self.meteor_type == 'pycocoevalcap':
             from pycocoevalcap.meteor.meteor import Meteor
-            
+
             refs = {idx: r for idx, r in enumerate(reference_corpus.tokenized_text)}
             gen = {idx: [g] for idx, g in enumerate(generate_corpus.tokenized_text)}
             score = Meteor().compute_score(refs, gen)

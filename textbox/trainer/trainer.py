@@ -498,6 +498,7 @@ class Trainer(AbstractTrainer):
             checkpoint = torch.load(checkpoint_file, map_location=self.device)
             self.model.load_state_dict(checkpoint['state_dict'])
             self.accelerator.wait_for_everyone()
+            del checkpoint
 
         if not is_valid:
             self.model = self.accelerator.prepare(self.model)

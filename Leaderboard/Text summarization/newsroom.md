@@ -6,6 +6,8 @@
 
 Paper: [Paper](https://aclanthology.org/N18-1065.pdf)
 
+Repository: [Official](https://github.com/lil-lab/newsroom)
+
 Homepage: [Official](http://lil.nlp.cornell.edu/newsroom/)
 
 CORNELL NEWSROOM is a large dataset for training and evaluating summarization systems. It contains 1.3 million articles and summaries written by authors and editors in the newsrooms of 38 major publications. The summaries are obtained from search and social metadata between 1998 and 2017 and use a variety of summarization strategies combining extraction and abstraction.
@@ -20,17 +22,17 @@ CORNELL NEWSROOM is a large dataset for training and evaluating summarization sy
 
 ```
 {
-    "compression": 33.880001068115234,
-    "compression_bin": "medium",
-    "coverage": 1.0,
-    "coverage_bin": "high",
-    "date": "200600000",
-    "density": 11.720000267028809,
+    "compression": 64.30769348144531,
+    "compression_bin": "high",
+    "coverage": 0.8461538553237915,
+    "coverage_bin": "medium",
+    "date": "20141011140242",
+    "density": 9.15384578704834,
     "density_bin": "extractive",
-    "summary": "some summary 1",
-    "text": "some text 1",
-    "title": "news title 1",
-    "url": "url.html"
+    "summary": "DC's Chief Creative Officer on mobile gaming: \"The reach that these games can get instantly is something short of a miracle.\"",
+    "text": "While Marvel Studios DIS has released many more big-budget comic book movies over the past decade, the anticipation is building for Batman vs Superman: Dawn of Justice starring Henry Cavill and Ben Affleck and the long-awaited Justice League movie. DC characters are also all over television this fall with The Flash, Gotham, Constantine and iZombie joining Arrow. And gamers are looking forward to the 2015 release of Batman: Arkham Knight, which marks the next gen debut of Batman. The man at the center of this multimedia DC Universe is Geoff Johns, Chief Creative Officer at DC Entertainment TWX . The writer of Superman, Green Lantern, The Flash, Teen Titans and Justice Society of America has been busy working with other creatives across every medium to connect DC superheroes with a mainstream audience, which is one seemingly more receptive to them than ever before. Before New York Comic Con, Johns recently talked to Fortune about how video games, mobile and digital distribution are [...]",
+    "title": "DC Entertainment exec Geoff Johns talks games, tech and TV",
+    "url": "http://fortune.com/2014/10/11/geoff-johns-dc-entertainment/"
 }
 ```
 

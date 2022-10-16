@@ -8,7 +8,7 @@ Paper: [Paper](https://aclanthology.org/2021.naacl-main.474.pdf)
 
 Repository: [Official](https://github.com/zcgzcgzcg1/MediaSum)
 
-This large-scale media interview dataset contains 463.6K transcripts with abstractive summaries, collected from interview transcripts and overview / topic descriptions from NPR and CNN.
+MediaSum, a large-scale media interview dataset consisting of 463.6K transcripts with abstractive summaries. To create this dataset, we collect interview transcripts from NPR and CNN and employ the overview and topic descriptions as summaries. Compared with existing public corpora for dialogue summarization, our dataset is an order of magnitude larger and contains complex multi-party conversations from multiple domains. We conduct statistical analysis to demonstrate the unique positional bias exhibited in the transcripts of televised and radioed interviews. We also show that MediaSum can be used in transfer learning to improve a model's performance on other dialogue summarization tasks.
 
 ### Overview
 
@@ -51,13 +51,14 @@ This large-scale media interview dataset contains 463.6K transcripts with abstra
 
 ## LeaderBoard
 
-Descending order by METRIC.
+Descending order by ROUGE-2.
 
-| Model | Metric | Repository | Generated Text |
-| ----- | ------ | ---------- | -------------- |
-|       |        |            |                |
-|       |        |            |                |
-|       |        |            |                |
+| Model                                            | ROUGE-1 | ROUGE-2 | ROUGE-L | Repository | Generated Text |
+| ------------------------------------------------ | ------- | ------- | ------- | ---------- | -------------- |
+| [BART](https://arxiv.org/pdf/2103.06410v2.pdf)   | $35.09$ | $18.05$ | $31.44$ |            |                |
+| [UniLM](https://arxiv.org/pdf/2103.06410v2.pdf)  | $32.70$ | $17.27$ | $29.82$ |            |                |
+| [PTGen](https://arxiv.org/pdf/2103.06410v2.pdf)  | $28.77$ | $12.24$ | $24.18$ |            |                |
+| [LEAD-3](https://arxiv.org/pdf/2103.06410v2.pdf) | $14.96$ | $5.10$  | $13.29$ |            |                |
 
 ## Citation
 

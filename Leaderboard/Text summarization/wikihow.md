@@ -40,11 +40,17 @@ o. Paints should be kept with brushes, cleaner, and canvas, print supplies shoul
 
 Descending order by ROUGE-2.
 
-| Model                                                        | ROUGE-1 | ROUGE-2 | ROUGE-L | Repository                                           | Generated Text |
-| ------------------------------------------------------------ | ------- | ------- | ------- | ---------------------------------------------------- | -------------- |
-| [BertSum](https://arxiv.org/pdf/2008.09676.pdf)              | $35.91$ | $13.9$  | $34.82$ |                                                      |                |
-| [Pointer-generator + coverage](https://arxiv.org/pdf/1810.09305v1.pdf) | $28.53$ | $9.23$  | $26.54$ |                                                      |                |
-| [MatchSum](https://arxiv.org/pdf/2004.08795v1.pdf)           | $31.85$ | $8.98$  | $29.58$ | [Official](https://github.com/maszhongming/MatchSum) |                |
+| Model                                                        | ROUGE-1 | ROUGE-2 | ROUGE-L | Repository                                             | Generated Text |
+| ------------------------------------------------------------ | ------- | ------- | ------- | ------------------------------------------------------ | -------------- |
+| [PEGASUS](http://proceedings.mlr.press/v119/zhang20ae/zhang20ae.pdf) | $43.06$ | $19.71$ | $34.80$ | [Official](https://github.com/google-research/pegasus) |                |
+| [BertSum](https://arxiv.org/pdf/2008.09676.pdf)              | $35.91$ | $13.9$  | $34.82$ |                                                        |                |
+| [Transformer](http://proceedings.mlr.press/v119/zhang20ae/zhang20ae.pdf) | $32.48$ | $10.53$ | $23.86$ |                                                        |                |
+| [Pointer-generator + coverage](https://arxiv.org/pdf/1810.09305v1.pdf) | $28.53$ | $9.23$  | $26.54$ |                                                        |                |
+| [Pointer-generator](https://arxiv.org/pdf/1810.09305.pdf)    | $27.30$ | $9.10$  | $26.54$ |                                                        |                |
+| [MatchSum](https://arxiv.org/pdf/2004.08795v1.pdf)           | $31.85$ | $8.98$  | $29.58$ | [Official](https://github.com/maszhongming/MatchSum)   |                |
+| [TextRank](https://arxiv.org/pdf/1810.09305.pdf)             | $27.53$ | $7.4$   | $20.00$ |                                                        |                |
+| [LEAD3](https://arxiv.org/pdf/1810.09305.pdf)                | $26.00$ | $7.24$  | $24.25$ |                                                        |                |
+| [Seq2Seq+Attention](https://arxiv.org/pdf/1810.09305.pdf)    | $22.04$ | $6.27$  | $20.87$ |                                                        |                |
 
 ## Citation
 

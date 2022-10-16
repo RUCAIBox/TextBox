@@ -1,6 +1,5 @@
 from collections import Counter
 from .abstract_evaluator import AbstractEvaluator
-from nltk.tokenize import word_tokenize
 
 
 class UniqueEvaluator(AbstractEvaluator):
@@ -13,13 +12,9 @@ class UniqueEvaluator(AbstractEvaluator):
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus=None):
         results = {}
-
-        for i, gen in enumerate(generate_corpus):
-            generate_corpus[i] = word_tokenize(gen)
-
         ngrams_all = [Counter() for _ in range(self.unique_max_ngrams)]
-        
-        for gen in generate_corpus:
+
+        for gen in generate_corpus.tokens:
             ngrams = []
             for i in range(self.unique_max_ngrams):
                 ngrams.append(gen[i:])
@@ -27,6 +22,7 @@ class UniqueEvaluator(AbstractEvaluator):
                 ngrams_all[i].update(ngram)
 
         for i in range(self.unique_max_ngrams):
-            results[f'unique-{i+1}'] = sum(filter(lambda x: x == 1, ngrams_all[i].values())) / sum(ngrams_all[i].values()) * 100
-                
+            results[f'unique-{i+1}'] = sum(filter(lambda x: x == 1, ngrams_all[i].values())
+                                           ) / sum(ngrams_all[i].values()) * 100
+
         return results

@@ -1,4 +1,3 @@
-from nltk.tokenize import word_tokenize
 from fast_bleu import SelfBLEU
 from .abstract_evaluator import AbstractEvaluator
 
@@ -12,7 +11,7 @@ class SelfBleuEvaluator(AbstractEvaluator):
         self.max_ngrams = config['self_bleu_max_ngrams']
         self.ngrams = ['self-bleu-{}'.format(n) for n in range(1, self.max_ngrams + 1)]
         self._generate_weights()
-    
+
     def _generate_weights(self):
         self.ngram_weights = []
         for n in range(1, self.max_ngrams + 1):
@@ -35,10 +34,7 @@ class SelfBleuEvaluator(AbstractEvaluator):
         for ngram in self.ngrams:
             results[ngram] = []
 
-        for i, gen in enumerate(generate_corpus):
-            generate_corpus[i] = word_tokenize(gen)
-        
-        self_bleu = SelfBLEU(generate_corpus, dict(zip(self.ngrams, self.ngram_weights)))
+        self_bleu = SelfBLEU(generate_corpus.tokens, dict(zip(self.ngrams, self.ngram_weights)))
         scores = self_bleu.get_score()
         for ngram in self.ngrams:
             results[ngram] = [s * 100 for s in scores[ngram]]

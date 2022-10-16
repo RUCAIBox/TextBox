@@ -1,9 +1,10 @@
 src_len: 1024
 tgt_len: 128
-metrics: ['bleu']
+metrics: ['multiwoz']
 metrics_for_best_model: ['overall']
 
 train_batch_size: 4
 accumulation_steps: 48
-eval_batch_size: 16
-prefix: 'Given the task dialog: '
+eval_batch_size: 36
+prefix_prompt: 'Given the task dialog: '
+tokenizer_add_tokens: ['[value_type]', '[value_departure]', '[hotel]', '[offerbooked]', '[value_food]', '[hospital]', '[value_stars]', '[value_arrive]', '[recommend]', '[value_people]', '[request]', '[welcome]', '[value_postcode]', '[value_leave]', '[inform]', '[general]', '[value_reference]', '[bye]', '[value_day]', '[attraction]', '[db_nores]', '[value_car]', '[value_stay]', '[train]', '[db_2]', '[taxi]', '[nooffer]', '[value_choice]', '[value_phone]', '[db_3]', '[nobook]', '[value_area]', '[restaurant]', '[value_pricerange]', '[value_time]', '[value_destination]', '[reqmore]', '[offerbook]', '[greet]', '[value_department]', '[select]', '[value_price]', '[value_address]', '[value_id]', '[police]', '[db_1]', '[value_name]', '[db_0]']

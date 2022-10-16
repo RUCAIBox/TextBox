@@ -12,10 +12,10 @@ class QaEvaluator(AbstractEvaluator):
     def __init__(self, config):
         super(QaEvaluator, self).__init__(config)
         self.multiref_strategy = config['multiref_strategy']
-    
 
     def _normalize_answer(self, s):
         """Lower text and remove punctuation, articles and extra whitespace."""
+
         def remove_articles(text):
             return re.sub(r'\b(a|an|the)\b', ' ', text)
 
@@ -27,7 +27,6 @@ class QaEvaluator(AbstractEvaluator):
             return ''.join(ch for ch in text if ch not in exclude)
 
         return white_space_fix(remove_articles(remove_punc(s.lower())))
-
 
     def _f1_score(self, prediction, ground_truth):
         prediction_tokens = self._normalize_answer(prediction).split()
@@ -41,10 +40,8 @@ class QaEvaluator(AbstractEvaluator):
         f1 = (2 * precision * recall) / (precision + recall)
         return f1
 
-
     def _exact_match_score(self, prediction, ground_truth):
         return (self._normalize_answer(prediction) == self._normalize_answer(ground_truth))
-
 
     def _metric_max_over_ground_truths(self, metric_fn, prediction, ground_truths):
         scores_for_ground_truths = []
@@ -59,8 +56,8 @@ class QaEvaluator(AbstractEvaluator):
 
     def _calc_metrics_info(self, generate_corpus, reference_corpus):
         results = {'em': [], 'f1': []}
-        
-        for gen, refs in zip(generate_corpus, reference_corpus):
+
+        for gen, refs in zip(generate_corpus.tokenized_text, reference_corpus.tokenized_text):
             em = self._metric_max_over_ground_truths(self._exact_match_score, gen, refs)
             f1 = self._metric_max_over_ground_truths(self._f1_score, gen, refs)
             results['em'].append(em * 100)

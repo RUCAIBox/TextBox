@@ -1,3 +1,4 @@
+import os
 import logging
 from copy import copy
 from logging import getLogger
@@ -9,7 +10,7 @@ from torch.utils.data import DataLoader
 from ..config.configurator import Config
 from ..data.utils import data_preparation
 from ..trainer.trainer import Trainer
-from ..utils.dashboard import init_dashboard, finish_dashboard, start_dashboard
+from ..utils.dashboard import SummaryTracker
 from ..utils.logger import init_logger
 from ..utils.utils import get_model, get_tokenizer, get_trainer, init_seed
 
@@ -28,11 +29,11 @@ class Experiment:
     """
 
     def __init__(
-            self,
-            model: Optional[str] = None,
-            dataset: Optional[str] = None,
-            config_file_list: Optional[List[str]] = None,
-            config_dict: Optional[Dict[str, Any]] = None,
+        self,
+        model: Optional[str] = None,
+        dataset: Optional[str] = None,
+        config_file_list: Optional[List[str]] = None,
+        config_dict: Optional[Dict[str, Any]] = None,
     ):
         self.__base_config = Config(model, dataset, config_file_list, config_dict)
         self.__extended_config = None
@@ -40,7 +41,7 @@ class Experiment:
         self.accelerator = Accelerator()
         self.__base_config.update({'_is_local_main_process': self.accelerator.is_local_main_process})
         self.logger = self.init_logger(self.__base_config)
-        init_dashboard(self.get_config())
+        SummaryTracker.basicConfig(self.get_config())
         self.train_data, self.valid_data, self.test_data, self.tokenizer = \
             self._init_data(self.get_config(), self.accelerator)
 
@@ -76,7 +77,6 @@ class Experiment:
         """(Re-)initialize configuration. Since for now config and trainer is modifiable, this
         function is needed to ensure they were aligned to initial configuration.
         """
-        start_dashboard()
         self.__extended_config = extended_config
         config = self.get_config()
         init_seed(config['seed'], config['reproducibility'])
@@ -106,18 +106,29 @@ class Experiment:
 
     def _do_test(self):
         if self.do_test:
-            self.test_result = self.trainer.evaluate(self.test_data, model_file=self.__base_config['load_experiment'])
+            with SummaryTracker.new_epoch('eval'):
+                self.test_result = self.trainer.evaluate(
+                    self.test_data, model_file=self.__base_config['load_experiment']
+                )
+                SummaryTracker.set_metrics_results(self.test_result)
+                self.logger.info(
+                    'Evaluation result:\n{}'.format(SummaryTracker.current_epoch().as_str(sep=",\n", indent=" "))
+                )
 
     def _on_experiment_end(self):
-        finish_dashboard()
+        if self.__base_config['max_save'] == 0:
+            saved_filename = os.path.abspath(
+                os.path.join(self.__base_config['checkpoint_dir'], self.__base_config['filename']) + '.pth'
+            )
+            saved_link = os.readlink(saved_filename) if os.path.exists(saved_filename) else ''
+            from ..utils import safe_remove
+            safe_remove(saved_filename)
+            safe_remove(saved_link)
         self.__extended_config = None
 
-    def run(self, extended_config: Optional[dict] = None) -> Tuple[Optional[ResultType], Optional[ResultType]]:
-
-        self._on_experiment_start(extended_config)
-
-        self._do_train_and_valid()
-        self._do_test()
-
-        self._on_experiment_end()
-        return self.valid_result, self.test_result
+    def run(self, extended_config: Optional[dict] = None):
+        with SummaryTracker.new_experiment():
+            self._on_experiment_start(extended_config)
+            self._do_train_and_valid()
+            self._do_test()
+            self._on_experiment_end()

@@ -7,4 +7,4 @@ metrics_for_best_model: ['bleu']
 train_batch_size: 16
 accumulation_steps: 12
 eval_batch_size: 64
-prefix: 'Transfer style from informal to formal: '
+prefix_prompt: 'Transfer style from informal to formal: '

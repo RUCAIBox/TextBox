@@ -3,9 +3,9 @@ tgt_len: 64
 truncate: head
 metrics: ['bleu', 'distinct']
 smoothing_function: 7
-metrics_for_best_model: ['bleu-1', 'bleu-2', 'bleu-3', 'bleu-4']
+metrics_for_best_model: ['bleu-1', 'bleu-2']
 
 train_batch_size: 8
 accumulation_steps: 24
 eval_batch_size: 16
-prefix: 'Given the dialog: '
+prefix_prompt: 'Given the dialog: '

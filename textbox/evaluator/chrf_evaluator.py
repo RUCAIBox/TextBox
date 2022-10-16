@@ -25,12 +25,12 @@ class ChrfEvaluator(AbstractEvaluator):
         if self.chrf_type == 'm-popovic':
             from .utils.chrf import computeChrF
 
-            score = computeChrF(reference_corpus, generate_corpus, nworder=word_order)
+            score = computeChrF(reference_corpus.text, generate_corpus.text, nworder=word_order)
             results[self.metric] = score * 100
-        
+
         elif self.chrf_type == 'sacrebleu':
             from sacrebleu import corpus_chrf
-            
-            score = corpus_chrf(generate_corpus, reference_corpus, word_order=word_order)
+
+            score = corpus_chrf(generate_corpus.text, reference_corpus.text, word_order=word_order)
             results[self.metric] = score.score
         return results

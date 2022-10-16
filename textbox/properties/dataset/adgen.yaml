@@ -11,4 +11,4 @@ label_smoothing: 0.1
 learning_rate: 1e-5
 train_batch_size: 16
 eval_batch_size: 16
-prefix: 'Summarize: '
+prefix_prompt: 'Summarize: '

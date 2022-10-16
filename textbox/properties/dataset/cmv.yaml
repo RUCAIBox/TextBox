@@ -1,0 +1,11 @@
+src_len: 128
+tgt_len: 512
+metrics: ['bleu', 'distinct']
+metrics_for_best_model: ['bleu-1', 'bleu-2']
+corpus_bleu: true
+
+train_batch_size: 24
+accumulation_steps: 8
+eval_batch_size: 32
+prefix_prompt: 'Given the story title: '
+generation_kwargs: {'num_beams': 1, 'do_sample': True, 'top_p': 0.9, 'temperature': 0.7}

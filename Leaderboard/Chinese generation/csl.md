@@ -14,7 +14,7 @@ Scientific literature serves as a high-quality corpus, supporting a lot of Natur
 
 | Dataset | Num Train | Num Valid | Num Test | Source Length (Avg) | Target Length (Avg) |
 | ------- | --------- | --------- | -------- | ------------------- | ------------------- |
-| CSL     | $3,000$   | $500$     | -        | -                   | -                   |
+| CSL     | $3,000$   | $500$     | -        | 202.4               | 18.8                |
 
 ### Data Sample
 

@@ -30,12 +30,14 @@ Output
 
 Descending order by BLEU-4.
 
-| Model                                     | BLEU-4 | Repository                                 | Generated Text |
-| ----------------------------------------- | ------ | ------------------------------------------ | -------------- |
-| [CPT](https://arxiv.org/abs/2109.05729)   | $10.7$ | [Official](https://github.com/fastnlp/CPT) |                |
-| [CPM-2](https://arxiv.org/abs/2109.05729) | $10.6$ |                                            |                |
-| [BART](https://arxiv.org/abs/2109.05729)  | $10.0$ |                                            |                |
-| [mBART](https://arxiv.org/abs/2109.05729) | $8.5$  |                                            |                |
+| Model                                             | BLEU-4  | Repository                                                   | Generated Text |
+| ------------------------------------------------- | ------- | ------------------------------------------------------------ | -------------- |
+| [ERNIE 3.0](https://arxiv.org/pdf/2107.02137.pdf) | $30.16$ | [Official](https://github.com/PaddlePaddle/PaddleNLP/tree/develop/model_zoo/ernie-3.0) |                |
+| [CPT](https://arxiv.org/abs/2109.05729)           | $10.7$  | [Official](https://github.com/fastnlp/CPT)                   |                |
+| [CPM-2](https://arxiv.org/abs/2109.05729)         | $10.6$  |                                                              |                |
+| [BART](https://arxiv.org/abs/2109.05729)          | $10.0$  |                                                              |                |
+| [mT5](https://arxiv.org/pdf/2107.02137.pdf)       | $9.82$  |                                                              |                |
+| [mBART](https://arxiv.org/abs/2109.05729)         | $8.5$   |                                                              |                |
 
 ## Citation
 

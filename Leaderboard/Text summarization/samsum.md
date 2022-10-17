@@ -32,11 +32,15 @@ Olivia and Olivier are voting for liberals in this election.
 
 Descending order by ROUGE-2.
 
-| Model                                               | ROUGE-1 | ROUGE-2 | ROUGE-L | Repository                                       | Generated Text |
-| --------------------------------------------------- | ------- | ------- | ------- | ------------------------------------------------ | -------------- |
-| [ConDigSum](https://arxiv.org/pdf/2109.04994v1.pdf) | $54.3$  | $29.3$  | $45.2$  | [Official](https://github.com/junpliu/condigsum) |                |
-| [HAT-CNNDM](https://arxiv.org/pdf/2104.07545v2.pdf) | $53.01$ | $28.27$ |         |                                                  |                |
-| [BART](https://arxiv.org/pdf/2109.04994v1.pdf)      | $52.6$  | $27$    | $42.1$  | [Official](https://github.com/junpliu/condigsum) |                |
+| Model                                               | ROUGE-1  | ROUGE-2  | ROUGE-L  | Repository                                                   | Generated Text |
+| --------------------------------------------------- | -------- | -------- | -------- | ------------------------------------------------------------ | -------------- |
+| [ConDigSum](https://arxiv.org/pdf/2109.04994v1.pdf) | $54.3$   | $29.3$   | $45.2$   | [Official](https://github.com/junpliu/condigsum)             |                |
+| [HAT-CNNDM](https://arxiv.org/pdf/2104.07545v2.pdf) | $53.01$  | $28.27$  | -        |                                                              |                |
+| [BART](https://arxiv.org/pdf/2109.04994v1.pdf)      | $52.6$   | $27$     | $42.1$   | [Official](https://github.com/junpliu/condigsum)             |                |
+| [ssr-base]()                                        | $46.253$ | $21.337$ | $36.194$ | [Official](https://huggingface.co/santiviquez/ssr-base-finetuned-samsum-en) |                |
+| [T5-small]()                                        | $40.039$ | $15.85$  | $31.808$ | [Official](https://huggingface.co/santiviquez/t5-small-finetuned-samsum-en) |                |
+| [PTGen](https://arxiv.org/pdf/2109.04994v1.pdf)     | $40.1$   | $15.3$   | $36.6$   |                                                              |                |
+| [LEAD3](https://arxiv.org/pdf/2109.04994v1.pdf)     | $31.4$   | $8.7$    | $29.4$   |                                                              |                |
 
 ## Citation
 

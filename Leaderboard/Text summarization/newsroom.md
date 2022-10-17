@@ -6,6 +6,8 @@
 
 Paper: [Paper](https://aclanthology.org/N18-1065.pdf)
 
+Repository: [Official](https://github.com/lil-lab/newsroom)
+
 Homepage: [Official](http://lil.nlp.cornell.edu/newsroom/)
 
 CORNELL NEWSROOM is a large dataset for training and evaluating summarization systems. It contains 1.3 million articles and summaries written by authors and editors in the newsrooms of 38 major publications. The summaries are obtained from search and social metadata between 1998 and 2017 and use a variety of summarization strategies combining extraction and abstraction.
@@ -18,20 +20,16 @@ CORNELL NEWSROOM is a large dataset for training and evaluating summarization sy
 
 ### Data Sample
 
+Input
+
 ```
-{
-    "compression": 33.880001068115234,
-    "compression_bin": "medium",
-    "coverage": 1.0,
-    "coverage_bin": "high",
-    "date": "200600000",
-    "density": 11.720000267028809,
-    "density_bin": "extractive",
-    "summary": "some summary 1",
-    "text": "some text 1",
-    "title": "news title 1",
-    "url": "url.html"
-}
+'By HOLLY RAMER, Associated Press\n\nCONCORD, N.H. -- A sick American engineer who was successfully evacuated from the South Pole to New Zealand is awaiting the results of medical tests after having what doctors believed was a stroke in August.\n\nRenee-Nicole Douceur told The Associated Press in an email Tuesday that she had MRI and echocardiogram exams. She said results will be shared with doctors in the United States, "so everyone will be on the same page."\n\n"Back at hotel now to chill out," Douceur wrote. She added, "So nice to see green and smell freshly cut grass, flowers, birds chirping, insects, etc., since it\'s now been over a year on the flat polar plateau of just ice and snow." She landed in Christchurch on Monday.\n\nDouceur, 58, is a Seabrook, N.H., resident who worked as a manager for research station contractor Raytheon Polar Services Co. She asked for an emergency evacuation after having what doctors believed was a stroke in August, but officials rejected her request because of bad weather, saying that sending a rescue plane was too dangerous and that her condition wasn\'t life-threatening.\n\nDoctors she contacted for a second opinion say a tumor may have caused her vision and speech problems.\n\nAfter initially having half her field of vision vanish, Douceur said last week she can now read if she concentrates on just a few words at a time. She said she sometimes jumbles words and has had trouble remembering simple lists of words during medical evaluations.'
+```
+
+Output
+
+```
+'By HOLLY RAMER, Associated Press CONCORD, N.H. -- A sick American engineer who was successfully evacuated from the South Pole to New Zealand is awaiting the results of medical tests after having what doctors believed was a stroke in August.'
 ```
 
 ## LeaderBoard

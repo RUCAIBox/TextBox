@@ -92,10 +92,13 @@ class Pretrained_Models(AbstractModel):
         self._init_params()
 
         # loading model
-        if self.model_name == 'bert2bert':
+        # if self.model_name == 'bert2bert':
+        if self.model_name in ['bert2bert', 'xlm', 'xlm-roberta']:
             self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(
                 model_path, model_path, config=self.configuration
             )
+        # elif self.model_name == 'xlm':
+        #     self.model = EncoderDecoderModel.from_pretrained(model_path_en, model_path_de, config=self.configuration)
         elif self.model_name == 'cpt':
             self.model = CPTForConditionalGeneration.from_pretrained(model_path, config=self.configuration)
         elif self.is_casual_model:
@@ -112,7 +115,8 @@ class Pretrained_Models(AbstractModel):
                 warnings.warn(f"Initialize {self.model_name} from scratch")
                 self.model = AutoModelForSeq2SeqLM.from_config(self.configuration)
 
-        if self.model_name != 'bert2bert':
+        # if self.model_name != 'bert2bert':
+        if self.model_name not in ['bert2bert', 'xlm', 'xlm-roberta']:
             self.model.resize_token_embeddings(len(self.tokenizer))
         else:
             self.model.config.decoder_start_token_id = self.tokenizer.cls_token_id

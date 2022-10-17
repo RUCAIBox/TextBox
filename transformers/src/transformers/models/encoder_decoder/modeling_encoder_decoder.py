@@ -544,10 +544,10 @@ class EncoderDecoderModel(PreTrainedModel):
         return Seq2SeqLMOutput(
             loss=loss,
             logits=decoder_outputs.logits,
-            past_key_values=decoder_outputs.past_key_values,
+            past_key_values=decoder_outputs.past_key_values if hasattr(decoder_outputs, 'past_key_values') else None,
             decoder_hidden_states=decoder_outputs.hidden_states,
             decoder_attentions=decoder_outputs.attentions,
-            cross_attentions=decoder_outputs.cross_attentions,
+            cross_attentions=decoder_outputs.cross_attentions if hasattr(decoder_outputs, 'cross_attentions') else None,
             encoder_last_hidden_state=encoder_outputs.last_hidden_state,
             encoder_hidden_states=encoder_outputs.hidden_states,
             encoder_attentions=encoder_outputs.attentions,

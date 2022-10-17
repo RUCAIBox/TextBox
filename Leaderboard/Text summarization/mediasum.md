@@ -18,35 +18,16 @@ MediaSum, a large-scale media interview dataset consisting of 463.6K transcripts
 
 ### Data Sample
 
+Input
+
 ```
-{
-  "id": "NPR-11",
-  "program": "Day to Day",
-  "date": "2008-06-10",
-  "url": "https://www.npr.org/templates/story/story.php?storyId=91356794",
-  "title": "Researchers Find Discriminating Plants",
-  "summary": "The \"sea rocket\" shows preferential treatment to plants that are its kin. Evolutionary plant ecologist Susan Dudley of McMaster University in Ontario discusses her discovery.",
-  "utt": [
-    "This is Day to Day.  I'm Madeleine Brand.",
-    "And I'm Alex Cohen.",
-    "Coming up, the question of who wrote a famous religious poem turns into a very unchristian battle.",
-    "First, remember the 1970s?  People talked to their houseplants, played them classical music. They were convinced plants were sensuous beings and there was that 1979 movie, \"The Secret Life of Plants.\"",
-    "Only a few daring individuals, from the scientific establishment, have come forward with offers to replicate his experiments, or test his results. The great majority are content simply to condemn his efforts without taking the trouble to investigate their validity.",
-    ...
-    "OK. Thank you.",
-    "That's Susan Dudley. She's an associate professor of biology at McMaster University in Hamilt on Ontario. She discovered that there is a social life of plants."
-  ],
-  "speaker": [
-    "MADELEINE BRAND, host",
-    "ALEX COHEN, host",
-    "ALEX COHEN, host",
-    "MADELEINE BRAND, host",
-    "Unidentified Male",    
-    ..."
-    Professor SUSAN DUDLEY (Biology, McMaster University)",
-    "MADELEINE BRAND, host"
-  ]
-}
+'RACHEL MARTIN, HOST: Good morning. I\'m Rachel Martin. A middle school art teacher in Abilene, Texas, wanted to reward her hardworking students. And what could ease their stress and spark their creativity? Dressing up like Bob Ross, of course. On the designated day, dozens of eighth graders wore big, curly, reddish wigs and chambray shirts. Then they painted along to an episode of Ross\' PBS show "The Joy Of Painting." The Abilene Reporter-News said it best. It was a Bob Ross flash mob - a flash Bob, if you will. It\'s MORNING EDITION.'
+```
+
+Output
+
+```
+'What could ease their stress? Dressing up like Bob Ross. Dozens of eighth graders wore big, curly wigs and chambray shirts, and then painted along to an episode of his PBS show The Joy of Painting.'
 ```
 
 ## LeaderBoard

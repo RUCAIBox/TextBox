@@ -20,20 +20,16 @@ CORNELL NEWSROOM is a large dataset for training and evaluating summarization sy
 
 ### Data Sample
 
+Input
+
 ```
-{
-    "compression": 64.30769348144531,
-    "compression_bin": "high",
-    "coverage": 0.8461538553237915,
-    "coverage_bin": "medium",
-    "date": "20141011140242",
-    "density": 9.15384578704834,
-    "density_bin": "extractive",
-    "summary": "DC's Chief Creative Officer on mobile gaming: \"The reach that these games can get instantly is something short of a miracle.\"",
-    "text": "While Marvel Studios DIS has released many more big-budget comic book movies over the past decade, the anticipation is building for Batman vs Superman: Dawn of Justice starring Henry Cavill and Ben Affleck and the long-awaited Justice League movie. DC characters are also all over television this fall with The Flash, Gotham, Constantine and iZombie joining Arrow. And gamers are looking forward to the 2015 release of Batman: Arkham Knight, which marks the next gen debut of Batman. The man at the center of this multimedia DC Universe is Geoff Johns, Chief Creative Officer at DC Entertainment TWX . The writer of Superman, Green Lantern, The Flash, Teen Titans and Justice Society of America has been busy working with other creatives across every medium to connect DC superheroes with a mainstream audience, which is one seemingly more receptive to them than ever before. Before New York Comic Con, Johns recently talked to Fortune about how video games, mobile and digital distribution are [...]",
-    "title": "DC Entertainment exec Geoff Johns talks games, tech and TV",
-    "url": "http://fortune.com/2014/10/11/geoff-johns-dc-entertainment/"
-}
+'By HOLLY RAMER, Associated Press\n\nCONCORD, N.H. -- A sick American engineer who was successfully evacuated from the South Pole to New Zealand is awaiting the results of medical tests after having what doctors believed was a stroke in August.\n\nRenee-Nicole Douceur told The Associated Press in an email Tuesday that she had MRI and echocardiogram exams. She said results will be shared with doctors in the United States, "so everyone will be on the same page."\n\n"Back at hotel now to chill out," Douceur wrote. She added, "So nice to see green and smell freshly cut grass, flowers, birds chirping, insects, etc., since it\'s now been over a year on the flat polar plateau of just ice and snow." She landed in Christchurch on Monday.\n\nDouceur, 58, is a Seabrook, N.H., resident who worked as a manager for research station contractor Raytheon Polar Services Co. She asked for an emergency evacuation after having what doctors believed was a stroke in August, but officials rejected her request because of bad weather, saying that sending a rescue plane was too dangerous and that her condition wasn\'t life-threatening.\n\nDoctors she contacted for a second opinion say a tumor may have caused her vision and speech problems.\n\nAfter initially having half her field of vision vanish, Douceur said last week she can now read if she concentrates on just a few words at a time. She said she sometimes jumbles words and has had trouble remembering simple lists of words during medical evaluations.'
+```
+
+Output
+
+```
+'By HOLLY RAMER, Associated Press CONCORD, N.H. -- A sick American engineer who was successfully evacuated from the South Pole to New Zealand is awaiting the results of medical tests after having what doctors believed was a stroke in August.'
 ```
 
 ## LeaderBoard

@@ -62,6 +62,12 @@ class AbstractModel(nn.Module):
             'attention_mask': batch['source_mask'].to(self.device),
             'labels': batch['target_ids'].to(self.device)
         }
+        if self.model_name == "unilm":
+            inputs.update({"token_type_ids": batch['segment_ids'].to(self.device)})
+            inputs.update({"masked_lm_labels": batch['masked_ids'].to(self.device)})
+            inputs.update({"masked_pos": batch['masked_pos'].to(self.device)})
+            inputs.update({"masked_weights": batch['masked_weights'].to(self.device)})
+            self.label_smoothing = False
         if self.is_prompt_tuning:
             inputs = self._process_prompt_tuning_input(inputs, batch)
         outputs = self.model(**inputs)
@@ -85,6 +91,11 @@ class AbstractModel(nn.Module):
             'attention_mask': batch['source_mask'].to(self.device),
         }
 
+        if self.model_name == "unilm":
+            inputs.update({"position_ids": batch['position_ids'].to(self.device)})
+            inputs.update({"token_type_ids": batch['segment_ids'].to(self.device)})
+            inputs.update({"source_length": batch['source_length'].to(self.device)})
+
         if self.is_prompt_tuning:
             inputs = self._process_prompt_tuning_input(inputs, batch)
 
@@ -92,12 +103,13 @@ class AbstractModel(nn.Module):
             input_ids_len = inputs['input_ids'].shape[1] if 'input_ids' in inputs else inputs['inputs_embeds'].shape[1]
             self.generation_kwargs['max_length'] = self.target_max_length + input_ids_len
 
+
         # sample_outputs = self.model.generate(**inputs, **self.generation_kwargs)
         sample_outputs = accelerator.unwrap_model(self.model).generate(**inputs, **self.generation_kwargs)
         sample_outputs = accelerator.pad_across_processes(sample_outputs, dim=1, pad_index=self.tokenizer.pad_token_id)
         sample_outputs = accelerator.gather((sample_outputs))
 
-        if self.is_casual_model:
+        if self.is_casual_model and self.model_name != 'unilm':
             sample_outputs = sample_outputs[:, input_ids_len:]
 
         decode_kwargs = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': False}

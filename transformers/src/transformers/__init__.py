@@ -866,6 +866,17 @@ else:
             "BertModel",
             "BertPreTrainedModel",
             "load_tf_weights_in_bert",
+            "BertPooler",
+            "BertIntermediate",
+            "BertOutput",
+            "BertPredictionHeadTransform",
+            "BertSelfOutput",
+            "BertLMPredictionHead",
+            "BertOnlyMLMHead",
+            "BertOnlyMLMHead",
+            "BertEmbeddings",
+            "BertOnlyNSPHead"
+
         ]
     )
     _import_structure["models.bert_generation"].extend(
@@ -3501,6 +3512,17 @@ if TYPE_CHECKING:
             BertModel,
             BertPreTrainedModel,
             load_tf_weights_in_bert,
+            BertPooler,
+            BertIntermediate,
+            BertOutput,
+            BertPredictionHeadTransform,
+            BertSelfOutput,
+            BertLMPredictionHead,
+            BertOnlyMLMHead,
+            BertOnlyMLMHead,
+            BertEmbeddings,
+            BertOnlyNSPHead,
+
         )
         from .models.bert_generation import (
             BertGenerationDecoder,

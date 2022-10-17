@@ -62,6 +62,16 @@ else:
         "BertModel",
         "BertPreTrainedModel",
         "load_tf_weights_in_bert",
+        "BertPooler",
+        "BertIntermediate",
+        "BertOutput",
+        "BertPredictionHeadTransform",
+        "BertSelfOutput",
+        "BertLMPredictionHead",
+        "BertOnlyMLMHead",
+        "BertOnlyMLMHead",
+        "BertEmbeddings",
+        "BertOnlyNSPHead"
     ]
 
 try:
@@ -144,6 +154,16 @@ if TYPE_CHECKING:
             BertModel,
             BertPreTrainedModel,
             load_tf_weights_in_bert,
+            BertPooler,
+            BertIntermediate,
+            BertOutput,
+            BertPredictionHeadTransform,
+            BertSelfOutput,
+            BertLMPredictionHead,
+            BertOnlyMLMHead,
+            BertOnlyMLMHead,
+            BertEmbeddings,
+            BertOnlyNSPHead,
         )
 
     try:

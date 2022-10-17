@@ -113,21 +113,10 @@ PRETRAINED_INIT_CONFIGURATION = {
     "wietsedv/bert-base-dutch-cased": {"do_lower_case": False},
 }
 
-def load_vocab(vocab_file, isUniLM = False):
+def load_vocab(vocab_file):
     """Loads a vocabulary file into a dictionary."""
     # mapping unused tokens to special tokens
     extra_map = {}
-    if isUniLM:
-        extra_map['[unused1]'] = '[X_SEP]'
-        for i in range(10):
-            extra_map['[unused{}]'.format(i+2)] = '[SEP_{}]'.format(i)
-        extra_map['[unused12]'] = '[S2S_SEP]'
-        extra_map['[unused13]'] = '[S2S_CLS]'
-        extra_map['[unused14]'] = '[L2R_SEP]'
-        extra_map['[unused15]'] = '[L2R_CLS]'
-        extra_map['[unused16]'] = '[R2L_SEP]'
-        extra_map['[unused17]'] = '[R2L_CLS]'
-        extra_map['[unused18]'] = '[S2S_SOS]'
     vocab = collections.OrderedDict()
     index = 0
     with open(vocab_file, "r", encoding="utf-8") as reader:
@@ -233,8 +222,7 @@ class BertTokenizer(PreTrainedTokenizer):
                 f"Can't find a vocabulary file at path '{vocab_file}'. To load the vocabulary from a Google pretrained"
                 " model use `tokenizer = BertTokenizer.from_pretrained(PRETRAINED_MODEL_NAME)`"
             )
-        isUniLM = kwargs.pop('isUniLM') if kwargs['isUniLM'] else False
-        self.vocab = load_vocab(vocab_file, isUniLM=isUniLM)
+        self.vocab = load_vocab(vocab_file)
         self.ids_to_tokens = collections.OrderedDict([(ids, tok) for tok, ids in self.vocab.items()])
         self.do_basic_tokenize = do_basic_tokenize
         if do_basic_tokenize:

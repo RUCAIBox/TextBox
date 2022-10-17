@@ -449,9 +449,10 @@ class Trainer(AbstractTrainer):
         self.logger.info("====== Start training ======")
         self.accelerator.wait_for_everyone()
         if self.config['model_name'] == 'unilm':
+            self.warmup_proportion = self.config['warmup_proportion'] if hasattr(self.config, 'warmup_proportion') else 0.1
             t_total = int(len(train_data) * (self.epochs - self.start_epoch + 1) / self.accumulation_steps)
             self.scheduler = transformers.get_linear_schedule_with_warmup(
-                self.optimizer, num_warmup_steps=int(t_total * 0.1), num_training_steps=t_total)
+                self.optimizer, num_warmup_steps=int(t_total * self.warmup_proportion), num_training_steps=t_total)
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
             loss = self._train_epoch(train_data, epoch_idx, valid_data)['loss']

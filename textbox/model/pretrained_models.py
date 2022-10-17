@@ -106,12 +106,6 @@ class Pretrained_Models(AbstractModel):
         elif self.model_name == 'cpt':
             self.model = CPTForConditionalGeneration.from_pretrained(model_path, config=self.configuration)
         elif self.model_name == "unilm":
-            # import pdb
-            # pdb.set_trace()
-            # model_recover = torch.load(
-            #     self.config['model_recover_path'], map_location='cpu')
-            # self.model = UnilmForTextbox.from_pretrained(
-            #     model_path, state_dict=model_recover, config=self.configuration)
             self.model = UnilmForTextbox.from_pretrained(model_path, config=self.configuration)
             mask_word_id, eos_word_ids, sos_word_id = tokenizer.convert_tokens_to_ids(
                 ["[MASK]", "[SEP]", "[S2S_SOS]"])

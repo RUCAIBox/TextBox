@@ -8,7 +8,7 @@ import torch
 from accelerate.utils import set_seed
 from transformers import AutoTokenizer, BertTokenizer
 
-from .enum_type import PLM_MODELS
+from .enum_type import PLM_MODELS, RNN_MODELS
 from transformers.models.unilm.tokenization_unilm import UnilmTokenizer
 
 

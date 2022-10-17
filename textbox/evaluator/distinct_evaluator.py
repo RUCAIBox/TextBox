@@ -18,7 +18,7 @@ class DistinctEvaluator(AbstractEvaluator):
             ngrams_all = [Counter() for _ in range(self.distinct_max_ngrams)]
         else:
             scores = [[] for _ in range(self.distinct_max_ngrams)]
-        
+
         for gen in generate_corpus.tokens:
             ngrams = []
             for i in range(self.distinct_max_ngrams):
@@ -27,10 +27,12 @@ class DistinctEvaluator(AbstractEvaluator):
                 if self.inter_distinct:
                     ngrams_all[i].update(ngram)
                 else:
-                    scores[i].append((len(ngram)+1e-12) / (max(0, len(gen)-i)+1e-5) * 100)
+                    scores[i].append((len(ngram) + 1e-12) / (max(0, len(gen) - i) + 1e-5) * 100)
 
         for i in range(self.distinct_max_ngrams):
             if self.inter_distinct:
-                results[f'distinct-{i+1}'] = (len(ngrams_all[i])+1e-12) / (sum(ngrams_all[i].values())+1e-5) * 100 if self.inter_distinct else scores[i]
-                
+                results[f'distinct-{i+1}'] = (len(ngrams_all[i]) +
+                                              1e-12) / (sum(ngrams_all[i].values()) +
+                                                        1e-5) * 100 if self.inter_distinct else scores[i]
+
         return results

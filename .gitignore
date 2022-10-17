@@ -24,3 +24,5 @@ facebook/
 .env
 /wandb/
 *.swp
+test/
+textbox/evaluator/test_evaluator.py

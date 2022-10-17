@@ -1,7 +1,7 @@
 src_len: 1024
 tgt_len: 64
 truncate: head
-metrics: ['da']
+metrics: ['bleu', 'rouge', 'meteor', 'cider']
 metrics_for_best_model: ["bleu-1", "bleu-2", "bleu-3", "bleu-4", 'meteor', 'rouge-l', 'cider']
 bleu_type: pycocoevalcap
 rouge_type: pycocoevalcap

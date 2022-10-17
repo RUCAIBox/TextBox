@@ -33,13 +33,13 @@ class HyperTuning:
     """
 
     def __init__(
-            self,
-            model: Optional[str],
-            dataset: Optional[str],
-            base_config_file_list: list,
-            base_config_dict: dict,
-            space: Union[SpaceType, str],
-            algo: Union[Callable, str],
+        self,
+        model: Optional[str],
+        dataset: Optional[str],
+        base_config_file_list: list,
+        base_config_dict: dict,
+        space: Union[SpaceType, str],
+        algo: Union[Callable, str],
     ):
 
         if isinstance(space, dict):
@@ -100,10 +100,14 @@ class HyperTuning:
             self.best_params = copy(params)
             current_best = True
 
-        et = EpochTracker(self.metrics_for_best_model)
-        et.update_metrics(test_result)
-        et.epoch_info(desc='Trial', serial=self._trial_count, time_duration=ed_time-st_time, current_best=current_best,
-                      logger=self.logger)
+        et = EpochTracker(self.metrics_for_best_model, metrics_results=test_result)
+        et.epoch_info(
+            desc='Trial',
+            serial=self._trial_count,
+            time_duration=ed_time - st_time,
+            current_best=current_best,
+            source=self.logger.info
+        )
 
         test_result['loss'] = test_result['score']
         test_result['status'] = hyperopt.STATUS_OK
@@ -114,8 +118,10 @@ class HyperTuning:
     def run(self):
         self.logger.info('======Hyper Tuning Start======')
         fmin(fn=self.fn, space=self.space, algo=self.algo, max_evals=self.max_evals)
-        self.logger.info(f'======Hyper Tuning Finished. Best at {self.best_trial}'
-                         f' trial (score = {self.best_score:4f}).======')
+        self.logger.info(
+            f'======Hyper Tuning Finished. Best at {self.best_trial}'
+            f' trial (score = {self.best_score:4f}).======'
+        )
         self.logger.info(f'Best params: {self.best_params}')
 
     @staticmethod
@@ -163,17 +169,20 @@ class HyperTuning:
             new_misc = None
             while not new_sample:
                 # -- sample new specs, indices, values
-                indices, values = pyll.rec_eval(domain.s_idxs_vals, memo={
-                    domain.s_new_ids: [new_id],
-                    domain.s_rng: rng,
-                })
+                indices, values = pyll.rec_eval(
+                    domain.s_idxs_vals, memo={
+                        domain.s_new_ids: [new_id],
+                        domain.s_rng: rng,
+                    }
+                )
                 new_result = domain.new_result()
                 new_misc = dict(tid=new_id, cmd=domain.cmd, workdir=domain.workdir)
                 miscs_update_idxs_vals([new_misc], indices, values)
 
                 # Compare with previous hashes
                 h = hash(
-                    frozenset([(key, value[0]) if len(value) > 0 else (key, None) for key, value in values.items()]))
+                    frozenset([(key, value[0]) if len(value) > 0 else (key, None) for key, value in values.items()])
+                )
                 if h not in hashset:
                     new_sample = True
                 else:
@@ -189,12 +198,12 @@ class HyperTuning:
 
 
 def run_hyper(
-        algo: str,
-        model: str,
-        dataset: str,
-        base_config_file_list: list,
-        base_config_dict: dict,
-        space: str,
+    algo: str,
+    model: str,
+    dataset: str,
+    base_config_file_list: list,
+    base_config_dict: dict,
+    space: str,
 ):
     hyper_tuning = HyperTuning(
         model=model,

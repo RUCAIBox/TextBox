@@ -12,11 +12,11 @@ from ..utils.dashboard import EpochTracker
 
 
 def run_multi_seed(
-        multi_seed: int,
-        model: str,
-        dataset: str,
-        base_config_file_list: list,
-        base_config_dict: dict,
+    multi_seed: int,
+    model: str,
+    dataset: str,
+    base_config_file_list: list,
+    base_config_dict: dict,
 ):
     experiment = Experiment(model, dataset, base_config_file_list, base_config_dict)
     config = experiment.get_config()
@@ -47,16 +47,17 @@ def run_multi_seed(
             best_score = valid_result['score']
         ed_time = time()
 
-        et = EpochTracker()
-        et.update_metrics(seed=trial_seed)
-        et.update_metrics(valid_result)
-        et.epoch_info(desc='Trial', serial=trial_idx, time_duration=ed_time-st_time, logger=logger)
+        et = EpochTracker(metrics_results=valid_result)
+        et._update_metrics(seed=trial_seed)
+        et.epoch_info(desc='Trial', serial=trial_idx, time_duration=ed_time - st_time, source=logger.info)
         for key, value in valid_result.items():
             avg_results[key] *= trial_idx / (trial_idx + 1)
             avg_results[key] += value / (trial_idx + 1)
 
-    logger.info(f'======Multiple Random Seeds Test Finished. Best at trial {best_trial} '
-                f'(score = {best_score:4f}).======')
+    logger.info(
+        f'======Multiple Random Seeds Test Finished. Best at trial {best_trial} '
+        f'(score = {best_score:4f}).======'
+    )
     logger.info(f'Average results:')
     for key, value in avg_results.items():
         logger.info(f' {key}: {value}')

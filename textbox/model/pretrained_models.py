@@ -65,10 +65,8 @@ class Pretrained_Models(AbstractModel):
         else:
             # loading config from config_path
             if self.model_name == "unilm":
-                config_kwargs = {
-                    "label_smoothing": config["label_smoothing"],
-                    "max_position_embeddings": 512
-                }
+                config_kwargs["label_smoothing"] = self.label_smoothing
+                self.label_smoothing = 0.
                 self.configuration = UnilmConfig.from_pretrained(config_path, **config_kwargs)
             else:
                 self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
@@ -193,9 +191,9 @@ class Pretrained_Models(AbstractModel):
             inputs['labels'] = torch.cat([labels, inputs['labels']], dim=1)
         return inputs
 
-    def forward(self, batch, epoch_idx=-1):
+    def process_forward_inputs(self, batch):
         if self.model_name != 'unilm':
-            return super(Pretrained_Models, self).forward(batch, epoch_idx)
+            return super(Pretrained_Models, self).process_forward_inputs(batch)
         inputs = {
             'input_ids': batch['source_ids'].to(self.device),
             'attention_mask': batch['source_mask'].to(self.device),
@@ -204,24 +202,15 @@ class Pretrained_Models(AbstractModel):
             'masked_pos': batch['masked_pos'].to(self.device),
             'masked_weights': batch['masked_weights'].to(self.device),
         }
-        return self.model(**inputs).loss
+        return inputs
 
-    def generate(self, batch, accelerator):
+    def process_generate_inputs(self, batch):
         if self.model_name != 'unilm':
-            return super(Pretrained_Models, self).generate(self, batch, accelerator)
+            return super(Pretrained_Models, self).process_generate_inputs(batch)
         inputs = {
             'input_ids': batch['source_ids'].to(self.device),
             'attention_mask': batch['source_mask'].to(self.device),
             'token_type_ids': batch['token_type_ids'].to(self.device),
             'position_ids': batch['position_ids'].to(self.device),
         }
-
-        # sample_outputs = self.model.generate(**inputs, **self.generation_kwargs)
-        sample_outputs = accelerator.unwrap_model(self.model).generate(**inputs, **self.generation_kwargs)
-        sample_outputs = accelerator.pad_across_processes(sample_outputs, dim=1, pad_index=self.tokenizer.pad_token_id)
-        sample_outputs = accelerator.gather((sample_outputs))
-
-        decode_kwargs = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': False}
-        generated_text = self.tokenizer.batch_decode(sample_outputs, **decode_kwargs)
-        generated_text = [g.strip() or 'NULL' for g in generated_text]
-        return generated_text
+        return inputs

@@ -21,7 +21,7 @@ class AbstractModel(nn.Module):
         self.is_seq2seq_model = bool(self.model_name in SEQ2SEQ_MODELS or self.model_name in RNN_MODELS)
 
         self.is_prompt_tuning = 'prompt-tuning' in config['efficient_methods']
-        self.label_smoothing = config['label_smoothing'] if config['label_smoothing'] and config['model_name'] != 'unilm' else 0.
+        self.label_smoothing = config['label_smoothing'] if config['label_smoothing'] else 0.
 
     def generate_setting(self, config):
         # geneation settings
@@ -57,11 +57,8 @@ class AbstractModel(nn.Module):
         return super().__str__() + '\nTrainable parameters: {}'.format(params)
 
     def forward(self, batch, epoch_idx=-1):
-        inputs = {
-            'input_ids': batch['source_ids'].to(self.device),
-            'attention_mask': batch['source_mask'].to(self.device),
-            'labels': batch['target_ids'].to(self.device)
-        }
+        inputs = self.process_forward_inputs(batch)
+
         if self.is_prompt_tuning:
             inputs = self._process_prompt_tuning_input(inputs, batch)
         outputs = self.model(**inputs)
@@ -80,10 +77,7 @@ class AbstractModel(nn.Module):
             return outputs.loss
 
     def generate(self, batch, accelerator):
-        inputs = {
-            'input_ids': batch['source_ids'].to(self.device),
-            'attention_mask': batch['source_mask'].to(self.device),
-        }
+        inputs = self.process_generate_inputs(batch)
 
         if self.is_prompt_tuning:
             inputs = self._process_prompt_tuning_input(inputs, batch)
@@ -104,3 +98,18 @@ class AbstractModel(nn.Module):
         generated_text = self.tokenizer.batch_decode(sample_outputs, **decode_kwargs)
         generated_text = [g.strip() or 'NULL' for g in generated_text]
         return generated_text
+
+    def process_forward_inputs(self, batch):
+        inputs = {
+            'input_ids': batch['source_ids'].to(self.device),
+            'attention_mask': batch['source_mask'].to(self.device),
+            'labels': batch['target_ids'].to(self.device)
+        }
+        return inputs
+
+    def process_generate_inputs(self, batch):
+        inputs = {
+            'input_ids': batch['source_ids'].to(self.device),
+            'attention_mask': batch['source_mask'].to(self.device),
+        }
+        return inputs

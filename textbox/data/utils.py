@@ -1,9 +1,10 @@
 from torch.utils.data import DataLoader
 from textbox.data.denoising_dataset import TextInfillingCollate, DenoisingCollate
+from ..data.unilm_dataset import UnilmCollate
 from textbox.data.abstract_dataset import AbstractDataset, AbstractCollate
 from logging import getLogger
 
-collate_options = {'disabled': AbstractCollate, 'denoising': DenoisingCollate, 'text_infilling': TextInfillingCollate}
+collate_options = {'disabled': AbstractCollate, 'denoising': DenoisingCollate, 'text_infilling': TextInfillingCollate, 'unilm': UnilmCollate}
 
 
 def data_preparation(config, tokenizer):
@@ -16,6 +17,8 @@ def data_preparation(config, tokenizer):
     test_dataset.tokenize(tokenizer)
 
     collate_name = config['pretrain_task']
+    if config['model_name'] == 'unilm':
+        collate_name = 'unilm'
     collate_fn = collate_options.get(collate_name, AbstractCollate)
     logger = getLogger(__name__)
     logger.info(f'Pretrain type: {collate_fn.get_type()}')

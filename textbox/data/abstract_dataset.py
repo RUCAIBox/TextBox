@@ -52,6 +52,16 @@ class AbstractDataset(Dataset):
                 f"The max length of target text {self.target_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and will be set to {self.tokenizer.model_max_length}."
             )
             self.target_length = self.tokenizer.model_max_length
+        if self.config["model_name"] == "unilm":
+            if self.source_length + self.target_length > self.tokenizer.model_max_length:
+                warnings.warn(
+                    f"The max length of the sum of source text {self.source_length} and target text {self.target_length}"
+                    f" exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, "
+                    f"and will be set to {self.tokenizer.model_max_length - self.tokenizer.model_max_length // 4} and "
+                    f"{self.tokenizer.model_max_length // 4}."
+                )
+                self.target_length = self.tokenizer.model_max_length // 4
+                self.source_length = self.tokenizer.model_max_length - self.target_length
 
         if (self.config["efficient_methods"] and "prompt-tuning" in self.config["efficient_methods"]):
             prompt_length = self.config["efficient_kwargs"]["prompt_length"]
@@ -80,7 +90,7 @@ class AbstractDataset(Dataset):
         )
         self.target_max_length = (self.target_length - self.tokenizer.num_special_tokens_to_add())
 
-        if self.config["model_name"] in ["bert2bert", "opt"]:
+        if self.config["model_name"] in ["bert2bert", "opt", "unilm"]:
             self.target_max_length += 1
 
     def tokenize(self, tokenizer):
@@ -113,7 +123,7 @@ class AbstractDataset(Dataset):
                         if self.config["truncate"] == "tail" else ids[-self.target_max_length:]
                     )
                     ids = self.tokenizer.build_inputs_with_special_tokens(ids)
-                    if self.config["model_name"] in ["bert2bert", "opt"]:
+                    if self.config["model_name"] in ["bert2bert", "opt", "unilm"]:
                         ids = ids[1:]
                     self.target_ids.append(torch.tensor(ids, dtype=torch.long))
 

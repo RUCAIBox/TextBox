@@ -9,6 +9,7 @@ from accelerate.utils import set_seed
 from transformers import AutoTokenizer, BertTokenizer
 
 from .enum_type import PLM_MODELS, RNN_MODELS
+from transformers.models.unilm.tokenization_unilm import UnilmTokenizer
 
 
 def get_local_time() -> str:
@@ -218,6 +219,8 @@ def get_tokenizer(config):
         tokenizer_path = config['tokenizer_path'] or config['model_path']
         if (config['model_name'] in ['chinese-bart', 'chinese-pegasus', 'cpt']):
             tokenizer = BertTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
+        elif config['model_name'] == "unilm":
+            tokenizer = UnilmTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
         else:
             tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
 
@@ -232,7 +235,7 @@ def get_tokenizer(config):
             tokenizer.pad_token = tokenizer.eos_token
 
         # (3): tokenizer needs to change replace eos token with sep token
-        if model_name in ['cpm']:
+        if model_name in ['cpm', 'unilm']:
             tokenizer.eos_token = tokenizer.sep_token
 
         # (4): tokenizer needs to modify `build_inputs_with_special_tokens()` and `num_special_tokens_to_add()`

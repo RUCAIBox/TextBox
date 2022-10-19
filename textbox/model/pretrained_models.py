@@ -29,6 +29,7 @@ from .abstract_model import AbstractModel
 
 from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForSeq2SeqLM, EncoderDecoderModel
 from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
+from transformers.models.unilm.modeling_unilm import UnilmConfig, UnilmForSeq2Seq
 from ..utils.argument_list import efficient_kwargs_dict
 '''
 # Model for Causal LM mapping
@@ -63,7 +64,12 @@ class Pretrained_Models(AbstractModel):
             self.configuration = AutoConfig.for_model(**config_dict)
         else:
             # loading config from config_path
-            self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
+            if self.model_name == "unilm":
+                config_kwargs["label_smoothing"] = self.label_smoothing
+                self.label_smoothing = 0.
+                self.configuration = UnilmConfig.from_pretrained(config_path, **config_kwargs)
+            else:
+                self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
         if config['efficient_methods']:
             hard_efficient_methods = [
                 m for m in ['prefix-tuning', 'p-tuning-v2', 'adapter', 'lora'] if m in config['efficient_methods']
@@ -89,6 +95,11 @@ class Pretrained_Models(AbstractModel):
             )
         elif self.model_name == 'cpt':
             self.model = CPTForConditionalGeneration.from_pretrained(model_path, config=self.configuration)
+        elif self.model_name == "unilm":
+            self.model = UnilmForSeq2Seq.from_pretrained(model_path, config=self.configuration)
+            mask_word_id, eos_word_ids, sos_word_id = tokenizer.convert_tokens_to_ids(
+                ["[MASK]", "[SEP]", "[S2S_SOS]"])
+            self.model.additional_init(mask_word_id, eos_word_ids, sos_word_id)
         elif self.is_casual_model:
             self.configuration.is_decoder = True
             if model_path:
@@ -103,9 +114,9 @@ class Pretrained_Models(AbstractModel):
                 warnings.warn(f"Initialize {self.model_name} from scratch")
                 self.model = AutoModelForSeq2SeqLM.from_config(self.configuration)
 
-        if self.model_name != 'bert2bert':
+        if self.model_name not in ['bert2bert', 'unilm']:
             self.model.resize_token_embeddings(len(self.tokenizer))
-        else:
+        elif self.model_name not in ['unilm']:
             self.model.config.decoder_start_token_id = self.tokenizer.cls_token_id
             self.model.config.pad_token_id = self.tokenizer.pad_token_id
 
@@ -143,6 +154,7 @@ class Pretrained_Models(AbstractModel):
         pegasus: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
         prophetnet: [src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [SEP]
         t5, mt5: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
+        unilm : [[CLS], src, [SEP]], [tgt, [SEP], decoder_start_token_id: [SEP]
         """
         # configuration needs to add pad token
         if self.model_name in ['ctrl', 'gpt2', 'gpt_neo', 'openai-gpt']:
@@ -177,4 +189,28 @@ class Pretrained_Models(AbstractModel):
         if self.is_casual_model and 'labels' in inputs:
             labels = torch.full_like(mask, -100)
             inputs['labels'] = torch.cat([labels, inputs['labels']], dim=1)
+        return inputs
+
+    def process_forward_inputs(self, batch):
+        if self.model_name != 'unilm':
+            return super(Pretrained_Models, self).process_forward_inputs(batch)
+        inputs = {
+            'input_ids': batch['source_ids'].to(self.device),
+            'attention_mask': batch['source_mask'].to(self.device),
+            'token_type_ids': batch['token_type_ids'].to(self.device),
+            'masked_lm_labels': batch['masked_lm_labels'].to(self.device),
+            'masked_pos': batch['masked_pos'].to(self.device),
+            'masked_weights': batch['masked_weights'].to(self.device),
+        }
+        return inputs
+
+    def process_generate_inputs(self, batch):
+        if self.model_name != 'unilm':
+            return super(Pretrained_Models, self).process_generate_inputs(batch)
+        inputs = {
+            'input_ids': batch['source_ids'].to(self.device),
+            'attention_mask': batch['source_mask'].to(self.device),
+            'token_type_ids': batch['token_type_ids'].to(self.device),
+            'position_ids': batch['position_ids'].to(self.device),
+        }
         return inputs

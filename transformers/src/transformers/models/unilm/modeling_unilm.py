@@ -28,194 +28,6 @@ UNILM_PRETRAINED_MODEL_ARCHIVE_MAP = {
 BertLayerNorm = torch.nn.LayerNorm
 
 
-class DataLoader4Unilm:
-    def __init__(self, config, max_tgt_len, mask_word_id, max_pred_num, masked_prob):
-        self.max_len = config.max_position_embeddings
-        if max_tgt_len >= self.max_len - 3:
-            max_tgt_len = self.max_len // 4
-        self.max_tgt_len = max_tgt_len
-        self.max_src_len = self.max_len - self.max_tgt_len
-        self._tril_matrix = torch.tril(torch.ones((self.max_len, self.max_len), dtype=torch.long))
-        self.vocab_size = config.vocab_size
-        self.mask_word_id = mask_word_id
-        self.max_pred_num = max_pred_num
-        self.masked_prob = masked_prob
-
-    def get_training_inputs(self, **batch):
-        src_ids = batch['input_ids'].tolist()
-        tgt_ids = batch['labels'].tolist()
-        device = batch['input_ids'].device
-        source_ids = []
-        source_mask = []
-        segment_ids = []
-        masked_ids_list = []
-        masked_pos_list = []
-        masked_weights_list = []
-
-        for index, (src_id, tgt_id) in enumerate(zip(src_ids, tgt_ids)):
-            n_0 = 0
-            for k in src_id[::-1]:
-                if k <= 0:
-                    n_0 += 1
-                else:
-                    break
-            if n_0:
-                src_id = src_id[:-n_0]
-            src_len = len(src_id)
-
-            n_0 = 0
-            for k in tgt_id[::-1]:
-                if k <= 0:
-                    n_0 += 1
-                else:
-                    break
-            if n_0:
-                tgt_id = tgt_id[:-n_0]
-            tgt_len = len(tgt_id)
-
-            src_id = src_id + tgt_id
-            input_len = len(src_id)
-
-            n_pad = self.max_len - input_len
-
-            src_id = src_id + [0] * n_pad
-
-            second_st, second_end = src_len, input_len
-            input_mask = torch.zeros(self.max_len, self.max_len, dtype=torch.long)
-            input_mask[:, :src_len].fill_(1)
-            input_mask[second_st:second_end, second_st:second_end].copy_(
-                self._tril_matrix[:second_end - second_st, :second_end - second_st])
-
-            segment_id = [4] * src_len + [5] * tgt_len + [0] * n_pad
-
-            n_pred = min(self.max_pred_num, max(1, int(round(tgt_len * self.masked_prob))))
-            cand_pos = []
-            special_pos = set()
-            for i, tk_id in enumerate(src_id):
-                if not tk_id:
-                    break
-                # only mask tokens_b (target sequence)
-                # we will mask [SEP] as an ending symbol
-                if i >= src_len:
-                    cand_pos.append(i)
-                else:
-                    special_pos.add(i)
-            random.shuffle(cand_pos)
-
-            masked_pos = set()
-            max_cand_pos = max(cand_pos)
-            for pos in cand_pos:
-                if len(masked_pos) >= n_pred:
-                    break
-                if pos in masked_pos:
-                    continue
-
-                st_pos, end_pos = pos, pos + 1
-
-                for mp in range(st_pos, end_pos):
-                    if (0 < mp <= max_cand_pos) and (mp not in special_pos):
-                        masked_pos.add(mp)
-                    else:
-                        break
-
-            masked_pos = list(masked_pos)
-            if len(masked_pos) > n_pred:
-                random.shuffle(masked_pos)
-                masked_pos = masked_pos[:n_pred]
-
-            masked_ids = [src_id[pos] for pos in masked_pos]
-            for pos in masked_pos:
-                if random.random() < 0.8:  # 80%
-                    src_id[pos] = self.mask_word_id
-                elif random.random() < 0.5:  # 10%
-                    src_id[pos] = random.randint(1, self.vocab_size - 1)
-            # when n_pred < max_pred, we only calculate loss within n_pred
-            masked_weights = [1] * len(masked_ids)
-
-            # Zero Padding for masked target
-            n_pad = 20 - len(masked_ids)
-            if masked_ids is not None:
-                masked_ids.extend([0] * n_pad)
-            if masked_pos is not None:
-                masked_pos.extend([0] * n_pad)
-            if masked_weights is not None:
-                masked_weights.extend([0] * n_pad)
-
-            source_mask.append(input_mask.tolist())
-            segment_ids.append(segment_id)
-            source_ids.append(src_id)
-            masked_ids_list.append(masked_ids)
-            masked_pos_list.append(masked_pos)
-            masked_weights_list.append(masked_weights)
-
-        model_inputs = {
-            'input_ids': torch.tensor(source_ids, dtype=torch.long, device=device),
-            'attention_mask': torch.tensor(source_mask, dtype=torch.long, device=device),
-            'token_type_ids': torch.tensor(segment_ids, dtype=torch.long, device=device),
-            'masked_lm_labels': torch.tensor(masked_ids_list, dtype=torch.long, device=device),
-            'masked_pos': torch.tensor(masked_pos_list, dtype=torch.long, device=device),
-            'masked_weights': torch.tensor(masked_weights_list, dtype=torch.long, device=device)
-        }
-        return model_inputs
-
-    def get_generation_inputs(self, **batch):
-        device = batch['input_ids'].device
-        src_ids = batch['input_ids'].tolist()
-        source_ids = []
-        source_mask = []
-        segment_ids = []
-        position_ids = []
-
-        for src_id in src_ids:
-            n_0 = 0
-            for k in src_id[::-1]:
-                if k <= 0:
-                    n_0 += 1
-                else:
-                    break
-            if n_0:
-                src_id = src_id[:-n_0]
-            src_len = len(src_id)
-            n_pad = self.max_len - src_len
-            n_pad_src = self.max_src_len - src_len
-            src_id = src_id + [0] * n_pad_src
-
-            position_id = []
-            for i in range(src_len):
-                position_id.append(i)
-            for i in range(src_len, self.max_src_len):
-                position_id.append(0)
-            for i in range(self.max_src_len, self.max_len):
-                position_id.append(i - self.max_src_len + src_len)
-
-            segment_id = [4] * src_len + [5] * n_pad
-
-            second_st, second_end = self.max_src_len, self.max_len
-            input_mask = torch.zeros(self.max_len, self.max_len, dtype=torch.long)
-            input_mask[:, :src_len].fill_(1)
-            input_mask[second_st:second_end, second_st:second_end].copy_(
-                self._tril_matrix[:second_end - second_st, :second_end - second_st])
-
-            source_mask.append(input_mask.tolist())
-            segment_ids.append(segment_id)
-            source_ids.append(src_id)
-            position_ids.append(position_id)
-
-        source_mask = torch.tensor(source_mask, dtype=torch.long, device=device)
-        source_ids = torch.tensor(source_ids, dtype=torch.long, device=device)
-        segment_ids = torch.tensor(segment_ids, dtype=torch.long, device=device)
-        position_ids = torch.tensor(position_ids, dtype=torch.long, device=device)
-
-        model_inputs = {
-            'input_ids': source_ids,
-            'attention_mask': source_mask,
-            'token_type_ids': segment_ids,
-            'position_ids': position_ids
-        }
-
-        return model_inputs
-
-
 class UnilmOutput:
     def __init__(self, loss):
         self.loss = loss
@@ -438,11 +250,11 @@ class LabelSmoothingLoss(_Loss):
         return F.kl_div(output, model_prob.type_as(output), reduction='none').view(batch_size, num_pos, -1).sum(2)
 
 
-class UnilmForTextbox(UnilmPreTrainedModel):
+class UnilmForSeq2Seq(UnilmPreTrainedModel):
     def __init__(self, config,
                  search_beam_size=5, length_penalty=0.,
                  forbid_duplicate_ngrams=False, forbid_ignore_set=None, ngram_size=3, min_len=0):
-        super(UnilmForTextbox, self).__init__(config)
+        super(UnilmForSeq2Seq, self).__init__(config)
         self.bert = UnilmModel(config)
         self.cls = BertOnlyMLMHead(config)
         self.crit_mask_lm = nn.CrossEntropyLoss(reduction='none')
@@ -474,11 +286,10 @@ class UnilmForTextbox(UnilmPreTrainedModel):
         ]
         return optimizer_grouped_parameters
 
-    def additional_init(self, mask_word_id=0, eos_id=0, sos_id=0, max_tgt_len=128, masked_prob=0.2, max_pred_num=20):
+    def additional_init(self, mask_word_id=0, eos_id=0, sos_id=0):
         self.mask_word_id = mask_word_id
         self.eos_id = eos_id
         self.sos_id = sos_id
-        self.dataloader = DataLoader4Unilm(config=self.config, max_tgt_len=max_tgt_len, mask_word_id=mask_word_id, masked_prob=masked_prob, max_pred_num=max_pred_num)
 
     def tie_weights(self):
         """ Make sure we are sharing the input and output embeddings.
@@ -487,16 +298,7 @@ class UnilmForTextbox(UnilmPreTrainedModel):
         self._tie_or_clone_weights(self.cls.predictions.decoder,
                                    self.bert.embeddings.word_embeddings)
 
-    def forward(self, **inputs):
-        batch = self.dataloader.get_training_inputs(**inputs)
-        del inputs
-        input_ids = batch["input_ids"]
-        token_type_ids = batch["token_type_ids"]
-        attention_mask = batch["attention_mask"]
-        masked_lm_labels = batch["masked_lm_labels"]
-        masked_pos = batch["masked_pos"]
-        masked_weights = batch["masked_weights"]
-        del batch
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, masked_lm_labels=None, masked_pos=None, masked_weights=None):
         sequence_output, __ = self.bert(
             input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask, output_all_encoded_layers=False)
 
@@ -543,12 +345,10 @@ class UnilmForTextbox(UnilmPreTrainedModel):
 
     def generate(self, **kwargs):
         self.search_beam_size = kwargs['num_beams']
-        batch = self.dataloader.get_generation_inputs(**kwargs)
-        del kwargs
-        return self.beam_search(input_ids=batch['input_ids'],
-                                attention_mask=batch['attention_mask'],
-                                position_ids=batch['position_ids'],
-                                token_type_ids=batch['token_type_ids'])
+        return self.beam_search(input_ids=kwargs['input_ids'],
+                                attention_mask=kwargs['attention_mask'],
+                                position_ids=kwargs['position_ids'],
+                                token_type_ids=kwargs['token_type_ids'])
 
     def beam_search(self, input_ids, token_type_ids, position_ids, attention_mask):
         input_shape = list(input_ids.size())

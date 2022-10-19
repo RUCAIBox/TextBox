@@ -29,8 +29,7 @@ from .abstract_model import AbstractModel
 
 from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForSeq2SeqLM, EncoderDecoderModel
 from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
-from transformers.models.unilm.modeling_unilm import UnilmConfig, UnilmForTextbox
-
+from transformers.models.unilm.modeling_unilm import UnilmConfig, UnilmForSeq2Seq
 from ..utils.argument_list import efficient_kwargs_dict
 '''
 # Model for Causal LM mapping
@@ -99,7 +98,7 @@ class Pretrained_Models(AbstractModel):
         elif self.model_name == 'cpt':
             self.model = CPTForConditionalGeneration.from_pretrained(model_path, config=self.configuration)
         elif self.model_name == "unilm":
-            self.model = UnilmForTextbox.from_pretrained(model_path, config=self.configuration)
+            self.model = UnilmForSeq2Seq.from_pretrained(model_path, config=self.configuration)
             mask_word_id, eos_word_ids, sos_word_id = tokenizer.convert_tokens_to_ids(
                 ["[MASK]", "[SEP]", "[S2S_SOS]"])
             self.model.additional_init(mask_word_id, eos_word_ids, sos_word_id)
@@ -193,3 +192,36 @@ class Pretrained_Models(AbstractModel):
             labels = torch.full_like(mask, -100)
             inputs['labels'] = torch.cat([labels, inputs['labels']], dim=1)
         return inputs
+
+    def forward(self, batch, epoch_idx=-1):
+        if self.model_name != 'unilm':
+            return super(Pretrained_Models, self).forward(batch, epoch_idx)
+        inputs = {
+            'input_ids': batch['source_ids'].to(self.device),
+            'attention_mask': batch['source_mask'].to(self.device),
+            'token_type_ids': batch['token_type_ids'].to(self.device),
+            'masked_lm_labels': batch['masked_lm_labels'].to(self.device),
+            'masked_pos': batch['masked_pos'].to(self.device),
+            'masked_weights': batch['masked_weights'].to(self.device),
+        }
+        return self.model(**inputs).loss
+
+    def generate(self, batch, accelerator):
+        if self.model_name != 'unilm':
+            return super(Pretrained_Models, self).generate(self, batch, accelerator)
+        inputs = {
+            'input_ids': batch['source_ids'].to(self.device),
+            'attention_mask': batch['source_mask'].to(self.device),
+            'token_type_ids': batch['token_type_ids'].to(self.device),
+            'position_ids': batch['position_ids'].to(self.device),
+        }
+
+        # sample_outputs = self.model.generate(**inputs, **self.generation_kwargs)
+        sample_outputs = accelerator.unwrap_model(self.model).generate(**inputs, **self.generation_kwargs)
+        sample_outputs = accelerator.pad_across_processes(sample_outputs, dim=1, pad_index=self.tokenizer.pad_token_id)
+        sample_outputs = accelerator.gather((sample_outputs))
+
+        decode_kwargs = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': False}
+        generated_text = self.tokenizer.batch_decode(sample_outputs, **decode_kwargs)
+        generated_text = [g.strip() or 'NULL' for g in generated_text]
+        return generated_text

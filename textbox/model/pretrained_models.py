@@ -26,7 +26,6 @@ import torch.nn as nn
 import warnings
 import inspect
 from .abstract_model import AbstractModel
-from textbox import CLM_MODELS, SEQ2SEQ_MODELS
 
 from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForSeq2SeqLM, EncoderDecoderModel
 from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
@@ -51,12 +50,7 @@ class Pretrained_Models(AbstractModel):
         super(Pretrained_Models, self).__init__(config, tokenizer)
         self.source_max_length = config['src_len']
         self.target_max_length = config['tgt_len']
-
-        # check model
-        self.model_name = config['model_name']
         model_path = config['model_path']
-        self.is_casual_model = bool(self.model_name in CLM_MODELS)
-        self.is_seq2seq_model = bool(self.model_name in SEQ2SEQ_MODELS)
 
         # loading config
         config_path = config['config_path'] or model_path or None
@@ -127,10 +121,9 @@ class Pretrained_Models(AbstractModel):
         if self.model_name not in ['bert2bert', 'unilm']:
             self.model.resize_token_embeddings(len(self.tokenizer))
         elif self.model_name not in ['unilm']:
-            self.model.config.decoder_start_token_id = self.tokenizer.sep_token_id
+            self.model.config.decoder_start_token_id = self.tokenizer.cls_token_id
             self.model.config.pad_token_id = self.tokenizer.pad_token_id
 
-        self.is_prompt_tuning = 'prompt-tuning' in config['efficient_methods']
         if self.is_prompt_tuning:
             self.prompt_length = self.model.config.prompt_length
             self.prompt_embedding = nn.Embedding(self.prompt_length, self.model.config.hidden_size)
@@ -145,17 +138,7 @@ class Pretrained_Models(AbstractModel):
             elif 'prompt-tuning' in config['efficient_methods']:
                 self.model.requires_grad_(False)
 
-        # self.generate_setting(config)
-        self.label_smoothing = config['label_smoothing'] if config['label_smoothing'] else 0.
-
-        # geneation settings
-        self.generation_kwargs = {}
-        self.generation_kwargs['max_length'] = self.target_max_length
-        self.generation_kwargs[
-            'decoder_start_token_id'
-        ] = self.configuration.decoder_start_token_id if self.model_name != 'mbart' else self.tokenizer.lang_code_to_id[
-            self.tokenizer.tgt_lang]
-        self.generation_kwargs.update(config['generation_kwargs'] or {})
+        self.generate_setting(config)
 
     def _init_params(self):
         r"""

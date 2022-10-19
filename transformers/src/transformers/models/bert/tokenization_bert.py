@@ -113,22 +113,15 @@ PRETRAINED_INIT_CONFIGURATION = {
     "wietsedv/bert-base-dutch-cased": {"do_lower_case": False},
 }
 
+
 def load_vocab(vocab_file):
     """Loads a vocabulary file into a dictionary."""
-    # mapping unused tokens to special tokens
-    extra_map = {}
     vocab = collections.OrderedDict()
-    index = 0
     with open(vocab_file, "r", encoding="utf-8") as reader:
-        while True:
-            token = reader.readline()
-            if not token:
-                break
-            token = token.strip()
-            if token in extra_map:
-                token = extra_map[token]
-            vocab[token] = index
-            index += 1
+        tokens = reader.readlines()
+    for index, token in enumerate(tokens):
+        token = token.rstrip("\n")
+        vocab[token] = index
     return vocab
 
 

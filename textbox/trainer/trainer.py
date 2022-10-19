@@ -157,19 +157,7 @@ class Trainer(AbstractTrainer):
 
         # get optimizer (use default value of pytorch if self.optimizer_kwargs is empty)
         self.logger.debug(f'Using optimizer {optimizer}')
-
-        if self.config['model_name'] == 'unilm':
-            param_optimizer = list(self.model.named_parameters())
-            no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
-            optimizer_grouped_parameters = [
-                {'params': [p for n, p in param_optimizer if not any(
-                    nd in n for nd in no_decay)], 'weight_decay': 0.01},
-                {'params': [p for n, p in param_optimizer if any(
-                    nd in n for nd in no_decay)], 'weight_decay': 0.0}
-            ]
-            optimizer = optimizer_class[optimizer](optimizer_grouped_parameters, **self.optimizer_kwargs)
-        else:
-            optimizer = optimizer_class[optimizer](params=self._trainable_parameters, **self.optimizer_kwargs)
+        optimizer = optimizer_class[optimizer](params=self._trainable_parameters, **self.optimizer_kwargs)
 
         # scheduling
         if scheduler is not None and scheduler in scheduler_class:
@@ -238,8 +226,6 @@ class Trainer(AbstractTrainer):
                     if self.grad_clip is not None:
                         self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
                     self.optimizer.step()
-                    if self.config['model_name'] == 'unilm':
-                        self.scheduler.step()
                     self.optimizer.zero_grad()
 
                 if not self.disable_tqdm:
@@ -448,11 +434,6 @@ class Trainer(AbstractTrainer):
 
         self.logger.info("====== Start training ======")
         self.accelerator.wait_for_everyone()
-        if self.config['model_name'] == 'unilm':
-            self.warmup_proportion = self.config['warmup_proportion'] if hasattr(self.config, 'warmup_proportion') else 0.1
-            t_total = int(len(train_data) * (self.epochs - self.start_epoch + 1) / self.accumulation_steps)
-            self.scheduler = transformers.get_linear_schedule_with_warmup(
-                self.optimizer, num_warmup_steps=int(t_total * self.warmup_proportion), num_training_steps=t_total)
         for epoch_idx in range(self.start_epoch, self.epochs):
             # train
             loss = self._train_epoch(train_data, epoch_idx, valid_data)['loss']
@@ -497,9 +478,7 @@ class Trainer(AbstractTrainer):
                                               It should be set True, if users want to test the model after training.
             model_file (str, optional): the saved model file, default: None. If users want to test the previously
                                         trained model file, they can set this parameter.
-            _eval: (default = True) True to evaluate and False to preview generation only.
             is_valid: (default = False) True if evaluate during validation
-            valid_count: (default = None) Validation index if `is_valid` is True.
 
         Returns:
             dict: eval result, key is the eval metric and value in the corresponding metric value

@@ -565,8 +565,8 @@ class EncoderDecoderModel(PreTrainedModel):
             "attention_mask": attention_mask,
             "decoder_attention_mask": decoder_attention_mask,
             "decoder_input_ids": decoder_inputs["input_ids"],
-            "encoder_outputs": encoder_outputs if hasattr(decoder_inputs, 'past_key_values') else None,
-            "past_key_values": decoder_inputs["past_key_values"],
+            "encoder_outputs": encoder_outputs if encoder_outputs else None,
+            "past_key_values": decoder_inputs["past_key_values"] if hasattr(decoder_inputs, 'past_key_values') else None,
             "use_cache": use_cache,
         }
         return input_dict

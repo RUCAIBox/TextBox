@@ -166,7 +166,7 @@ class Pretrained_Models(AbstractModel):
         blenderbot-small: [src, __end__], [tgt, __end__], decoder_start_token_id: __start__
         m2m_100: [src_lang_id, src, </s>], [tgt_lang_id, tgt, </s>], decoder_start_token_id: </s>, forced_bos_token_id: tgt_lang_id
         mbart: [src, </s>, src_lang_id], [tgt, </s>, tgt_lang_id], decoder_start_token_id: tgt_lang_id
-        pegasus: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
+        pegasus, pegasus_x: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
         prophetnet: [src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [SEP]
         t5, mt5: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
         LongT5: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>

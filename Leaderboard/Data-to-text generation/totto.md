@@ -18,30 +18,31 @@ It is an open-domain English table-to-text dataset with over 120,000 training ex
 
 ### Data Sample
 
+Input
+
 ```
-{
-  "table_page_title": "'Weird Al' Yankovic",
-  "table_webpage_url": "https://en.wikipedia.org/wiki/%22Weird_Al%22_Yankovic",
-  "table_section_title": "Television",
-  "table_section_text": "",
-  "table": "[Described below]",
-  "highlighted_cells": [[22, 2], [22, 3], [22, 0], [22, 1], [23, 3], [23, 1], [23, 0]],
-  "example_id": 12345678912345678912,
-  "sentence_annotations": [{"original_sentence": "In 2016, Al appeared in 2 episodes of BoJack Horseman as Mr. Peanutbutter's brother, Captain Peanutbutter, and was hired to voice the lead role in the 2016 Disney XD series Milo Murphy's Law.",
-                  "sentence_after_deletion": "In 2016, Al appeared in 2 episodes of BoJack Horseman as Captain Peanutbutter, and was hired to the lead role in the 2016 series Milo Murphy's Law.",
-                  "sentence_after_ambiguity": "In 2016, Al appeared in 2 episodes of BoJack Horseman as Captain Peanutbutter, and was hired for the lead role in the 2016 series Milo Murphy's 'Law.",
-                  "final_sentence": "In 2016, Al appeared in 2 episodes of BoJack Horseman as Captain Peanutbutter and was hired for the lead role in the 2016 series Milo Murphy's Law."}],
-}
+'page title | List of Governors of South Carolina [SEP] section title | Governors under the Constitution of 1868 [X_SEP] # | 76 [SEP] Governor | Daniel Henry Chamberlain [SEP] Took Office | December 1 , 1874'
+```
+
+Output
+
+```
+'Daniel Henry Chamberlain was the 76th Governor of South Carolina from 1874.', 'Daniel Henry Chamberlain was the 76th Governor of South Carolina, beginning in 1874.', 'Daniel Henry Chamberlain was the 76th Governor of South Carolina who took office in 1874.'
 ```
 
 ## LeaderBoard
 
 Descending order by BLEU.
 
-| Model                                                 | BLEU   | PARENT | Repository | Generated Text |
-| ----------------------------------------------------- | ------ | ------ | ---------- | -------------- |
-| [BERT-to-BERT](https://arxiv.org/abs/2004.14373)      | $44.0$ | $52.6$ |            |                |
-| [Pointer-Generator](https://arxiv.org/abs/2004.14373) | $41.6$ | $51.6$ |            |                |
+| Model                                                 | BLEU   | PARENT | Repository                                                   | Generated Text |
+| ----------------------------------------------------- | ------ | ------ | ------------------------------------------------------------ | -------------- |
+| [T5-3B](https://arxiv.org/pdf/2005.10433v3.pdf)       | $49.5$ | $58.4$ | [Official](https://github.com/google-research-datasets/ToTTo) |                |
+| [PlanGen](https://arxiv.org/abs/2108.13740)           | $49.2$ | $58.7$ |                                                              |                |
+| [CoNT](https://arxiv.org/abs/2205.14690v2)            | $49.1$ | $58.9$ | [Official](https://github.com/Shark-NLP/CoNT)                |                |
+| [LATTICE](https://arxiv.org/pdf/2205.03972v1.pdf)     | $48.4$ | $58.1$ | [Official](https://github.com/luka-group/lattice)            |                |
+| [Supervised+NLPO](https://arxiv.org/abs/2210.01241)   | $47.4$ | $59.6$ | [Official](https://github.com/allenai/rl4lms)                |                |
+| [BERT-to-BERT](https://arxiv.org/abs/2004.14373)      | $44.0$ | $52.6$ |                                                              |                |
+| [Pointer-Generator](https://arxiv.org/abs/2004.14373) | $41.6$ | $51.6$ |                                                              |                |
 
 ## Citation
 

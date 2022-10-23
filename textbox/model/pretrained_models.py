@@ -90,7 +90,6 @@ class Pretrained_Models(AbstractModel):
         self._init_params()
 
         # loading model
-        # if self.model_name == 'bert2bert':
         if self.model_name in ['bert2bert', 'xlm-roberta']:
             self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(
                 model_path, model_path, config=self.configuration

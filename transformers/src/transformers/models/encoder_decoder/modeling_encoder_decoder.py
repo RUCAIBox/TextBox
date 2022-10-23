@@ -565,7 +565,7 @@ class EncoderDecoderModel(PreTrainedModel):
             "attention_mask": attention_mask,
             "decoder_attention_mask": decoder_attention_mask,
             "decoder_input_ids": decoder_inputs["input_ids"],
-            "encoder_outputs": encoder_outputs if encoder_outputs else None,
+            "encoder_outputs": encoder_outputs,
             "past_key_values": decoder_inputs["past_key_values"],
             "use_cache": use_cache,
         }

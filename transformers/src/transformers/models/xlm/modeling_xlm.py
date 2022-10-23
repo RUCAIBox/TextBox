@@ -19,7 +19,7 @@
 import itertools
 import math
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple, Union, List
+from typing import Dict, Optional, Tuple, Union
 
 import numpy as np
 import torch

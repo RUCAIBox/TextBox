@@ -248,7 +248,7 @@ def get_tokenizer(config):
             tokenizer.num_special_tokens_to_add = lambda: 2
 
         # (5): tokenizer needs to set src_lang, tgt_lang (used in translation task)
-        if model_name in ['m2m_100', 'mbart', 'marian', 'xlm-prephetnet', 'nllb']:
+        if model_name in ['m2m_100', 'mbart', 'marian', 'nllb']:
             assert config['src_lang'] and config['tgt_lang'], \
                 model_name + ' needs to specify source language and target language ' \
                              'with `--src_lang=xx` and `--tgt_lang=xx`'

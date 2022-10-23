@@ -95,7 +95,7 @@ class AbstractDataset(Dataset):
             self.target_length - self.tokenizer.num_special_tokens_to_add()
         )
 
-        if self.config["model_name"] in ["bert2bert", "opt", "xlm"]:
+        if self.config["model_name"] in ["bert2bert", "opt"]:
             self.target_max_length += 1
 
     def tokenize(self, tokenizer):
@@ -135,7 +135,7 @@ class AbstractDataset(Dataset):
                         else ids[-self.target_max_length :]
                     )
                     ids = self.tokenizer.build_inputs_with_special_tokens(ids)
-                    if self.config["model_name"] in ["bert2bert", "opt", "xlm"]:
+                    if self.config["model_name"] in ["bert2bert", "opt"]:
                         ids = ids[1:]
                     self.target_ids.append(torch.tensor(ids, dtype=torch.long))
 

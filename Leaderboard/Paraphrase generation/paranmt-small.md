@@ -14,36 +14,32 @@ Repository: [Official](https://github.com/mingdachen/syntactic-template-generati
 
 | Dataset       | Num Train | Num Valid | Num Test | Source Length (Avg) | Target Length (Avg) |
 | ------------- | --------- | --------- | -------- | ------------------- | ------------------- |
-| ParaNMT-small |           |           |          |                     |                     |
+| ParaNMT-small | $493,081$ | $500$     | $800$    | $62.6$              | $29.4$              |
 
 ### Data Sample
 
-Semantic Input
+Input
 
 ```
-his teammates’ eyes got an ugly, hostile expression.
+i had a dream yesterday and it was about you <sep>  (ROOT (S (S (VP (LS i) (S (VP (VBD had) (NP (DT a) (NN dream)) (NP (NN yesterday)))))) (CC and) (S (NP (PRP it)) (VP (VBD was) (PP (IN about) (NP (PRP you))))))) <sep> (ROOT (S (NP (NN )) (VP (VBD ) (NP (DT ) (NN )) (PP (IN ) (NP )))))
 ```
 
-Syntactic Exemplar
+Output
 
 ```
-the smell of flowers was thick and sweet.
-```
-
-Reference Output
-
-```
-the eyes of his teammates had turned ugly and hostile.
+i had a dream about you yesterday
 ```
 
 ## LeaderBoard
 
 Descending order by BLEU.
 
-| Model                                          | BLEU   | ROUGE-1 | ROUGE-2 | ROUGE-L | METEOR | ST    | Repository                                                   | Generated Text |
-| ---------------------------------------------- | ------ | ------- | ------- | ------- | ------ | ----- | ------------------------------------------------------------ | -------------- |
-| [SCPN](https://aclanthology.org/P19-1599.pdf)  | $19.2$ | $50.4$  | $26.1$  | $53.5$  | $28.4$ | $5.9$ |                                                              |                |
-| [VGVAE](https://aclanthology.org/P19-1599.pdf) | $13.6$ | $44.7$  | $21.0$  | $48.3$  | $24.8$ | $6.7$ | [Official](https://github.com/mingdachen/syntactic-template-generation) |                |
+| Model                                                     | BLEU   | ROUGE-1 | ROUGE-2 | ROUGE-L | METEOR | ST    | Repository                                                   | Generated Text |
+| --------------------------------------------------------- | ------ | ------- | ------- | ------- | ------ | ----- | ------------------------------------------------------------ | -------------- |
+| [SCPN](https://aclanthology.org/P19-1599.pdf)             | $19.2$ | $50.4$  | $26.1$  | $53.5$  | $28.4$ | $5.9$ |                                                              |                |
+| [Source-as-Output](https://aclanthology.org/P19-1599.pdf) | $18.5$ | $50.6$  | $23.2$  | $47.7$  | $12.1$ | $5.9$ |                                                              |                |
+| [VGVAE](https://aclanthology.org/P19-1599.pdf)            | $13.6$ | $44.7$  | $21.0$  | $48.3$  | $24.8$ | $6.7$ | [Official](https://github.com/mingdachen/syntactic-template-generation) |                |
+
 
 ## Citation
 

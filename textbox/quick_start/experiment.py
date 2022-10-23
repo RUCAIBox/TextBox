@@ -29,11 +29,11 @@ class Experiment:
     """
 
     def __init__(
-            self,
-            model: Optional[str] = None,
-            dataset: Optional[str] = None,
-            config_file_list: Optional[List[str]] = None,
-            config_dict: Optional[Dict[str, Any]] = None,
+        self,
+        model: Optional[str] = None,
+        dataset: Optional[str] = None,
+        config_file_list: Optional[List[str]] = None,
+        config_dict: Optional[Dict[str, Any]] = None,
     ):
         self.__base_config = Config(model, dataset, config_file_list, config_dict)
         self.__extended_config = None
@@ -107,13 +107,19 @@ class Experiment:
     def _do_test(self):
         if self.do_test:
             with SummaryTracker.new_epoch('eval'):
-                self.test_result = self.trainer.evaluate(self.test_data, model_file=self.__base_config['load_experiment'])
+                self.test_result = self.trainer.evaluate(
+                    self.test_data, model_file=self.__base_config['load_experiment']
+                )
                 SummaryTracker.set_metrics_results(self.test_result)
-                self.logger.info('Evaluation result:\n{}'.format(SummaryTracker.current_epoch().as_str(sep=",\n", indent=" ")))
+                self.logger.info(
+                    'Evaluation result:\n{}'.format(SummaryTracker.current_epoch().as_str(sep=",\n", indent=" "))
+                )
 
     def _on_experiment_end(self):
         if self.__base_config['max_save'] == 0:
-            saved_filename = os.path.abspath(os.path.join(self.__base_config['checkpoint_dir'], self.__base_config['filename']) + '.pth')
+            saved_filename = os.path.abspath(
+                os.path.join(self.__base_config['checkpoint_dir'], self.__base_config['filename']) + '.pth'
+            )
             saved_link = os.readlink(saved_filename) if os.path.exists(saved_filename) else ''
             from ..utils import safe_remove
             safe_remove(saved_filename)
@@ -126,4 +132,3 @@ class Experiment:
             self._do_train_and_valid()
             self._do_test()
             self._on_experiment_end()
-

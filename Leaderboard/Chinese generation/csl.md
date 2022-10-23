@@ -4,15 +4,17 @@
 
 ### Instruction
 
+Paper: [Paper](https://arxiv.org/pdf/2209.05034v1.pdf)
+
 Repository: [Official](https://github.com/CLUEbenchmark/CLGE)
 
-The dataset is constructed from Chinese Scientific Literature Dataset for summarization task. The dataset is about computer science.
+Scientific literature serves as a high-quality corpus, supporting a lot of Natural Language Processing (NLP) research. However, existing datasets are centered around the English language, which restricts the development of Chinese scientific NLP. In this work, we present CSL, a large-scale Chinese Scientific Literature dataset, which contains the titles, abstracts, keywords and academic fields of 396k papers. To our knowledge, CSL is the first scientific document dataset in Chinese. The CSL can serve as a Chinese corpus. Also, this semi-structured data is a natural annotation that can constitute many supervised NLP tasks. Based on CSL, we present a benchmark to evaluate the performance of models across scientific domain tasks, i.e., summarization, keyword generation and text classification. We analyze the behavior of existing text-to-text models on the evaluation tasks and reveal the challenges for Chinese scientific NLP tasks, which provides a valuable reference for future research.
 
 ### Overview
 
 | Dataset | Num Train | Num Valid | Num Test | Source Length (Avg) | Target Length (Avg) |
 | ------- | --------- | --------- | -------- | ------------------- | ------------------- |
-| CSL     | $3,000$   | $500$     | -        | -                   | -                   |
+| CSL     | $3,000$   | $500$     | -        | 202.4               | 18.8                |
 
 ### Data Sample
 

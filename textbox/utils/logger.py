@@ -12,6 +12,7 @@ import os
 from textbox.utils.utils import ensure_dir
 from collections import defaultdict
 from colorama import init, Fore, Style
+
 init(autoreset=True)
 
 from typing import Optional
@@ -29,12 +30,17 @@ class ColorFormatter(logging.Formatter):
         if formatter_type == 'file':
             self._formatters = defaultdict(lambda: logging.Formatter(self.FILE_FMT, self.FILE_DATE_FMT))
         else:
-            self._formatters = defaultdict(lambda: logging.Formatter(self.STREAM_FMT, self.STREAM_DATE_FMT), {
-                logging.WARNING: logging.Formatter(Fore.YELLOW + self.STREAM_FMT + Fore.RESET, self.STREAM_DATE_FMT),
-                logging.ERROR: logging.Formatter(Fore.RED + self.STREAM_FMT + Fore.RESET, self.STREAM_DATE_FMT),
-                logging.CRITICAL: logging.Formatter(Fore.RED + Style.BRIGHT+ self.STREAM_FMT + Fore.RESET, self.STREAM_DATE_FMT),
-            })
-        
+            self._formatters = defaultdict(
+                lambda: logging.Formatter(self.STREAM_FMT, self.STREAM_DATE_FMT), {
+                    logging.WARNING:
+                    logging.Formatter(Fore.YELLOW + self.STREAM_FMT + Fore.RESET, self.STREAM_DATE_FMT),
+                    logging.ERROR:
+                    logging.Formatter(Fore.RED + self.STREAM_FMT + Fore.RESET, self.STREAM_DATE_FMT),
+                    logging.CRITICAL:
+                    logging.Formatter(Fore.RED + Style.BRIGHT + self.STREAM_FMT + Fore.RESET, self.STREAM_DATE_FMT),
+                }
+            )
+
     def format(self, record):
         return self._formatters[record.levelno].format(record)
 
@@ -83,5 +89,3 @@ def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, l
 
     if not enabled:
         textbox_logger.disabled = True
-
-

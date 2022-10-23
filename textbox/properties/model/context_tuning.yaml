@@ -1,0 +1,9 @@
+model_name: bart
+model_path: 'facebook/bart-base'
+prompt_generator: bert
+bert_model_path: 'bert-base-uncased'
+roberta_model_path: 'roberta-base'
+semantic_mapping: True
+efficient_methods: ['prompt-tuning']
+efficient_kwargs: {'prompt_length': 150}
+efficient_unfreeze_model: True

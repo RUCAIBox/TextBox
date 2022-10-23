@@ -26,10 +26,10 @@ import torch.nn as nn
 import warnings
 import inspect
 from .abstract_model import AbstractModel
-from textbox import CLM_MODELS, SEQ2SEQ_MODELS
 
 from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForSeq2SeqLM, EncoderDecoderModel
 from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
+from transformers.models.unilm.modeling_unilm import UnilmConfig, UnilmForSeq2Seq
 from ..utils.argument_list import efficient_kwargs_dict
 '''
 # Model for Causal LM mapping
@@ -49,14 +49,7 @@ class Pretrained_Models(AbstractModel):
 
     def __init__(self, config, tokenizer):
         super(Pretrained_Models, self).__init__(config, tokenizer)
-        self.source_max_length = config['src_len']
-        self.target_max_length = config['tgt_len']
-
-        # check model
-        self.model_name = config['model_name']
         model_path = config['model_path']
-        self.is_casual_model = bool(self.model_name in CLM_MODELS)
-        self.is_seq2seq_model = bool(self.model_name in SEQ2SEQ_MODELS)
 
         # loading config
         config_path = config['config_path'] or model_path or None
@@ -72,7 +65,12 @@ class Pretrained_Models(AbstractModel):
             self.configuration = AutoConfig.for_model(**config_dict)
         else:
             # loading config from config_path
-            self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
+            if self.model_name == "unilm":
+                config_kwargs["label_smoothing"] = self.label_smoothing
+                self.label_smoothing = 0.
+                self.configuration = UnilmConfig.from_pretrained(config_path, **config_kwargs)
+            else:
+                self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
         if config['efficient_methods']:
             hard_efficient_methods = [
                 m for m in ['prefix-tuning', 'p-tuning-v2', 'adapter', 'lora'] if m in config['efficient_methods']
@@ -99,6 +97,11 @@ class Pretrained_Models(AbstractModel):
             )
         elif self.model_name == 'cpt':
             self.model = CPTForConditionalGeneration.from_pretrained(model_path, config=self.configuration)
+        elif self.model_name == "unilm":
+            self.model = UnilmForSeq2Seq.from_pretrained(model_path, config=self.configuration)
+            mask_word_id, eos_word_ids, sos_word_id = tokenizer.convert_tokens_to_ids(
+                ["[MASK]", "[SEP]", "[S2S_SOS]"])
+            self.model.additional_init(mask_word_id, eos_word_ids, sos_word_id)
         elif self.is_casual_model:
             self.configuration.is_decoder = True
             if model_path:
@@ -113,14 +116,12 @@ class Pretrained_Models(AbstractModel):
                 warnings.warn(f"Initialize {self.model_name} from scratch")
                 self.model = AutoModelForSeq2SeqLM.from_config(self.configuration)
 
-        # if self.model_name != 'bert2bert':
-        if self.model_name not in ['bert2bert', 'xlm-roberta']:
+        if self.model_name not in ['bert2bert', 'unilm', 'xlm-roberta']:
             self.model.resize_token_embeddings(len(self.tokenizer))
-        else:
+        elif self.model_name not in ['unilm']:
             self.model.config.decoder_start_token_id = self.tokenizer.cls_token_id
             self.model.config.pad_token_id = self.tokenizer.pad_token_id
 
-        self.is_prompt_tuning = 'prompt-tuning' in config['efficient_methods']
         if self.is_prompt_tuning:
             self.prompt_length = self.model.config.prompt_length
             self.prompt_embedding = nn.Embedding(self.prompt_length, self.model.config.hidden_size)
@@ -134,17 +135,7 @@ class Pretrained_Models(AbstractModel):
                         para.requires_grad_(False)
             elif 'prompt-tuning' in config['efficient_methods']:
                 self.model.requires_grad_(False)
-
-        self.label_smoothing = config['label_smoothing'] if config['label_smoothing'] else 0.
-
-        # geneation settings
-        self.generation_kwargs = {}
-        self.generation_kwargs['max_length'] = self.target_max_length
-        self.generation_kwargs[
-            'decoder_start_token_id'
-        ] = self.configuration.decoder_start_token_id if self.model_name != 'mbart' else self.tokenizer.lang_code_to_id[
-            self.tokenizer.tgt_lang]
-        self.generation_kwargs.update(config['generation_kwargs'] or {})
+        self.generate_setting(config)
 
     def _init_params(self):
         r"""
@@ -170,6 +161,7 @@ class Pretrained_Models(AbstractModel):
         xlm-roberta: [<s>, src, </s>; </s>, tgt, </s>], decoder_start_token_id: </s>
         xlm-prophetnet: [src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [SEP]
         nllb: [src_lang_id, src, </s>], [tgt_lang_id, tgt, </s>], decoder_start_token_id: </s>
+        unilm : [[CLS], src, [SEP]], [tgt, [SEP], decoder_start_token_id: [SEP]
         """
         # configuration needs to add pad token
         if self.model_name in ['ctrl', 'gpt2', 'gpt_neo', 'openai-gpt']:
@@ -206,51 +198,26 @@ class Pretrained_Models(AbstractModel):
             inputs['labels'] = torch.cat([labels, inputs['labels']], dim=1)
         return inputs
 
-    def forward(self, batch, epoch_idx=-1):
+    def process_forward_inputs(self, batch):
+        if self.model_name != 'unilm':
+            return super(Pretrained_Models, self).process_forward_inputs(batch)
         inputs = {
             'input_ids': batch['source_ids'].to(self.device),
             'attention_mask': batch['source_mask'].to(self.device),
-            'labels': batch['target_ids'].to(self.device)
+            'token_type_ids': batch['token_type_ids'].to(self.device),
+            'masked_lm_labels': batch['masked_lm_labels'].to(self.device),
+            'masked_pos': batch['masked_pos'].to(self.device),
+            'masked_weights': batch['masked_weights'].to(self.device),
         }
-        if self.is_prompt_tuning:
-            inputs = self._process_prompt_tuning_input(inputs, batch)
-        outputs = self.model(**inputs)
+        return inputs
 
-        if self.label_smoothing:
-            loss_fct = nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
-            vocab_size = outputs.logits.size(-1)
-            if self.is_casual_model:
-                logits = outputs.logits[..., :-1, :].contiguous()
-                labels = inputs['labels'][..., 1:].contiguous()
-            else:
-                logits = outputs.logits
-                labels = inputs['labels']
-            return loss_fct(logits.view(-1, vocab_size), labels.view(-1))
-        else:
-            return outputs.loss
-
-    def generate(self, batch, eval_data, accelerator):
+    def process_generate_inputs(self, batch):
+        if self.model_name != 'unilm':
+            return super(Pretrained_Models, self).process_generate_inputs(batch)
         inputs = {
             'input_ids': batch['source_ids'].to(self.device),
             'attention_mask': batch['source_mask'].to(self.device),
+            'token_type_ids': batch['token_type_ids'].to(self.device),
+            'position_ids': batch['position_ids'].to(self.device),
         }
-
-        if self.is_prompt_tuning:
-            inputs = self._process_prompt_tuning_input(inputs, batch)
-
-        if self.is_casual_model:
-            input_ids_len = inputs['input_ids'].shape[1] if 'input_ids' in inputs else inputs['inputs_embeds'].shape[1]
-            self.generation_kwargs['max_length'] = self.target_max_length + input_ids_len
-
-        # sample_outputs = self.model.generate(**inputs, **self.generation_kwargs)
-        sample_outputs = accelerator.unwrap_model(self.model).generate(**inputs, **self.generation_kwargs)
-        sample_outputs = accelerator.pad_across_processes(sample_outputs, dim=1, pad_index=self.tokenizer.pad_token_id)
-        sample_outputs = accelerator.gather((sample_outputs))
-
-        if self.is_casual_model:
-            sample_outputs = sample_outputs[:, input_ids_len:]
-
-        decode_kwargs = {'skip_special_tokens': True, 'clean_up_tokenization_spaces': False}
-        generated_text = self.tokenizer.batch_decode(sample_outputs, **decode_kwargs)
-        generated_text = [g.strip() or 'NULL' for g in generated_text]
-        return generated_text
+        return inputs

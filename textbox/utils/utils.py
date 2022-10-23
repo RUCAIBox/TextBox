@@ -8,7 +8,8 @@ import torch
 from accelerate.utils import set_seed
 from transformers import AutoTokenizer, BertTokenizer
 
-from .enum_type import PLM_MODELS
+from .enum_type import PLM_MODELS, RNN_MODELS
+from transformers.models.unilm.tokenization_unilm import UnilmTokenizer
 
 
 def get_local_time() -> str:
@@ -92,15 +93,15 @@ def _save(source: Union[dict, list], path_to_save: str, extension_name: str):
 
 
 def serialized_save(
-        source: Union[dict, list],
-        serial: Optional[int],
-        serial_of_soft_link: Optional[int],
-        path_without_extension: str,
-        tag: Optional[str] = None,
-        extension_name: Optional[str] = None,
-        overwrite: bool = True,
-        serial_intervals: int = 1,
-        max_save: int = -1,
+    source: Union[dict, list],
+    serial: Optional[int],
+    serial_of_soft_link: Optional[int],
+    path_without_extension: str,
+    tag: Optional[str] = None,
+    extension_name: Optional[str] = None,
+    overwrite: bool = True,
+    serial_intervals: int = 1,
+    max_save: int = -1,
 ):
     r"""
     Save a sequence of files with given serial numbers and create a soft link
@@ -129,7 +130,7 @@ def serialized_save(
     path_to_save = os.path.abspath(path_without_extension + get_tag(tag, serial) + '.' + extension_name)
     safe_remove(path_to_save, overwrite)  # behavior of torch.save is not clearly defined.
     getLogger(__name__).debug(f'Saving file to "{path_to_save}"')
-    
+
     # not serialized saving
     if serial is None or serial_of_soft_link is None or max_save == -1:
         _save(source, path_to_save, extension_name)
@@ -156,9 +157,7 @@ def serialized_save(
     serial_to_delete = serial - (max_save - int(soft_link_goes_beyond)) * serial_intervals
     getLogger(__name__).debug(f'Soft link now are pointing to serial: "{serial_of_soft_link}"')
     if 0 <= serial_to_delete < serial:
-        path_to_delete = os.path.abspath(
-            path_without_extension + get_tag(tag, serial_to_delete) + '.' + extension_name
-        )
+        path_to_delete = os.path.abspath(path_without_extension + get_tag(tag, serial_to_delete) + '.' + extension_name)
         safe_remove(path_to_delete)
 
     # update soft link
@@ -184,6 +183,8 @@ def get_model(model_name):
     """
     if model_name.lower() in PLM_MODELS:
         model_name = 'Pretrained_Models'
+    elif model_name.lower() in RNN_MODELS:
+        model_name = 'RNN_Models'
     module_path = '.'.join(['...model', model_name.lower()])
     if importlib.util.find_spec(module_path, __name__):
         model_module = importlib.import_module(module_path, __name__)
@@ -213,13 +214,17 @@ def get_trainer(model_name):
 
 def get_tokenizer(config):
     model_name = config['model_name']
-    if model_name in PLM_MODELS:
+    if model_name in PLM_MODELS or model_name in RNN_MODELS:
         tokenizer_kwargs = config['tokenizer_kwargs'] or {}
         tokenizer_path = config['tokenizer_path'] or config['model_path']
         if (config['model_name'] in ['chinese-bart', 'chinese-pegasus', 'cpt']):
             tokenizer = BertTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
+        elif config['model_name'] == "unilm":
+            tokenizer = UnilmTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
         else:
             tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
+
+        tokenizer.add_tokens(config['tokenizer_add_tokens'])
 
         # (1): tokenizer needs to add eos token
         if model_name in ['ctrl', 'openai-gpt']:
@@ -230,7 +235,7 @@ def get_tokenizer(config):
             tokenizer.pad_token = tokenizer.eos_token
 
         # (3): tokenizer needs to change replace eos token with sep token
-        if model_name in ['cpm']:
+        if model_name in ['cpm', 'unilm']:
             tokenizer.eos_token = tokenizer.sep_token
 
         # (4): tokenizer needs to modify `build_inputs_with_special_tokens()` and `num_special_tokens_to_add()`

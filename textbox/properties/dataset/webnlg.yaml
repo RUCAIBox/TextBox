@@ -5,6 +5,7 @@ metrics_for_best_model: ['bleu', 'meteor', 'rouge-l']
 bleu_type: mt-eval
 rouge_type: pycocoevalcap
 meteor_type: pycocoevalcap
+remove_punc: True
 
 train_batch_size: 20
 accumulation_steps: 10

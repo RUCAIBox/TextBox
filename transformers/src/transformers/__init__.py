@@ -266,6 +266,7 @@ _import_structure = {
     "models.mt5": ["MT5Config"],
     "models.mvp": ["MvpConfig", "MvpTokenizer"],
     "models.nezha": ["NEZHA_PRETRAINED_CONFIG_ARCHIVE_MAP", "NezhaConfig"],
+    "models.nllb": [],
     "models.nystromformer": [
         "NYSTROMFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP",
         "NystromformerConfig",
@@ -273,6 +274,7 @@ _import_structure = {
     "models.openai": ["OPENAI_GPT_PRETRAINED_CONFIG_ARCHIVE_MAP", "OpenAIGPTConfig", "OpenAIGPTTokenizer"],
     "models.opt": ["OPTConfig"],
     "models.pegasus": ["PEGASUS_PRETRAINED_CONFIG_ARCHIVE_MAP", "PegasusConfig", "PegasusTokenizer"],
+    "models.pegasus_x": ["PEGASUS_X_PRETRAINED_CONFIG_ARCHIVE_MAP", "PegasusXConfig"],
     "models.perceiver": ["PERCEIVER_PRETRAINED_CONFIG_ARCHIVE_MAP", "PerceiverConfig", "PerceiverTokenizer"],
     "models.phobert": ["PhobertTokenizer"],
     "models.plbart": ["PLBART_PRETRAINED_CONFIG_ARCHIVE_MAP", "PLBartConfig"],
@@ -479,6 +481,7 @@ else:
     _import_structure["models.m2m_100"].append("M2M100Tokenizer")
     _import_structure["models.marian"].append("MarianTokenizer")
     _import_structure["models.mbart"].append("MBartTokenizer")
+    _import_structure["models.nllb"].append("NllbTokenizer")
     _import_structure["models.mbart50"].append("MBart50Tokenizer")
     _import_structure["models.mluke"].append("MLukeTokenizer")
     _import_structure["models.mt5"].append("MT5Tokenizer")
@@ -543,6 +546,7 @@ else:
     _import_structure["models.mpnet"].append("MPNetTokenizerFast")
     _import_structure["models.mt5"].append("MT5TokenizerFast")
     _import_structure["models.mvp"].append("MvpTokenizerFast")
+    _import_structure["models.nllb"].append("NllbTokenizerFast")
     _import_structure["models.openai"].append("OpenAIGPTTokenizerFast")
     _import_structure["models.pegasus"].append("PegasusTokenizerFast")
     _import_structure["models.realm"].append("RealmTokenizerFast")
@@ -1505,6 +1509,14 @@ else:
     )
     _import_structure["models.pegasus"].extend(
         ["PegasusForCausalLM", "PegasusForConditionalGeneration", "PegasusModel", "PegasusPreTrainedModel"]
+    )
+    _import_structure["models.pegasus_x"].extend(
+        [
+            "PEGASUS_X_PRETRAINED_MODEL_ARCHIVE_LIST",
+            "PegasusXForConditionalGeneration",
+            "PegasusXModel",
+            "PegasusXPreTrainedModel",
+        ]
     )
     _import_structure["models.perceiver"].extend(
         [
@@ -2999,6 +3011,7 @@ if TYPE_CHECKING:
     from .models.openai import OPENAI_GPT_PRETRAINED_CONFIG_ARCHIVE_MAP, OpenAIGPTConfig, OpenAIGPTTokenizer
     from .models.opt import OPTConfig
     from .models.pegasus import PEGASUS_PRETRAINED_CONFIG_ARCHIVE_MAP, PegasusConfig, PegasusTokenizer
+    from .models.pegasus_x import PEGASUS_X_PRETRAINED_CONFIG_ARCHIVE_MAP, PegasusXConfig
     from .models.perceiver import PERCEIVER_PRETRAINED_CONFIG_ARCHIVE_MAP, PerceiverConfig, PerceiverTokenizer
     from .models.phobert import PhobertTokenizer
     from .models.plbart import PLBART_PRETRAINED_CONFIG_ARCHIVE_MAP, PLBartConfig
@@ -3188,6 +3201,7 @@ if TYPE_CHECKING:
         from .models.mbart import MBart50Tokenizer, MBartTokenizer
         from .models.mluke import MLukeTokenizer
         from .models.mt5 import MT5Tokenizer
+        from .models.nllb import NllbTokenizer
         from .models.pegasus import PegasusTokenizer
         from .models.plbart import PLBartTokenizer
         from .models.reformer import ReformerTokenizer
@@ -3242,6 +3256,7 @@ if TYPE_CHECKING:
         from .models.mpnet import MPNetTokenizerFast
         from .models.mt5 import MT5TokenizerFast
         from .models.mvp import MvpTokenizerFast
+        from .models.nllb import NllbTokenizerFast
         from .models.openai import OpenAIGPTTokenizerFast
         from .models.pegasus import PegasusTokenizerFast
         from .models.realm import RealmTokenizerFast
@@ -4027,6 +4042,12 @@ if TYPE_CHECKING:
             PegasusForConditionalGeneration,
             PegasusModel,
             PegasusPreTrainedModel,
+        )
+        from .models.pegasus_x import (
+            PEGASUS_X_PRETRAINED_MODEL_ARCHIVE_LIST,
+            PegasusXForConditionalGeneration,
+            PegasusXModel,
+            PegasusXPreTrainedModel,
         )
         from .models.perceiver import (
             PERCEIVER_PRETRAINED_MODEL_ARCHIVE_LIST,

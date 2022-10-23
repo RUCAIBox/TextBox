@@ -41,6 +41,7 @@ from ..utils.argument_list import efficient_kwargs_dict
 ("longt5", "LongT5ForConditionalGeneration"),
 ("marian", "MarianMTModel"),
 ("xlm-prophetnet", "XLMProphetNetForConditionalGeneration"),
+("nllb", "M2M100ForConditionalGeneration"),
 '''
 
 
@@ -89,7 +90,7 @@ class Pretrained_Models(AbstractModel):
         self._init_params()
 
         # loading model
-        if self.model_name == 'bert2bert':
+        if self.model_name in ['bert2bert', 'xlm-roberta']:
             self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(
                 model_path, model_path, config=self.configuration
             )
@@ -114,7 +115,7 @@ class Pretrained_Models(AbstractModel):
                 warnings.warn(f"Initialize {self.model_name} from scratch")
                 self.model = AutoModelForSeq2SeqLM.from_config(self.configuration)
 
-        if self.model_name not in ['bert2bert', 'unilm']:
+        if self.model_name not in ['bert2bert', 'unilm', 'xlm-roberta']:
             self.model.resize_token_embeddings(len(self.tokenizer))
         elif self.model_name not in ['unilm']:
             self.model.config.decoder_start_token_id = self.tokenizer.cls_token_id
@@ -151,9 +152,14 @@ class Pretrained_Models(AbstractModel):
         blenderbot-small: [src, __end__], [tgt, __end__], decoder_start_token_id: __start__
         m2m_100: [src_lang_id, src, </s>], [tgt_lang_id, tgt, </s>], decoder_start_token_id: </s>, forced_bos_token_id: tgt_lang_id
         mbart: [src, </s>, src_lang_id], [tgt, </s>, tgt_lang_id], decoder_start_token_id: tgt_lang_id
-        pegasus: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
+        pegasus, pegasus_x: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
         prophetnet: [src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [SEP]
         t5, mt5: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
+        LongT5: [src, </s>], [tgt, </s>], decoder_start_token_id: <pad>
+        marian: [src, </s>], [tgt, </s>], decoder_start_token_id: </s>
+        xlm-roberta: [<s>, src, </s>; </s>, tgt, </s>], decoder_start_token_id: </s>
+        xlm-prophetnet: [src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [SEP]
+        nllb: [src_lang_id, src, </s>], [tgt_lang_id, tgt, </s>], decoder_start_token_id: </s>
         unilm : [[CLS], src, [SEP]], [tgt, [SEP], decoder_start_token_id: [SEP]
         """
         # configuration needs to add pad token

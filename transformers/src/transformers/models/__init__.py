@@ -101,6 +101,7 @@ from . import (
     openai,
     opt,
     pegasus,
+    pegasus_x,
     perceiver,
     phobert,
     plbart,

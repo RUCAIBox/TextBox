@@ -176,6 +176,13 @@ else:
                 ),
             ),
             ("mvp", ("MvpTokenizer", "MvpTokenizerFast" if is_tokenizers_available() else None)),
+            (
+                "nllb",
+                (
+                    "NllbTokenizer" if is_sentencepiece_available() else None,
+                    "NllbTokenizerFast" if is_tokenizers_available() else None,
+                ),
+            ),
             ("nezha", ("BertTokenizer", "BertTokenizerFast" if is_tokenizers_available() else None)),
             (
                 "nystromformer",

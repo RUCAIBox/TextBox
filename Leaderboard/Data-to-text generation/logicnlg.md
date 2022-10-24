@@ -21,23 +21,25 @@ It's a dataset based on TabFact (Chen et al., 2019), which is a table-based fact
 Input
 
 ```
-
+Title | black ice (album) [X_SEP] country | europe [SEP] country | australia [SEP] country | united kingdom [SEP] country | united kingdom [SEP] country | united states [SEP] country | japan [SEP] country | germany [SEP] country | global ( itunes )'
 ```
 
 Output
 
 ```
-
+'the album Black Ice was first released in Europe'
 ```
 
 ## LeaderBoard
 
-Descending order by BLEU-1.
+Descending order by BLEU-3.
 
-| Model                                          | BLEU-1 | BLEU-2 | BLEU-3 | Repository | Generated Text |
-| ---------------------------------------------- | ------ | ------ | ------ | ---------- | -------------- |
-| [DCVED](https://arxiv.org/abs/2004.10404)      | $49.5$ | $28.6$ | $15.3$ |            |                |
-| [GPT-TabGen](https://arxiv.org/abs/2004.10404) | $48.8$ | $27.1$ | $12.6$ |            |                |
+| Model                                                      | BLEU-1 | BLEU-2 | BLEU-3 | Repository                                        | Generated Text |
+| ---------------------------------------------------------- | ------ | ------ | ------ | ------------------------------------------------- | -------------- |
+| [GPT-TabGen](https://arxiv.org/abs/2004.10404)             | $49.6$ | $28.2$ | $14.2$ | [Official](https://github.com/wenhuchen/LogicNLG) |                |
+| [BERT-TabGen](https://arxiv.org/abs/2004.10404)            | $49.1$ | $27.7$ | $13.5$ | [Official](https://github.com/wenhuchen/LogicNLG) |                |
+| [Field-Infusing+Trans]((https://arxiv.org/abs/2004.10404)) | $43.7$ | $20.9$ | $8.4$  | [Official](https://github.com/wenhuchen/LogicNLG) |                |
+| [Field-Infusing+LSTM](https://arxiv.org/abs/2004.10404)    | $43.1$ | $19.7$ | $7.1$  | [Official](https://github.com/wenhuchen/LogicNLG) |                |
 
 
 ## Citation

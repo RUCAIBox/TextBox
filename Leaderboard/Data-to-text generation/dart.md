@@ -8,7 +8,7 @@ Paper: [Paper](https://arxiv.org/abs/2007.02871)
 
 Repository: [Official](https://github.com/Yale-LILY/dart)
 
-The dataset is an open domain structured **DA**ta **R**ecord to **T**ext generation dataset with over 82k instances (DARTs).
+The dataset is an open domain structured **DA**ta **R**ecord to **T**ext generation dataset. DART consists of 82,191 examples across different domains with each input being a semantic RDF triple set derived from data records in tables and the tree ontology of the schema, annotated with sentence descriptions that cover all facts in the triple set.
 
 ### Overview
 
@@ -21,25 +21,27 @@ The dataset is an open domain structured **DA**ta **R**ecord to **T**ext generat
 Input
 
 ```
-
+'Mars Hill College | JOINED | 1973 [SEP] Mars Hill College | LOCATION | Mars Hill, North Carolina'
 ```
 
 Output
 
 ```
-
+A school from Mars Hill, North Carolina, joined in 1973.
 ```
 
 ## LeaderBoard
 
 Descending order by BLEU.
 
-| Model                                                       | BLEU    | METEOR | Repository | Generated Text |
-| ----------------------------------------------------------- | ------- | ------ | ---------- | -------------- |
-| [T5](https://arxiv.org/abs/2007.02871)                      | $50.66$ | $0.40$ |            |                |
-| [BART](https://arxiv.org/abs/2007.02871)                    | $48.56$ | $0.39$ |            |                |
-| [LSTM with Attention](https://arxiv.org/abs/2007.02871)     | $29.66$ | $0.27$ |            |                |
-| [End-to-End Transformers](https://arxiv.org/abs/2007.02871) | $27.24$ | $0.25$ |            |                |
+| Model                                                       | BLEU    | METEOR | BERTScore | Repository                                    | Generated Text |
+| ----------------------------------------------------------- | ------- | ------ | --------- | --------------------------------------------- | -------------- |
+| [T5](https://arxiv.org/abs/2007.02871)                      | $50.66$ | $0.40$ | $0.54$    | [Official](https://github.com/Yale-LILY/dart) |                |
+| [BART](https://arxiv.org/abs/2007.02871)                    | $48.56$ | $0.39$ | $0.52$    | [Official](https://github.com/Yale-LILY/dart) |                |
+| [HTLM](https://arxiv.org/pdf/2107.06955v1.pdf)              | $47.2$  | $0.39$ | -         |                                               |                |
+| [GPT-2-Large](https://arxiv.org/pdf/2107.06955v1.pdf)       | $47.0$  | $0.39$ | -         |                                               |                |
+| [LSTM with Attention](https://arxiv.org/abs/2007.02871)     | $29.66$ | $0.27$ | $0.31$    | [Official](https://github.com/Yale-LILY/dart) |                |
+| [End-to-End Transformers](https://arxiv.org/abs/2007.02871) | $27.24$ | $0.25$ | $0.25$    | [Official](https://github.com/Yale-LILY/dart) |                |
 
 ## Citation
 

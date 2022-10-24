@@ -23,29 +23,51 @@ The Yahoo Answers corpus consists of several different domains like Business, En
 
 ### Data Sample
 
+#### GYAFC-E&M
+
 Input
 
 ```
-
+Is Any Baby Really A Freak.
 ```
 
 Output
 
 ```
+['Is any baby really a freak.', 'Is any baby really a freak?', 'Is Any Baby really strange?', 'Is anyone really that crazy?']
+```
 
+#### GYAFC-F&R
+
+Input
+
+```
+And so what if it is a rebound relationship for both of you?
+```
+
+Output
+
+```
+['What if it is a rebound relationship for both of you?', 'Is it a rebound relationship for both of you?', 'So what if it is a rebound relationship for the two of you?', 'What does it matter if it is a rebound relationship for you both?'] 
 ```
 
 ## LeaderBoard
 
 Descending order by BLEU.
 
-| Model                                               | BLEU   | Repository                                                   | Generated Text |
-| --------------------------------------------------- | ------ | ------------------------------------------------------------ | -------------- |
-| [DualRL](https://arxiv.org/pdf/1905.10060v1.pdf)    | $41.9$ | [Official](https://github.com/luofuli/DualRL)                |                |
-| [Template](https://arxiv.org/pdf/1804.06437v1.pdf)  | $35.2$ | [Official](https://github.com/lijuncen/Sentiment-and-Style-Transfer) |                |
-| [UnsuperMT](https://arxiv.org/pdf/1808.07894v1.pdf) | $33.4$ |                                                              |                |
-| [Del](https://arxiv.org/pdf/1804.06437v1.pdf)       | $29.2$ | [Official](https://github.com/lijuncen/Sentiment-and-Style-Transfer) |                |
-| [DelRetri](https://arxiv.org/pdf/1804.06437v1.pdf)  | $21.2$ | [Official](https://github.com/lijuncen/Sentiment-and-Style-Transfer) |                |
+| Model                                                | BLEU   | Repository                                                   | Generated Text |
+| ---------------------------------------------------- | ------ | ------------------------------------------------------------ | -------------- |
+| [DualRL](https://arxiv.org/pdf/1905.10060v1.pdf)     | $41.9$ | [Official](https://github.com/luofuli/DualRL)                |                |
+| [Template](https://arxiv.org/pdf/1804.06437v1.pdf)   | $35.2$ | [Official](https://github.com/lijuncen/Sentiment-and-Style-Transfer) |                |
+| [UnsuperMT](https://arxiv.org/pdf/1808.07894v1.pdf)  | $33.4$ |                                                              |                |
+| [Del](https://arxiv.org/pdf/1804.06437v1.pdf)        | $29.2$ | [Official](https://github.com/lijuncen/Sentiment-and-Style-Transfer) |                |
+| [DelRetri](https://arxiv.org/pdf/1804.06437v1.pdf)   | $21.2$ | [Official](https://github.com/lijuncen/Sentiment-and-Style-Transfer) |                |
+| [MultiDec](https://arxiv.org/pdf/1711.06861v2.pdf)   | $12.3$ |                                                              |                |
+| [StyleEmbed](https://arxiv.org/pdf/1711.06861v2.pdf) | $7.9$  |                                                              |                |
+| [CrossAlign](https://arxiv.org/pdf/1705.09655v2.pdf) | $3.6$  | [Official](https://github.com/shentianxiao/language-style-transfer) |                |
+| [Unpair](https://arxiv.org/pdf/1805.05181v2.pdf)     | $2.0$  | [Official](https://github.com/lancopku/unpaired-sentiment-translation) |                |
+| [BackTrans](https://arxiv.org/pdf/1804.09000v3.pdf)  | $0.9$  | [Official](https://github.com/shrimai/Style-Transfer-Through-Back-Translation) |                |
+| [Retri](https://arxiv.org/pdf/1804.06437v1.pdf)      | $0.4$  | [Official](https://github.com/lijuncen/Sentiment-and-Style-Transfer) |                |
 
 ## Citation
 

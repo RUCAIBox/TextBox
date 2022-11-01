@@ -19,13 +19,13 @@ This dataset is about weather forecasts. In this dataset, there are two part for
 Input
 
 ```
-
+'type | skyCover [SEP] mode | 0-25 [SEP] date | 2009-02-08 [SEP] label | Tonight [SEP] time | 17-30 [X_SEP] type | temperature [SEP] min | 33 [SEP] mean | 44 [SEP] max | 60 [SEP] date | 2009-02-08 [SEP] label | Tonight [SEP] time | 17-30 [X_SEP] type | windDir [SEP] mode | NNW [SEP] date | 2009-02-08 [SEP] label | Tonight [SEP] time | 17-30 [SEP] type | windSpeed [SEP] min | 2 [SEP] mean | 5 [SEP] max | 13 [SEP] mode | 0-10 [SEP] date | 2009-02-08 [SEP] label | Tonight [SEP] time | 17-30'
 ```
 
 Output
 
 ```
-
+'Clear , with a low around 31 . North wind between 6 and 9 mph becoming calm .'
 ```
 
 ## LeaderBoard

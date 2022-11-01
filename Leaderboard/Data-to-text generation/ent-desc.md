@@ -21,13 +21,13 @@ It is a large-scale and challenging dataset to facilitate the study of such a pr
 Input
 
 ```
-
+"Hatip Dicle | name in native language | Mehmet Hatip Dicle [SEP] Hatip Dicle | country of citizenship | Turkey [SEP] Hatip Dicle | member of political party | Democracy Party (Turkey) [SEP] Hatip Dicle | member of political party | People's Labor Party [SEP] Hatip Dicle | languages spoken, written or signed | Kurdish languages [SEP] Hatip Dicle | occupation | politician [SEP] Hatip Dicle | position held | Member of the Grand National Assembly of Turkey [SEP] Hatip Dicle | sex or gender | male [SEP] Hatip Dicle | educated at | Istanbul Technical University [SEP] Hatip Dicle | significant event | prisoner of conscience [SEP] Hatip Dicle | languages spoken, written or signed | Turkish [SEP] Peace and Democracy Party | country | Turkey [SEP] Hatip Dicle | date of birth | 1954-01-01 [SEP] Hatip Dicle | place of birth | Diyarbakır
 ```
 
 Output
 
 ```
-
+'Hatip Dicle (born 1954, Diyarbakir, Turkey), full name Mehmet Hatip Dicle, is a Turkish politician, of Kurdish origin, of the Peace and Democracy Party .'
 ```
 
 ## LeaderBoard

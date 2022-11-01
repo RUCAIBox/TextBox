@@ -8,7 +8,7 @@ Paper: [Paper](https://arxiv.org/abs/2010.12688v2)
 
 Repository: [Official](https://github.com/google-research-datasets/KELM-corpus)
 
-
+The Dataset is part of the KELM corpus This is the Wikipedia text--Wikidata KG aligned corpus used to train the data-to-text generation model. Please note that this is a corpus generated with distant supervision and should not be used as gold standard for evaluation.
 
 ### Overview
 
@@ -21,24 +21,23 @@ Repository: [Official](https://github.com/google-research-datasets/KELM-corpus)
 Input
 
 ```
-
+'Masi-Manimba | instance of | Town'
 ```
 
 Output
 
 ```
-
+'The town elects seven national deputies and the majority recently were from the Unified Lumumbist Party.'
 ```
 
 ## LeaderBoard
 
-Descending order by METRIC.
+Descending order by BLEU.
 
-| Model | Metric | Repository | Generated Text |
-| ----- | ------ | ---------- | -------------- |
-|       |        |            |                |
-|       |        |            |                |
-|       |        |            |                |
+| Model                                                | BLEU   | Repository                               | Generated Text |
+| ---------------------------------------------------- | ------ | ---------------------------------------- | -------------- |
+| [ReGen-SCST](https://arxiv.org/pdf/2108.12472v1.pdf) | $26.2$ | [Official](https://github.com/IBM/regen) |                |
+| [ReGen-CE](https://arxiv.org/pdf/2108.12472v1.pdf)   | $24.1$ | [Official](https://github.com/IBM/regen) |                |
 
 ## Citation
 

@@ -144,8 +144,7 @@ class MultiHeadAttention(nn.Module):
         past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] =None, 
         head_mask: Optional[torch.FloatTensor] =None, 
         encoder_hidden_states: Optional[torch.FloatTensor] = None,
-        output_attentions: Optional[bool] =False,
-        is_decoder = False):
+        output_attentions: Optional[bool] =False):
         """
         Self-attention (if kv is None) or attention over source sentence (provided by kv).
         """
@@ -170,7 +169,6 @@ class MultiHeadAttention(nn.Module):
             """compute context"""
             return x.transpose(1, 2).contiguous().view(bs, -1, self.n_heads * dim_per_head)
         
-        is_cross_attention = encoder_hidden_states is not None
         q = shape(self.q_lin(hidden_states))
         if encoder_hidden_states is None:
             k = shape(self.k_lin(hidden_states))  # (bs, n_heads, qlen, dim_per_head)
@@ -187,26 +185,11 @@ class MultiHeadAttention(nn.Module):
                 v = torch.cat([v_, v], dim=2)  # (bs, n_heads, klen, dim_per_head)
             else:
                 k, v = past_key_values
-            past_key_values = (k, v)
-        # if is_cross_attention and past_key_values is not None:
-        #     # reuse k,v, cross_attentions
-        #     k = past_key_values[0]
-        #     v = past_key_values[1]
-        # elif is_cross_attention:
-        #     k = v = encoder_hidden_states
-        #     k = shape(self.k_lin(k))  # (bs, n_heads, qlen, dim_per_head)
-        #     v = shape(self.v_lin(v))  # (bs, n_heads, qlen, dim_per_head)
-        # else:
-        #     k = shape(self.k_lin(hidden_states))  # (bs, n_heads, qlen, dim_per_head)
-        #     v = shape(self.v_lin(hidden_states)) 
+            past_key_values = (k, v) 
 
         q = q / math.sqrt(dim_per_head)  # (bs, n_heads, qlen, dim_per_head)
 
         scores = torch.matmul(q, k.transpose(2, 3))  # (bs, n_heads, qlen, klen)
-        print(q.shape)
-        print(k.shape)
-        print(scores.shape)
-        print((attention_mask == 0).view(mask_reshape).shape)
         attention_mask = (attention_mask == 0).view(mask_reshape).expand_as(scores)  # (bs, n_heads, qlen, klen)
         scores.masked_fill_(attention_mask, torch.finfo(scores.dtype).min)  # (bs, n_heads, qlen, klen)
 
@@ -221,13 +204,6 @@ class MultiHeadAttention(nn.Module):
         context = unshape(context)  # (bs, qlen, dim)
 
         outputs = (self.out_lin(context),)
-        # if is_cross_attention:
-        #     n_k = shape(self.k_lin(outputs[0]))
-        #     n_v = shape(self.k_lin(outputs[0]))
-        #     if past_key_values is None:
-        #         past_key_values = (n_k, n_v)
-        #     else:
-        #         past_key_values = (n_k+past_key_values[0], n_v+past_key_values[1])
         if output_attentions:
             outputs = outputs + (weights,)
 
@@ -434,7 +410,6 @@ class XLMModel(XLMPreTrainedModel):
         super().__init__(config)
 
         # encoder / decoder, output layer
-        print(config.is_encoder)
         self.is_encoder = config.is_encoder
         self.is_decoder = config.is_decoder
         # if self.is_decoder:
@@ -449,10 +424,11 @@ class XLMModel(XLMPreTrainedModel):
         self.eos_index = config.eos_index
         self.pad_index = config.pad_index
         # self.dico = dico
-        # self.id2lang = config.id2lang
-        # self.lang2id = config.lang2id
+        self.id2lang = config.id2lang
+        self.lang2id = config.lang2id
+        self.langs = list(self.id2lang.keys())
         # assert len(self.dico) == self.n_words
-        # assert len(self.id2lang) == len(self.lang2id) == self.n_langs
+        assert len(self.id2lang) == len(self.lang2id) == self.n_langs
 
         # model parameters
         self.dim = config.emb_dim  # 512 by default
@@ -526,10 +502,9 @@ class XLMModel(XLMPreTrainedModel):
         self,
         input_ids: Optional[torch.Tensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
-        langs: Optional[torch.Tensor] = None,
         token_type_ids: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.Tensor] = None,
-        # NOTE: lengths->encoder_attention_mask ok
+        # NOTE: lengths->encoder_attention_mask 
         lengths: Optional[torch.Tensor] = None,
         # NOTE:cache->past_key_values
         past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
@@ -549,7 +524,6 @@ class XLMModel(XLMPreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # NOTE:use_cache
-        print("config.is_decoder", self.config.is_decoder)
         if self.config.is_decoder:
             use_cache = use_cache if use_cache is not None else None
         else:
@@ -588,6 +562,10 @@ class XLMModel(XLMPreTrainedModel):
             if self.is_decoder and encoder_hidden_states is not None and encoder_attention_mask is None:
                 encoder_attention_mask = torch.arange(lengths.max(), dtype=torch.long, device=lengths.device) < lengths[:, None]
 
+                # embeddings
+        if inputs_embeds is None:
+            inputs_embeds = self.embeddings(input_ids)
+
         # position_ids
         if position_ids is None:
             position_ids = self.position_ids[:, :seq_length]
@@ -595,10 +573,19 @@ class XLMModel(XLMPreTrainedModel):
             assert position_ids.size() == (batch_size, seq_length)  # (slen, bs)
             # position_ids = position_ids.transpose(0, 1)
 
+        # language IDs
+        if encoder_hidden_states is None:
+            langs = inputs_embeds.new(seq_length).long().fill_(torch.tensor(int(self.langs[0])))
+            langs = langs.unsqueeze(1).expand(seq_length, batch_size)
+            langs = langs.transpose(0, 1)
+        else :
+            langs = encoder_hidden_states.new(seq_length).long().fill_(torch.tensor(int(self.langs[1])))
+            langs = langs.unsqueeze(1).expand(seq_length, batch_size)
+            langs = langs.transpose(0, 1)
+
         # langs
         if langs is not None:
             assert langs.size() == (batch_size, seq_length)  # (slen, bs)
-            # langs = langs.transpose(0, 1)
 
         # Prepare head mask if needed
         head_mask = self.get_head_mask(head_mask, self.config.n_layers)
@@ -614,9 +601,7 @@ class XLMModel(XLMPreTrainedModel):
             mask = mask[:, -_slen:]
             attn_mask = attn_mask[:, -_slen:]
 
-        # embeddings
-        if inputs_embeds is None:
-            inputs_embeds = self.embeddings(input_ids)
+
 
         tensor = inputs_embeds + self.position_embeddings(position_ids).expand_as(inputs_embeds)
         if langs is not None and self.use_lang_emb and self.n_langs > 1:
@@ -641,8 +626,7 @@ class XLMModel(XLMPreTrainedModel):
                 attn_mask,
                 past_key_values=past_key_values,
                 head_mask=head_mask[i],
-                output_attentions=output_attentions,
-                is_decoder = self.is_decoder
+                output_attentions=output_attentions
             )
             attn = attn_outputs[0]
             if output_attentions:
@@ -654,7 +638,7 @@ class XLMModel(XLMPreTrainedModel):
 
             # encoder attention (for decoder only)
             if self.is_decoder and encoder_hidden_states is not None:
-                attn, past_key_values = self.encoder_attn[i](tensor, encoder_attention_mask, encoder_hidden_states=encoder_hidden_states, past_key_values=past_key_values, output_attentions=output_attentions,is_decoder=self.is_decoder)
+                attn, past_key_values = self.encoder_attn[i](tensor, encoder_attention_mask, encoder_hidden_states=encoder_hidden_states, past_key_values=past_key_values, output_attentions=output_attentions)
                 if output_attentions:
                     cross_attentions = cross_attentions + (attn[1],)
                 attn = nn.functional.dropout(attn[0], p=self.dropout, training=self.training)
@@ -676,7 +660,7 @@ class XLMModel(XLMPreTrainedModel):
 
         if not return_dict:
             return tuple(v for v in [tensor, hidden_states, attentions] if v is not None)
-        # return BaseModelOutput(last_hidden_state=tensor, hidden_states=hidden_states, attentions=attentions)
+
         return BaseModelOutputWithPastAndCrossAttentions(
             last_hidden_state=tensor,
             past_key_values=past_key_values,
@@ -900,7 +884,6 @@ class XLMWithLMHeadModel(XLMPreTrainedModel):
         transformer_outputs = self.transformer(
             input_ids,
             attention_mask=attention_mask,
-            langs=langs,
             token_type_ids=token_type_ids,
             position_ids=position_ids,
             lengths=lengths,

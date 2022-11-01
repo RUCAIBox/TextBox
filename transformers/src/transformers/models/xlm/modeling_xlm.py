@@ -19,7 +19,7 @@
 import itertools
 import math
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -904,12 +904,6 @@ class XLMWithLMHeadModel(XLMPreTrainedModel):
         if not return_dict:
             return outputs + transformer_outputs[1:]
 
-        # return MaskedLMOutput(
-        #     loss=outputs[0] if labels is not None else None,
-        #     logits=outputs[0] if labels is None else outputs[1],
-        #     hidden_states=transformer_outputs.hidden_states,
-        #     attentions=transformer_outputs.attentions,
-        # )
         return CausalLMOutputWithCrossAttentions(
             loss=outputs[0] if labels is not None else None,
             logits=outputs[0] if labels is None else outputs[1],

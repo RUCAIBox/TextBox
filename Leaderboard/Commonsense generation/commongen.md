@@ -16,7 +16,7 @@ CommonGen is challenging because it inherently requires 1) relational reasoning 
 
 | Dataset   | Num Train | Num Valid | Num Test | Source Length (Avg) | Target Length (Avg) |
 | --------- | --------- | --------- | -------- | ------------------- | ------------------- |
-| CommonGen | $67,389$  | $4,018$   | $1,497$  | -                   | -                   |
+| CommonGen | $67,389$  | $4,018$   | $1,497$  | 5.5                 | 11.6                |
 
 ### Data Sample
 
@@ -32,15 +32,22 @@ Skier skis down the mountain
 
 Descending order by SPICE.
 
-| Model                                                    | BLUE-4   | CIDEr    | SPICE    | Repository | Generated Text |
-| -------------------------------------------------------- | -------- | -------- | -------- | ---------- | -------------- |
-| [KFCNet](https://arxiv.org/abs/2109.06704)               | $43.619$ | $18.845$ | $33.911$ |            |                |
-| [KGR$^4$](https://arxiv.org/abs/2112.08266)              | $42.818$ | $18.423$ | $33.564$ |            |                |
-| [RE-T5](https://aclanthology.org/2021.findings-acl.269/) | $40.863$ | $17.663$ | $31.079$ |            |                |
-| [T5-Large](https://arxiv.org/abs/1910.10683)             | $31.962$ | $15.128$ | $28.855$ |            |                |
-| [BART](https://arxiv.org/abs/1910.13461)                 | $31.827$ | $13.976$ | $27.995$ |            |                |
-| [UniLM](https://arxiv.org/abs/1905.03197v3)              | $30.616$ | $14.889$ | $27.429$ |            |                |
-| [GPT-2](https://github.com/openai/gpt-2)                 | $26.833$ | $12.187$ | $23.567$ |            |                |
+| Model                                                        | BLUE-4   | CIDEr    | SPICE    | Repository                                                   | Generated Text |
+| ------------------------------------------------------------ | -------- | -------- | -------- | ------------------------------------------------------------ | -------------- |
+| [KFCNet](https://arxiv.org/abs/2109.06704)                   | $43.619$ | $18.845$ | $33.911$ |                                                              |                |
+| [KGR$^4$](https://arxiv.org/abs/2112.08266)                  | $42.818$ | $18.423$ | $33.564$ | [Official](https://github.com/DeepLearnXMU/KGR-4)            |                |
+| [PU-GEN + T5-large](https://www.sciencedirect.com/science/article/abs/pii/S0950705122009546?via%3Dihub) | $38.233$ | $18.036$ | $31.682$ |                                                              |                |
+| [Imagine-and-Verbalize](https://openreview.net/forum?id=Oh1r2wApbPv) | $40.565$ | $17.716$ | $31.291$ | [Official](https://github.com/wangpf3/imagine-and-verbalize) |                |
+| [RE-T5](https://aclanthology.org/2021.findings-acl.269/)     | $40.863$ | $17.663$ | $31.079$ | [Official](https://github.com/HanNight/RE-T5)                |                |
+| [VisCTG](https://arxiv.org/pdf/2109.03892.pdf)               | $36.939$ | $17.199$ | $29.973$ | [Official](https://github.com/styfeng/VisCTG)                |                |
+| [SAPPHIRE](https://aclanthology.org/2021.inlg-1.21.pdf)      | $37.119$ | $16.901$ | $29.751$ | [Official](https://github.com/styfeng/sapphire)              |                |
+| [KG-BART](https://arxiv.org/pdf/2009.12677.pdf)              | $33.867$ | $16.927$ | $29.634$ | [Official](https://github.com/yeliu918/KG-BART)              |                |
+| [EKI-BART](https://arxiv.org/pdf/2012.00366.pdf)             | $35.945$ | $16.999$ | $29.583$ |                                                              |                |
+| [T5-Large](https://arxiv.org/abs/1910.10683)                 | $31.962$ | $15.128$ | $28.855$ |                                                              |                |
+| [BART](https://arxiv.org/abs/1910.13461)                     | $31.827$ | $13.976$ | $27.995$ |                                                              |                |
+| [UniLM](https://arxiv.org/abs/1905.03197v3)                  | $30.616$ | $14.889$ | $27.429$ |                                                              |                |
+| [BERT-Gen]()                                                 | $23.468$ | $12.606$ | $24.822$ | [Official](https://github.com/microsoft/unilm/tree/master/s2s-ft) |                |
+| [GPT-2](https://github.com/openai/gpt-2)                     | $26.833$ | $12.187$ | $23.567$ |                                                              |                |
 
 ## Citation
 

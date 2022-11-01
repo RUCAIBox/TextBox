@@ -35,11 +35,16 @@ The three star coffee shop, The Eagle, gives families a mid-priced dining experi
 ```
 ## LeaderBoard
 
-Descending order by BLEU. (results on development set)
+Descending order by BLEU.
 
-| Model                                    | BLEU     | NIST     | METEOR   | ROUGE-L  | CIDEr    | Repository                                   | Generated Text |
-| ---------------------------------------- | -------- | -------- | -------- | -------- | -------- | -------------------------------------------- | -------------- |
-| [TGen](https://arxiv.org/abs/1706.09254) | $0.6925$ | $8.4781$ | $0.4703$ | $0.7257$ | $2.3987$ | [Official](https://github.com/UFAL-DSG/tgen) |                |
+| Model                                                 | BLEU    | NIST     | METEOR  | ROUGE-L | CIDEr    | Repository                                                   | Generated Text |
+| ----------------------------------------------------- | ------- | -------- | ------- | ------- | -------- | ------------------------------------------------------------ | -------------- |
+| [HTLM](https://arxiv.org/pdf/2107.06955v1.pdf)        | $70.3$  | $8.90$   | $46.3$  | $70.8$  | $2.47$   |                                                              |                |
+| [$S_1^R$](https://arxiv.org/pdf/1904.01301v2.pdf)     | $68.60$ | $8.73$   | $45.25$ | $70.82$ | $2.37$   |                                                              |                |
+| [GPT-2-Large](https://arxiv.org/pdf/2107.06955v1.pdf) | $68.5$  | $8.78$   | $46.0$  | $69.9$  | $2.45$   |                                                              |                |
+| [EDA_CS](https://arxiv.org/pdf/1904.11838v4.pdf)      | $67.05$ | $8.5150$ | $44.49$ | $68.94$ | $2.2355$ | [Official](https://github.com/marco-roberti/char-data-to-text-gen) |                |
+| [Slug](https://arxiv.org/pdf/1805.06553v1.pdf) | $66.19$ | $8.6130$ | $44.54$ | $67.72$ |  |  | |
+| [TGen](https://arxiv.org/pdf/1810.01170v1.pdf) | $65.93$ | $8.6094$ | $44.83$ | $68.50$ | $2.2338$ | [Official](https://github.com/UFAL-DSG/tgen) ||
 
 ## Citation
 

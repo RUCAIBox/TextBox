@@ -21,25 +21,27 @@ Authors cast generating Wikipedia sections as a data-to-text generation task and
 Input
 
 ```
-
+'Doc Title | Aardvark [SEP] Sec Title | Name and taxonomy Name [X_SEP] LAW | the Cape of Good Hope [SEP] class | pig [SEP] NORP | African [SEP] ORG | Tubulidentata [SEP] language | Afrikaans [SEP] taxon | anteater'
 ```
 
 Output
 
 ```
-
+'The aardvark is sometimes colloquially called "African ant bear", "anteater" (not to be confused with the South American anteater), or the "Cape anteater" after the Cape of Good Hope. The name "aardvark" is Afrikaans (), comes from earlier Afrikaans (erdvark) and means "earth pig" or "ground pig" ("aarde": earth/ground, "vark": pig), because of its burrowing habits. The name "Orycteropus" means burrowing foot, and the name "afer" refers to Africa. The name of the aardvarks\'s order, "Tubulidentata," comes from the tubule-style teeth.'
 ```
 
 ## LeaderBoard
 
-Descending order by METRIC.
+Descending order by BLEU.
 
-| Model                                                        | BLEU   | ROUGE-L | METEOR | Repository | Generated Text |
-| ------------------------------------------------------------ | ------ | ------- | ------ | ---------- | -------------- |
-| [transformer+beam search](https://aclanthology.org/2021.findings-acl.17.pdf) | $19.5$ | $39.9$  | $23.9$ |            |                |
-| [transformer+beam search+$n$-gram blocking](https://aclanthology.org/2021.findings-acl.17.pdf) | $19.3$ | $39.3$  | $24.4$ |            |                |
-| [transformer+greedy](https://aclanthology.org/2021.findings-acl.17.pdf) | $18.9$ | $38.5$  | $23.5$ |            |                |
-| [transformer+nucleus sampling](https://aclanthology.org/2021.findings-acl.17.pdf) | $18.3$ | $36.1$  | $23.7$ |            |                |
+| Model                                                        | BLEU   | ROUGE-L | METEOR  | Repository | Generated Text |
+| ------------------------------------------------------------ | ------ | ------- | ------- | ---------- | -------------- |
+| [Asymmetric Generation-First](https://arxiv.org/pdf/2208.04558v1.pdf) | $23.7$ | $25.21$ | $52.22$ |            |                |
+| [ProEdit-1-First](https://arxiv.org/pdf/2208.04558v1.pdf)    | $23.4$ | $25.77$ | $49.82$ |            |                |
+| [transformer+beam search](https://aclanthology.org/2021.findings-acl.17.pdf) | $19.5$ | $39.9$  | $23.9$  |            |                |
+| [transformer+beam search+n-gram blocking](https://aclanthology.org/2021.findings-acl.17.pdf) | $19.3$ | $39.3$  | $24.4$  |            |                |
+| [transformer+greedy](https://aclanthology.org/2021.findings-acl.17.pdf) | $18.9$ | $38.5$  | $23.5$  |            |                |
+| [transformer+nucleus sampling](https://aclanthology.org/2021.findings-acl.17.pdf) | $18.3$ | $36.1$  | $23.7$  |            |                |
 
 ## Citation
 

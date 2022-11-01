@@ -18,32 +18,16 @@ GenWiki is a large-scale dataset for *knowledge graph-to-text* (G2T) and *text-t
 
 ### Data Sample
 
+Input
+
 ```
-{
-    "text": "It has been <ENT_0> the permanent collection of the <ENT_1> <ENT_0> <ENT_2> since <ENT_4> , acquired through the <ENT_3> .",
-    "entities": [
-        "in",
-        "Museum of Modern Art",
-        "New York City",
-        "Lillie P. Bliss Bequest",
-        "1941"
-    ],
-    "graph": [
-        [
-            "The Starry Night",
-            "city",
-            "New York City"
-        ]
-    ],
-    "id_long": {
-        "wikipage": "The_Starry_Night",
-        "text_paragraph_index": 0,
-        "text_sentence_index_start": 2,
-        "text_sentence_index_end": 3,
-        "graph_set_index": 0
-    },
-    "id_short": "[\"The_Starry_Night\", 0, [0, 2, 3]]"
-}
+'White Coppice | country | England [SEP] White Coppice | district | Chorley [SEP] White Coppice | county | Lancashire [SEP] White Coppice | settlement Type | hamlet'
+```
+
+Output
+
+```
+'White Coppice is a hamlet near Chorley , Lancashire , England .'
 ```
 
 ## LeaderBoard
@@ -52,8 +36,11 @@ Descending order by BLEU.
 
 | Model                                                        | BLEU    | METEOR  | ROUGE-L | CIDEr  | Repository | Generated Text |
 | ------------------------------------------------------------ | ------- | ------- | ------- | ------ | ---------- | -------------- |
-| [CycleGT](https://aclanthology.org/2020.coling-main.217.pdf) | $41.29$ | $35.39$ | $63.73$ | $3.53$ |            |                |
+| [CycleGT_Base](https://aclanthology.org/2020.coling-main.217.pdf) | $41.29$ | $35.39$ | $63.73$ | $3.53$ |            |                |
+| [CycleGT_Warm]((https://aclanthology.org/2020.coling-main.217.pdf)) | $40.47$ | $34.84$ | $63.40$ | $3.48$ |            |                |
 | [Graph Transformer Model](https://aclanthology.org/2020.coling-main.217.pdf) | $35.03$ | $33.45$ | $58.14$ | $2.63$ |            |                |
+| [DirectTransfer]((https://aclanthology.org/2020.coling-main.217.pdf)) | $13.89$ | $25.76$ | $39.75$ | $1.26$ |            |                |
+| [Rule-Based](https://aclanthology.org/2020.coling-main.217.pdf) | $13.45$ | $30.72$ | $40.93$ | $1.26$ |            |                |
 
 ## Citation
 

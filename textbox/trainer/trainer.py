@@ -19,7 +19,7 @@ from .scheduler import (
 from torch.utils.data import DataLoader
 from ..evaluator import BaseEvaluator
 from ..model.abstract_model import AbstractModel
-from ..utils import ensure_dir, serialized_save, init_seed
+from ..utils import serialized_save, init_seed
 
 
 class AbstractTrainer:
@@ -104,15 +104,9 @@ class Trainer(AbstractTrainer):
         self.evaluator = BaseEvaluator(config, self.config["metrics"])
 
         # Functionality
-        self.total_train_dir = os.path.join(config['total_dir'], self.filename)
-        self.checkpoint_dir = os.path.join(self.total_train_dir, config['checkpoint_dir'])
-        ensure_dir(self.checkpoint_dir)
-        self.saved_model_filename: str = os.path.join(self.checkpoint_dir, self.filename)
-        r"""Path to saved checkpoint file (without suffix!), which can be loaded with `load_experiment`."""
-
-        self.generate_dir = os.path.join(self.total_train_dir, config['generated_text_dir'])
-        ensure_dir(self.generate_dir)
-        self.saved_text_filename: str = os.path.join(self.generate_dir, self.filename)
+        self.total_dir = os.path.join(config['total_dir'], self.filename)
+        self.saved_model_filename = os.path.join(self.total_dir, self.filename)
+        self.saved_text_filename: str = os.path.join(self.total_dir, self.filename)
 
         self.max_save = config['max_save'] if config['max_save'] is not None else 2
         if self.max_save == 0:
@@ -266,7 +260,8 @@ class Trainer(AbstractTrainer):
         self._valid_count += 1
         if self._valid_count % self.valid_intervals != 0:
             return False
-
+        self.temp_mode = self._summary_tracker._current_mode
+        self.temp_epoch = self._summary_tracker._current_epoch
         with self._summary_tracker.new_epoch('valid'):
             if 'loss' in self.metrics_for_best_model:
                 self.model.eval()
@@ -292,7 +287,8 @@ class Trainer(AbstractTrainer):
                 valid_results = self.evaluate(valid_data, is_valid=True)
                 self._summary_tracker.set_metrics_results(valid_results)
             self.valid_result_dict[self.timestamp.valid_epoch] = self._summary_tracker._current_epoch
-
+        self._summary_tracker._current_mode = self.temp_mode
+        self._summary_tracker._current_epoch = self.temp_epoch
         self.model.train()
 
         stopped = bool(self.stopping_steps) and self._early_stopping(self._summary_tracker.is_best_valid)

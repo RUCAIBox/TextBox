@@ -69,10 +69,8 @@ def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, l
     ensure_dir(total_dir_name)
     total_train_dir=os.path.join(total_dir_name,filename)
     ensure_dir(total_train_dir)
-    log_dir=os.path.join(total_train_dir,logdir)
-    ensure_dir(log_dir)
     log_filename = filename + '.log'
-    log_filepath = os.path.join(log_dir, log_filename)
+    log_filepath = os.path.join(total_train_dir, log_filename)
 
     if log_level is None:
         log_level = "warning"

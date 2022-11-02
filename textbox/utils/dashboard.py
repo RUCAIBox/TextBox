@@ -16,7 +16,6 @@ import wandb
 from wandb import AlertLevel
 from wandb.data_types import Table
 from wandb.sdk.wandb_run import Run
-from textbox.utils.utils import ensure_dir
 from textbox.config.configurator import Config
 
 train_step = 'train/step'
@@ -289,15 +288,14 @@ class SummaryTracker:
 
         project = f"{config['model']}-{config['dataset']}"
         name = config['filename'][len(project) + 1:]
-        total_train_dir = os.path.join(config['total_dir'], config['filename'])
-        log_dir = os.path.join(total_train_dir, config['logdir'])
-
+        total_dir = os.path.join(config['total_dir'], config['filename'])
+        
         root = SummaryTracker(
             email=config['email'],
             is_local_main_process=config['_is_local_main_process'],
             metrics_for_best_model=config['metrics_for_best_model'],
             kwargs=dict(
-                dir=log_dir,
+                dir=total_dir,
                 project=project,
                 name=name,
                 config=config.final_config_dict,

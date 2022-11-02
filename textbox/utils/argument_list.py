@@ -12,9 +12,6 @@ general_parameters = [
     'cmd',  # input
     'filename',
     'total_dir',
-    'generated_text_dir',
-    'checkpoint_dir',
-    'logdir',
     'saved',
     'state',
     'email',  # output

@@ -41,7 +41,7 @@ class Experiment:
         self.accelerator = Accelerator()
         self.__base_config.update({'_is_local_main_process': self.accelerator.is_local_main_process})
         self.logger = self.init_logger(self.__base_config)
-        SummaryTracker.basicConfig(self.get_config())
+        self.summary_tracker = SummaryTracker.basicConfig(self.get_config())
         self.train_data, self.valid_data, self.test_data, self.tokenizer = \
             self._init_data(self.get_config(), self.accelerator)
 
@@ -59,7 +59,8 @@ class Experiment:
             filename=config['filename'],
             log_level=config['state'],
             enabled=config['_is_local_main_process'],
-            logdir=config['logdir']
+            logdir=config['logdir'],
+            total_dir=config['total_dir']
         )
         logger = getLogger(__name__)
         logger.info(config)
@@ -106,13 +107,13 @@ class Experiment:
 
     def _do_test(self):
         if self.do_test:
-            with SummaryTracker.new_epoch('eval'):
+            with self.summary_tracker.new_epoch('eval'):
                 self.test_result = self.trainer.evaluate(
                     self.test_data, model_file=self.__base_config['load_experiment']
                 )
-                SummaryTracker.set_metrics_results(self.test_result)
+                self.summary_tracker.set_metrics_results(self.test_result)
                 self.logger.info(
-                    'Evaluation result:\n{}'.format(SummaryTracker.current_epoch().as_str(sep=",\n", indent=" "))
+                    'Evaluation result:\n{}'.format(self.summary_tracker._current_epoch.as_str(sep=",\n", indent=" "))
                 )
 
     def _on_experiment_end(self):
@@ -127,7 +128,7 @@ class Experiment:
         self.__extended_config = None
 
     def run(self, extended_config: Optional[dict] = None):
-        with SummaryTracker.new_experiment():
+        with self.summary_tracker.new_experiment():
             self._on_experiment_start(extended_config)
             self._do_train_and_valid()
             self._do_test()

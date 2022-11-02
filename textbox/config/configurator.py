@@ -254,7 +254,8 @@ class Config(object):
             f'-{self.final_config_dict["dataset"]}'
             f'-{get_local_time()}'
         )  # warning: filename is not replicable
-        self.setdefault('logdir', './log/')
+        self.setdefault('total_dir','saved/')
+        self.setdefault('logdir', 'log/')
         self.setdefault('_hyper_tuning', [])
         self.setdefault('do_train', True)
         self.setdefault('do_valid', True)

@@ -11,6 +11,7 @@ general_parameters = [
     'config_files',
     'cmd',  # input
     'filename',
+    'total_dir',
     'generated_text_dir',
     'checkpoint_dir',
     'logdir',

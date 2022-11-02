@@ -16,7 +16,7 @@ import wandb
 from wandb import AlertLevel
 from wandb.data_types import Table
 from wandb.sdk.wandb_run import Run
-
+from textbox.utils.utils import ensure_dir
 from textbox.config.configurator import Config
 
 train_step = 'train/step'
@@ -74,18 +74,18 @@ class EpochTracker:
     ):
 
         # loss
-        self._avg_loss: float = 0.
-        self._accumulate_step: int = 0
+        self._avg_loss = 0.
+        self._accumulate_step = 0
 
         # metrics
-        self._metrics_results: Dict[str, float] = dict()
+        self._metrics_results = dict()
         self.is_best_valid = False
 
         # result: loss & metrics
-        self._score: Optional[float] = None
+        self._score = None
 
-        self._start_time: float = -math.inf
-        self._end_time: float = math.inf
+        self._start_time = -math.inf
+        self._end_time = math.inf
         self.mode = mode or 'Epoch'
         self.axes = axes if axes is not None else Timestamp()
         self.metrics_for_best_model = metrics_for_best_model or set()
@@ -189,7 +189,7 @@ class EpochTracker:
         current_best: bool = False,
         desc: Optional[str] = None,
         serial: Union[int, str, None] = None,
-        source: Optional[Callable] = None
+        source: Optional[Callable] = logger.info
     ):
         r"""Output loss with epoch and time information."""
 
@@ -200,8 +200,6 @@ class EpochTracker:
             output += '(best) '
         output += f"[time: {time_duration:.2f}s, {self.as_str()}]"
 
-        if source is None:
-            source = logger.info
         source(output)
 
     def __repr__(self):
@@ -235,7 +233,7 @@ class SummaryTracker:
     _email = False
     _is_local_main_process = False
     tracker_finished = False
-    _tables: Dict[str, Table] = dict()
+    _tables = dict()
     kwargs = dict()
 
     # experiment information
@@ -245,10 +243,9 @@ class SummaryTracker:
     metrics_for_best_model = set()
 
     # stack of current epochs
-    _current_epoch: List[EpochTracker] = []
-    _current_mode: List[str] = []
-    _fallback: Optional[Tuple[EpochTracker, str]] = None
-    is_best_valid: Optional[bool] = None
+    _current_epoch = None
+    _current_mode = None
+    is_best_valid = None
 
     def __init__(
         self,
@@ -257,23 +254,13 @@ class SummaryTracker:
         metrics_for_best_model: Set[str],
         email: bool = True,
     ):
-        self.__init_config(kwargs, is_local_main_process, metrics_for_best_model, email)
-
-    @classmethod
-    def __init_config(
-        cls,
-        kwargs: dict,
-        is_local_main_process: bool,
-        metrics_for_best_model: Set[str],
-        email: bool = True,
-    ):
         # wandb configurations
-        cls._email = email
-        cls._is_local_main_process = is_local_main_process
-        cls.tracker_finished = False
-        cls.kwargs = kwargs
+        self._email = email
+        self._is_local_main_process = is_local_main_process
+        self.tracker_finished = False
+        self.kwargs = kwargs
 
-        cls.metrics_for_best_model: Set[str] = metrics_for_best_model
+        self.metrics_for_best_model = metrics_for_best_model
 
     @classmethod
     def basicConfig(cls, config: Config):
@@ -302,13 +289,15 @@ class SummaryTracker:
 
         project = f"{config['model']}-{config['dataset']}"
         name = config['filename'][len(project) + 1:]
+        total_train_dir = os.path.join(config['total_dir'], config['filename'])
+        log_dir = os.path.join(total_train_dir, config['logdir'])
 
         root = SummaryTracker(
             email=config['email'],
             is_local_main_process=config['_is_local_main_process'],
             metrics_for_best_model=config['metrics_for_best_model'],
             kwargs=dict(
-                dir=config['logdir'],
+                dir=log_dir,
                 project=project,
                 name=name,
                 config=config.final_config_dict,
@@ -317,52 +306,27 @@ class SummaryTracker:
         )
         return root
 
-    @classmethod
-    def current_epoch(cls, fallback: bool = False) -> EpochTracker:
-        if len(cls._current_epoch) <= 0:
-            if not fallback or cls._fallback is None:
-                raise RuntimeError(
-                    'No avaliable epoch information found. '
-                    'Move your code into `with new_epoch()` context to fix it.'
-                )
-            else:
-                return cls._fallback[0]
-        return cls._current_epoch[-1]
-
-    @classmethod
-    def current_mode(cls, fallback: bool = False) -> str:
-        if len(cls._current_epoch) <= 0:
-            if not fallback or cls._fallback is None:
-                raise RuntimeError(
-                    'No avaliable epoch information found. '
-                    'Move your code into `with new_epoch()` context to fix it.'
-                )
-            else:
-                return cls._fallback[1]
-        return cls._current_mode[-1]
-
-    @classmethod
     @contextmanager
-    def new_experiment(cls, reinit=False):
+    def new_experiment(self, reinit=False):
         _run = None
-        if cls._is_local_main_process:
-            _run = wandb.init(reinit=reinit, **cls.kwargs)
+        if self._is_local_main_process:
+            _run = wandb.init(reinit=reinit, **self.kwargs)
             wandb.define_metric("loss/train")
             wandb.define_metric("loss/valid")
             wandb.define_metric("metrics/*")
 
-        cls.axes = Timestamp()
+        self.axes = Timestamp()
 
-        cls.best_valid_score = -math.inf
-        cls.best_valid_timestamp = Timestamp()
-        cls.is_best_valid = None
+        self.best_valid_score = -math.inf
+        self.best_valid_timestamp = Timestamp()
+        self.is_best_valid = None
 
         try:
             yield True
 
         except Exception:
-            if cls._email:
-                config = cls.kwargs['config']
+            if self._email:
+                config = self.kwargs['config']
                 wandb.alert(
                     title=f"Error {config['model']}-{config['dataset']}",
                     text=f"{config['cmd']}\n\n{traceback.format_exc()}",
@@ -371,54 +335,50 @@ class SummaryTracker:
             logger.error(traceback.format_exc())
 
         else:
-            if cls._is_local_main_process and _run is not None:
-                if cls._email:
+            if self._is_local_main_process and _run is not None:
+                if self._email:
                     try:
-                        test_result = cls.current_epoch(fallback=True).as_str()
+                        test_result = self._last_epoch.as_str()
                     except RuntimeError:
                         test_result = 'None'
                     wandb.alert(
-                        title=f"Finished {cls.kwargs['project']}",
-                        text=f"{cls.kwargs['config']['cmd']}\n\n{test_result}"
+                        title=f"Finished {self.kwargs['project']}",
+                        text=f"{self.kwargs['config']['cmd']}\n\n{test_result}"
                     )
-                cls.flush_text()
+                self.flush_text()
                 _run.finish()
-            cls.tracker_finished = True
+            self.tracker_finished = True
 
         return root
 
-    @classmethod
     @contextmanager
-    def new_epoch(cls, mode: str):
+    def new_epoch(self, mode: str):
         """Decorate the epoch function
 
         Args:
             mode: the mode of current epoch (train or valid)
         """
-
-        if cls.axes is None:
+        if self.axes is None:
             raise RuntimeError('You should decorate the function of experiment with new_experiment!')
 
-        cls._current_mode.append(mode)
+        self._current_mode = mode
         if mode == 'train' or mode == 'valid':
-            cls.axes.update_axe(mode, 'epoch')
-        cls._current_epoch.append(EpochTracker(cls.metrics_for_best_model, mode=mode, axes=cls.axes))
-        cls._current_epoch[-1]._on_epoch_start()
+            self.axes.update_axe(mode, 'epoch')
+        self._current_epoch = EpochTracker(self.metrics_for_best_model, mode=mode, axes=self.axes)
+        self._current_epoch._on_epoch_start()
 
         yield True
 
-        cls._current_epoch[-1]._on_epoch_end()
-        cls._fallback = (cls._current_epoch[-1], cls._current_mode[-1])
-        del cls._current_mode[-1]
-        del cls._current_epoch[-1]
+        self._current_epoch._on_epoch_end()
+        self._last_epoch = self._current_epoch
+        self._current_mode = None
+        self._current_epoch = None
 
-    @classmethod
-    def new_step(cls, fallback: bool = False):
+    def new_step(self, fallback: bool = False):
         r"""Call at the beginning of one step."""
-        cls.axes.update_axe(cls.current_mode(fallback=fallback), 'step')
+        self.axes.update_axe(self._current_mode, 'step')
 
-    @classmethod
-    def append_loss(cls, loss: Union[float, torch.Tensor], fallback: bool = False):
+    def append_loss(self, loss: Union[float, torch.Tensor], fallback: bool = False):
         r"""Append loss of current step to tracker and update current step.
 
         Notes:
@@ -428,86 +388,77 @@ class SummaryTracker:
             loss = loss.item()
         if math.isnan(loss):
             raise ValueError('Value is nan.')
-        cls.add_scalar("loss/" + cls.current_mode(fallback=fallback), loss)
-        cls.current_epoch(fallback=fallback)._append_loss(loss)
+        self.add_scalar("loss/" + self._current_mode, loss)
+        self._current_epoch._append_loss(loss)
 
-    @classmethod
-    def epoch_loss(cls, fallback: bool = False) -> float:
+    def epoch_loss(self, fallback: bool = False) -> float:
         r"""Loss of this epoch. Average loss will be calculated and returned.
         """
-        return cls.current_epoch(fallback=fallback).avg_loss
+        return self._current_epoch.avg_loss
 
-    @classmethod
-    def set_metrics_results(cls, results: Optional[dict], fallback: bool = False):
+    def set_metrics_results(self, results: Optional[dict], fallback: bool = False):
         r"""Record the metrics results."""
         if results is None:
             return
-        tag = 'metrics/' if cls.current_mode(fallback=fallback) != 'eval' else 'test/'
+        tag = 'metrics/' if self._current_mode != 'eval' else 'test/'
         for metric, result in results.items():
-            cls.add_any(tag + metric, result)
+            self.add_any(tag + metric, result)
             if not isinstance(result, str):
-                cls.current_epoch(fallback=fallback)._update_metrics({metric: result})
+                self._current_epoch._update_metrics({metric: result})
 
-        cls.is_best_valid = False
-        if cls.epoch_score() > cls.best_valid_score:
-            cls.best_valid_score = cls.epoch_score()
-            cls.best_valid_timestamp = copy(cls.axes)
-            cls.is_best_valid = True
-            cls.current_epoch(fallback=fallback).is_best_valid = True
+        self.is_best_valid = False
+        if self.epoch_score() > self.best_valid_score:
+            self.best_valid_score = self.epoch_score()
+            self.best_valid_timestamp = copy(self.axes)
+            self.is_best_valid = True
+            self._current_epoch.is_best_valid = True
 
-    @classmethod
-    def epoch_score(cls, fallback: bool = False) -> float:
+    def epoch_score(self, fallback: bool = False) -> float:
         r"""Get the score of current epoch calculated by `metrics_for_best_model`.
 
         Notes:
             If `loss` metric is in `metrics_for_best_model`, the negative of `loss` will be returned.
         """
-        return cls.current_epoch(fallback=fallback).calc_score()
+        return self._current_epoch.calc_score()
 
-    @classmethod
-    def epoch_dict(cls, fallback: bool = False) -> dict:
+    def epoch_dict(self, fallback: bool = False) -> dict:
         r"""Get result of current epoch."""
-        return cls.current_epoch(fallback=fallback).as_dict()
+        return self._current_epoch.as_dict()
 
-    @classmethod
-    def add_text(cls, tag: str, text_string: str):
+    def add_text(self, tag: str, text_string: str):
         r"""Add text to summary. The text will automatically upload to W&B at the end of experiment
         with `on_experiment_end()`. It may also be manually upload with `flush_text()`"""
-        if cls._is_local_main_process and cls.axes is not None:
-            if tag not in cls._tables:
-                cls._tables[tag] = wandb.Table(columns=[train_step, tag])
-            cls._tables[tag].add_data(cls.axes.train_step, text_string)
+        if self._is_local_main_process and self.axes is not None:
+            if tag not in self._tables:
+                self._tables[tag] = wandb.Table(columns=[train_step, tag])
+            self._tables[tag].add_data(self.axes.train_step, text_string)
 
-    @classmethod
-    def flush_text(cls):
+    def flush_text(self):
         r"""Manually flush temporary text added."""
-        wandb.log(cls._tables)
-        cls._tables = dict()
+        wandb.log(self._tables)
+        self._tables = dict()
 
-    @classmethod
-    def add_scalar(cls, tag: str, scalar_value: Union[float, int]):
+    def add_scalar(self, tag: str, scalar_value: Union[float, int]):
         r"""Add a scalar (`float` or `int`) to summary."""
         info = {tag: scalar_value}
         # info.update(self.axes.as_dict())
-        if cls._is_local_main_process and not cls.tracker_finished and cls.axes is not None:
-            wandb.log(info, step=cls.axes.train_step, commit=False)
+        if self._is_local_main_process and not self.tracker_finished and self.axes is not None:
+            wandb.log(info, step=self.axes.train_step, commit=False)
 
-    @classmethod
-    def add_any(cls, tag: str, any_value: Union[str, float, int]):
+    def add_any(self, tag: str, any_value: Union[str, float, int]):
         r"""Add a metric of any type (`float`, `int` and `str` supported) to summary."""
         if isinstance(any_value, str):
-            cls.add_text(tag, any_value)
+            self.add_text(tag, any_value)
         elif isinstance(any_value, (float, int)):
-            cls.add_scalar(tag, any_value)
+            self.add_scalar(tag, any_value)
 
-    @classmethod
-    def add_corpus(cls, tag: str, corpus: Iterable[str], fallback: bool = False):
+    def add_corpus(self, tag: str, corpus: Iterable[str], fallback: bool = False):
         r"""Add a corpus to summary."""
         if tag.startswith('valid'):
-            cls.current_epoch(fallback=fallback)._update_metrics({'generated_corpus': '\n'.join(corpus)})
-        if cls._is_local_main_process and not cls.tracker_finished:
+            self._current_epoch._update_metrics({'generated_corpus': '\n'.join(corpus)})
+        if self._is_local_main_process and not self.tracker_finished:
             _corpus = wandb.Table(columns=[tag], data=pd.DataFrame(corpus))
-            wandb.log({tag: _corpus}, step=cls.axes.train_step)
+            wandb.log({tag: _corpus}, step=self.axes.train_step)
 
 
 root = None

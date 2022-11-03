@@ -104,9 +104,9 @@ class Trainer(AbstractTrainer):
         self.evaluator = BaseEvaluator(config, self.config["metrics"])
 
         # Functionality
-        self.total_dir = os.path.join(config['total_dir'], self.filename)
-        self.saved_model_filename = os.path.join(self.total_dir, self.filename)
-        self.saved_text_filename: str = os.path.join(self.total_dir, self.filename)
+        self.saved_dir = os.path.join(config['saved_dir'], self.filename)
+        self.saved_model_filename = os.path.join(self.saved_dir, self.filename)
+        self.saved_text_filename: str = os.path.join(self.saved_dir, self.filename)
 
         self.max_save = config['max_save'] if config['max_save'] is not None else 2
         if self.max_save == 0:

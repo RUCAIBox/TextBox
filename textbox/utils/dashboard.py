@@ -288,14 +288,14 @@ class SummaryTracker:
 
         project = f"{config['model']}-{config['dataset']}"
         name = config['filename'][len(project) + 1:]
-        total_dir = os.path.join(config['total_dir'], config['filename'])
+        saved_dir = os.path.join(config['saved_dir'], config['filename'])
         
         root = SummaryTracker(
             email=config['email'],
             is_local_main_process=config['_is_local_main_process'],
             metrics_for_best_model=config['metrics_for_best_model'],
             kwargs=dict(
-                dir=total_dir,
+                dir=saved_dir,
                 project=project,
                 name=name,
                 config=config.final_config_dict,
@@ -372,11 +372,11 @@ class SummaryTracker:
         self._current_mode = None
         self._current_epoch = None
 
-    def new_step(self, fallback: bool = False):
+    def new_step(self):
         r"""Call at the beginning of one step."""
         self.axes.update_axe(self._current_mode, 'step')
 
-    def append_loss(self, loss: Union[float, torch.Tensor], fallback: bool = False):
+    def append_loss(self, loss: Union[float, torch.Tensor]):
         r"""Append loss of current step to tracker and update current step.
 
         Notes:
@@ -389,12 +389,12 @@ class SummaryTracker:
         self.add_scalar("loss/" + self._current_mode, loss)
         self._current_epoch._append_loss(loss)
 
-    def epoch_loss(self, fallback: bool = False) -> float:
+    def epoch_loss(self) -> float:
         r"""Loss of this epoch. Average loss will be calculated and returned.
         """
         return self._current_epoch.avg_loss
 
-    def set_metrics_results(self, results: Optional[dict], fallback: bool = False):
+    def set_metrics_results(self, results: Optional[dict]):
         r"""Record the metrics results."""
         if results is None:
             return
@@ -411,7 +411,7 @@ class SummaryTracker:
             self.is_best_valid = True
             self._current_epoch.is_best_valid = True
 
-    def epoch_score(self, fallback: bool = False) -> float:
+    def epoch_score(self) -> float:
         r"""Get the score of current epoch calculated by `metrics_for_best_model`.
 
         Notes:
@@ -419,7 +419,7 @@ class SummaryTracker:
         """
         return self._current_epoch.calc_score()
 
-    def epoch_dict(self, fallback: bool = False) -> dict:
+    def epoch_dict(self) -> dict:
         r"""Get result of current epoch."""
         return self._current_epoch.as_dict()
 
@@ -450,7 +450,7 @@ class SummaryTracker:
         elif isinstance(any_value, (float, int)):
             self.add_scalar(tag, any_value)
 
-    def add_corpus(self, tag: str, corpus: Iterable[str], fallback: bool = False):
+    def add_corpus(self, tag: str, corpus: Iterable[str]):
         r"""Add a corpus to summary."""
         if tag.startswith('valid'):
             self._current_epoch._update_metrics({'generated_corpus': '\n'.join(corpus)})

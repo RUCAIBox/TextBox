@@ -11,7 +11,7 @@ general_parameters = [
     'config_files',
     'cmd',  # input
     'filename',
-    'total_dir',
+    'saved_dir',
     'saved',
     'state',
     'email',  # output

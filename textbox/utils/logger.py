@@ -45,7 +45,7 @@ class ColorFormatter(logging.Formatter):
         return self._formatters[record.levelno].format(record)
 
 
-def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, logdir: str = 'log/', total_dir = 'saved/'):
+def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, saved_dir = 'saved/'):
     """
     A logger that can show a message on standard output and write it into the
     file named `filename` simultaneously.
@@ -55,7 +55,7 @@ def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, l
         filename: The filename of current experiment.
         log_level: Log log_level of loggers in `logging` module.
         enabled: (Default = True) False to throttle logging output down.
-        logdir: (Default = './log/') Directory of log files.
+        saved_dir: (Default = './log/') Directory of log files.
 
     Example:
         >>> init_logger("filename", "warning", disabled=True)
@@ -65,12 +65,12 @@ def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, l
         >>> logger.warning("Warning!")
         Warning!
     """
-    total_dir_name = os.path.dirname(total_dir)
-    ensure_dir(total_dir_name)
-    total_train_dir=os.path.join(total_dir_name,filename)
-    ensure_dir(total_train_dir)
+    saved_dir_name = os.path.dirname(saved_dir)
+    ensure_dir(saved_dir_name)
+    saved_train_dir=os.path.join(saved_dir_name,filename)
+    ensure_dir(saved_train_dir)
     log_filename = filename + '.log'
-    log_filepath = os.path.join(total_train_dir, log_filename)
+    log_filepath = os.path.join(saved_train_dir, log_filename)
 
     if log_level is None:
         log_level = "warning"

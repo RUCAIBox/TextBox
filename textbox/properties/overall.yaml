@@ -18,14 +18,12 @@ grad_clip: 0.1
 optimizer_kwargs: {}
 accumulation_steps: 1
 adafactor_kwargs: {'lr': 1e-3, 'scale_parameter': False, 'relative_step': False, 'warmup_init': False}
-
 # evaluation settings
 metrics: ["bleu"]
 eval_batch_size: 64
-
 # Pretrained model settings
 config_kwargs: {}
-tokenizer_kwargs: {'use_fast': True}  #'additional_special_tokens': None
+tokenizer_kwargs: {'use_fast': True} #'additional_special_tokens': None
 tokenizer_add_tokens: []
 generation_kwargs: {'num_beams': 5, 'no_repeat_ngram_size': 3, 'early_stopping': True}
 # efficient_methods: ['lora']
@@ -42,31 +40,22 @@ efficient_methods: []
 efficient_kwargs: {}
 efficient_unfreeze_model: False
 label_smoothing: 0.1
-
 # Evaluation settings
 lower_evaluation: True
 multiref_strategy: max
-
 bleu_max_ngrams: 4
 bleu_type: nltk
 smoothing_function: 0
 corpus_bleu: False
-
 rouge_max_ngrams: 2
 rouge_type: files2rouge
-
 meteor_type: pycocoevalcap
 corpus_meteor: True
-
-chrf_type: m - popovic
-
+chrf_type: m-popovic
 distinct_max_ngrams: 4
 inter_distinct: True
-
 unique_max_ngrams: 4
-
 self_bleu_max_ngrams: 4
-
 # Dataset Parameters
 tgt_lang: 'en'
 truncate: tail

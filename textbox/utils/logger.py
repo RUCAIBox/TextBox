@@ -45,7 +45,7 @@ class ColorFormatter(logging.Formatter):
         return self._formatters[record.levelno].format(record)
 
 
-def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, saved_dir = 'saved/'):
+def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, saved_dir='saved/'):
     """
     A logger that can show a message on standard output and write it into the
     file named `filename` simultaneously.
@@ -67,7 +67,7 @@ def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, s
     """
     saved_dir_name = os.path.dirname(saved_dir)
     ensure_dir(saved_dir_name)
-    saved_train_dir=os.path.join(saved_dir_name,filename)
+    saved_train_dir = os.path.join(saved_dir_name, filename)
     ensure_dir(saved_train_dir)
     log_filename = filename + '.log'
     log_filepath = os.path.join(saved_train_dir, log_filename)

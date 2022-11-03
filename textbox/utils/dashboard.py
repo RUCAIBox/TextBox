@@ -289,7 +289,7 @@ class SummaryTracker:
         project = f"{config['model']}-{config['dataset']}"
         name = config['filename'][len(project) + 1:]
         saved_dir = os.path.join(config['saved_dir'], config['filename'])
-        
+
         root = SummaryTracker(
             email=config['email'],
             is_local_main_process=config['_is_local_main_process'],

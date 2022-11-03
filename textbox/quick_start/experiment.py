@@ -118,7 +118,9 @@ class Experiment:
     def _on_experiment_end(self):
         if self.__base_config['max_save'] == 0:
             saved_filename = os.path.abspath(
-                os.path.join(self.__base_config['saved_dir'], self.__base_config['filename'],self.__base_config['filename']) + '.pth'
+                os.path.
+                join(self.__base_config['saved_dir'], self.__base_config['filename'], self.__base_config['filename']) +
+                '.pth'
             )
             saved_link = os.readlink(saved_filename) if os.path.exists(saved_filename) else ''
             from ..utils import safe_remove

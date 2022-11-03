@@ -5,8 +5,6 @@ seed: 2020
 state: INFO
 reproducibility: True
 data_path: 'dataset/'
-checkpoint_dir: 'saved/'
-generated_text_dir: 'generated/'
 
 # training settings
 epochs: 50

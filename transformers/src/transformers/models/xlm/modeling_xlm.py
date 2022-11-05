@@ -657,10 +657,6 @@ class XLMModel(XLMPreTrainedModel):
         if output_hidden_states:
             hidden_states = hidden_states + (tensor,)
 
-        # move back sequence length to dimension 0
-        # if self.is_decoder and not self.training:
-        #     cur_len = cur_len + 1
-
         if not return_dict:
             return tuple(v for v in [tensor, hidden_states, attentions] if v is not None)
 

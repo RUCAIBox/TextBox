@@ -427,11 +427,11 @@ class XLMModel(XLMPreTrainedModel):
         self.eos_index = config.eos_index
         self.pad_index = config.pad_index
         # self.dico = dico
-        self.id2lang = config.id2lang
-        self.lang2id = config.lang2id
+        self.id2lang = config.id2lang if hasattr(config, 'id2lang') else None
+        self.lang2id = config.lang2id if hasattr(config, 'lang2id') else None
         self.lang_id = config.lang_id
         # assert len(self.dico) == self.n_words
-        assert len(self.id2lang) == len(self.lang2id) == self.n_langs
+        # assert len(self.id2lang) == len(self.lang2id) == self.n_langs
 
         # model parameters
         self.dim = config.emb_dim  # 512 by default

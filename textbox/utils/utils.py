@@ -235,7 +235,7 @@ def get_tokenizer(config):
             tokenizer.pad_token = tokenizer.eos_token
 
         # (3): tokenizer needs to change replace eos token with sep token
-        if model_name in ['cpm', 'unilm']:
+        if model_name in ['cpm', 'unilm', 'xlm']:
             tokenizer.eos_token = tokenizer.sep_token
 
         # (4): tokenizer needs to modify `build_inputs_with_special_tokens()` and `num_special_tokens_to_add()`
@@ -248,7 +248,7 @@ def get_tokenizer(config):
             tokenizer.num_special_tokens_to_add = lambda: 2
 
         # (5): tokenizer needs to set src_lang, tgt_lang (used in translation task)
-        if model_name in ['m2m_100', 'mbart', 'marian', 'nllb']:
+        if model_name in ['m2m_100', 'mbart', 'marian', 'nllb', 'xlm']:
             assert config['src_lang'] and config['tgt_lang'], \
                 model_name + ' needs to specify source language and target language ' \
                              'with `--src_lang=xx` and `--tgt_lang=xx`'

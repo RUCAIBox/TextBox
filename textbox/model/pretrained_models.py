@@ -21,6 +21,7 @@ r"""
     prophetnet: ProphetNet: Predicting Future N-gram for Sequence-to-Sequence Pre-training
 """
 
+import copy
 import torch
 import torch.nn as nn
 import warnings
@@ -28,6 +29,7 @@ import inspect
 from .abstract_model import AbstractModel
 
 from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForSeq2SeqLM, EncoderDecoderModel
+from transformers.models.encoder_decoder.configuration_encoder_decoder import EncoderDecoderConfig
 from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
 from transformers.models.unilm.modeling_unilm import UnilmConfig, UnilmForSeq2Seq
 from ..utils.argument_list import efficient_kwargs_dict
@@ -175,6 +177,16 @@ class Pretrained_Models(AbstractModel):
         # used in generate() for casual models
         if self.is_casual_model:
             self.configuration.eos_token_id = self.tokenizer.eos_token_id
+
+        # set lang_id for xlm
+        if self.model_name == 'xlm':
+            encoder_config = copy.deepcopy(self.configuration)
+            decoder_config = copy.deepcopy(self.configuration)
+            encoder_config.lang_id = self.configuration.lang2id[self.config['src_lang']]
+            decoder_config.is_encoder = False
+            decoder_config.causal = True
+            decoder_config.lang_id = self.configuration.lang2id[self.config['tgt_lang']]
+            self.configuration = EncoderDecoderConfig.from_encoder_decoder_configs(encoder_config, decoder_config)
 
         # special settings for cpm
         if self.model_name == 'cpm':

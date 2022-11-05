@@ -235,7 +235,7 @@ def get_tokenizer(config):
             tokenizer.pad_token = tokenizer.eos_token
 
         # (3): tokenizer needs to change replace eos token with sep token
-        if model_name in ['cpm', 'unilm']:
+        if model_name in ['cpm', 'unilm', 'xlm']:
             tokenizer.eos_token = tokenizer.sep_token
 
         # (4): tokenizer needs to modify `build_inputs_with_special_tokens()` and `num_special_tokens_to_add()`

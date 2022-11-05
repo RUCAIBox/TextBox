@@ -564,7 +564,7 @@ class XLMModel(XLMPreTrainedModel):
         # if self.is_decoder and encoder_hidden_states is not None:
         if self.is_decoder and encoder_hidden_states is not None and encoder_attention_mask is None:
             encoder_attention_mask = torch.arange(lengths.max(), dtype=torch.long, device=lengths.device) < lengths[:, None]
-            en_attention_mask = encoder_attention_mask.repeat(seq_length, 1, 1).transpose(0, 1)
+            # en_attention_mask = encoder_attention_mask.repeat(seq_length, 1, 1).transpose(0, 1)
             # attention_mask = torch.cat((en_attention_mask, attn_mask), -1) # mask for cross attention
 
         # position_ids
@@ -586,14 +586,6 @@ class XLMModel(XLMPreTrainedModel):
         # Prepare head mask if needed
         head_mask = self.get_head_mask(head_mask, self.config.n_layers)
 
-        # if self.is_decoder and not self.training:
-        #     cur_len = 1
-        #     input_ids = input_ids[:, :cur_len]
-        #     position_ids = position_ids[:, :cur_len]
-        #     if langs is not None:
-        #         langs = langs[:, :cur_len]
-        #     attn_mask = attn_mask[:, :, :cur_len]
-        #     mask = mask[:, :cur_len]
         if self.is_decoder and not self.training:
             input_ids = input_ids[:, :seq_length]
             position_ids = position_ids[:, :seq_length]

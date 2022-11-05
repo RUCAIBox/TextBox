@@ -127,6 +127,9 @@ class Pretrained_Models(AbstractModel):
             self.prompt_length = self.model.config.prompt_length
             self.prompt_embedding = nn.Embedding(self.prompt_length, self.model.config.hidden_size)
 
+        if config['lightweight_tuning']:
+            self.model.set_lightweight_tuning()
+
         if config['efficient_methods'] and not config['efficient_unfreeze_model']:
             if hard_efficient_methods:
                 self.model.set_efficient_tuning()

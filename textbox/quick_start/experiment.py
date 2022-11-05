@@ -35,18 +35,18 @@ class Experiment:
         config_file_list: Optional[List[str]] = None,
         config_dict: Optional[Dict[str, Any]] = None,
     ):
-        self.__base_config = Config(model, dataset, config_file_list, config_dict)
+        self.config = Config(model, dataset, config_file_list, config_dict)
         self.__extended_config = None
 
         self.accelerator = Accelerator()
-        self.__base_config.update({'_is_local_main_process': self.accelerator.is_local_main_process})
-        self.logger = self.init_logger(self.__base_config)
-        SummaryTracker.basicConfig(self.get_config())
+        self.config.update({'_is_local_main_process': self.accelerator.is_local_main_process})
+        self.logger = self.init_logger(self.config)
+        self.summary_tracker = SummaryTracker.basicConfig(self.get_config())
         self.train_data, self.valid_data, self.test_data, self.tokenizer = \
             self._init_data(self.get_config(), self.accelerator)
 
     def get_config(self) -> Config:
-        config = copy(self.__base_config)
+        config = copy(self.config)
         if self.__extended_config is not None:
             config.update(self.__extended_config)
         return config
@@ -59,7 +59,7 @@ class Experiment:
             filename=config['filename'],
             log_level=config['state'],
             enabled=config['_is_local_main_process'],
-            logdir=config['logdir']
+            saved_dir=config['saved_dir']
         )
         logger = getLogger(__name__)
         logger.info(config)
@@ -97,8 +97,8 @@ class Experiment:
             raise ValueError('Cannot execute validation without training.')
 
         if self.do_train:
-            if self.__base_config['load_experiment'] is not None:
-                self.trainer.resume_checkpoint(resume_file=self.__base_config['load_experiment'])
+            if self.config['load_experiment'] is not None:
+                self.trainer.resume_checkpoint(resume_file=self.config['load_experiment'])
             train_data = self.train_data
             valid_data = self.valid_data if self.do_valid else None
 
@@ -106,19 +106,17 @@ class Experiment:
 
     def _do_test(self):
         if self.do_test:
-            with SummaryTracker.new_epoch('eval'):
-                self.test_result = self.trainer.evaluate(
-                    self.test_data, model_file=self.__base_config['load_experiment']
-                )
-                SummaryTracker.set_metrics_results(self.test_result)
+            with self.summary_tracker.new_epoch('eval'):
+                self.test_result = self.trainer.evaluate(self.test_data, model_file=self.config['load_experiment'])
+                self.summary_tracker.set_metrics_results(self.test_result)
                 self.logger.info(
-                    'Evaluation result:\n{}'.format(SummaryTracker.current_epoch().as_str(sep=",\n", indent=" "))
+                    'Evaluation result:\n{}'.format(self.summary_tracker._current_epoch.as_str(sep=",\n", indent=" "))
                 )
 
     def _on_experiment_end(self):
-        if self.__base_config['max_save'] == 0:
+        if self.config['max_save'] == 0:
             saved_filename = os.path.abspath(
-                os.path.join(self.__base_config['checkpoint_dir'], self.__base_config['filename']) + '.pth'
+                os.path.join(self.config['saved_dir'], self.config['filename'], self.config['filename']) + '.pth'
             )
             saved_link = os.readlink(saved_filename) if os.path.exists(saved_filename) else ''
             from ..utils import safe_remove
@@ -127,7 +125,7 @@ class Experiment:
         self.__extended_config = None
 
     def run(self, extended_config: Optional[dict] = None):
-        with SummaryTracker.new_experiment():
+        with self.summary_tracker.new_experiment():
             self._on_experiment_start(extended_config)
             self._do_train_and_valid()
             self._do_test()

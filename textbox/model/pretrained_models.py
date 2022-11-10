@@ -100,8 +100,7 @@ class Pretrained_Models(AbstractModel):
             self.model = CPTForConditionalGeneration.from_pretrained(model_path, config=self.configuration)
         elif self.model_name == "unilm":
             self.model = UnilmForSeq2Seq.from_pretrained(model_path, config=self.configuration)
-            mask_word_id, eos_word_ids, sos_word_id = tokenizer.convert_tokens_to_ids(
-                ["[MASK]", "[SEP]", "[S2S_SOS]"])
+            mask_word_id, eos_word_ids, sos_word_id = tokenizer.convert_tokens_to_ids(["[MASK]", "[SEP]", "[S2S_SOS]"])
             self.model.additional_init(mask_word_id, eos_word_ids, sos_word_id)
         elif self.is_casual_model:
             self.configuration.is_decoder = True

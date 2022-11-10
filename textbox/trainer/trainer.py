@@ -553,8 +553,8 @@ class Trainer(AbstractTrainer):
 
         if self.post_processing == 'paraphrase':
             for i, gen in enumerate(generate_corpus):
-                if gen.find('<sep>') >= 0:
-                    gen = gen.split('<sep>')[1].strip()
+                if gen.find('[SEP]') >= 0:
+                    gen = gen.split('[SEP]')[1].strip()
                 else:
                     last = max(gen.rfind('('), gen.rfind(')'))
                     last = gen.find(' ', last)

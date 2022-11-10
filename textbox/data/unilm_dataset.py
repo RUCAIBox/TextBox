@@ -4,6 +4,7 @@ import torch
 
 
 class UnilmCollate(AbstractCollate):
+
     def __init__(self, config, tokenizer, set, max_pred_num=20, masked_prob=0.2):
         super(UnilmCollate, self).__init__(config, tokenizer, set)
         self.mask_word_id, self.pad_id = tokenizer.convert_tokens_to_ids(["[MASK]", "[PAD]"])
@@ -49,7 +50,8 @@ class UnilmCollate(AbstractCollate):
                 input_mask = torch.zeros(self.max_len, self.max_len, dtype=torch.long)
                 input_mask[:, :src_len].fill_(1)
                 input_mask[second_st:second_end, second_st:second_end].copy_(
-                    self._tril_matrix[:second_end - second_st, :second_end - second_st])
+                    self._tril_matrix[:second_end - second_st, :second_end - second_st]
+                )
 
                 segment_id = [4] * src_len + [5] * tgt_len + [0] * n_pad
 
@@ -136,7 +138,7 @@ class UnilmCollate(AbstractCollate):
             source_mask = []
             segment_ids = []
             position_ids = []
-            source_text= []
+            source_text = []
             source_length = []
             target_text = []
 
@@ -161,7 +163,8 @@ class UnilmCollate(AbstractCollate):
                 input_mask = torch.zeros(self.max_len, self.max_len, dtype=torch.long)
                 input_mask[:, :src_len].fill_(1)
                 input_mask[second_st:second_end, second_st:second_end].copy_(
-                    self._tril_matrix[:second_end - second_st, :second_end - second_st])
+                    self._tril_matrix[:second_end - second_st, :second_end - second_st]
+                )
 
                 source_mask.append(input_mask.tolist())
                 segment_ids.append(segment_id)

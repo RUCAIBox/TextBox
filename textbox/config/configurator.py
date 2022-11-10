@@ -260,7 +260,7 @@ class Config(object):
         self.setdefault('do_valid', True)
         self.setdefault('do_test', True)
         self.setdefault('valid_strategy', 'epoch')
-        self.setdefault('valid_intervals', 1)
+        self.setdefault('valid_steps', 1)
         self.setdefault('disable_tqdm', False)
         self._simplify_parameter('optimizer')
         self._simplify_parameter('scheduler')

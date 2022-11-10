@@ -2,6 +2,7 @@ import collections
 import os
 from logging import getLogger
 from typing import Optional, Union, List, Dict
+import math
 
 import torch
 import torch.optim as optim
@@ -83,14 +84,14 @@ class Trainer(AbstractTrainer):
 
         # Training strategy
         self.quick_test = bool(config['quick_test'])
+        self.max_steps = config['max_steps']  # max training batch step
         self.start_epoch = 0
         r"""Start epoch index. That is, `epoch_idx` iterates through `range(self.start_epoch, self.epochs)`"""
-        self.epochs = config['epochs']
+        self.epochs = config['epochs'] if not self.max_steps else 1e10
         r"""End epoch index + 1, aka max iteration times. That is, `epoch_idx` iterates through 
         `range(self.start_epoch, self.epochs)`"""
-        self.max_steps = config['max_steps']  # max training batch step
 
-        self.valid_intervals = self.config['valid_intervals']
+        self.valid_steps = self.config['valid_steps']
         self.valid_strategy = self.config['valid_strategy']
         self._valid_count = 0
         self.train_loss_list: List[float] = list()
@@ -201,38 +202,43 @@ class Trainer(AbstractTrainer):
         """
         self.model.train()
         if not self.disable_tqdm:
+            train_data_len = math.ceil(len(train_data) / self.accumulation_steps)
             train_tqdm = tqdm(
-                train_data, desc=f"train {epoch_idx:4}", dynamic_ncols=True, postfix={'loss': None}, unit='step'
+                range(train_data_len),
+                desc=f"train {epoch_idx:4}",
+                dynamic_ncols=True,
+                postfix={'loss': None},
+                unit='step'
             )
-        else:
-            train_tqdm = train_data
 
         with self._summary_tracker.new_epoch('train'):
-            for step, data in enumerate(train_tqdm):
-                self._summary_tracker.new_step()
-                if self.timestamp.train_step == self.max_steps:
-                    self.stopped = True
-                    break
+            for step, data in enumerate(train_data):
+                if step % self.accumulation_steps == 0:
+                    self._summary_tracker.new_step()
+                    if self.timestamp.train_step == self.max_steps:
+                        self.stopped = True
+                        break
 
                 loss = self.model(data, epoch_idx=epoch_idx)
                 # loss = self.accelerator.gather(loss).mean().item()
                 self._summary_tracker.append_loss(loss.item())
                 self.accelerator.backward(loss / self.accumulation_steps)
 
-                if (step + 1) % self.accumulation_steps == 0 or (step + 1) == len(train_tqdm):
+                if (step + 1) % self.accumulation_steps == 0 or (step + 1) == len(train_data):
                     if self.grad_clip is not None:
                         self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
                     self.optimizer.step()
                     self.optimizer.zero_grad()
+                    if not self.disable_tqdm:
+                        train_tqdm.update(1)
+                        train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss())
+                    if valid_data:
+                        self.stopped |= self._valid(valid_data, 'step')
+                    if self.stopped:
+                        break
 
-                if not self.disable_tqdm:
-                    train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss())
-
-                if valid_data:
-                    self.stopped |= self._valid(valid_data, 'step')
-                if self.stopped:
-                    break
-
+            if not self.disable_tqdm:
+                train_tqdm.close()
             return self._summary_tracker.epoch_dict()
 
     @torch.no_grad()
@@ -254,11 +260,11 @@ class Trainer(AbstractTrainer):
             bool: Early stopping. Return true if `self.stopping_steps` is positive integer and `self._early_stopping()`
             is True.
         """
-        if (self.valid_intervals <= 0) or (valid_mode != self.valid_strategy):
+        if (self.valid_steps <= 0) or (valid_mode != self.valid_strategy):
             return False
 
         self._valid_count += 1
-        if self._valid_count % self.valid_intervals != 0:
+        if self._valid_count % self.valid_steps != 0:
             return False
         self.temp_mode = self._summary_tracker._current_mode
         self.temp_epoch = self._summary_tracker._current_epoch

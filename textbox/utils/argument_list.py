@@ -31,7 +31,7 @@ training_parameters = [
     'optimizer_kwargs',
     'scheduler',
     'scheduler_kwargs',  # optimizer
-    'valid_intervals',
+    'valid_steps',
     'valid_strategy',  # validation
     'max_save',  # checkpoint saving
     'stopping_steps',  # early stopping

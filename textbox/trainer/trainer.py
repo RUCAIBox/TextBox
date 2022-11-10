@@ -2,7 +2,7 @@ import collections
 import os
 from logging import getLogger
 from typing import Optional, Union, List, Dict
-import sys
+import math
 
 import torch
 import torch.optim as optim
@@ -87,7 +87,7 @@ class Trainer(AbstractTrainer):
         self.max_steps = config['max_steps']  # max training batch step
         self.start_epoch = 0
         r"""Start epoch index. That is, `epoch_idx` iterates through `range(self.start_epoch, self.epochs)`"""
-        self.epochs = config['epochs'] if not self.max_steps else sys.maxsize
+        self.epochs = config['epochs'] if not self.max_steps else int(1e10)
         r"""End epoch index + 1, aka max iteration times. That is, `epoch_idx` iterates through 
         `range(self.start_epoch, self.epochs)`"""
 
@@ -202,8 +202,7 @@ class Trainer(AbstractTrainer):
         """
         self.model.train()
         if not self.disable_tqdm:
-            batch_size = self.config['train_batch_size']
-            train_data_len = int((len(train_data) - 1) / self.accumulation_steps) + 1
+            train_data_len = math.ceil(len(train_data)  / self.accumulation_steps)
             train_tqdm = tqdm(
                 range(train_data_len),
                 desc=f"train {epoch_idx:4}",

@@ -134,6 +134,9 @@ class AbstractCollate:
         self.tokenizer = tokenizer
         self.set = set
         self.is_casual_model = bool(config["model_name"] in CLM_MODELS)
+        self.paired_text = bool(
+            set == "train" or (self.set == 'valid' and self.config['metrics_for_best_model'] == ['loss'])
+        )
 
     @classmethod
     def get_type(cls) -> str:

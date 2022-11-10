@@ -4,7 +4,12 @@ from ..data.unilm_dataset import UnilmCollate
 from textbox.data.abstract_dataset import AbstractDataset, AbstractCollate
 from logging import getLogger
 
-collate_options = {'disabled': AbstractCollate, 'denoising': DenoisingCollate, 'text_infilling': TextInfillingCollate, 'unilm': UnilmCollate}
+collate_options = {
+    'disabled': AbstractCollate,
+    'denoising': DenoisingCollate,
+    'text_infilling': TextInfillingCollate,
+    'unilm': UnilmCollate
+}
 
 
 def data_preparation(config, tokenizer):

@@ -22,7 +22,10 @@ class AbstractDataset(Dataset):
         self.target_text = load_data(target_filename, max_length=self.quick_test)
         self.source_length = self.config["src_len"]
         self.target_length = self.config["tgt_len"]
-        if set == "train":
+        self.paired_text = bool(
+            set == "train" or (self.set == 'valid' and self.config['metrics_for_best_model'] == ['loss'])
+        )
+        if self.paired_text:
             assert len(self.source_text) == len(self.target_text)
 
     def __len__(self):
@@ -34,10 +37,8 @@ class AbstractDataset(Dataset):
             "source_ids": self.source_ids[idx],
             "target_text": self.target_text[idx],
         }
-        if self.set == "train":
-            sample.update({
-                "target_ids": self.target_ids[idx],
-            })
+        if self.paired_text:
+            sample.update({"target_ids": self.target_ids[idx]})
         return sample
 
     def _init_process(self):
@@ -84,11 +85,9 @@ class AbstractDataset(Dataset):
         self.prefix_ids = self.tokenizer.encode(prefix, add_special_tokens=False)
         self.suffix_ids = self.tokenizer.encode(suffix, add_special_tokens=False)
 
-        self.source_max_length = (
-            self.source_length - self.tokenizer.num_special_tokens_to_add() - len(self.prefix_ids) -
-            len(self.suffix_ids)
-        )
-        self.target_max_length = (self.target_length - self.tokenizer.num_special_tokens_to_add())
+        self.source_max_length = self.source_length - self.tokenizer.num_special_tokens_to_add() \
+                                 - len(self.prefix_ids) - len(self.suffix_ids)
+        self.target_max_length = self.target_length - self.tokenizer.num_special_tokens_to_add()
 
         if self.config["model_name"] in ["bert2bert", "opt", "unilm", "xlm"]:
             self.target_max_length += 1
@@ -105,10 +104,10 @@ class AbstractDataset(Dataset):
             return_attention_mask=False,
         )["input_ids"]
         for ids in source_ids:
-            ids = (ids[:self.source_max_length] if self.config["truncate"] == "tail" else ids[-self.source_max_length:])
+            ids = ids[:self.source_max_length] if self.config["truncate"] == "tail" else ids[-self.source_max_length:]
             ids = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + ids + self.suffix_ids)
             self.source_ids.append(torch.tensor(ids, dtype=torch.long))
-        if self.set == "train":
+        if self.paired_text:
             self.target_ids = []
             with tokenizer.as_target_tokenizer():
                 target_ids = tokenizer(
@@ -118,10 +117,10 @@ class AbstractDataset(Dataset):
                     return_attention_mask=False,
                 )["input_ids"]
                 for ids in target_ids:
-                    ids = (
-                        ids[:self.target_max_length]
-                        if self.config["truncate"] == "tail" else ids[-self.target_max_length:]
-                    )
+                    if self.config["truncate"] == "tail":
+                        ids = ids[:self.target_max_length]
+                    else:
+                        ids = ids[-self.target_max_length:]
                     ids = self.tokenizer.build_inputs_with_special_tokens(ids)
                     if self.config["model_name"] in ["bert2bert", "opt", "unilm", "xlm"]:
                         ids = ids[1:]
@@ -147,14 +146,14 @@ class AbstractCollate:
         source_mask = []
         source_length = []
         target_text = []
-        source_padding_side = ("left" if self.set != "train" and self.is_casual_model else self.tokenizer.padding_side)
+        source_padding_side = ("left" if not self.paired_text and self.is_casual_model else self.tokenizer.padding_side)
 
         for sample in samples:
             source_text.append(sample["source_text"])
-            src_id = (
-                torch.cat([sample["source_ids"], sample["target_ids"]])
-                if self.set == "train" and self.is_casual_model else sample["source_ids"]
-            )
+            if self.paired_text and self.is_casual_model:
+                src_id = torch.cat([sample["source_ids"], sample["target_ids"]])
+            else:
+                src_id = sample["source_ids"]
             source_ids.append(src_id)
             source_mask.append(torch.ones(len(src_id), dtype=torch.long))
             source_length.append(len(src_id))
@@ -166,15 +165,15 @@ class AbstractCollate:
         batch["source_length"] = torch.tensor(source_length, dtype=torch.long)
         batch["target_text"] = target_text
 
-        if self.set == "train":
+        if self.paired_text:
             target_ids = []
             for sample in samples:
-                tgt_id = (
-                    torch.cat([
-                        torch.full([len(sample["source_ids"])], -100, dtype=torch.long),
-                        sample["target_ids"],
-                    ]) if self.is_casual_model else sample["target_ids"]
-                )
+                if self.is_casual_model:
+                    tgt_id = torch.cat([
+                        torch.full([len(sample["source_ids"])], -100, dtype=torch.long), sample["target_ids"]
+                    ])
+                else:
+                    tgt_id = sample["target_ids"]
                 target_ids.append(tgt_id)
             batch["target_ids"] = _pad_sequence(target_ids, -100, self.tokenizer.padding_side)
         return batch

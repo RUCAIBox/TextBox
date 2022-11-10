@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from ...utils import OptionalDependencyNotAvailable, _LazyModule, is_torch_available, is_vision_available
 
 
-_import_structure = {"configuration_levit": ["LEVIT_PRETRAINED_CONFIG_ARCHIVE_MAP", "LevitConfig"]}
+_import_structure = {"configuration_levit": ["LEVIT_PRETRAINED_CONFIG_ARCHIVE_MAP", "LevitConfig", "LevitOnnxConfig"]}
 
 try:
     if not is_vision_available():
@@ -29,6 +29,7 @@ except OptionalDependencyNotAvailable:
     pass
 else:
     _import_structure["feature_extraction_levit"] = ["LevitFeatureExtractor"]
+    _import_structure["image_processing_levit"] = ["LevitImageProcessor"]
 
 try:
     if not is_torch_available():
@@ -46,7 +47,7 @@ else:
 
 
 if TYPE_CHECKING:
-    from .configuration_levit import LEVIT_PRETRAINED_CONFIG_ARCHIVE_MAP, LevitConfig
+    from .configuration_levit import LEVIT_PRETRAINED_CONFIG_ARCHIVE_MAP, LevitConfig, LevitOnnxConfig
 
     try:
         if not is_vision_available():
@@ -55,6 +56,7 @@ if TYPE_CHECKING:
         pass
     else:
         from .feature_extraction_levit import LevitFeatureExtractor
+        from .image_processing_levit import LevitImageProcessor
 
     try:
         if not is_torch_available():

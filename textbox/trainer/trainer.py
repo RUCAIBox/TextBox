@@ -281,17 +281,21 @@ class Trainer(AbstractTrainer):
                     )
                 else:
                     valid_tqdm = valid_data
+
+                losses = 0
                 for data in valid_tqdm:
                     self._summary_tracker.new_step()
                     loss = self.model(data)
-                    losses = self.accelerator.gather(loss)
-                    loss = losses.mean().item()
+                    loss = self.accelerator.gather(loss)
+                    loss = loss.mean().item()
+                    losses += loss
                     self._summary_tracker.append_loss(loss)
                     if not self.disable_tqdm:
                         valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss())
+                valid_results = {'loss': losses / len(valid_tqdm)}
             else:
                 valid_results = self.evaluate(valid_data, is_valid=True)
-                self._summary_tracker.set_metrics_results(valid_results)
+            self._summary_tracker.set_metrics_results(valid_results)
             self.valid_result_dict[self.timestamp.valid_epoch] = self._summary_tracker._current_epoch
         self._summary_tracker._current_mode = self.temp_mode
         self._summary_tracker._current_epoch = self.temp_epoch
@@ -553,8 +557,8 @@ class Trainer(AbstractTrainer):
 
         if self.post_processing == 'paraphrase':
             for i, gen in enumerate(generate_corpus):
-                if gen.find('<sep>') >= 0:
-                    gen = gen.split('<sep>')[1].strip()
+                if gen.find('[SEP]') >= 0:
+                    gen = gen.split('[SEP]')[1].strip()
                 else:
                     last = max(gen.rfind('('), gen.rfind(')'))
                     last = gen.find(' ', last)

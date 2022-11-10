@@ -87,7 +87,7 @@ class Trainer(AbstractTrainer):
         self.max_steps = config['max_steps']  # max training batch step
         self.start_epoch = 0
         r"""Start epoch index. That is, `epoch_idx` iterates through `range(self.start_epoch, self.epochs)`"""
-        self.epochs = config['epochs'] if not self.max_steps else int(1e10)
+        self.epochs = config['epochs'] if not self.max_steps else 1e10
         r"""End epoch index + 1, aka max iteration times. That is, `epoch_idx` iterates through 
         `range(self.start_epoch, self.epochs)`"""
 
@@ -202,7 +202,7 @@ class Trainer(AbstractTrainer):
         """
         self.model.train()
         if not self.disable_tqdm:
-            train_data_len = math.ceil(len(train_data)  / self.accumulation_steps)
+            train_data_len = math.ceil(len(train_data) / self.accumulation_steps)
             train_tqdm = tqdm(
                 range(train_data_len),
                 desc=f"train {epoch_idx:4}",

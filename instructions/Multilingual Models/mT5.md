@@ -1,12 +1,11 @@
-You can fine-tune a NLLB model from HuggingFace through ``model=NLLB``, ``model_path=<hf-or-local-path>``, ``dataset=<dataset-name>``. Specifically, Marian is a Multilingual Model. You can set source language and target language with ``src_lang=<source language>``, ``tgt_lang=<target_language>``.
+## mT5
+
+You can fine-tune a mT5 model from HuggingFace through ``model=mT5``, ``model_path=<hf-or-local-path>``, ``dataset=<dataset-name>``.
 
 Example usage:
 
 ```bash
 python run_textbox.py \
-    --model=marian \
-    --model_path=Helsinki-NLP/opus-mt-ROMANCE-en \
-    --dataset=wmt16-ro-en \
-    --src_lang=ro \
-    --tgt_lang=en
+    --model=mt5 \
+    --model_path=google/mt5-small 
 ```

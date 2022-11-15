@@ -18,37 +18,27 @@ A knowledge-grounded human-human conversation dataset where the underlying knowl
 
 ### Data Sample
 
+Input
+
 ```
-{
-<conversation_id>: {
-	“article_url”: <article url>,
-	“config”: <config>, # one of A,B,C, D
-	“content”: [ # ordered list of conversation turns
-		{ 
-		“agent”: “agent_1”, # or “agent_2”,
-		“message” : <message text>,
-		“sentiment”: <text>,
-		“knowledge_source” : [“AS1”, “Personal Knowledge”,...],
-		“turn_rating”: “Poor”, # Note: changed from number to actual annotated text
-		},…
-	],
-	“conversation_rating”: {
-		“agent_1”: “Good”,
-		“agent_2”: “Excellent”
-		}
-},…
-}
+"Are you a football fan? [SEP] yes, I'm. a football fan. [SEP] Did you now that the university of Iowa's visiting football teams locker room is painted pink?"
+```
+
+Output
+
+```
+'Yes, I do. I think they want to intimidate the visiting teams.'
 ```
 
 ## LeaderBoard
 
-Descending order by METRIC.
+Descending order by Spearman Correlation.
 
-| Model | Metric | Repository | Generated Text |
-| ----- | ------ | ---------- | -------------- |
-|       |        |            |                |
-|       |        |            |                |
-|       |        |            |                |
+| Model                                                       | Spearman Correlation | Pearson Correlation | Repository                                                   | Generated Text |
+| ----------------------------------------------------------- | -------------------- | ------------------- | ------------------------------------------------------------ | -------------- |
+| [MDD-Eval](https://arxiv.org/pdf/2112.07194v2.pdf)          | $51.09$              | $45.75$             | [Offcial](https://github.com/e0397123/mdd-eval)              |                |
+| [Lin-Reg](https://aclanthology.org/2021.emnlp-main.618.pdf) | $48.77$              | $49.74$             | [Official](https://github.com/smartdataanalytics/proxy_indicators) |                |
+| [USR](https://arxiv.org/pdf/2005.00456v1.pdf)               | $32.45$              | $40.68$             | [Official](https://github.com/shikib/usr)                    |                |
 
 ## Citation
 

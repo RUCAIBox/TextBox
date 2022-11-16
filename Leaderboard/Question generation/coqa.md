@@ -18,31 +18,17 @@ CoQA is a large-scale dataset for building Conversational Question Answering sys
 
 ### Data Sample
 
+Input
+
 ```
-"source": "mctest",
-"id": "3dr23u6we5exclen4th8uq9rb42tel",
-"filename": "mc160.test.41",
-"story": "Once upon a time, in a barn near a farm house, there lived a little white kitten named Cotton. Cotton lived high up in a nice warm place above the barn where all of the farmer's horses slept. But Cotton wasn't alone in her little home above the barn, oh no. She shared her hay bed with her mommy and 5 other sisters. All of her sisters were cute and fluffy, like Cotton. But she was the only white one in the bunch. The rest of her sisters were all orange with beautiful white tiger stripes like Cotton's mommy. Being different made Cotton quite sad. She often wished she looked like the rest of her family. So one day, when Cotton found a can of the old farmer's orange paint, she used it to paint herself like them. When her mommy and sisters found her they started laughing. \n\n\"What are you doing, Cotton?!\" \n\n\"I only wanted to be more like you\". \n\nCotton's mommy rubbed her face on Cotton's and said \"Oh Cotton, but your fur is so pretty and special, like you. We would never want you to be any other way\". And with that, Cotton's mommy picked her up and dropped her into a big bucket of water. When Cotton came out she was herself again. Her sisters licked her face until Cotton's fur was all all dry. \n\n\"Don't ever do that again, Cotton!\" they all cried. \"Next time you might mess up that pretty white fur of yours and we wouldn't want that!\" \n\nThen Cotton thought, \"I change my mind. I like being special\".",
-"questions": [
-        {
-          "input_text": "What color was Cotton?",
-          "turn_id": 1
-        },
-        ...
-]
-"answers": [
-        {
-          "span_start": 59,
-          "span_end": 93,
-          "span_text": "a little white kitten named Cotton",
-          "input_text": "white",
-          "turn_id": 1
-        },
-        ...
-]
+'white [X_SEP] Once upon a time, in a barn near a farm house, there lived a little white kitten named Cotton. Cotton lived high up in a nice warm place above the barn where all of the farmer\'s horses slept. But Cotton wasn\'t alone in her little home above the barn, oh no. She shared her hay bed with her mommy and 5 other sisters. All of her sisters were cute and fluffy, like Cotton. But she was the only white one in the bunch. The rest of her sisters were all orange with beautiful white tiger stripes like Cotton\'s mommy. Being different made Cotton quite sad. She often wished she looked like the rest of her family. So one day, when Cotton found a can of the old farmer\'s orange paint, she used it to paint herself like them. When her mommy and sisters found her they started laughing.\n\n"What are you doing, Cotton?!"\n\n"I only wanted to be more like you".\n\nCotton\'s mommy rubbed her face on Cotton\'s and said "Oh Cotton, but your fur is so pretty and special, like you. We would never want you to be any other way". And with that, Cotton\'s mommy picked her up and dropped her into a big bucket of water. When Cotton came out she was herself again. Her sisters licked her face until Cotton\'s fur was all all dry.\n\n"Don\'t ever do that again, Cotton!" they all cried. "Next time you might mess up that pretty white fur of yours and we wouldn\'t want that!"\n\nThen Cotton thought, "I change my mind. I like being special".'
 ```
 
+Output
 
+```
+'What color was Cotton?'
+```
 
 ## LeaderBoard
 

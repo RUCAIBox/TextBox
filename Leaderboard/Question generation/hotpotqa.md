@@ -20,17 +20,16 @@ HotpotQA is a question answering dataset featuring natural, multi-hop questions,
 
 ### Data Sample
 
+Input
+
 ```
-[
-	{
-		"_id":"5a8b57f25542995d1e6f1371",
-		"answer":"yes",
-		"question":"Were Scott Derrickson and Ed Wood of the same nationality?",
-		"supporting_facts":[["Scott Derrickson",0],["Ed Wood",0]],
-		"context":[["Ed Wood (film)",["Ed Wood is a 1994 American biographical period comedy-drama film directed and produced by Tim Burton, and starring Johnny Depp as cult filmmaker Ed Wood."," The film concerns the period in Wood's life when he made his best-known films as well as his relationship with actor Bela Lugosi, played by Martin Landau."," Sarah Jessica Parker, Patricia Arquette, Jeffrey Jones, Lisa Marie, and Bill Murray are among the supporting cast."]], ... ]
-	}
-	...
-]
+'yes [X_SEP] Scott Derrickson ( born July 16 , 1966 ) is an American director , screenwriter and producer . Edward Davis Wood Jr. ( October 10 , 1924 – December 10 , 1978 ) was an American filmmaker , actor , writer , producer , and director .'
+```
+
+Output
+
+```
+'Were Scott Derrickson and Ed Wood of the same nationality ?'
 ```
 
 ## LeaderBoard

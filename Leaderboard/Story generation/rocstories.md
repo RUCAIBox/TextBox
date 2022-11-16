@@ -32,13 +32,11 @@ Jennifer has a big exam tomorrow. She got so stressed, she pulled an all-nighter
 
 ## LeaderBoard
 
-Descending order by METRIC.
+Descending order by BLEU-1.
 
-| Model | Metric | Repository | Generated Text |
-| ----- | ------ | ---------- | -------------- |
-|       |        |            |                |
-|       |        |            |                |
-|       |        |            |                |
+| Model                                                        | BLEU-1 | Perplexity | Repository                                                 | Generated Text |
+| ------------------------------------------------------------ | ------ | ---------- | ---------------------------------------------------------- | -------------- |
+| [Beam search + A*esque](https://arxiv.org/pdf/2112.08726v1.pdf) | $34.4$ | $2.14$     | [Official](https://github.com/GXimingLu/a_star_neurologic) |                |
 
 ## Citation
 

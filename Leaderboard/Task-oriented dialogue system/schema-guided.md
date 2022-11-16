@@ -18,63 +18,16 @@ The Schema-Guided Dialogue (SGD) dataset consists of over 20k annotated multi-do
 
 ### Data Sample
 
+Input
+
 ```
-{
-  "dialogue_id": "1_00000",
-  "services": [
-    "Restaurants_2"
-  ],
-  "turns": [
-    {
-      "frames": [
-        {
-          "actions": [
-            {
-              "act": "INFORM",
-              "canonical_values": [
-                "2019-03-08"
-              ],
-              "slot": "date",
-              "values": [
-                "the 8th"
-              ]
-            },
-            {
-              "act": "INFORM_INTENT",
-              "canonical_values": [
-                "ReserveRestaurant"
-              ],
-              "slot": "intent",
-              "values": [
-                "ReserveRestaurant"
-              ]
-            }
-          ],
-          "service": "Restaurants_2",
-          "slots": [
-            {
-              "exclusive_end": 52,
-              "slot": "date",
-              "start": 45
-            }
-          ],
-          "state": {
-            "active_intent": "ReserveRestaurant",
-            "requested_slots": [],
-            "slot_values": {
-              "date": [
-                "the 8th"
-              ]
-            }
-          }
-        }
-      ],
-      "speaker": "USER",
-      "utterance": "Hi, could you get me a restaurant booking on the 8th please?"
-    },
-    ...
-  ]
-}
+'Dialogue action [X_SEP] Find me a movie to see.'
+```
+
+Output
+
+```
+'[media] [request] genre'
 ```
 
 ## LeaderBoard

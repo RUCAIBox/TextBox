@@ -23,22 +23,22 @@ The Audio Visual Scene-Aware Dialog (AVSD) dataset, or DSTC7 Track 3, is a audio
 Input
 
 ```
-
+"a person stands in front of the bathroom mirror , eating a sandwich [SEP] the person leaves [SEP] a young man is in a bathroom with a mostly eaten sandwich , finishes it while looking in the mirror , then walks out [X_SEP] do they show the kid walking in or leaving ? [SEP] they only show him leaving [SEP] what ' s the first thing he does in the bathroom ? [SEP] he leans in the sink and eats a sandwich [SEP] is there any audio in the video ? [SEP] no there is not any . [SEP] did he walk in with the sandwich ?"
 ```
 
 Output
 
 ```
-
+'no he and the sandwich were already in the video .'
 ```
 
 ## LeaderBoard
 
 Descending order by CIDEr.
 
-| Model                                                        | CIDEr   | Repository                                        | Generated Text |
-| ------------------------------------------------------------ | ------- | ------------------------------------------------- | -------------- |
-| [simple](https://openaccess.thecvf.com/content_CVPR_2019/papers/Schwartz_A_Simple_Baseline_for_Audio-Visual_Scene-Aware_Dialog_CVPR_2019_paper.pdf) | $0.941$ | [Official](https://github.com/idansc/simple-avsd) |                |
+| Model                                                        | CIDEr  | Repository                                        | Generated Text |
+| ------------------------------------------------------------ | ------ | ------------------------------------------------- | -------------- |
+| [simple](https://openaccess.thecvf.com/content_CVPR_2019/papers/Schwartz_A_Simple_Baseline_for_Audio-Visual_Scene-Aware_Dialog_CVPR_2019_paper.pdf) | $94.1$ | [Official](https://github.com/idansc/simple-avsd) |                |
 
 ## Citation
 

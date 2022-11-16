@@ -12,7 +12,7 @@ Translation dataset based on the data from statmt.org.
 
 | Dataset               | Num Train    | Num Valid | Num Test | Source Length (Avg) | Target Length (Avg) |
 | --------------------- | ------------ | --------- | -------- | ------------------- | ------------------- |
-| WMT19 Chinese-English | $25,986,436$ | $3,981$   | -        |                     |                     |
+| WMT19 Chinese-English | $25,986,436$ | $3,981$   | $3,981$  | $39.6$              | $20.7$              |
 
 ### Data Sample
 
@@ -34,11 +34,9 @@ Chinese
 
 Descending order by BLEU.
 
-| Model | BLEU | Repository | Generated Text |
-| ----- | ---- | ---------- | -------------- |
-|       |      |            |                |
-|       |      |            |                |
-|       |      |            |                |
+| Model                                         | BLEU   | Repository                                                   | Generated Text |
+| --------------------------------------------- | ------ | ------------------------------------------------------------ | -------------- |
+| [mBART](https://arxiv.org/pdf/2001.08210.pdf) | $33.3$ | [Official](https://github.com/facebookresearch/fairseq/tree/main/examples/mbart) |                |
 
 #### Chinese $\rarr$ English
 

@@ -18,42 +18,18 @@ Collected by leveraging background knowledge from a larger, more highly represen
 
 ### Data Sample
 
-Full Dialog
+Input
 
 ```
-Domain: Ski
-User Task: You want to know if there are good ski hills an
-hour’s drive from your current location.
-Bot Task: Tell the user that there are no ski hills in their
-immediate location.
-Bot: Hello how may I help you?
-User: Is there any good ski hills an hour’s drive from my
-current location?
-Bot: I’m sorry to inform you that there are no ski hills in your
-immediate location
-User: Can you help me find the nearest?
-Bot: Absolutely! It looks like you’re about 3 hours away from
-Bear Mountain. That seems to be the closest.
-User: Hmm.. sounds good
-Bot: Alright! I can help you get your lift tickets now!When
-will you be going?
-User: Awesome! please get me a ticket for 10pax
-Bot: You’ve got it. Anything else I can help you with?
-User: None. Thanks again!
-Bot: No problem!
+'System response [X_SEP] can you help me with world knowledge?'
 ```
 
-Example Input
+Output
 
 ```
-dialog history = Hello how may I help you?; Is there any good ski hills an hour’s drive from my current location?; I’m sorry to inform you that there are no ski hills in your immediate location
+'Yes, I can help you with that! What would you like to know?'
 ```
 
-Example Output
-
-```
-user response = Can you help me find the nearest?
-```
 
 ## LeaderBoard
 

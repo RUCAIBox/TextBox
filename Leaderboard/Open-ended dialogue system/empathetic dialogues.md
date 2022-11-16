@@ -18,26 +18,30 @@ The Empathetic Dialogues dataset is a large-scale multi-turn empathetic dialogue
 
 ### Data Sample
 
+Input
+
 ```
-{
-    "context": "sentimental",
-    "conv_id": "hit:0_conv:1",
-    "prompt": "I remember going to the fireworks with my best friend. There was a lot of people_comma_ but it only felt like us in the world.",
-    "selfeval": "5|5|5_2|2|5",
-    "speaker_idx": 1,
-    "tags": "",
-    "utterance": "I remember going to see the fireworks with my best friend. It was the first time we ever spent time alone together. Although there was a lot of people_comma_ we felt like the only people in the world.",
-    "utterance_idx": 1
-}
+'Today,as i was leaving for work in the morning,i had a tire burst in the middle of a busy road. That scared the hell out of me! [X_SEP] Today,as i was leaving for work in the morning,i had a tire burst in the middle of a busy road. That scared the hell out of me!'
+```
+
+Output
+
+```
+'Are you fine now?'
 ```
 
 ## LeaderBoard
 
-Descending order by BLEU-4.
+Descending order by BLEU.
 
-| Model                                                        | BLEU-4 | F1     | ROUGE-L | Repository | Generated Text |
-| ------------------------------------------------------------ | ------ | ------ | ------- | ---------- | -------------- |
-| [Multi-Modal BlenderBot](https://arxiv.org/pdf/2010.01082v1.pdf) | $1.5$  | $19.2$ | $24.5$  |            |                |
+| Model                                                        | BLEU    | Repository                                                   | Generated Text |
+| ------------------------------------------------------------ | ------- | ------------------------------------------------------------ | -------------- |
+| [Emotion-aware transformer encoder](https://arxiv.org/pdf/2204.11320v1.pdf) | $22.5$  | [Official](https://github.com/r9729104234/Emotion-Aware-Transformer-Encoder-for-Empathetic-Dialogue-Generation) |                |
+| [CARO](https://arxiv.org/pdf/2204.11320v1.pdf)               | $17.9$  |                                                              |                |
+| [Transformer](https://arxiv.org/pdf/2204.11320v1.pdf)        | $17.3$  |                                                              |                |
+| [EmoDS Seq2Seq](https://arxiv.org/pdf/2204.11320v1.pdf)      | $17.3$  |                                                              |                |
+| [EmpTransfo](https://arxiv.org/pdf/2204.11320v1.pdf)         | $15.92$ |                                                              |                |
+| [Seq2Seq with Attention](https://arxiv.org/pdf/2204.11320v1.pdf) | $13.7$  |                                                              |                |
 
 ## Citation
 

@@ -18,74 +18,27 @@ The Schema-Guided Dialogue (SGD) dataset consists of over 20k annotated multi-do
 
 ### Data Sample
 
+Input
+
 ```
-{
-  "dialogue_id": "1_00000",
-  "services": [
-    "Restaurants_2"
-  ],
-  "turns": [
-    {
-      "frames": [
-        {
-          "actions": [
-            {
-              "act": "INFORM",
-              "canonical_values": [
-                "2019-03-08"
-              ],
-              "slot": "date",
-              "values": [
-                "the 8th"
-              ]
-            },
-            {
-              "act": "INFORM_INTENT",
-              "canonical_values": [
-                "ReserveRestaurant"
-              ],
-              "slot": "intent",
-              "values": [
-                "ReserveRestaurant"
-              ]
-            }
-          ],
-          "service": "Restaurants_2",
-          "slots": [
-            {
-              "exclusive_end": 52,
-              "slot": "date",
-              "start": 45
-            }
-          ],
-          "state": {
-            "active_intent": "ReserveRestaurant",
-            "requested_slots": [],
-            "slot_values": {
-              "date": [
-                "the 8th"
-              ]
-            }
-          }
-        }
-      ],
-      "speaker": "USER",
-      "utterance": "Hi, could you get me a restaurant booking on the 8th please?"
-    },
-    ...
-  ]
-}
+"song_name | Carnivore [SEP] playback_device | TV [X_SEP] Yes, I would. [X_SEP] I need a movie to watch. [SEP] I have 10 movies. What about Searching for Sugar Man rated 8.2. [SEP] What about a drama genre movie? [SEP] What about Dogman rated 7.3? [SEP] Sure, I'd like some songs searched for now. [SEP] I have 10 songs. What about Despacito by Karolina Protsenko from the album My Dream. [SEP] What type of music it that? [SEP] That's a pop song. [SEP] What year is it from? [SEP] The year is 2018. [SEP] What other items do you have? [SEP] What about your thoughts on Carnivore by Starset in the album Transmissions? [SEP] Yes, that is it. [SEP] Do you want to play this song?"
+```
+
+Output
+
+```
+['Please confirm the song Carnivore on tv.']
 ```
 
 ## LeaderBoard
 
-Descending order by METRIC.
+Descending order by METEOR.
 
-| Model | Metric | Repository | Generated Text |
-| ----- | ------ | ---------- | -------------- |
-|       |        |            |                |
-|       |        |            |                |
-|       |        |            |                |
+| Model                                          | METEOR | Repository | Generated Text |
+| ---------------------------------------------- | ------ | ---------- | -------------- |
+| [T5](https://arxiv.org/pdf/2102.01672v3.pdf)   | $33.1$ |            |                |
+| [BART](https://arxiv.org/pdf/2102.01672v3.pdf) | $8.9$  |            |                |
+|                                                |        |            |                |
 
 ## Citation
 

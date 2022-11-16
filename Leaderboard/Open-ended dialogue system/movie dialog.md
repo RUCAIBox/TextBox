@@ -18,20 +18,16 @@ Movie Dialog dataset (MDD) is designed to measure how well models can perform at
 
 ### Data Sample
 
+Input
+
 ```
-{
-	'dialogue_turns': {
-		'speaker': [0, 1, 0, 1, 0, 1], 
-		'utterance': [
-			"I really like Jaws, Bottle Rocket, Saving Private Ryan, Tommy Boy, The Muppet Movie, Face/Off, and Cool Hand Luke. I'm looking for a Documentary movie.", 
-			'Beyond the Mat', 
-			'Who is that directed by?', 
-			'Barry W. Blaustein', 
-			'I like Jon Fauer movies more. Do you know anything else?', 
-			'Cinematographer Style'
-		]
-	}
-}
+"Yup. That 's what the villains in X-Men argue . Just like the Japanese were a danger during ww2 so we put them in camps ."
+```
+
+Output
+
+```
+'Not the same . This is a movie about beings that fly and could decapitated you with their mind . They are not some minority that people are afraid because of their skin colour or some idiot shit . The mutants are really dangerous .'
 ```
 
 ## LeaderBoard

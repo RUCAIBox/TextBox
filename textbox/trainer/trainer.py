@@ -87,7 +87,7 @@ class Trainer(AbstractTrainer):
         self.max_steps = config['max_steps']  # max training batch step
         self.start_epoch = 0
         r"""Start epoch index. That is, `epoch_idx` iterates through `range(self.start_epoch, self.epochs)`"""
-        self.epochs = config['epochs'] if not self.max_steps else 1e10
+        self.epochs = config['epochs'] if not self.max_steps else 10000000000
         r"""End epoch index + 1, aka max iteration times. That is, `epoch_idx` iterates through 
         `range(self.start_epoch, self.epochs)`"""
 
@@ -106,8 +106,8 @@ class Trainer(AbstractTrainer):
 
         # Functionality
         self.saved_dir = os.path.join(config['saved_dir'], self.filename)
-        self.saved_model_filename = os.path.join(self.saved_dir, self.filename)
-        self.saved_text_filename: str = os.path.join(self.saved_dir, self.filename)
+        self.saved_model_filename = os.path.join(self.saved_dir, 'checkpoint-')
+        self.saved_text_filename: str = os.path.join(self.saved_dir, 'test_generation')
 
         self.max_save = config['max_save'] if config['max_save'] is not None else 2
         if self.max_save == 0:
@@ -369,9 +369,7 @@ class Trainer(AbstractTrainer):
 
     def save_generated_text(self, generated_corpus: List[str], is_valid: bool = False):
         r"""Store the generated text by our model into `self.saved_text_filename`."""
-        if is_valid:
-            self._summary_tracker.add_corpus('valid-' + str(self._valid_count), generated_corpus)
-        else:
+        if not is_valid:
             self._summary_tracker.add_corpus('test', generated_corpus)
             serialized_save(
                 generated_corpus,

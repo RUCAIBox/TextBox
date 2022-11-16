@@ -56,7 +56,7 @@ class Experiment:
 
         # logger initialization
         init_logger(
-            filename=config['filename'],
+            filename='project',
             log_level=config['state'],
             enabled=config['_is_local_main_process'],
             saved_dir=config['saved_dir']
@@ -116,7 +116,7 @@ class Experiment:
     def _on_experiment_end(self):
         if self.config['max_save'] == 0:
             saved_filename = os.path.abspath(
-                os.path.join(self.config['saved_dir'], self.config['filename'], self.config['filename']) + '.pth'
+                os.path.join(self.config['saved_dir'], self.config['filename'], 'checkpoint-best') + '.pth'
             )
             saved_link = os.readlink(saved_filename) if os.path.exists(saved_filename) else ''
             from ..utils import safe_remove

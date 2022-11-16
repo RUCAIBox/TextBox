@@ -120,14 +120,6 @@ class EpochTracker:
         self._accumulate_step += 1
         self._has_loss = True
 
-    @property
-    def avg_loss(self) -> float:
-        """Get the average of losses in each step."""
-        if self._accumulate_step == 0:
-            logger.warning("Trying to access epoch average loss before append any.")
-            return math.inf
-        return self._avg_loss
-
     def _update_metrics(self, results: Optional[dict] = None, **kwargs):
         """Update metrics result of this epoch."""
         for results_dict in (results, kwargs):
@@ -139,7 +131,7 @@ class EpochTracker:
         """Return the epoch result as a dict"""
         results = {}
         if self._has_loss:
-            results.update(loss=self.avg_loss)
+            results.update(loss=self._avg_loss)
         if self._has_score:
             results.update(score=self.calc_score())
             results.update(self._metrics_results)
@@ -153,7 +145,7 @@ class EpochTracker:
         """
 
         if 'loss' in self.metrics_for_best_model:
-            return -self.avg_loss
+            return -self._avg_loss
         if 'score' in self._metrics_results:
             return self._metrics_results['score']
 
@@ -433,6 +425,7 @@ class SummaryTracker:
 
     def flush_text(self):
         r"""Manually flush temporary text added."""
+        print(self._tables)
         wandb.log(self._tables)
         self._tables = dict()
 

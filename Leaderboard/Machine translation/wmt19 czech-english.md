@@ -12,7 +12,7 @@ Translation dataset based on the data from statmt.org.
 
 | Dataset             | Num Train    | Num Valid | Num Test | Source Length (Avg) | Target Length (Avg) |
 | ------------------- | ------------ | --------- | -------- | ------------------- | ------------------- |
-| WMT19 Czech-English | $20,246,548$ | $2,983$   |          |                     |                     |
+| WMT19 Czech-English | $20,246,548$ | $2,983$   | $2,983$  | $12.6$              | $13.8$              |
 
 ### Data Sample
 
@@ -36,9 +36,7 @@ Descending order by BLEU.
 
 | Model | BLEU | Repository | Generated Text |
 | ----- | ------ | ---------- | -------------- |
-|       |        |            |                |
-|       |        |            |                |
-|       |        |            |                |
+| [mBART](https://arxiv.org/pdf/2001.08210.pdf) | $18.0$ | [Official](https://github.com/facebookresearch/fairseq/tree/main/examples/mbart) |                |
 
 #### Czech $\rarr$ English
 

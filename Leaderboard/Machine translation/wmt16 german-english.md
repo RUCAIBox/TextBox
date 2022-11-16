@@ -14,7 +14,7 @@ Translate dataset based on the data from statmt.org.
 
 | Dataset              | Num Train   | Num Valid | Num Test | Source Length (Avg) | Target Length (Avg) |
 | -------------------- | ----------- | --------- | -------- | ------------------- | ------------------- |
-| WMT16 German-English | $4,548,885$ | $2,169$   | $2,999$  |                     |                     |
+| WMT16 German-English | $4,549,585$ | $2,169$   | $2,999$  | $21.3$              | $23.0$              |
 
 ### Data Sample
 
@@ -36,21 +36,27 @@ Wiederaufnahme der Sitzungsperiode
 
 Descending order by BLEU.
 
-| Model                                                        | BLEU    | Repository                                             | Generated Text |
-| ------------------------------------------------------------ | ------- | ------------------------------------------------------ | -------------- |
-| [MADL](https://openreview.net/pdf?id=HyGhN2A5tm)             | $40.68$ |                                                        |                |
-| [Attentional encoder-decoder + BPE](https://arxiv.org/pdf/1606.02891v2.pdf) | $34.2$  | [Official](https://github.com/rsennrich/wmt16-scripts) |                |
-| [Linguistic Input Features](https://arxiv.org/pdf/1606.02892v2.pdf) | $28.4$  | [Official](https://github.com/rsennrich/wmt16-scripts) |                |
+| Model                                                        | BLEU    | Repository                                                   | Generated Text |
+| ------------------------------------------------------------ | ------- | ------------------------------------------------------------ | -------------- |
+| [MADL](https://openreview.net/pdf?id=HyGhN2A5tm)             | $40.68$ |                                                              |                |
+| [Attentional encoder-decoder + BPE](https://arxiv.org/pdf/1606.02891v2.pdf) | $34.2$  | [Official](https://github.com/rsennrich/wmt16-scripts)       |                |
+| [mBART](https://arxiv.org/pdf/2001.08210.pdf)                | $30.5$  | [Official](https://github.com/pytorch/fairseq/tree/master/examples/mbart) |                |
+| [Linguistic Input Features](https://arxiv.org/pdf/1606.02892v2.pdf) | $28.4$  | [Official](https://github.com/rsennrich/wmt16-scripts)       |                |
+| [DeLighT](https://arxiv.org/pdf/2008.00623v2.pdf)            | $28.0$  | [Official](https://github.com/sacmehta/delight)              |                |
+| [FLAN 137B zero-shot](https://arxiv.org/pdf/2109.01652v5.pdf) | $27.0$  | [Official](https://github.com/google-research/flan)          |                |
 
 #### German $\rarr$ English
 
 Descending order by BLEU.
 
-| Model                                                        | BLEU   | Repository                                             | Generated Text |
-| ------------------------------------------------------------ | ------ | ------------------------------------------------------ | -------------- |
-| [FLAN 137B zero-shot](https://arxiv.org/pdf/2109.01652v5.pdf) | $39.8$ | [Official](https://github.com/google-research/flan)    |                |
-| [Attentional encoder-decoder + BPE](https://arxiv.org/pdf/1606.02891v2.pdf) | $38.6$ | [Official](https://github.com/rsennrich/wmt16-scripts) |                |
-| [Linguistic Input Features](https://arxiv.org/pdf/1606.02892v2.pdf) | $32.9$ | [Official](https://github.com/rsennrich/wmt16-scripts) |                |
+| Model                                                        | BLEU    | Repository                                                   | Generated Text |
+| ------------------------------------------------------------ | ------- | ------------------------------------------------------------ | -------------- |
+| [FLAN 137B zero-shot](https://arxiv.org/pdf/2109.01652v5.pdf) | $39.8$  | [Official](https://github.com/google-research/flan)          |                |
+| [Attentional encoder-decoder + BPE](https://arxiv.org/pdf/1606.02891v2.pdf) | $38.6$  | [Official](https://github.com/rsennrich/wmt16-scripts)       |                |
+| [Linguistic Input Features](https://arxiv.org/pdf/1606.02892v2.pdf) | $32.9$  | [Official](https://github.com/rsennrich/wmt16-scripts)       |                |
+| [SMT + iterative backtranslation](https://arxiv.org/pdf/1809.01272v1.pdf) | $23.05$ | [Official](https://github.com/artetxem/monoses)              |                |
+| [Unsupervised NMT + weight-sharing](https://arxiv.org/pdf/1804.09057v1.pdf) | $14.62$ | [Official](https://github.com/ZhenYangIACAS/unsupervised-NMT) |                |
+| [Unsupervised S2S with attention](https://arxiv.org/pdf/1711.00043v2.pdf) | $13.33$ |                                                              |                |
 
 ## Citation
 

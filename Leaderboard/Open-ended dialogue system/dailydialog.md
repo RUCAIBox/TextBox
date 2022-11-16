@@ -28,11 +28,14 @@ DailyDialog is a high-quality multi-turn open-domain English dialog dataset. It 
 
 ## LeaderBoard
 
-Descending order by BLEU-4.
+Descending order by BLEU-2.
 
-| Model                                                   | BLEU-1  | BLEU-2 | BLEU-3 | BLEU-4 | Repository                                  | Generated Text |
-| ------------------------------------------------------- | ------- | ------ | ------ | ------ | ------------------------------------------- | -------------- |
-| [AEM+Attention](https://arxiv.org/pdf/1808.08795v1.pdf) | $14.17$ | $5.69$ | $3.78$ | $2.84$ | [Official](https://github.com/lancopku/AMM) |                |
+| Model                                                      | BLEU-1  | BLEU-2 | BLEU-3 | BLEU-4 | Repository                                           | Generated Text |
+| ---------------------------------------------------------- | ------- | ------ | ------ | ------ | ---------------------------------------------------- | -------------- |
+| [PLATO](https://arxiv.org/pdf/1910.07931v3.pdf)            | $39.7$  | $31.1$ | -      | -      | [Official](https://github.com/PaddlePaddle/Research) |                |
+| [Seq2Seq](https://arxiv.org/pdf/1910.07931v3.pdf)          | $33.6$  | $26.8$ | -      | -      |                                                      |                |
+| [iVAE$_{\rm{MI}}$](https://arxiv.org/pdf/1910.07931v3.pdf) | $30.9$  | $24.9$ | -      | -      |                                                      |                |
+| [AEM+Attention](https://arxiv.org/pdf/1808.08795v1.pdf)    | $14.17$ | $5.69$ | $3.78$ | $2.84$ | [Official](https://github.com/lancopku/AMM)          |                |
 
 ## Citation
 

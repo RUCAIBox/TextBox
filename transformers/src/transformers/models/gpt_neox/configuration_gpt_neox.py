@@ -66,22 +66,19 @@ class GPTNeoXConfig(PretrainedConfig):
         use_cache (`bool`, *optional*, defaults to `True`):
             Whether or not the model should return the last key/values attentions (not used by all models). Only
             relevant if `config.is_decoder=True`.
-        use_parallel_residual (`bool`, *optional*, defaults to `True`):
-            Whether to use a "parallel" formulation in each Transformer layer, which can provide a slight training
-            speedup at large scales (e.g. 20B).
         Example:
 
     ```python
-    >>> from transformers import GPTNeoXConfig, GPTNeoXModel
+    >>> from transformers import GPTNeoXModel, GPTNeoXConfig
 
     >>> # Initializing a GPTNeoX gpt-neox-20b style configuration
     >>> configuration = GPTNeoXConfig()
 
-    >>> # Initializing a model (with random weights) from the gpt-neox-20b style configuration
-    >>> model = GPTNeoXModel(configuration)  # doctest: +SKIP
+    >>> # Initializing a model from the gpt-neox-20b style configuration
+    >>> model = GPTNeoXModel(configuration)
 
     >>> # Accessing the model configuration
-    >>> configuration = model.config  # doctest: +SKIP
+    >>> configuration = model.config
     ```"""
     model_type = "gpt_neox"
 
@@ -102,7 +99,6 @@ class GPTNeoXConfig(PretrainedConfig):
         bos_token_id=0,
         eos_token_id=2,
         tie_word_embeddings=False,
-        use_parallel_residual=True,
         **kwargs
     ):
         super().__init__(bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
@@ -119,4 +115,3 @@ class GPTNeoXConfig(PretrainedConfig):
         self.layer_norm_eps = layer_norm_eps
         self.use_cache = use_cache
         self.tie_word_embeddings = tie_word_embeddings
-        self.use_parallel_residual = use_parallel_residual

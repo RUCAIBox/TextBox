@@ -63,7 +63,6 @@ else:
         "CamembertForSequenceClassification",
         "CamembertForTokenClassification",
         "CamembertModel",
-        "CamembertPreTrainedModel",
     ]
 
 try:
@@ -81,7 +80,6 @@ else:
         "TFCamembertForSequenceClassification",
         "TFCamembertForTokenClassification",
         "TFCamembertModel",
-        "TFCamembertPreTrainedModel",
     ]
 
 
@@ -119,7 +117,6 @@ if TYPE_CHECKING:
             CamembertForSequenceClassification,
             CamembertForTokenClassification,
             CamembertModel,
-            CamembertPreTrainedModel,
         )
 
     try:
@@ -137,7 +134,6 @@ if TYPE_CHECKING:
             TFCamembertForSequenceClassification,
             TFCamembertForTokenClassification,
             TFCamembertModel,
-            TFCamembertPreTrainedModel,
         )
 
 else:

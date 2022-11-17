@@ -42,9 +42,8 @@ class DetrConfig(PretrainedConfig):
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
 
+
     Args:
-        num_channels (`int`, *optional*, defaults to 3):
-            The number of input channels.
         num_queries (`int`, *optional*, defaults to 100):
             Number of object queries, i.e. detection slots. This is the maximal number of objects [`DetrModel`] can
             detect in a single image. For COCO, we recommend 100 queries.
@@ -75,10 +74,10 @@ class DetrConfig(PretrainedConfig):
             The standard deviation of the truncated_normal_initializer for initializing all weight matrices.
         init_xavier_std (`float`, *optional*, defaults to 1):
             The scaling factor used for the Xavier initialization gain in the HM Attention map module.
-        encoder_layerdrop (`float`, *optional*, defaults to 0.0):
+        encoder_layerdrop: (`float`, *optional*, defaults to 0.0):
             The LayerDrop probability for the encoder. See the [LayerDrop paper](see https://arxiv.org/abs/1909.11556)
             for more details.
-        decoder_layerdrop (`float`, *optional*, defaults to 0.0):
+        decoder_layerdrop: (`float`, *optional*, defaults to 0.0):
             The LayerDrop probability for the decoder. See the [LayerDrop paper](see https://arxiv.org/abs/1909.11556)
             for more details.
         auxiliary_loss (`bool`, *optional*, defaults to `False`):
@@ -113,12 +112,12 @@ class DetrConfig(PretrainedConfig):
     Examples:
 
     ```python
-    >>> from transformers import DetrConfig, DetrModel
+    >>> from transformers import DetrModel, DetrConfig
 
     >>> # Initializing a DETR facebook/detr-resnet-50 style configuration
     >>> configuration = DetrConfig()
 
-    >>> # Initializing a model (with random weights) from the facebook/detr-resnet-50 style configuration
+    >>> # Initializing a model from the facebook/detr-resnet-50 style configuration
     >>> model = DetrModel(configuration)
 
     >>> # Accessing the model configuration
@@ -133,7 +132,6 @@ class DetrConfig(PretrainedConfig):
 
     def __init__(
         self,
-        num_channels=3,
         num_queries=100,
         max_position_embeddings=1024,
         encoder_layers=6,
@@ -169,7 +167,6 @@ class DetrConfig(PretrainedConfig):
         eos_coefficient=0.1,
         **kwargs
     ):
-        self.num_channels = num_channels
         self.num_queries = num_queries
         self.max_position_embeddings = max_position_embeddings
         self.d_model = d_model
@@ -223,8 +220,8 @@ class DetrOnnxConfig(OnnxConfig):
     def inputs(self) -> Mapping[str, Mapping[int, str]]:
         return OrderedDict(
             [
-                ("pixel_values", {0: "batch", 1: "num_channels", 2: "height", 3: "width"}),
-                ("pixel_mask", {0: "batch"}),
+                ("pixel_values", {0: "batch", 1: "sequence"}),
+                ("pixel_mask", {0: "batch", 1: "sequence"}),
             ]
         )
 

@@ -31,6 +31,7 @@ from typing import Any, Dict, Iterator, List, Optional, Union
 import numpy as np
 import torch
 import torch.distributed as dist
+from packaging import version
 from torch import nn
 from torch.utils.data import Dataset, IterableDataset, RandomSampler, Sampler
 from torch.utils.data.distributed import DistributedSampler
@@ -104,7 +105,7 @@ def numpy_pad_and_concatenate(array1, array2, padding_index=-100):
 def nested_concat(tensors, new_tensors, padding_index=-100):
     """
     Concat the `new_tensors` to `tensors` on the first dim and pad them on the second if needed. Works for tensors or
-    nested list/tuples/dict of tensors.
+    nested list/tuples of tensors.
     """
     assert type(tensors) == type(
         new_tensors
@@ -113,10 +114,6 @@ def nested_concat(tensors, new_tensors, padding_index=-100):
         return type(tensors)(nested_concat(t, n, padding_index=padding_index) for t, n in zip(tensors, new_tensors))
     elif isinstance(tensors, torch.Tensor):
         return torch_pad_and_concatenate(tensors, new_tensors, padding_index=padding_index)
-    elif isinstance(tensors, Mapping):
-        return type(tensors)(
-            {k: nested_concat(t, new_tensors[k], padding_index=padding_index) for k, t in tensors.items()}
-        )
     elif isinstance(tensors, np.ndarray):
         return numpy_pad_and_concatenate(tensors, new_tensors, padding_index=padding_index)
     else:
@@ -144,12 +141,9 @@ def find_batch_size(tensors):
 
 
 def nested_numpify(tensors):
-    "Numpify `tensors` (even if it's a nested list/tuple/dict of tensors)."
+    "Numpify `tensors` (even if it's a nested list/tuple of tensors)."
     if isinstance(tensors, (list, tuple)):
         return type(tensors)(nested_numpify(t) for t in tensors)
-    if isinstance(tensors, Mapping):
-        return type(tensors)({k: nested_numpify(t) for k, t in tensors.items()})
-
     t = tensors.cpu()
     if t.dtype == torch.bfloat16:
         # As of Numpy 1.21.4, NumPy does not support bfloat16 (see
@@ -160,11 +154,9 @@ def nested_numpify(tensors):
 
 
 def nested_detach(tensors):
-    "Detach `tensors` (even if it's a nested list/tuple/dict of tensors)."
+    "Detach `tensors` (even if it's a nested list/tuple of tensors)."
     if isinstance(tensors, (list, tuple)):
         return type(tensors)(nested_detach(t) for t in tensors)
-    elif isinstance(tensors, Mapping):
-        return type(tensors)({k: nested_detach(t) for k, t in tensors.items()})
     return tensors.detach()
 
 
@@ -174,11 +166,6 @@ def nested_xla_mesh_reduce(tensors, name):
 
         if isinstance(tensors, (list, tuple)):
             return type(tensors)(nested_xla_mesh_reduce(t, f"{name}_{i}") for i, t in enumerate(tensors))
-        if isinstance(tensors, Mapping):
-            return type(tensors)(
-                {k: nested_xla_mesh_reduce(t, f"{name}_{i}") for i, (k, t) in enumerate(tensors.items())}
-            )
-
         tensors = atleast_1d(tensors)
         return xm.mesh_reduce(name, tensors, torch.cat)
     else:
@@ -349,12 +336,9 @@ def expand_like(arrays, new_seq_length, padding_index=-100):
 
 
 def nested_truncate(tensors, limit):
-    "Truncate `tensors` at `limit` (even if it's a nested list/tuple/dict of tensors)."
+    "Truncate `tensors` at `limit` (even if it's a nested list/tuple of tensors)."
     if isinstance(tensors, (list, tuple)):
         return type(tensors)(nested_truncate(t, limit) for t in tensors)
-    if isinstance(tensors, Mapping):
-        return type(tensors)({k: nested_truncate(t, limit) for k, t in tensors.items()})
-
     return tensors[:limit]
 
 
@@ -393,6 +377,7 @@ class DistributedTensorGatherer:
     For some reason, that's not going to roll their boat. This class is there to solve that problem.
 
     Args:
+
         world_size (`int`):
             The number of processes used in the distributed training.
         num_samples (`int`):
@@ -847,9 +832,12 @@ def _get_learning_rate(self):
             else:
                 raise
     else:
-        last_lr = self.lr_scheduler.get_last_lr()[0]
-        if torch.is_tensor(last_lr):
-            last_lr = last_lr.item()
+        last_lr = (
+            # backward compatibility for pytorch schedulers
+            self.lr_scheduler.get_last_lr()[0]
+            if version.parse(torch.__version__) >= version.parse("1.4")
+            else self.lr_scheduler.get_lr()[0]
+        )
     return last_lr
 
 
@@ -1043,26 +1031,6 @@ def get_parameter_names(model, forbidden_layer_types):
     # Add model specific parameters (defined with nn.Parameter) since they are not in any child.
     result += list(model._parameters.keys())
     return result
-
-
-def get_module_class_from_name(module, name):
-    """
-    Gets a class from a module by its name.
-
-    Args:
-        module (`torch.nn.Module`): The module to get the class from.
-        name (`str`): The name of the class.
-    """
-    modules_children = list(module.children())
-    if module.__class__.__name__ == name:
-        return module.__class__
-    elif len(modules_children) == 0:
-        return
-    else:
-        for child_module in modules_children:
-            module_class = get_module_class_from_name(child_module, name)
-            if module_class is not None:
-                return module_class
 
 
 if is_sagemaker_mp_enabled():

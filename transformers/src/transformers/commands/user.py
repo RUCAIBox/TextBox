@@ -22,6 +22,9 @@ from requests.exceptions import HTTPError
 from . import BaseTransformersCLICommand
 
 
+UPLOAD_MAX_FILES = 15
+
+
 class UserCommands(BaseTransformersCLICommand):
     @staticmethod
     def register_subcommand(parser: ArgumentParser):
@@ -102,7 +105,7 @@ class LoginCommand(BaseUserCommand):
     def run(self):
         print(
             ANSI.red(
-                "ERROR! `huggingface-cli login` uses an outdated login mechanism "
+                "ERROR! `transformers-cli login` uses an outdated login mechanism "
                 "that is not compatible with the Hugging Face Hub backend anymore. "
                 "Please use `huggingface-cli login instead."
             )

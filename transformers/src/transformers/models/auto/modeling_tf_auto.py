@@ -39,7 +39,6 @@ TF_MODEL_MAPPING_NAMES = OrderedDict(
         ("convbert", "TFConvBertModel"),
         ("convnext", "TFConvNextModel"),
         ("ctrl", "TFCTRLModel"),
-        ("cvt", "TFCvtModel"),
         ("data2vec-vision", "TFData2VecVisionModel"),
         ("deberta", "TFDebertaModel"),
         ("deberta-v2", "TFDebertaV2Model"),
@@ -47,22 +46,18 @@ TF_MODEL_MAPPING_NAMES = OrderedDict(
         ("distilbert", "TFDistilBertModel"),
         ("dpr", "TFDPRQuestionEncoder"),
         ("electra", "TFElectraModel"),
-        ("esm", "TFEsmModel"),
         ("flaubert", "TFFlaubertModel"),
         ("funnel", ("TFFunnelModel", "TFFunnelBaseModel")),
         ("gpt2", "TFGPT2Model"),
         ("gptj", "TFGPTJModel"),
-        ("groupvit", "TFGroupViTModel"),
         ("hubert", "TFHubertModel"),
         ("layoutlm", "TFLayoutLMModel"),
-        ("layoutlmv3", "TFLayoutLMv3Model"),
         ("led", "TFLEDModel"),
         ("longformer", "TFLongformerModel"),
         ("lxmert", "TFLxmertModel"),
         ("marian", "TFMarianModel"),
         ("mbart", "TFMBartModel"),
         ("mobilebert", "TFMobileBertModel"),
-        ("mobilevit", "TFMobileViTModel"),
         ("mpnet", "TFMPNetModel"),
         ("mt5", "TFMT5Model"),
         ("openai-gpt", "TFOpenAIGPTModel"),
@@ -73,7 +68,6 @@ TF_MODEL_MAPPING_NAMES = OrderedDict(
         ("resnet", "TFResNetModel"),
         ("roberta", "TFRobertaModel"),
         ("roformer", "TFRoFormerModel"),
-        ("segformer", "TFSegformerModel"),
         ("speech_to_text", "TFSpeech2TextModel"),
         ("swin", "TFSwinModel"),
         ("t5", "TFT5Model"),
@@ -82,8 +76,6 @@ TF_MODEL_MAPPING_NAMES = OrderedDict(
         ("vit", "TFViTModel"),
         ("vit_mae", "TFViTMAEModel"),
         ("wav2vec2", "TFWav2Vec2Model"),
-        ("whisper", "TFWhisperModel"),
-        ("xglm", "TFXGLMModel"),
         ("xlm", "TFXLMModel"),
         ("xlm-roberta", "TFXLMRobertaModel"),
         ("xlnet", "TFXLNetModel"),
@@ -130,7 +122,6 @@ TF_MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("ctrl", "TFCTRLLMHeadModel"),
         ("distilbert", "TFDistilBertForMaskedLM"),
         ("electra", "TFElectraForMaskedLM"),
-        ("esm", "TFEsmForMaskedLM"),
         ("flaubert", "TFFlaubertWithLMHeadModel"),
         ("funnel", "TFFunnelForMaskedLM"),
         ("gpt2", "TFGPT2LMHeadModel"),
@@ -149,7 +140,6 @@ TF_MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("t5", "TFT5ForConditionalGeneration"),
         ("tapas", "TFTapasForMaskedLM"),
         ("transfo-xl", "TFTransfoXLLMHeadModel"),
-        ("whisper", "TFWhisperForConditionalGeneration"),
         ("xlm", "TFXLMWithLMHeadModel"),
         ("xlm-roberta", "TFXLMRobertaForMaskedLM"),
         ("xlnet", "TFXLNetLMHeadModel"),
@@ -170,7 +160,6 @@ TF_MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("roberta", "TFRobertaForCausalLM"),
         ("roformer", "TFRoFormerForCausalLM"),
         ("transfo-xl", "TFTransfoXLLMHeadModel"),
-        ("xglm", "TFXGLMForCausalLM"),
         ("xlm", "TFXLMWithLMHeadModel"),
         ("xlnet", "TFXLNetLMHeadModel"),
     ]
@@ -187,13 +176,10 @@ TF_MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
     [
         # Model for Image-classsification
         ("convnext", "TFConvNextForImageClassification"),
-        ("cvt", "TFCvtForImageClassification"),
         ("data2vec-vision", "TFData2VecVisionForImageClassification"),
         ("deit", ("TFDeiTForImageClassification", "TFDeiTForImageClassificationWithTeacher")),
-        ("mobilevit", "TFMobileViTForImageClassification"),
         ("regnet", "TFRegNetForImageClassification"),
         ("resnet", "TFResNetForImageClassification"),
-        ("segformer", "TFSegformerForImageClassification"),
         ("swin", "TFSwinForImageClassification"),
         ("vit", "TFViTForImageClassification"),
     ]
@@ -203,8 +189,6 @@ TF_MODEL_FOR_SEMANTIC_SEGMENTATION_MAPPING_NAMES = OrderedDict(
     [
         # Model for Semantic Segmentation mapping
         ("data2vec-vision", "TFData2VecVisionForSemanticSegmentation"),
-        ("mobilevit", "TFMobileViTForSemanticSegmentation"),
-        ("segformer", "TFSegformerForSemanticSegmentation"),
     ]
 )
 
@@ -225,7 +209,6 @@ TF_MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
         ("deberta-v2", "TFDebertaV2ForMaskedLM"),
         ("distilbert", "TFDistilBertForMaskedLM"),
         ("electra", "TFElectraForMaskedLM"),
-        ("esm", "TFEsmForMaskedLM"),
         ("flaubert", "TFFlaubertWithLMHeadModel"),
         ("funnel", "TFFunnelForMaskedLM"),
         ("layoutlm", "TFLayoutLMForMaskedLM"),
@@ -260,7 +243,6 @@ TF_MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
 TF_MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING_NAMES = OrderedDict(
     [
         ("speech_to_text", "TFSpeech2TextForConditionalGeneration"),
-        ("whisper", "TFWhisperForConditionalGeneration"),
     ]
 )
 
@@ -276,13 +258,11 @@ TF_MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("deberta-v2", "TFDebertaV2ForSequenceClassification"),
         ("distilbert", "TFDistilBertForSequenceClassification"),
         ("electra", "TFElectraForSequenceClassification"),
-        ("esm", "TFEsmForSequenceClassification"),
         ("flaubert", "TFFlaubertForSequenceClassification"),
         ("funnel", "TFFunnelForSequenceClassification"),
         ("gpt2", "TFGPT2ForSequenceClassification"),
         ("gptj", "TFGPTJForSequenceClassification"),
         ("layoutlm", "TFLayoutLMForSequenceClassification"),
-        ("layoutlmv3", "TFLayoutLMv3ForSequenceClassification"),
         ("longformer", "TFLongformerForSequenceClassification"),
         ("mobilebert", "TFMobileBertForSequenceClassification"),
         ("mpnet", "TFMPNetForSequenceClassification"),
@@ -312,7 +292,6 @@ TF_MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES = OrderedDict(
         ("flaubert", "TFFlaubertForQuestionAnsweringSimple"),
         ("funnel", "TFFunnelForQuestionAnswering"),
         ("gptj", "TFGPTJForQuestionAnswering"),
-        ("layoutlmv3", "TFLayoutLMv3ForQuestionAnswering"),
         ("longformer", "TFLongformerForQuestionAnswering"),
         ("mobilebert", "TFMobileBertForQuestionAnswering"),
         ("mpnet", "TFMPNetForQuestionAnswering"),
@@ -325,19 +304,13 @@ TF_MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES = OrderedDict(
     ]
 )
 
-TF_MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING_NAMES = OrderedDict(
-    [
-        ("layoutlm", "TFLayoutLMForQuestionAnswering"),
-    ]
-)
-
-
 TF_MODEL_FOR_TABLE_QUESTION_ANSWERING_MAPPING_NAMES = OrderedDict(
     [
         # Model for Table Question Answering mapping
         ("tapas", "TFTapasForQuestionAnswering"),
     ]
 )
+
 
 TF_MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
     [
@@ -350,11 +323,9 @@ TF_MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("deberta-v2", "TFDebertaV2ForTokenClassification"),
         ("distilbert", "TFDistilBertForTokenClassification"),
         ("electra", "TFElectraForTokenClassification"),
-        ("esm", "TFEsmForTokenClassification"),
         ("flaubert", "TFFlaubertForTokenClassification"),
         ("funnel", "TFFunnelForTokenClassification"),
         ("layoutlm", "TFLayoutLMForTokenClassification"),
-        ("layoutlmv3", "TFLayoutLMv3ForTokenClassification"),
         ("longformer", "TFLongformerForTokenClassification"),
         ("mobilebert", "TFMobileBertForTokenClassification"),
         ("mpnet", "TFMPNetForTokenClassification"),
@@ -397,6 +368,7 @@ TF_MODEL_FOR_NEXT_SENTENCE_PREDICTION_MAPPING_NAMES = OrderedDict(
     ]
 )
 
+
 TF_MODEL_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, TF_MODEL_MAPPING_NAMES)
 TF_MODEL_FOR_PRETRAINING_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, TF_MODEL_FOR_PRETRAINING_MAPPING_NAMES)
 TF_MODEL_WITH_LM_HEAD_MAPPING = _LazyAutoMapping(CONFIG_MAPPING_NAMES, TF_MODEL_WITH_LM_HEAD_MAPPING_NAMES)
@@ -423,9 +395,6 @@ TF_MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING = _LazyAutoMapping(
 )
 TF_MODEL_FOR_QUESTION_ANSWERING_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, TF_MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES
-)
-TF_MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING = _LazyAutoMapping(
-    CONFIG_MAPPING_NAMES, TF_MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING_NAMES
 )
 TF_MODEL_FOR_TABLE_QUESTION_ANSWERING_MAPPING = _LazyAutoMapping(
     CONFIG_MAPPING_NAMES, TF_MODEL_FOR_TABLE_QUESTION_ANSWERING_MAPPING_NAMES
@@ -534,17 +503,6 @@ class TFAutoModelForQuestionAnswering(_BaseAutoModelClass):
 
 
 TFAutoModelForQuestionAnswering = auto_class_update(TFAutoModelForQuestionAnswering, head_doc="question answering")
-
-
-class TFAutoModelForDocumentQuestionAnswering(_BaseAutoModelClass):
-    _model_mapping = TF_MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING
-
-
-TFAutoModelForDocumentQuestionAnswering = auto_class_update(
-    TFAutoModelForDocumentQuestionAnswering,
-    head_doc="document question answering",
-    checkpoint_for_example='impira/layoutlm-document-qa", revision="52e01b3',
-)
 
 
 class TFAutoModelForTableQuestionAnswering(_BaseAutoModelClass):

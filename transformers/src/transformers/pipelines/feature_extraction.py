@@ -31,8 +31,6 @@ class FeatureExtractionPipeline(Pipeline):
             If no framework is specified, will default to the one currently installed. If no framework is specified and
             both frameworks are installed, will default to the framework of the `model`, or to PyTorch if no model is
             provided.
-        return_tensor (`bool`, *optional*):
-            If `True`, returns a tensor according to the specified framework, otherwise returns a list.
         task (`str`, defaults to `""`):
             A task-identifier for the pipeline.
         args_parser ([`~pipelines.ArgumentHandler`], *optional*):
@@ -42,38 +40,27 @@ class FeatureExtractionPipeline(Pipeline):
             the associated CUDA device id.
     """
 
-    def _sanitize_parameters(self, truncation=None, tokenize_kwargs=None, return_tensors=None, **kwargs):
-        if tokenize_kwargs is None:
-            tokenize_kwargs = {}
-
+    def _sanitize_parameters(self, truncation=None, **kwargs):
+        preprocess_params = {}
         if truncation is not None:
-            if "truncation" in tokenize_kwargs:
-                raise ValueError(
-                    "truncation parameter defined twice (given as keyword argument as well as in tokenize_kwargs)"
-                )
-            tokenize_kwargs["truncation"] = truncation
+            preprocess_params["truncation"] = truncation
+        return preprocess_params, {}, {}
 
-        preprocess_params = tokenize_kwargs
-
-        postprocess_params = {}
-        if return_tensors is not None:
-            postprocess_params["return_tensors"] = return_tensors
-
-        return preprocess_params, {}, postprocess_params
-
-    def preprocess(self, inputs, **tokenize_kwargs) -> Dict[str, GenericTensor]:
+    def preprocess(self, inputs, truncation=None) -> Dict[str, GenericTensor]:
         return_tensors = self.framework
-        model_inputs = self.tokenizer(inputs, return_tensors=return_tensors, **tokenize_kwargs)
+        if truncation is None:
+            kwargs = {}
+        else:
+            kwargs = {"truncation": truncation}
+        model_inputs = self.tokenizer(inputs, return_tensors=return_tensors, **kwargs)
         return model_inputs
 
     def _forward(self, model_inputs):
         model_outputs = self.model(**model_inputs)
         return model_outputs
 
-    def postprocess(self, model_outputs, return_tensors=False):
+    def postprocess(self, model_outputs):
         # [0] is the first available tensor, logits or last_hidden_state.
-        if return_tensors:
-            return model_outputs[0]
         if self.framework == "pt":
             return model_outputs[0].tolist()
         elif self.framework == "tf":

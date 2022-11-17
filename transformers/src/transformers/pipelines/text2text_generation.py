@@ -1,5 +1,4 @@
 import enum
-import warnings
 
 from ..tokenization_utils import TruncationStrategy
 from ..utils import add_end_docstrings, is_tf_available, is_torch_available, logging
@@ -32,9 +31,7 @@ class Text2TextGenerationPipeline(Pipeline):
 
     The models that this pipeline can use are models that have been fine-tuned on a translation task. See the
     up-to-date list of available models on
-    [huggingface.co/models](https://huggingface.co/models?filter=text2text-generation). For a list of available
-    parameters, see the [following
-    documentation](https://huggingface.co/docs/transformers/en/main_classes/text_generation#transformers.generation_utils.GenerationMixin.generate)
+    [huggingface.co/models](https://huggingface.co/models?filter=text2text-generation).
 
     Usage:
 
@@ -62,7 +59,6 @@ class Text2TextGenerationPipeline(Pipeline):
         return_type=None,
         clean_up_tokenization_spaces=None,
         truncation=None,
-        stop_sequence=None,
         **generate_kwargs
     ):
         preprocess_params = {}
@@ -79,15 +75,6 @@ class Text2TextGenerationPipeline(Pipeline):
 
         if clean_up_tokenization_spaces is not None:
             postprocess_params["clean_up_tokenization_spaces"] = clean_up_tokenization_spaces
-
-        if stop_sequence is not None:
-            stop_sequence_ids = self.tokenizer.encode(stop_sequence, add_special_tokens=False)
-            if len(stop_sequence_ids) > 1:
-                warnings.warn(
-                    "Stopping on a multiple token sequence is not yet supported on transformers. The first token of"
-                    " the stop sequence will be used as the stop sequence string in the interim."
-                )
-            generate_kwargs["eos_token_id"] = stop_sequence_ids[0]
 
         return preprocess_params, forward_params, postprocess_params
 
@@ -204,9 +191,7 @@ class SummarizationPipeline(Text2TextGenerationPipeline):
 
     The models that this pipeline can use are models that have been fine-tuned on a summarization task, which is
     currently, '*bart-large-cnn*', '*t5-small*', '*t5-base*', '*t5-large*', '*t5-3b*', '*t5-11b*'. See the up-to-date
-    list of available models on [huggingface.co/models](https://huggingface.co/models?filter=summarization). For a list
-    of available parameters, see the [following
-    documentation](https://huggingface.co/docs/transformers/en/main_classes/text_generation#transformers.generation_utils.GenerationMixin.generate)
+    list of available models on [huggingface.co/models](https://huggingface.co/models?filter=summarization).
 
     Usage:
 
@@ -273,8 +258,6 @@ class TranslationPipeline(Text2TextGenerationPipeline):
 
     The models that this pipeline can use are models that have been fine-tuned on a translation task. See the
     up-to-date list of available models on [huggingface.co/models](https://huggingface.co/models?filter=translation).
-    For a list of available parameters, see the [following
-    documentation](https://huggingface.co/docs/transformers/en/main_classes/text_generation#transformers.generation_utils.GenerationMixin.generate)
 
     Usage:
 

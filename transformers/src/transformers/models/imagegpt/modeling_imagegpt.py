@@ -21,9 +21,16 @@ from typing import Any, Optional, Tuple, Union
 
 import torch
 import torch.utils.checkpoint
+from packaging import version
 from torch import nn
-from torch.cuda.amp import autocast
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+
+
+if version.parse(torch.__version__) >= version.parse("1.6"):
+    is_amp_available = True
+    from torch.cuda.amp import autocast
+else:
+    is_amp_available = False
 
 from ...activations import ACT2FN
 from ...modeling_outputs import (
@@ -287,7 +294,12 @@ class ImageGPTAttention(nn.Module):
             scale_factor /= float(self.layer_idx + 1)
 
         # Upcast (turn off autocast) and reorder (Scale K by 1 / root(dk))
-        with autocast(enabled=False):
+        if is_amp_available:
+            with autocast(enabled=False):
+                q, k = query.reshape(-1, q_seq_len, dk), key.transpose(-1, -2).reshape(-1, dk, k_seq_len)
+                attn_weights = torch.baddbmm(attn_weights, q.float(), k.float(), beta=0, alpha=scale_factor)
+                attn_weights = attn_weights.reshape(bsz, num_heads, q_seq_len, k_seq_len)
+        else:
             q, k = query.reshape(-1, q_seq_len, dk), key.transpose(-1, -2).reshape(-1, dk, k_seq_len)
             attn_weights = torch.baddbmm(attn_weights, q.float(), k.float(), beta=0, alpha=scale_factor)
             attn_weights = attn_weights.reshape(bsz, num_heads, q_seq_len, k_seq_len)
@@ -757,7 +769,7 @@ class ImageGPTModel(ImageGPTPreTrainedModel):
 
             # Since attention_mask is 1.0 for positions we want to attend and 0.0 for
             # masked positions, this operation will create a tensor which is 0.0 for
-            # positions we want to attend and the dtype's smallest value for masked positions.
+            # positions we want to attend and -10000.0 for masked positions.
             # Since we are adding it to the raw scores before the softmax, this is
             # effectively the same as removing these entirely.
             attention_mask = attention_mask.to(dtype=self.dtype)  # fp16 compatibility
@@ -992,12 +1004,11 @@ class ImageGPTForCausalImageModeling(ImageGPTPreTrainedModel):
         ... )
 
         >>> clusters = feature_extractor.clusters
-        >>> height = feature_extractor.size["height"]
-        >>> width = feature_extractor.size["width"]
+        >>> n_px = feature_extractor.size
 
         >>> samples = output[:, 1:].cpu().detach().numpy()
         >>> samples_img = [
-        ...     np.reshape(np.rint(127.5 * (clusters[s] + 1.0)), [height, width, 3]).astype(np.uint8) for s in samples
+        ...     np.reshape(np.rint(127.5 * (clusters[s] + 1.0)), [n_px, n_px, 3]).astype(np.uint8) for s in samples
         ... ]  # convert color cluster tokens back to pixels
         >>> f, axes = plt.subplots(1, batch_size, dpi=300)
 

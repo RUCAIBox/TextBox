@@ -19,7 +19,7 @@ from typing import Callable, Iterable, List, Optional, Tuple, Dict
 
 import numpy as np
 import torch
-from torch import nn 
+from torch import nn
 from torch.autograd import Function
 try:
     import ngram_repeat_block_cuda
@@ -37,6 +37,7 @@ class NGramRepeatBlockFunction(Function):
     """
     forward inputs to ngram_repeat_block cuda extension
     backward method not needed.
+
     """
     def forward(self, tokens, lprobs, bsz,
         step, beam_size, no_repeat_ngram_size):
@@ -232,8 +233,8 @@ class TopPLogitsWarper(LogitsWarper):
 
     Args:
         top_p (`float`):
-            If set to < 1, only the smallest set of most probable tokens with probabilities that add up to `top_p` or
-            higher are kept for generation.
+            If set to < 1, only the most probable tokens with probabilities that add up to `top_p` or higher are kept
+            for generation.
         filter_value (`float`, *optional*, defaults to `-float("Inf")`):
             All filtered values will be set to this float value.
         min_tokens_to_keep (`int`, *optional*, defaults to 1):
@@ -250,14 +251,17 @@ class TopPLogitsWarper(LogitsWarper):
         self.min_tokens_to_keep = min_tokens_to_keep
 
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
-        sorted_logits, sorted_indices = torch.sort(scores, descending=False)
+        sorted_logits, sorted_indices = torch.sort(scores, descending=True)
         cumulative_probs = sorted_logits.softmax(dim=-1).cumsum(dim=-1)
 
         # Remove tokens with cumulative top_p above the threshold (token with 0 are kept)
-        sorted_indices_to_remove = cumulative_probs <= (1 - self.top_p)
+        sorted_indices_to_remove = cumulative_probs > self.top_p
         if self.min_tokens_to_keep > 1:
-            # Keep at least min_tokens_to_keep
-            sorted_indices_to_remove[..., -self.min_tokens_to_keep :] = 0
+            # Keep at least min_tokens_to_keep (set to min_tokens_to_keep-1 because we add the first one below)
+            sorted_indices_to_remove[..., : self.min_tokens_to_keep - 1] = 0
+        # Shift the indices to the right to keep also the first token above the threshold
+        sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+        sorted_indices_to_remove[..., 0] = 0
 
         # scatter sorted tensors to original indexing
         indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
@@ -295,19 +299,6 @@ class TopKLogitsWarper(LogitsWarper):
 
 
 class TypicalLogitsWarper(LogitsWarper):
-    r"""
-    [`LogitsWarper`] that performs typical decoding. See [Typical Decoding for Natural Language
-    Generation](https://arxiv.org/abs/2202.00666) for more information.
-
-    Args:
-        mass (`float`):
-            Value of typical_p between 0 and 1 inclusive, defaults to 0.9.
-        filter_value (`float`, *optional*, defaults to `-float("Inf")`):
-            All filtered values will be set to this float value.
-        min_tokens_to_keep (`int`, *optional*, defaults to 1):
-            Minimum number of tokens that cannot be filtered.
-    """
-
     def __init__(self, mass: float = 0.9, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
         mass = float(mass)
         if not (mass > 0 and mass < 1):
@@ -343,7 +334,9 @@ class TypicalLogitsWarper(LogitsWarper):
         return scores
 
 
-def _get_ngrams(ngram_size: int, prev_input_ids: torch.Tensor, num_hypos: int, pad_token_id: int = None) -> List[Dict]:
+def _get_ngrams(
+    ngram_size: int, prev_input_ids: torch.Tensor, num_hypos: int, pad_token_id: int = None
+) -> List[Dict]:
     generated_ngrams = [{} for _ in range(num_hypos)]
     for idx in range(num_hypos):
         gen_tokens = prev_input_ids[idx].tolist()
@@ -420,7 +413,7 @@ class NoRepeatNGramLogitsProcessor(NoRepeatNGramLogitsProcessor_origin):
         self.num_beams = num_beams
         self.batch_size = batch_size
         self.pad_token_id = pad_token_id
-
+        
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
         def _update_scores(banned_tokens):
             banned_idx = [(bbsz_idx, banned_idx)
@@ -804,51 +797,4 @@ class LogitNormalization(LogitsProcessor, LogitsWarper):
 
     def __call__(self, input_ids: torch.Tensor, scores: torch.Tensor) -> torch.Tensor:
         scores = scores.log_softmax(dim=-1)
-        return scores
-
-
-class SuppressTokensAtBeginLogitsProcessor(LogitsProcessor):
-    r"""
-    [`SuppressTokensAtBeginLogitsProcessor`] supresses a list of tokens as soon as the `generate` function starts
-    generating using `begin_index` tokens. This should ensure that the tokens defined by `begin_suppress_tokens` at not
-    sampled at the begining of the generation.
-    """
-
-    def __init__(self, begin_suppress_tokens, begin_index):
-        self.begin_suppress_tokens = list(begin_suppress_tokens)
-        self.begin_index = begin_index
-
-    def __call__(self, input_ids, scores):
-        if input_ids.shape[1] == self.begin_index:
-            scores[:, self.begin_suppress_tokens] = -float("inf")
-
-        return scores
-
-
-class SuppressTokensLogitsProcessor(LogitsProcessor):
-    r"""This processor can be used to suppress a list of tokens. The processor will set their log probs to `-inf` so that they
-    are not sampled."""
-
-    def __init__(self, suppress_tokens):
-        self.suppress_tokens = list(suppress_tokens)
-
-    def __call__(self, input_ids, scores):
-        scores[:, self.suppress_tokens] = -float("inf")
-        return scores
-
-
-class ForceTokensLogitsProcessor(LogitsProcessor):
-    r"""This processor takes a list of pairs of integers which indicates a mapping from generation indices to token
-    indices that will be forced before sampling. The processor will set their log probs to `inf` so that they are
-    sampled at their corresponding index."""
-
-    def __init__(self, force_token_map: List[List[int]]):
-        self.force_token_map = dict(force_token_map)
-
-    def __call__(self, input_ids, scores):
-        generation_idx = input_ids.shape[-1]
-        current_token = self.force_token_map.get(generation_idx, None)
-        if current_token is not None:
-            scores[:, :] = -float("inf")
-            scores[:, current_token] = 0
         return scores

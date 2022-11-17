@@ -91,17 +91,19 @@ class BigBirdConfig(PretrainedConfig):
     Example:
 
     ```python
-    >>> from transformers import BigBirdConfig, BigBirdModel
 
-    >>> # Initializing a BigBird google/bigbird-roberta-base style configuration
-    >>> configuration = BigBirdConfig()
+    ```
 
-    >>> # Initializing a model (with random weights) from the google/bigbird-roberta-base style configuration
-    >>> model = BigBirdModel(configuration)
+        >>> from transformers import BigBirdModel, BigBirdConfig
 
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
+        >>> # Initializing a BigBird google/bigbird-roberta-base style configuration >>> configuration =
+        BigBirdConfig()
+
+        >>> # Initializing a model from the google/bigbird-roberta-base style configuration >>> model =
+        BigBirdModel(configuration)
+
+        >>> # Accessing the model configuration >>> configuration = model.config
+    """
     model_type = "big_bird"
 
     def __init__(

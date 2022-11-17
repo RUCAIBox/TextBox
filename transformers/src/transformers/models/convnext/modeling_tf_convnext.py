@@ -330,8 +330,7 @@ class TFConvNextMainLayer(tf.keras.layers.Layer):
             hidden_states = tuple([tf.transpose(h, perm=(0, 3, 1, 2)) for h in encoder_outputs[1]])
 
         if not return_dict:
-            hidden_states = hidden_states if output_hidden_states else ()
-            return (last_hidden_state, pooled_output) + hidden_states
+            return (last_hidden_state, pooled_output) + encoder_outputs[1:]
 
         return TFBaseModelOutputWithPooling(
             last_hidden_state=last_hidden_state,
@@ -384,8 +383,7 @@ class TFConvNextPreTrainedModel(TFPreTrainedModel):
             inputs (`Dict[str, tf.Tensor]`):
                 The input of the saved model as a dictionary of tensors.
         """
-        output = self.call(inputs)
-        return self.serving_output(output)
+        return self.call(inputs)
 
 
 CONVNEXT_START_DOCSTRING = r"""
@@ -399,27 +397,13 @@ CONVNEXT_START_DOCSTRING = r"""
 
     <Tip>
 
-    TensorFlow models and layers in `transformers` accept two formats as input:
+    TF 2.0 models accepts two formats as inputs:
 
     - having all inputs as keyword arguments (like PyTorch models), or
-    - having all inputs as a list, tuple or dict in the first positional argument.
+    - having all inputs as a list, tuple or dict in the first positional arguments.
 
-    The reason the second format is supported is that Keras methods prefer this format when passing inputs to models
-    and layers. Because of this support, when using methods like `model.fit()` things should "just work" for you - just
-    pass your inputs and labels in any format that `model.fit()` supports! If, however, you want to use the second
-    format outside of Keras methods like `fit()` and `predict()`, such as when creating your own layers or models with
-    the Keras `Functional` API, there are three possibilities you can use to gather all the input Tensors in the first
-    positional argument:
-
-    - a single Tensor with `pixel_values` only and nothing else: `model(pixel_values)`
-    - a list of varying length with one or several input Tensors IN THE ORDER given in the docstring:
-    `model([pixel_values, attention_mask])` or `model([pixel_values, attention_mask, token_type_ids])`
-    - a dictionary with one or several input Tensors associated to the input names given in the docstring:
-    `model({"pixel_values": pixel_values, "token_type_ids": token_type_ids})`
-
-    Note that when creating models and layers with
-    [subclassing](https://keras.io/guides/making_new_layers_and_models_via_subclassing/) then you don't need to worry
-    about any of this, as you can just pass inputs like you would to any other Python function!
+    This second option is useful when using [`tf.keras.Model.fit`] method which currently requires having all the
+    tensors in the first argument of the model call function: `model(inputs)`.
 
     </Tip>
 
@@ -506,14 +490,6 @@ class TFConvNextModel(TFConvNextPreTrainedModel):
             last_hidden_state=outputs.last_hidden_state,
             pooler_output=outputs.pooler_output,
             hidden_states=outputs.hidden_states,
-        )
-
-    def serving_output(self, output: TFBaseModelOutputWithPooling) -> TFBaseModelOutputWithPooling:
-        # hidden_states not converted to Tensor with tf.convert_to_tensor as they are all of different dimensions
-        return TFBaseModelOutputWithPooling(
-            last_hidden_state=output.last_hidden_state,
-            pooler_output=output.pooler_output,
-            hidden_states=output.hidden_states,
         )
 
 
@@ -608,7 +584,3 @@ class TFConvNextForImageClassification(TFConvNextPreTrainedModel, TFSequenceClas
             logits=logits,
             hidden_states=outputs.hidden_states,
         )
-
-    def serving_output(self, output: TFSequenceClassifierOutput) -> TFSequenceClassifierOutput:
-        # hidden_states not converted to Tensor with tf.convert_to_tensor as they are all of different dimensions
-        return TFSequenceClassifierOutput(logits=output.logits, hidden_states=output.hidden_states)

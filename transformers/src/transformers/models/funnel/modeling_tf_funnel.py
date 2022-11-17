@@ -110,16 +110,6 @@ class TFFunnelEmbeddings(tf.keras.layers.Layer):
         assert not (input_ids is not None and inputs_embeds is not None)
 
         if input_ids is not None:
-            # Note: tf.gather, on which the embedding layer is based, won't check positive out of bound
-            # indices on GPU, returning zeros instead. This is a dangerous silent behavior.
-            tf.debugging.assert_less(
-                input_ids,
-                tf.cast(self.vocab_size, dtype=input_ids.dtype),
-                message=(
-                    "input_ids must be smaller than the embedding layer's input dimension (got"
-                    f" {tf.math.reduce_max(input_ids)} >= {self.vocab_size})"
-                ),
-            )
             inputs_embeds = tf.gather(self.weight, input_ids)
 
         final_embeddings = self.LayerNorm(inputs=inputs_embeds)
@@ -1025,27 +1015,22 @@ FUNNEL_START_DOCSTRING = r"""
 
     <Tip>
 
-    TensorFlow models and layers in `transformers` accept two formats as input:
+    TF 2.0 models accepts two formats as inputs:
 
     - having all inputs as keyword arguments (like PyTorch models), or
-    - having all inputs as a list, tuple or dict in the first positional argument.
+    - having all inputs as a list, tuple or dict in the first positional arguments.
 
-    The reason the second format is supported is that Keras methods prefer this format when passing inputs to models
-    and layers. Because of this support, when using methods like `model.fit()` things should "just work" for you - just
-    pass your inputs and labels in any format that `model.fit()` supports! If, however, you want to use the second
-    format outside of Keras methods like `fit()` and `predict()`, such as when creating your own layers or models with
-    the Keras `Functional` API, there are three possibilities you can use to gather all the input Tensors in the first
-    positional argument:
+    This second option is useful when using [`tf.keras.Model.fit`] method which currently requires having all the
+    tensors in the first argument of the model call function: `model(inputs)`.
 
-    - a single Tensor with `input_ids` only and nothing else: `model(input_ids)`
+    If you choose this second option, there are three possibilities you can use to gather all the input Tensors in the
+    first positional argument :
+
+    - a single Tensor with `input_ids` only and nothing else: `model(inputs_ids)`
     - a list of varying length with one or several input Tensors IN THE ORDER given in the docstring:
     `model([input_ids, attention_mask])` or `model([input_ids, attention_mask, token_type_ids])`
     - a dictionary with one or several input Tensors associated to the input names given in the docstring:
     `model({"input_ids": input_ids, "token_type_ids": token_type_ids})`
-
-    Note that when creating models and layers with
-    [subclassing](https://keras.io/guides/making_new_layers_and_models_via_subclassing/) then you don't need to worry
-    about any of this, as you can just pass inputs like you would to any other Python function!
 
     </Tip>
 
@@ -1142,14 +1127,12 @@ class TFFunnelBaseModel(TFFunnelPreTrainedModel):
             training=training,
         )
 
+    # Copied from transformers.models.distilbert.modeling_tf_distilbert.TFDistilBertModel.serving_output
     def serving_output(self, output):
-        # hidden_states and attentions not converted to Tensor with tf.convert_to_tensor as they are all of
-        # different dimensions
-        return TFBaseModelOutput(
-            last_hidden_state=output.last_hidden_state,
-            hidden_states=output.hidden_states,
-            attentions=output.attentions,
-        )
+        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
+        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+
+        return TFBaseModelOutput(last_hidden_state=output.last_hidden_state, hidden_states=hs, attentions=attns)
 
 
 @add_start_docstrings(
@@ -1192,14 +1175,12 @@ class TFFunnelModel(TFFunnelPreTrainedModel):
             training=training,
         )
 
+    # Copied from transformers.models.distilbert.modeling_tf_distilbert.TFDistilBertModel.serving_output
     def serving_output(self, output):
-        # hidden_states and attentions not converted to Tensor with tf.convert_to_tensor as they are all of
-        # different dimensions
-        return TFBaseModelOutput(
-            last_hidden_state=output.last_hidden_state,
-            hidden_states=output.hidden_states,
-            attentions=output.attentions,
-        )
+        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
+        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+
+        return TFBaseModelOutput(last_hidden_state=output.last_hidden_state, hidden_states=hs, attentions=attns)
 
 
 @add_start_docstrings(
@@ -1268,11 +1249,10 @@ class TFFunnelForPreTraining(TFFunnelPreTrainedModel):
         )
 
     def serving_output(self, output):
-        # hidden_states and attentions not converted to Tensor with tf.convert_to_tensor as they are all of
-        # different dimensions
-        return TFFunnelForPreTrainingOutput(
-            logits=output.logits, hidden_states=output.hidden_states, attentions=output.attentions
-        )
+        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
+        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+
+        return TFFunnelForPreTrainingOutput(logits=output.logits, hidden_states=hs, attentions=attns)
 
 
 @add_start_docstrings("""Funnel Model with a `language modeling` head on top.""", FUNNEL_START_DOCSTRING)
@@ -1342,10 +1322,12 @@ class TFFunnelForMaskedLM(TFFunnelPreTrainedModel, TFMaskedLanguageModelingLoss)
             attentions=outputs.attentions,
         )
 
+    # Copied from transformers.models.bert.modeling_tf_bert.TFBertForMaskedLM.serving_output
     def serving_output(self, output: TFMaskedLMOutput) -> TFMaskedLMOutput:
-        # hidden_states and attentions not converted to Tensor with tf.convert_to_tensor as they are all of
-        # different dimensions
-        return TFMaskedLMOutput(logits=output.logits, hidden_states=output.hidden_states, attentions=output.attentions)
+        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
+        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+
+        return TFMaskedLMOutput(logits=output.logits, hidden_states=hs, attentions=attns)
 
 
 @add_start_docstrings(
@@ -1416,12 +1398,12 @@ class TFFunnelForSequenceClassification(TFFunnelPreTrainedModel, TFSequenceClass
             attentions=outputs.attentions,
         )
 
+    # Copied from transformers.models.bert.modeling_tf_bert.TFBertForSequenceClassification.serving_output
     def serving_output(self, output: TFSequenceClassifierOutput) -> TFSequenceClassifierOutput:
-        # hidden_states and attentions not converted to Tensor with tf.convert_to_tensor as they are all of
-        # different dimensions
-        return TFSequenceClassifierOutput(
-            logits=output.logits, hidden_states=output.hidden_states, attentions=output.attentions
-        )
+        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
+        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+
+        return TFSequenceClassifierOutput(logits=output.logits, hidden_states=hs, attentions=attns)
 
 
 @add_start_docstrings(
@@ -1521,9 +1503,9 @@ class TFFunnelForMultipleChoice(TFFunnelPreTrainedModel, TFMultipleChoiceLoss):
     @tf.function(
         input_signature=[
             {
-                "input_ids": tf.TensorSpec((None, None), tf.int64, name="input_ids"),
-                "attention_mask": tf.TensorSpec((None, None), tf.float32, name="attention_mask"),
-                "token_type_ids": tf.TensorSpec((None, None), tf.int64, name="token_type_ids"),
+                "input_ids": tf.TensorSpec((None, None, None), tf.int32, name="input_ids"),
+                "attention_mask": tf.TensorSpec((None, None, None), tf.int32, name="attention_mask"),
+                "token_type_ids": tf.TensorSpec((None, None, None), tf.int32, name="token_type_ids"),
             }
         ]
     )
@@ -1532,12 +1514,12 @@ class TFFunnelForMultipleChoice(TFFunnelPreTrainedModel, TFMultipleChoiceLoss):
 
         return self.serving_output(output=output)
 
+    # Copied from transformers.models.bert.modeling_tf_bert.TFBertForMultipleChoice.serving_output
     def serving_output(self, output: TFMultipleChoiceModelOutput) -> TFMultipleChoiceModelOutput:
-        # hidden_states and attentions not converted to Tensor with tf.convert_to_tensor as they are all of
-        # different dimensions
-        return TFMultipleChoiceModelOutput(
-            logits=output.logits, hidden_states=output.hidden_states, attentions=output.attentions
-        )
+        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
+        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+
+        return TFMultipleChoiceModelOutput(logits=output.logits, hidden_states=hs, attentions=attns)
 
 
 @add_start_docstrings(
@@ -1610,12 +1592,12 @@ class TFFunnelForTokenClassification(TFFunnelPreTrainedModel, TFTokenClassificat
             attentions=outputs.attentions,
         )
 
+    # Copied from transformers.models.bert.modeling_tf_bert.TFBertForTokenClassification.serving_output
     def serving_output(self, output: TFTokenClassifierOutput) -> TFTokenClassifierOutput:
-        # hidden_states and attentions not converted to Tensor with tf.convert_to_tensor as they are all of
-        # different dimensions
-        return TFTokenClassifierOutput(
-            logits=output.logits, hidden_states=output.hidden_states, attentions=output.attentions
-        )
+        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
+        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+
+        return TFTokenClassifierOutput(logits=output.logits, hidden_states=hs, attentions=attns)
 
 
 @add_start_docstrings(
@@ -1701,12 +1683,11 @@ class TFFunnelForQuestionAnswering(TFFunnelPreTrainedModel, TFQuestionAnsweringL
             attentions=outputs.attentions,
         )
 
+    # Copied from transformers.models.bert.modeling_tf_bert.TFBertForQuestionAnswering.serving_output
     def serving_output(self, output: TFQuestionAnsweringModelOutput) -> TFQuestionAnsweringModelOutput:
-        # hidden_states and attentions not converted to Tensor with tf.convert_to_tensor as they are all of
-        # different dimensions
+        hs = tf.convert_to_tensor(output.hidden_states) if self.config.output_hidden_states else None
+        attns = tf.convert_to_tensor(output.attentions) if self.config.output_attentions else None
+
         return TFQuestionAnsweringModelOutput(
-            start_logits=output.start_logits,
-            end_logits=output.end_logits,
-            hidden_states=output.hidden_states,
-            attentions=output.attentions,
+            start_logits=output.start_logits, end_logits=output.end_logits, hidden_states=hs, attentions=attns
         )

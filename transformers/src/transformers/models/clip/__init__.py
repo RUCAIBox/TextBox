@@ -29,14 +29,7 @@ from ...utils import (
 
 
 _import_structure = {
-    "configuration_clip": [
-        "CLIP_PRETRAINED_CONFIG_ARCHIVE_MAP",
-        "CLIPConfig",
-        "CLIPOnnxConfig",
-        "CLIPTextConfig",
-        "CLIPVisionConfig",
-    ],
-    "processing_clip": ["CLIPProcessor"],
+    "configuration_clip": ["CLIP_PRETRAINED_CONFIG_ARCHIVE_MAP", "CLIPConfig", "CLIPTextConfig", "CLIPVisionConfig"],
     "tokenization_clip": ["CLIPTokenizer"],
 }
 
@@ -55,7 +48,7 @@ except OptionalDependencyNotAvailable:
     pass
 else:
     _import_structure["feature_extraction_clip"] = ["CLIPFeatureExtractor"]
-    _import_structure["image_processing_clip"] = ["CLIPImageProcessor"]
+    _import_structure["processing_clip"] = ["CLIPProcessor"]
 
 try:
     if not is_torch_available():
@@ -102,14 +95,7 @@ else:
 
 
 if TYPE_CHECKING:
-    from .configuration_clip import (
-        CLIP_PRETRAINED_CONFIG_ARCHIVE_MAP,
-        CLIPConfig,
-        CLIPOnnxConfig,
-        CLIPTextConfig,
-        CLIPVisionConfig,
-    )
-    from .processing_clip import CLIPProcessor
+    from .configuration_clip import CLIP_PRETRAINED_CONFIG_ARCHIVE_MAP, CLIPConfig, CLIPTextConfig, CLIPVisionConfig
     from .tokenization_clip import CLIPTokenizer
 
     try:
@@ -127,7 +113,7 @@ if TYPE_CHECKING:
         pass
     else:
         from .feature_extraction_clip import CLIPFeatureExtractor
-        from .image_processing_clip import CLIPImageProcessor
+        from .processing_clip import CLIPProcessor
 
     try:
         if not is_torch_available():

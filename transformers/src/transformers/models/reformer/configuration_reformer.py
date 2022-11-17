@@ -146,12 +146,12 @@ class ReformerConfig(PretrainedConfig):
     Examples:
 
     ```python
-    >>> from transformers import ReformerConfig, ReformerModel
+    >>> from transformers import ReformerModel, ReformerConfig
 
     >>> # Initializing a Reformer configuration
     >>> configuration = ReformerConfig()
 
-    >>> # Initializing a Reformer model (with random weights)
+    >>> # Initializing a Reformer model
     >>> model = ReformerModel(configuration)
 
     >>> # Accessing the model configuration

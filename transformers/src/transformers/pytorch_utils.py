@@ -25,11 +25,8 @@ ALL_LAYERNORM_LAYERS = [nn.LayerNorm]
 
 logger = logging.get_logger(__name__)
 
-parsed_torch_version_base = version.parse(version.parse(torch.__version__).base_version)
-
-is_torch_less_than_1_8 = parsed_torch_version_base < version.parse("1.8.0")
-is_torch_greater_or_equal_than_1_10 = parsed_torch_version_base >= version.parse("1.10")
-is_torch_less_than_1_11 = parsed_torch_version_base < version.parse("1.11")
+is_torch_less_than_1_8 = version.parse(version.parse(torch.__version__).base_version) < version.parse("1.8.0")
+is_torch_less_than_1_11 = version.parse(version.parse(torch.__version__).base_version) < version.parse("1.11")
 
 
 def torch_int_div(tensor1, tensor2):

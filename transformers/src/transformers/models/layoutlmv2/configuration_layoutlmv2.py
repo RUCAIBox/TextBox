@@ -103,12 +103,12 @@ class LayoutLMv2Config(PretrainedConfig):
     Example:
 
     ```python
-    >>> from transformers import LayoutLMv2Config, LayoutLMv2Model
+    >>> from transformers import LayoutLMv2Model, LayoutLMv2Config
 
     >>> # Initializing a LayoutLMv2 microsoft/layoutlmv2-base-uncased style configuration
     >>> configuration = LayoutLMv2Config()
 
-    >>> # Initializing a model (with random weights) from the microsoft/layoutlmv2-base-uncased style configuration
+    >>> # Initializing a model from the microsoft/layoutlmv2-base-uncased style configuration
     >>> model = LayoutLMv2Model(configuration)
 
     >>> # Accessing the model configuration

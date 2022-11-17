@@ -21,7 +21,6 @@ from typing import List, Optional, Union
 import numpy as np
 import torch
 import torchaudio
-from packaging import version
 
 from ...feature_extraction_sequence_utils import SequenceFeatureExtractor
 from ...feature_extraction_utils import BatchFeature
@@ -30,13 +29,6 @@ from ...utils import logging
 
 
 logger = logging.get_logger(__name__)
-
-parsed_torchaudio_version_base = version.parse(version.parse(torchaudio.__version__).base_version)
-if not parsed_torchaudio_version_base >= version.parse("0.10"):
-    logger.warning(
-        f"You are using torchaudio=={torchaudio.__version__}, but torchaudio>=0.10.0 is required to use "
-        "MCTCTFeatureExtractor. This requires torch>=1.10.0. Please upgrade torch and torchaudio."
-    )
 
 
 class MCTCTFeatureExtractor(SequenceFeatureExtractor):

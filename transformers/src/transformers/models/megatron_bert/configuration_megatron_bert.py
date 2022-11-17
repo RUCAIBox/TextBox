@@ -77,12 +77,12 @@ class MegatronBertConfig(PretrainedConfig):
     Examples:
 
     ```python
-    >>> from transformers import MegatronBertConfig, MegatronBertModel
+    >>> from transformers import MegatronBertModel, MegatronBertConfig
 
     >>> # Initializing a MEGATRON_BERT bert-base-uncased style configuration
     >>> configuration = MegatronBertConfig()
 
-    >>> # Initializing a model (with random weights) from the bert-base-uncased style configuration
+    >>> # Initializing a model from the bert-base-uncased style configuration
     >>> model = MegatronBertModel(configuration)
 
     >>> # Accessing the model configuration

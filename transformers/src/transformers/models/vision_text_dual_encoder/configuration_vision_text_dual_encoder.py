@@ -35,9 +35,9 @@ class VisionTextDualEncoderConfig(PretrainedConfig):
     documentation from [`PretrainedConfig`] for more information.
 
     Args:
-        text_config (`dict`):
+        text_config_dict (`dict`):
             Dictionary of configuration options that defines text model config.
-        vision_config (`dict`):
+        vision_config_dict (`dict`):
             Dictionary of configuration options that defines vison model config.
         projection_dim (`int`, *optional*, defaults to 512):
             Dimentionality of text and vision projection layers.
@@ -57,7 +57,7 @@ class VisionTextDualEncoderConfig(PretrainedConfig):
 
     >>> config = VisionTextDualEncoderConfig.from_vision_text_configs(config_vision, config_text, projection_dim=512)
 
-    >>> # Initializing a BERT and ViT model (with random weights)
+    >>> # Initializing a BERT and ViT model
     >>> model = VisionTextDualEncoderModel(config=config)
 
     >>> # Accessing the model configuration
@@ -65,7 +65,7 @@ class VisionTextDualEncoderConfig(PretrainedConfig):
     >>> config_text = model.config.text_config
 
     >>> # Saving the model, including its configuration
-    >>> model.save_pretrained("vit-bert")
+    >>> model.save_pretrained("my-model")
 
     >>> # loading model and config from pretrained folder
     >>> vision_text_config = VisionTextDualEncoderConfig.from_pretrained("vit-bert")

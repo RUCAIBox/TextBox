@@ -19,6 +19,7 @@ import unicodedata
 from typing import Any, Dict, List, Optional, Tuple
 
 import sentencepiece as sp
+import six
 
 from ...tokenization_utils import PreTrainedTokenizer
 
@@ -146,9 +147,7 @@ class DebertaV2Tokenizer(PreTrainedTokenizer):
         self.do_lower_case = do_lower_case
         self.split_by_punct = split_by_punct
         self.vocab_file = vocab_file
-        self._tokenizer = SPMTokenizer(
-            vocab_file, self.all_special_tokens, split_by_punct=split_by_punct, sp_model_kwargs=self.sp_model_kwargs
-        )
+        self._tokenizer = SPMTokenizer(vocab_file, split_by_punct=split_by_punct, sp_model_kwargs=self.sp_model_kwargs)
 
     @property
     def vocab_size(self):
@@ -293,9 +292,7 @@ class SPMTokenizer:
               BPE-dropout.
     """
 
-    def __init__(
-        self, vocab_file, special_tokens, split_by_punct=False, sp_model_kwargs: Optional[Dict[str, Any]] = None
-    ):
+    def __init__(self, vocab_file, split_by_punct=False, sp_model_kwargs: Optional[Dict[str, Any]] = None):
         self.split_by_punct = split_by_punct
         self.vocab_file = vocab_file
         self.sp_model_kwargs = {} if sp_model_kwargs is None else sp_model_kwargs
@@ -316,7 +313,6 @@ class SPMTokenizer:
         # self.vocab['[UNK]'] = 3
 
         self.spm = spm
-        self.special_tokens = special_tokens
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -344,22 +340,7 @@ class SPMTokenizer:
 
     def decode(self, tokens, start=-1, end=-1, raw_text=None):
         if raw_text is None:
-            current_sub_tokens = []
-            out_string = ""
-            prev_is_special = False
-            for token in tokens:
-                # make sure that special tokens are not decoded using sentencepiece model
-                if token in self.special_tokens:
-                    if not prev_is_special:
-                        out_string += " "
-                    out_string += self.spm.decode_pieces(current_sub_tokens) + token
-                    prev_is_special = True
-                    current_sub_tokens = []
-                else:
-                    current_sub_tokens.append(token)
-                    prev_is_special = False
-            out_string += self.spm.decode_pieces(current_sub_tokens)
-            return out_string.strip()
+            return self.spm.decode_pieces([t for t in tokens])
         else:
             words = self.split_to_words(raw_text)
             word_tokens = [self.tokenize(w) for w in words]
@@ -542,9 +523,17 @@ def _is_punctuation(char):
 
 def convert_to_unicode(text):
     """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
-    if isinstance(text, str):
-        return text
-    elif isinstance(text, bytes):
-        return text.decode("utf-8", "ignore")
+    if six.PY3:
+        if isinstance(text, str):
+            return text
+        elif isinstance(text, bytes):
+            return text.decode("utf-8", "ignore")
+        else:
+            raise ValueError(f"Unsupported string type: {type(text)}")
+    elif six.PY2:
+        if isinstance(text, str):
+            return text.decode("utf-8", "ignore")
+        else:
+            raise ValueError(f"Unsupported string type: {type(text)}")
     else:
-        raise ValueError(f"Unsupported string type: {type(text)}")
+        raise ValueError("Not running on Python2 or Python 3?")

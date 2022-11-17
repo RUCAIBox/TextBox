@@ -32,7 +32,7 @@ logging.set_verbosity_info()
 logger = logging.get_logger(__name__)
 
 
-def get_yolos_config(yolos_name: str) -> YolosConfig:
+def get_yolos_config(yolos_name):
     config = YolosConfig()
 
     # size of the architecture
@@ -57,9 +57,9 @@ def get_yolos_config(yolos_name: str) -> YolosConfig:
         config.image_size = [800, 1344]
 
     config.num_labels = 91
-    repo_id = "huggingface/label-files"
+    repo_id = "datasets/huggingface/label-files"
     filename = "coco-detection-id2label.json"
-    id2label = json.load(open(hf_hub_download(repo_id, filename, repo_type="dataset"), "r"))
+    id2label = json.load(open(hf_hub_download(repo_id, filename), "r"))
     id2label = {int(k): v for k, v in id2label.items()}
     config.id2label = id2label
     config.label2id = {v: k for k, v in id2label.items()}
@@ -68,7 +68,7 @@ def get_yolos_config(yolos_name: str) -> YolosConfig:
 
 
 # we split up the matrix of each encoder layer into queries, keys and values
-def read_in_q_k_v(state_dict: dict, config: YolosConfig, base_model: bool = False):
+def read_in_q_k_v(state_dict, config, base_model=False):
     for i in range(config.num_hidden_layers):
         # read in weights + bias of input projection layer (in timm, this is a single matrix + bias)
         in_proj_weight = state_dict.pop(f"blocks.{i}.attn.qkv.weight")
@@ -86,7 +86,7 @@ def read_in_q_k_v(state_dict: dict, config: YolosConfig, base_model: bool = Fals
         state_dict[f"encoder.layer.{i}.attention.attention.value.bias"] = in_proj_bias[-config.hidden_size :]
 
 
-def rename_key(name: str) -> str:
+def rename_key(name):
     if "backbone" in name:
         name = name.replace("backbone", "vit")
     if "cls_token" in name:
@@ -123,7 +123,7 @@ def rename_key(name: str) -> str:
     return name
 
 
-def convert_state_dict(orig_state_dict: dict, model: YolosForObjectDetection) -> dict:
+def convert_state_dict(orig_state_dict, model):
     for key in orig_state_dict.copy().keys():
         val = orig_state_dict.pop(key)
 
@@ -148,16 +148,14 @@ def convert_state_dict(orig_state_dict: dict, model: YolosForObjectDetection) ->
 
 
 # We will verify our results on an image of cute cats
-def prepare_img() -> torch.Tensor:
+def prepare_img():
     url = "http://images.cocodataset.org/val2017/000000039769.jpg"
     im = Image.open(requests.get(url, stream=True).raw)
     return im
 
 
 @torch.no_grad()
-def convert_yolos_checkpoint(
-    yolos_name: str, checkpoint_path: str, pytorch_dump_folder_path: str, push_to_hub: bool = False
-):
+def convert_yolos_checkpoint(yolos_name, checkpoint_path, pytorch_dump_folder_path, push_to_hub=False):
     """
     Copy/paste/tweak model's weights to our YOLOS structure.
     """

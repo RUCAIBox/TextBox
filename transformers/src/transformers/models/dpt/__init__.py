@@ -30,7 +30,6 @@ except OptionalDependencyNotAvailable:
     pass
 else:
     _import_structure["feature_extraction_dpt"] = ["DPTFeatureExtractor"]
-    _import_structure["image_processing_dpt"] = ["DPTImageProcessor"]
 
 try:
     if not is_torch_available():
@@ -57,7 +56,6 @@ if TYPE_CHECKING:
         pass
     else:
         from .feature_extraction_dpt import DPTFeatureExtractor
-        from .image_processing_dpt import DPTImageProcessor
 
     try:
         if not is_torch_available():

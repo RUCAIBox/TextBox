@@ -112,7 +112,7 @@ class Wav2Vec2FeatureExtractor(SequenceFeatureExtractor):
         **kwargs
     ) -> BatchFeature:
         """
-        Main method to featurize and prepare for the model one or several sequence(s).
+        Main method to featurize and prepare for the model one or several sequence(s). sequences.
 
         Args:
             raw_speech (`np.ndarray`, `List[float]`, `List[np.ndarray]`, `List[List[float]]`):

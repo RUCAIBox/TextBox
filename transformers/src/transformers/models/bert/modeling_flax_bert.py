@@ -612,7 +612,7 @@ class FlaxBertLayerCollection(nn.Module):
         if output_hidden_states:
             all_hidden_states += (hidden_states,)
 
-        outputs = (hidden_states, all_hidden_states, all_attentions, all_cross_attentions)
+        outputs = (hidden_states,)
 
         if not return_dict:
             return tuple(v for v in outputs if v is not None)

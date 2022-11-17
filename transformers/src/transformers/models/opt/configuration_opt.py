@@ -67,6 +67,8 @@ class OPTConfig(PretrainedConfig):
             The dropout probability for all fully connected layers in the embeddings, encoder, and pooler.
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
+        activation_dropout (`float`, *optional*, defaults to 0.0):
+            The dropout ratio for activations inside the fully connected layer.
         layerdrop: (`float`, *optional*, defaults to 0.0):
             The LayerDrop probability. See the [LayerDrop paper](see https://arxiv.org/abs/1909.11556) for more
             details.
@@ -78,12 +80,12 @@ class OPTConfig(PretrainedConfig):
     Example:
 
     ```python
-    >>> from transformers import OPTConfig, OPTModel
+    >>> from transformers import OPTModel, OPTConfig
 
     >>> # Initializing a OPT facebook/opt-large style configuration
     >>> configuration = OPTConfig()
 
-    >>> # Initializing a model (with random weights) from the facebook/opt-large style configuration
+    >>> # Initializing a model from the facebook/opt-large style configuration
     >>> model = OPTModel(configuration)
 
     >>> # Accessing the model configuration
@@ -104,6 +106,7 @@ class OPTConfig(PretrainedConfig):
         word_embed_proj_dim=None,
         dropout=0.1,
         attention_dropout=0.0,
+        activation_dropout=0.0,
         num_attention_heads=12,
         activation_function="relu",
         layerdrop=0.0,
@@ -129,6 +132,7 @@ class OPTConfig(PretrainedConfig):
         self.num_hidden_layers = num_hidden_layers
         self.dropout = dropout
         self.attention_dropout = attention_dropout
+        self.activation_dropout = activation_dropout
         self.activation_function = activation_function
         self.init_std = init_std
         self.layerdrop = layerdrop

@@ -30,7 +30,6 @@ except OptionalDependencyNotAvailable:
     pass
 else:
     _import_structure["feature_extraction_glpn"] = ["GLPNFeatureExtractor"]
-    _import_structure["image_processing_glpn"] = ["GLPNImageProcessor"]
 
 try:
     if not is_torch_available():
@@ -57,7 +56,6 @@ if TYPE_CHECKING:
         pass
     else:
         from .feature_extraction_glpn import GLPNFeatureExtractor
-        from .image_processing_glpn import GLPNImageProcessor
 
     try:
         if not is_torch_available():

@@ -93,11 +93,12 @@ class ObjectDetectionPipeline(Pipeline):
 
     def postprocess(self, model_outputs, threshold=0.9):
         target_size = model_outputs["target_size"]
-        raw_annotations = self.feature_extractor.post_process_object_detection(model_outputs, threshold, target_size)
+        raw_annotations = self.feature_extractor.post_process(model_outputs, target_size)
         raw_annotation = raw_annotations[0]
-        scores = raw_annotation["scores"]
-        labels = raw_annotation["labels"]
-        boxes = raw_annotation["boxes"]
+        keep = raw_annotation["scores"] > threshold
+        scores = raw_annotation["scores"][keep]
+        labels = raw_annotation["labels"][keep]
+        boxes = raw_annotation["boxes"][keep]
 
         raw_annotation["scores"] = scores.tolist()
         raw_annotation["labels"] = [self.model.config.id2label[label.item()] for label in labels]

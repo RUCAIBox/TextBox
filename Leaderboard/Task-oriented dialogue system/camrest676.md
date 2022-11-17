@@ -21,13 +21,13 @@ CamRest676 Human2Human dataset contains the following three json files:1. CamRes
 Input
 
 ```
-
+'Belief state [X_SEP] I want to find a restaurant in the south part of town serving singaporean food.'
 ```
 
 Output
 
 ```
-
+'[restaurant] food singaporean area south'
 ```
 
 ## LeaderBoard

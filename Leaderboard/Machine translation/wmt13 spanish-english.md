@@ -4,6 +4,8 @@
 
 ### Instruction
 
+Paper: [Paper](https://aclanthology.org/W13-2201.pdf)
+
 Homepage: [Official](https://www.statmt.org/wmt13/)
 
 Translate dataset based on the data from statmt.org.
@@ -12,7 +14,7 @@ Translate dataset based on the data from statmt.org.
 
 | Dataset               | Num Train    | Num Valid | Num Test | Source Length (Avg) | Target Length (Avg) |
 | --------------------- | ------------ | --------- | -------- | ------------------- | ------------------- |
-| WMT13 Spanish-English | $15,176,790$ | $13,573$  | $3,000$  |                     |                     |
+| WMT13 Spanish-English | $11,196,913$ | $13,573$  | -        | 29.3                | 25.1                |
 
 ### Data Sample
 
@@ -32,26 +34,43 @@ A ese respecto, recordó que la Asamblea General, en su resolución 52/111, hab�
 
 #### Spanish $\rarr$ English
 
-Descending order by METRIC.
+Descending order by BLEU.
 
-| Model | Metric | Repository | Generated Text |
-| ----- | ------ | ---------- | -------------- |
-|       |        |            |                |
-|       |        |            |                |
-|       |        |            |                |
+| Model | BLEU | Repository | Generated Text |
+| ----- | ---- | ---------- | -------------- |
+|       |      |            |                |
+|       |      |            |                |
+|       |      |            |                |
 
 #### English $\rarr$ Spanish
 
-Descending order by METRIC.
+Descending order by BLEU.
 
-| Model | Metric | Repository | Generated Text |
-| ----- | ------ | ---------- | -------------- |
-|       |        |            |                |
-|       |        |            |                |
-|       |        |            |                |
+| Model                                         | BLEU   | Repository                                                   | Generated Text |
+| --------------------------------------------- | ------ | ------------------------------------------------------------ | -------------- |
+| [mBART](https://arxiv.org/pdf/2001.08210.pdf) | $34.0$ | [Official](https://github.com/pytorch/fairseq/tree/master/examples/mbart) |                |
 
 ## Citation
 
 ```
- 
+ @inproceedings{bojar-etal-2013-findings,
+    title = "Findings of the 2013 {W}orkshop on {S}tatistical {M}achine {T}ranslation",
+    author = "Bojar, Ond{\v{r}}ej  and
+      Buck, Christian  and
+      Callison-Burch, Chris  and
+      Federmann, Christian  and
+      Haddow, Barry  and
+      Koehn, Philipp  and
+      Monz, Christof  and
+      Post, Matt  and
+      Soricut, Radu  and
+      Specia, Lucia",
+    booktitle = "Proceedings of the Eighth Workshop on Statistical Machine Translation",
+    month = aug,
+    year = "2013",
+    address = "Sofia, Bulgaria",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/W13-2201",
+    pages = "1--44",
+}
 ```

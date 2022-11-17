@@ -21,13 +21,13 @@ WritingPrompts is a large dataset of 300K human-written stories paired with writ
 Input
 
 ```
-
+man is granted the thing he most desires . problem is , after a certain amount of time , he will forget every memory of having it .
 ```
 
 Output
 
 ```
-
+daniel 's hands shook as he counted the coins . his hands always shook . it was n't the biting cold of december in scotland , it was n't the exhaustion of having to talk to everyone that walked past , it was n't the sheer excitement of finally having enough . they just always shook . he dropped the last penny in his pocket and smiled . a warmth flooded his body , he felt better than he had in weeks . he would finally be granted the thing he most desired . people gave him a wide berth as he walked down the street to the newsagent . daniel smiled even wider . the world was now on his side , everyone wanted him to get there as fast as possible .
 ```
 
 ## LeaderBoard

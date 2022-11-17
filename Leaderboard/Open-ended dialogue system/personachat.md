@@ -18,34 +18,16 @@ The PERSONA-CHAT dataset is a crowd-sourced dataset, collected via Amazon Mechan
 
 ### Data Sample
 
-personality
+Input
 
 ```
-[ 
-	"i like to remodel homes .", 
-	"i like to go hunting .", 
-	"i like to shoot a bow .", 
-	"my favorite holiday is halloween ." 
-]
+'i read twenty books a year . [SEP] i am a stunt double as my second job . [SEP] i only eat kosher . [SEP] i was raised in a single parent household . [X_SEP] hello what are doing today ?'
 ```
 
-utterances
+Output
 
 ```
-[ 
-	{ 
-		"candidates": [ 
-			"my mom was single with 3 boys , so we never left the projects .", 
-			"i try to wear all black every day . it makes me feel comfortable .", 
-			"well nursing stresses you out so i wish luck with sister",
-			...
-		], 
-		"history": [ 
-			"hi , how are you doing ? i'm getting ready to do some cheetah chasing to stay in shape ." 
-		] 
-	}, 
-	...
-]
+'i am good , i just got off work and tired , i have two jobs .'
 ```
 
 ## LeaderBoard
@@ -56,6 +38,7 @@ Descending order by Avg F1.
 | ------------------------------------------------------------ | ------- | ------------------------------------------------------------ | -------------- |
 | [P$^2$ Bot](https://arxiv.org/pdf/2004.05388v1.pdf)          | $19.77$ | [Official](https://github.com/SivilTaram/Persona-Dialogue-Generation) |                |
 | [TransferTransfo](https://arxiv.org/pdf/1901.08149v2.pdf)    | $19.09$ | [Official](https://github.com/huggingface/transfer-learning-conv-ai) |                |
+| [Seq2Seq + Attention](https://arxiv.org/pdf/1409.0473v7.pdf) | $16.18$ |                                                              |                |
 | [ KV Profile Memory](https://arxiv.org/pdf/1801.07243v5.pdf) | $11.9$  | [Official](https://github.com/facebookresearch/ParlAI)       |                |
 
 ## Citation

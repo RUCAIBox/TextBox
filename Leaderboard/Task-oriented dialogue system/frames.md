@@ -18,47 +18,16 @@ This dataset is dialog dataset collected in a Wizard-of-Oz fashion. Two humans t
 
 ### Data Sample
 
+Input
+
 ```
-{
-    "user_id": "U22HTHYNP", 
-    "turns": [
-        {
-            "text": "I'd like to book a trip to Atlantis from Caprica on Saturday, August 13, 2016 for 8 adults. I have a tight budget of 1700.",
-            "labels": {
-                "acts": [
-                    {"args": [{"val": "book", "key": "intent"}], "name": "inform"}, 
-                    {"args": [{"val": "Atlantis", "key": "dst_city"}, {"val": "Caprica", "key": "or_city"}, {"val": "Saturday, August 13, 2016", "key": "str_date"}, {"val": "8", "key": "n_adults"}, {"val": "1700", "key": "budget"}], "name": "inform"}
-                ], 
-                "acts_without_refs": [
-                    {"args": [{"val": "book", "key": "intent"}], "name": "inform"}, 
-                    {"args": [{"val": "Atlantis", "key": "dst_city"}, {"val": "Caprica", "key": "or_city"}, {"val": "Saturday, August 13, 2016", "key": "str_date"}, {"val": "8", "key": "n_adults"}, {"val": "1700", "key": "budget"}], "name": "inform"}
-                ], 
-                "active_frame": 1, 
-                "frames": [
-                    {
-                        "info": {
-                            "intent": [{"val": "book", "negated": false}], 
-                            "budget": [{"val": "1700.0", "negated": false}], 
-                            "dst_city": [{"val": "Atlantis", "negated": false}], 
-                            "or_city": [{"val": "Caprica", "negated": false}], 
-                            "str_date": [{"val": "august 13", "negated": false}], 
-                            "n_adults": [{"val": "8", "negated": false}]
-                        }, 
-                        "frame_id": 1,
-                        "requests": [], 
-                        "frame_parent_id": null, 
-                        "binary_questions": [], 
-                        "compare_requests": []
-                    }
-                ]
-            }, 
-            "author": "user", 
-            "timestamp": 1471272019730.0
-        }, 
-		...
-	]
-	...
-}
+'Belief state [X_SEP] Hello bot. I want to go to Manas from Boston on September 2'
+```
+
+Output
+
+```
+'[booking] intent book destination city Manas origin city Boston start date September 2'
 ```
 
 ## LeaderBoard

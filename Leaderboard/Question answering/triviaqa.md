@@ -21,24 +21,35 @@ TriviaQA is a realistic text-based question answering dataset which includes 950
 Input
 
 ```
-
+'Who was the man behind The Chipmunks?'
 ```
 
 Output
 
 ```
-
+'David Seville'
 ```
 
 ## LeaderBoard
 
-Descending order by EM.
+Descending order by F1.
 
-| Model                                                  | EM     | Repository                                             | Generated Text |
-| ------------------------------------------------------ | ------ | ------------------------------------------------------ | -------------- |
-| [ PaLM-540B](https://arxiv.org/pdf/2204.02311v3.pdf)   | $81.4$ | [Official](https://github.com/lucidrains/PaLM-pytorch) |                |
-| [GLaM 62B/64E](https://arxiv.org/pdf/2112.06905v2.pdf) | $75.8$ |                                                        |                |
-| [ FiD+Distil](https://arxiv.org/pdf/2012.04584v2.pdf)  | $72.1$ | [Official](https://github.com/facebookresearch/FiD)    |                |
+| Model                                                        | EM     | F1     | Repository                                                   | Generated Text |
+| ------------------------------------------------------------ | ------ | ------ | ------------------------------------------------------------ | -------------- |
+| [BigBird-etc](https://arxiv.org/pdf/2007.14062v2.pdf)        | -      | $80.9$ | [Official](https://github.com/google-research/bigbird)       |                |
+| [LinkBERT](https://arxiv.org/pdf/2203.15827v1.pdf)           | -      | $78.2$ | [Official](https://github.com/michiyasunaga/LinkBERT)        |                |
+| [ UnitedQA](https://arxiv.org/pdf/2101.00178v2.pdf)          | -      | $70.3$ |                                                              |                |
+| [ ReasonBERTR](https://arxiv.org/pdf/2109.04912v1.pdf)       | -      | $45.5$ | [Official](https://github.com/sunlab-osu/reasonbert)         |                |
+| [ PaLM-540B](https://arxiv.org/pdf/2204.02311v3.pdf)         | $81.4$ | -      | [Official](https://github.com/lucidrains/PaLM-pytorch)       |                |
+| [GLaM 62B/64E](https://arxiv.org/pdf/2112.06905v2.pdf)       | $75.8$ | -      |                                                              |                |
+| [ FiD+Distil](https://arxiv.org/pdf/2012.04584v2.pdf)        | $72.1$ | -      | [Official](https://github.com/facebookresearch/FiD)          |                |
+| [EMDR2](https://arxiv.org/pdf/2106.05346v2.pdf)              | $71.4$ | -      | [Official](https://github.com/DevSinghSachan/emdr2)          |                |
+| [GPT-3 175B](https://arxiv.org/pdf/2005.14165v4.pdf)         | $71.2$ | -      | [Official](https://github.com/openai/gpt-3)                  |                |
+| [Fusion-in-Decoder](https://arxiv.org/pdf/2007.01282v2.pdf)  | $67.6$ | -      |                                                              |                |
+| [TOME-2](https://arxiv.org/pdf/2110.06176v2.pdf)             | $65.8$ | -      | [Official](https://github.com/google-research/language/tree/master/language/mentionmemory) |                |
+| [FLAN 137B zero-shot](https://arxiv.org/pdf/2109.01652v5.pdf) | $56.7$ | -      | [Official](https://github.com/google-research/flan)          |                |
+| [RAG](https://arxiv.org/pdf/2005.11401v4.pdf)                | $56.1$ | -      |                                                              |                |
+
 
 ## Citation
 

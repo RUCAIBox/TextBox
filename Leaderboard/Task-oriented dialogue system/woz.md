@@ -16,28 +16,16 @@ The WoZ 2.0 dataset is a newer dialogue state tracking dataset whose evaluation 
 
 ### Data Sample
 
+Input
+
 ```
-[ 
-	{ 
-		"turn_label": [ [ "food", "eritrean" ] ], 
-		"asr": [ [ "Are there any eritrean restaurants in town?" ] ], 
-		"system_transcript": "", 
-		"turn_idx": 0, 
-		"belief_state": [ { "slots": [ [ "food", "eritrean" ] ], "act": "inform" } ], 
-		"transcript": "Are there any eritrean restaurants in town?", 
-		"system_acts": [] 
-	}, 
-	{ 
-		"turn_label": [ [ "food", "chinese" ] ], 
-		"asr": [ [ "How about Chinese food?" ] ], 
-		"system_transcript": "No, there are no eritrean restaurants in town. Would you like a different restaurant? ", 
-		"turn_idx": 1, 
-		"belief_state": [ { "slots": [ [ "food", "chinese" ] ], "act": "inform" } ], 
-		"transcript": "How about Chinese food?", 
-		"system_acts": [] 
-	}, 
-	...
-]
+"Belief state [X_SEP] I'm looking for an expensive restaurant in the south part of town."
+```
+
+Output
+
+```
+'[restaurant] price range expensive area south'
 ```
 
 ## LeaderBoard
@@ -49,6 +37,9 @@ Descending order by Joint.
 | [AG-DST](https://arxiv.org/pdf/2110.15659v1.pdf)             | $91.37$ | [Official](https://github.com/PaddlePaddle/Knover/tree/develop/projects/AG-DST) |                |
 | [Seq2Seq-DU-w/oSchema](https://arxiv.org/pdf/2011.09553v2.pdf) | $91.2$  | [Official](https://github.com/sweetalyssum/Seq2Seq-DU)       |                |
 | [T5(span)](https://arxiv.org/pdf/2108.13990v2.pdf)           | $91$    |                                                              |                |
+| [StateNet](https://arxiv.org/pdf/1810.09587v1.pdf)           | $88.9$  | [Official](https://github.com/renll/StateNet)                |                |
+| [G-SAT](https://arxiv.org/pdf/1910.09942v1.pdf)              | $88.7$  | [Official](https://github.com/vevake/GSAT)                   |                |
+| [GCE](https://arxiv.org/pdf/1812.00899v1.pdf)                | $88.5$  | [Official](https://github.com/elnaaz/GCE-Model)              |                |
 
 ## Citation
 

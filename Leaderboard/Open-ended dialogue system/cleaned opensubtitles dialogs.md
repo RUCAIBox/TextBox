@@ -16,24 +16,16 @@ OpenSubtitles is collection of multilingual parallel corpora. The dataset is com
 
 ### Data Sample
 
-Meta
+Input
 
 ```
-{
-	"year": 1973, 
-	"imdbId": 70215, 
-	"subtitleId": { "bs": 6080330, "eo": 4010963 }, 
-	"sentenceIds": { "bs": [ 2 ], "eo": [ 3 ] } 
-}
+'Have you reached a verdict ? [SEP] We have , your honor .'
 ```
 
-Translation
+Output
 
 ```
-{
-	"bs": "Imam odgovor za vas iz New Orleansa.", 
-	"eo": "Kion ili diris?" 
-}
+'What is your verdict ?'
 ```
 
 ## LeaderBoard

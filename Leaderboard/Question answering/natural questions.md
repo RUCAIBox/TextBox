@@ -21,30 +21,36 @@ The Natural Questions corpus is a question answering dataset containing 307,373 
 Input
 
 ```
-when are hops added to the brewing process?
+'who got the first nobel prize in physics'
 ```
 
-Short Answer
+Output
 
 ```
-The boiling process
+'Wilhelm Conrad Röntgen'
 ```
 
-Long Answer
-
-```
-After mashing , the beer wort is boiled with hops ( and other flavourings if used ) in a large tank known as a " copper " or brew kettle – though historically the mash vessel was used and is still in some small breweries . The boiling process is where chemical reactions take place , including sterilization of the wort to remove unwanted bacteria , releasing of hop flavours , bitterness and aroma compounds through isomerization , stopping of enzymatic processes , precipitation of proteins , and concentration of the wort . Finally , the vapours produced during the boil volatilise off - flavours , including dimethyl sulfide precursors . The boil is conducted so that it is even and intense – a continuous " rolling boil " . The boil on average lasts between 45 and 90 minutes , depending on its intensity , the hop addition schedule , and volume of water the brewer expects to evaporate . At the end of the boil , solid particles in the hopped wort are separated out , usually in a vessel called a " whirlpool ".
-```
 
 ## LeaderBoard
 
 Descending order by EM.
 
-| Model                                                  | EM     | Repository                                             | Generated Text |
-| ------------------------------------------------------ | ------ | ------------------------------------------------------ | -------------- |
-| [PaLM-540B](https://arxiv.org/pdf/2204.02311v3.pdf)    | $39.6$ | [Official](https://github.com/lucidrains/PaLM-pytorch) |                |
-| [GLaM 62B/64E](https://arxiv.org/pdf/2112.06905v2.pdf) | $32.5$ |                                                        |                |
-| [GPT-3 175B](https://arxiv.org/pdf/2005.14165v4.pdf)   | $29.9$ | [Official](https://github.com/openai/gpt-3)            |                |
+| Model                                                  | EM     | Repository                                                   | Generated Text |
+| ------------------------------------------------------ | ------ | ------------------------------------------------------------ | -------------- |
+| [Atlas](https://arxiv.org/pdf/2208.03299v2.pdf)        | $60.4$ |                                                              |                |
+| [R2-D2](https://arxiv.org/pdf/2109.03502v1.pdf)        | $59.9$ | [Official](https://github.com/KNOT-FIT-BUT/R2-D2)            |                |
+| [FiD-KD](https://arxiv.org/pdf/2007.01282v2.pdf)       | $54.7$ |                                                              |                |
+| [EMDR$^2$](https://arxiv.org/pdf/2106.05346v2.pdf)     | $52.5$ | [Official](https://github.com/DevSinghSachan/emdr2)          |                |
+| [RETRO + DPR](https://arxiv.org/pdf/2112.04426v3.pdf)  | $45.5$ |                                                              |                |
+| [RAG](https://arxiv.org/pdf/2005.11401v4.pdf)          | $44.5$ |                                                              |                |
+| [DPR](https://arxiv.org/pdf/2004.04906v3.pdf)          | $41.5$ | [Official](https://github.com/facebookresearch/DPR)          |                |
+| [REALM](https://arxiv.org/pdf/2002.08909v1.pdf)        | $40.4$ | [Official](https://github.com/google-research/language/tree/master/language/realm) |                |
+| [PaLM-540B](https://arxiv.org/pdf/2204.02311v3.pdf)    | $39.6$ | [Official](https://github.com/lucidrains/PaLM-pytorch)       |                |
+| [Chinchilla](https://arxiv.org/pdf/2203.15556v1.pdf)   | $35.5$ |                                                              |                |
+| [GLaM 62B/64E](https://arxiv.org/pdf/2112.06905v2.pdf) | $32.5$ |                                                              |                |
+| [GPT-3 175B](https://arxiv.org/pdf/2005.14165v4.pdf)   | $29.9$ | [Official](https://github.com/openai/gpt-3)                  |                |
+| [Gopher](https://arxiv.org/pdf/2112.11446v2.pdf)       | $28.2$ |                                                              |                |
+| [Neo-6B](https://arxiv.org/pdf/2210.02441v2.pdf)       | $19.7$ | [Official](https://github.com/hazyresearch/ama_prompting)    |                |
 
 ## Citation
 

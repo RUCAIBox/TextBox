@@ -16,23 +16,31 @@ The **WebQuestions** dataset is a question answering dataset using Freebase as t
 
 ### Data Sample
 
+Input
+
 ```
-{
-    "answers": ["Jamaican Creole English Language", "Jamaican English"],
-    "question": "what does jamaican people speak?",
-    "url": "http://www.freebase.com/view/en/jamaica"
-}
+'what does jamaican people speak?'
+```
+
+Output
+
+```
+'Jamaican Creole English Language'
 ```
 
 ## LeaderBoard
 
 Descending order by EM.
 
-| Model                                                | EM     | Repository                                             | Generated Text |
-| ---------------------------------------------------- | ------ | ------------------------------------------------------ | -------------- |
-| [ RAG](https://arxiv.org/pdf/2005.11401v4.pdf)       | $45.2$ |                                                        |                |
-| [ PaLM-540B](https://arxiv.org/pdf/2204.02311v3.pdf) | $43.5$ | [Official](https://github.com/lucidrains/PaLM-pytorch) |                |
-| [DPR](https://arxiv.org/pdf/2004.04906v3.pdf)        | $42.4$ | [Official](https://github.com/facebookresearch/DPR)    |                |
+| Model                                                  | EM     | Repository                                                   | Generated Text |
+| ------------------------------------------------------ | ------ | ------------------------------------------------------------ | -------------- |
+| [ RAG](https://arxiv.org/pdf/2005.11401v4.pdf)         | $45.2$ |                                                              |                |
+| [ PaLM-540B](https://arxiv.org/pdf/2204.02311v3.pdf)   | $43.5$ | [Official](https://github.com/lucidrains/PaLM-pytorch)       |                |
+| [DPR](https://arxiv.org/pdf/2004.04906v3.pdf)          | $42.4$ | [Official](https://github.com/facebookresearch/DPR)          |                |
+| [GPT-3-175B](https://arxiv.org/pdf/2005.14165v4.pdf)   | $41.5$ | [Official](https://github.com/openai/gpt-3)                  |                |
+| [REALM](https://arxiv.org/pdf/2002.08909v1.pdf)        | $40.7$ | [Official](https://github.com/google-research/language/tree/master/language/realm) |                |
+| [ORQA](https://arxiv.org/pdf/1906.00300v3.pdf)         | $36.4$ | [Official](https://github.com/google-research/language/tree/master/language/orqa) |                |
+| [GLaM 62B/64E](https://arxiv.org/pdf/2112.06905v2.pdf) | $15.5$ |                                                              |                |
 
 ## Citation
 

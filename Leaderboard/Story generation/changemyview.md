@@ -19,13 +19,13 @@ This dataset contains pairs of original post (OP) statement on a controversial i
 Input
 
 ```
-
+'CMV : Military desertion should not be a crime as it is an entirely normal human behavior and invokes on the right of freedom of speech and prosecution of such can often be observed as external coercion which goes against freedom of action.'
 ```
 
 Output
 
 ```
-
+"In order for your argument to be true, you'd also have to say that dodging a draft wouldn't be a crime either, right? It'd be a part of your right to free speech. And if you could dodge the draft during a time of extreme crisis, how would you ensure that the country could be safely protected?"
 ```
 
 ## LeaderBoard

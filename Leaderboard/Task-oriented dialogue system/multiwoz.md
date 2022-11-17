@@ -18,11 +18,16 @@ The Multi-domain Wizard-of-Oz (MultiWOZ) dataset is a large-scale human-human co
 
 ### Data Sample
 
+Input
+
 ```
-[
-	'What fun places can I visit in the East?',
-	'We have five spots which include boating, museums and entertainment. Any preferences that you have?'
-]
+Belief state [X_SEP] i need to book a hotel in the east that has 4 stars .
+```
+
+Output
+
+```
+[hotel] area east stars 4
 ```
 
 ## LeaderBoard
@@ -34,6 +39,9 @@ Descending order by BLEU.
 | [ Noisy Channel Model](https://arxiv.org/pdf/2103.10518v1.pdf) | $20.6$ |                                                         |                |
 | [GALAXY](https://arxiv.org/pdf/2111.14592v8.pdf)             | $20.5$ | [Official](https://github.com/siat-nlp/galaxy)          |                |
 | [ DAMD](https://arxiv.org/pdf/1911.10484v2.pdf)              | $18.6$ | [Official](https://gitlab.com/ucdavisnlp/damd-multiwoz) |                |
+| [AuGPT](https://arxiv.org/pdf/2102.05126v3.pdf)              | $17.2$ | [Official](https://github.com/ufal/augpt)               |                |
+| [SOLOIST](https://arxiv.org/pdf/2005.05298v4.pdf)            | $16.5$ |                                                         |                |
+| [SimpleTOD](https://arxiv.org/pdf/2005.00796v4.pdf)          | $15.0$ | [Official](https://github.com/salesforce/simpletod)     |                |
 
 ## Citation
 

@@ -21,13 +21,13 @@ MSQG: MicroSoft Question Generation (MSQG) is a new challenge dataset, the quest
 Input
 
 ```
-
+'anti-epilepsy drugs (particularly carbamazepine, phenobarbital and phenytoin), the anti-gout drug, allopurinol, olanzapine, and the sulphonamide group of antibiotics [X_SEP] Genetic susceptibility and HLA associations have been found for several causative drugs. The most common drugs to cause this reaction are a number of anti-epilepsy drugs (particularly carbamazepine, phenobarbital and phenytoin), the anti-gout drug, allopurinol, olanzapine, and the sulphonamide group of antibiotics.'
 ```
 
 Output
 
 ```
-
+'causative medications'
 ```
 
 ## LeaderBoard

@@ -87,6 +87,7 @@ else
 fi
 
 echo -e "\033[0;32mInstalling requirements (transformers) ...\033[0m"
+git clone https://github.com/RUCAIBox/transformers.git
 cd transformers || exit
 pip install -e . > /dev/null
 cd ..

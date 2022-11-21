@@ -56,7 +56,7 @@ class Experiment:
 
         # logger initialization
         init_logger(
-            filename='project',
+            filename=config['filename'],
             log_level=config['state'],
             enabled=config['_is_local_main_process'],
             saved_dir=config['saved_dir']

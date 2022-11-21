@@ -69,7 +69,7 @@ def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, s
     ensure_dir(saved_dir_name)
     saved_train_dir = os.path.join(saved_dir_name, filename)
     ensure_dir(saved_train_dir)
-    log_filename = filename + '.log'
+    log_filename = 'project.log'
     log_filepath = os.path.join(saved_train_dir, log_filename)
 
     if log_level is None:

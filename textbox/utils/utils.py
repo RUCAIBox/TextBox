@@ -82,17 +82,8 @@ def get_tag(_tag: Optional[str], _serial: Optional[int]):
         _tag += '-' + str(_serial)
     return _tag
 
-
-def _save(source: Union[dict, list], path_to_save: str, extension_name: str):
-    if extension_name == 'txt':
-        with open(path_to_save, 'w') as fout:
-            for text in source:
-                fout.write(text + '\n')
-    else:
-        torch.save(source, path_to_save)
-
-
 def serialized_save(
+    model: torch.nn.Moudel,
     source: Union[dict, list],
     serial: Optional[int],
     serial_of_soft_link: Optional[int],
@@ -125,23 +116,11 @@ def serialized_save(
     """
 
     # deal with naming
-    if extension_name not in ('txt', 'pth'):
-        extension_name = 'txt' if isinstance(source, list) else 'pth'
-    path_to_save = os.path.abspath(path_without_extension + get_tag(tag, serial) + '.' + extension_name)
-    safe_remove(path_to_save, overwrite)  # behavior of torch.save is not clearly defined.
-    getLogger(__name__).debug(f'Saving file to "{path_to_save}"')
-
-    # not serialized saving
-    if serial is None or serial_of_soft_link is None or max_save == -1:
-        _save(source, path_to_save, extension_name)
-        return
-
-    # no new file to save
-    if max_save == 0 or (max_save == 1 and serial_of_soft_link != serial):
-        return
+    path_to_save = os.path.abspath(path_without_extension + get_tag(tag, serial)) # saving fold 
+    getLogger(__name__).debug(f'Saving files to "{path_to_save}"')
 
     # read soft link
-    path_to_link = os.path.abspath(path_without_extension + '.' + extension_name)
+    path_to_link = os.path.abspath(path_without_extension + '-best')
     path_to_pre_best = os.readlink(path_to_link) if file_exists(path_to_link) else ''
     serial_of_pre_best = serial
     if not file_exists(path_to_pre_best):
@@ -150,15 +129,16 @@ def serialized_save(
         serial_of_pre_best = int(path_to_pre_best[:-4].split('-')[-1])
 
     # save
-    _save(source, path_to_save, extension_name)
+    model.save_pretrained(path_to_save)
+    torch.save(source, os.path.join(path_to_save,'checkpoint.pt'))
 
     # delete the file beyond the max_save
     soft_link_goes_beyond = ((max_save - 1) * serial_intervals < serial - serial_of_soft_link)
     serial_to_delete = serial - (max_save - int(soft_link_goes_beyond)) * serial_intervals
     getLogger(__name__).debug(f'Soft link now are pointing to serial: "{serial_of_soft_link}"')
     if 0 <= serial_to_delete < serial:
-        path_to_delete = os.path.abspath(path_without_extension + get_tag(tag, serial_to_delete) + '.' + extension_name)
-        safe_remove(path_to_delete)
+        path_to_delete = os.path.abspath(path_without_extension + get_tag(tag, serial_to_delete))
+        os.removedirs(path_to_delete)
 
     # update soft link
     pre_best_goes_beyond = ((max_save - 1) * serial_intervals < serial - serial_of_pre_best)

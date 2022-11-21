@@ -489,7 +489,7 @@ class RNN_Models(AbstractModel):
         super().__init__(config, tokenizer)
 
         # initialize model
-        self.model_config = RNNConfig(
+        self.configuration = RNNConfig(
             model_name=self.model_name,
             input_size=config['input_size'],
             hidden_size=config['hidden_size'],
@@ -502,5 +502,5 @@ class RNN_Models(AbstractModel):
             eos_token_id=config['eos_token_id'],
             bos_token_id=config['bos_token_id'],
         )
-        self.model = RNNSeq2Seq(self.model_config)
+        self.model = RNNSeq2Seq(self.configuration)
         self.generate_setting(config)

@@ -113,3 +113,42 @@ class AbstractModel(nn.Module):
             'attention_mask': batch['source_mask'].to(self.device),
         }
         return inputs
+
+    def save_pretrained(
+        self,
+        save_directory: Union[str, os.PathLike],
+        is_main_process: bool = True,
+        state_dict: Optional[dict] = None,
+        # save_function: Callable = torch.save,
+        # push_to_hub: bool = False,
+        # max_shard_size: Union[int, str] = "10GB",
+        # safe_serialization: bool = False,
+        **kwargs,
+    ):
+        os.makedirs(save_directory, exist_ok=True)
+        # save the string version of dtype to the config, e.g. convert torch.float32 => "float32"
+        # we currently don't use this setting automatically, but may start to use with v5
+        dtype = get_parameter_dtype(self)
+        self.configuration.torch_dtype = str(dtype).split(".")[1]
+
+        # Attach architecture to the config
+        self.configuration.architectures = [self.model.__class__.__name__]
+
+        # If we have a custom model, we copy the file defining it in the folder and set the attributes so it can be
+        # loaded from the Hub.
+        if self._auto_class is not None:
+            custom_object_save(self, save_directory, config=self.config)
+
+        # Save the config
+        if is_main_process:
+            self.configuration.save_pretrained(save_directory)
+        
+        # Save the tokenizer
+        if self.tokenizer is not None:
+            self.tokenizer.save_pretrained(save_directory)
+
+        # Save the model
+        if state_dict is None:
+            state_dict = self.state_dict()
+        
+        torch.save(state_dict, os.path.join(save_directory,'pytorch_model.bin'))

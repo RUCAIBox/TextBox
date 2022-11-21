@@ -380,20 +380,23 @@ class SummaryTracker:
             raise ValueError('Value is nan.')
         self.add_scalar("loss/" + self._current_mode, loss)
         self._current_epoch._append_loss(loss)
-
+    
+    @property
     def epoch_loss(self) -> float:
         r"""Loss of this epoch. Average loss will be calculated and returned.
         """
-        return self._current_epoch.avg_loss
+        return self._current_epoch._avg_loss
 
     def set_metrics_results(self, results: Optional[dict]):
         r"""Record the metrics results."""
         if results is None:
             return
         tag = 'metrics/' if self._current_mode != 'eval' else 'test/'
-        for metric, result in results.items():
-            self.add_any(tag + metric, result)
-            if not isinstance(result, str):
+        for metric, result in results.items():         
+            if isinstance(result, str):
+                self.add_text(tag + metric, result)
+            else:
+                self.add_scalar(tag + metric, result)
                 self._current_epoch._update_metrics({metric: result})
 
         self.is_best_valid = False
@@ -419,7 +422,7 @@ class SummaryTracker:
         r"""Add text to summary. The text will automatically upload to W&B at the end of experiment
         with `on_experiment_end()`. It may also be manually upload with `flush_text()`"""
         if self._is_local_main_process and self.axes is not None:
-            if tag not in self._tables:
+            if tag not in self._tables:          
                 self._tables[tag] = wandb.Table(columns=[train_step, tag])
             self._tables[tag].add_data(self.axes.train_step, text_string)
 
@@ -435,13 +438,6 @@ class SummaryTracker:
         # info.update(self.axes.as_dict())
         if self._is_local_main_process and not self.tracker_finished and self.axes is not None:
             wandb.log(info, step=self.axes.train_step, commit=False)
-
-    def add_any(self, tag: str, any_value: Union[str, float, int]):
-        r"""Add a metric of any type (`float`, `int` and `str` supported) to summary."""
-        if isinstance(any_value, str):
-            self.add_text(tag, any_value)
-        elif isinstance(any_value, (float, int)):
-            self.add_scalar(tag, any_value)
 
     def add_corpus(self, tag: str, corpus: Iterable[str]):
         r"""Add a corpus to summary."""

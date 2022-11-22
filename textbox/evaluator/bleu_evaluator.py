@@ -126,8 +126,6 @@ class BleuEvaluator(AbstractEvaluator):
                     results['bleu-precisions'] = scores[3]
                 except subprocess.CalledProcessError as call_e:
                     traceback.print_exc()
-                    print(call_e.output.decode().strip())
-                    exit(0)
 
         elif self.bleu_type == 'sacrebleu-romanian':
             with tempfile.TemporaryDirectory() as tmpdir:

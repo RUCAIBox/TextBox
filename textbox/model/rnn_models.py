@@ -19,7 +19,6 @@ class RNNConfig(PretrainedConfig):
 
     def __init__(
         self,
-        model_name,
         input_size=768,
         hidden_size=768,
         vocab_size=50265,
@@ -36,7 +35,6 @@ class RNNConfig(PretrainedConfig):
         **kwargs
     ):
         self.vocab_size = vocab_size
-        self.model_name = model_name
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.dropout = dropout
@@ -99,9 +97,9 @@ class RNNOutput(ModelOutput):
 
 class RNNEncoder(RNNPretrainedModel):
 
-    def __init__(self, config):
+    def __init__(self, model_name, config):
         super(RNNEncoder, self).__init__(config)
-        self.model_name = config.model_name
+        self.model_name = model_name
         self.input_size = config.input_size
         self.hidden_size = config.hidden_size
         self.num_layers = config.num_layers
@@ -183,9 +181,9 @@ class RNNEncoder(RNNPretrainedModel):
 
 class RNNDecoder(RNNPretrainedModel):
 
-    def __init__(self, config):
+    def __init__(self, model_name, config):
         super(RNNDecoder, self).__init__(config)
-        self.model_name = config.model_name
+        self.model_name = model_name
         self.input_size = config.input_size
         self.hidden_size = config.hidden_size
         self.num_layers = config.num_layers
@@ -231,10 +229,10 @@ class RNNDecoder(RNNPretrainedModel):
 
 class RNNSeq2Seq(RNNPretrainedModel):
 
-    def __init__(self, config: RNNConfig):
+    def __init__(self, model_name, config: RNNConfig):
         super(RNNSeq2Seq, self).__init__(config)
         self.config = config
-        self.model_name = config.model_name
+        self.model_name = model_name
         self.input_size = config.input_size
         self.hidden_size = config.hidden_size
         self.vocab_size = config.vocab_size
@@ -252,8 +250,8 @@ class RNNSeq2Seq(RNNPretrainedModel):
         self.loss_fct = CrossEntropyLoss(ignore_index=self.pad_token_id, reduction='mean')
         self.main_input_name = "input_ids"
         # loading encoder and decoder
-        self.encoder = RNNEncoder(self.config)
-        self.decoder = RNNDecoder(self.config)
+        self.encoder = RNNEncoder(self.model_name, self.config)
+        self.decoder = RNNDecoder(self.model_name, self.config)
         self.att_projection = nn.Linear(
             in_features=self.hidden_size + self.hidden_size * int(self.encoder_bidirectional),
             out_features=self.hidden_size,
@@ -490,7 +488,6 @@ class RNN_Models(AbstractModel):
 
         # initialize model
         self.configuration = RNNConfig(
-            model_name=self.model_name,
             input_size=config['input_size'],
             hidden_size=config['hidden_size'],
             vocab_size=config['vocab_size'],
@@ -502,5 +499,5 @@ class RNN_Models(AbstractModel):
             eos_token_id=config['eos_token_id'],
             bos_token_id=config['bos_token_id'],
         )
-        self.model = RNNSeq2Seq(self.configuration)
+        self.model = RNNSeq2Seq(config['model_name'], self.configuration)
         self.generate_setting(config)

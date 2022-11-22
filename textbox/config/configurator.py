@@ -219,7 +219,6 @@ class Config(object):
 
         if os.path.isfile(model_init_file):
             model_config_dict = self._update_internal_config_dict(model_init_file)
-            #print(model_config_dict)
             self.parameters['Model'] += list(set(model_config_dict.keys()) - self.all_parameters)
             self.all_parameters.update(self.parameters['Model'])
 

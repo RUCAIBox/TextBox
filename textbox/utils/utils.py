@@ -83,7 +83,7 @@ def get_tag(_tag: Optional[str], _serial: Optional[int]):
     return _tag
 
 def serialized_save(
-    model: torch.nn.Moudel,
+    model: torch.nn.Module,
     source: Union[dict, list],
     serial: Optional[int],
     serial_of_soft_link: Optional[int],
@@ -120,13 +120,13 @@ def serialized_save(
     getLogger(__name__).debug(f'Saving files to "{path_to_save}"')
 
     # read soft link
-    path_to_link = os.path.abspath(path_without_extension + '-best')
+    path_to_link = os.path.abspath(path_without_extension + '_best')
     path_to_pre_best = os.readlink(path_to_link) if file_exists(path_to_link) else ''
     serial_of_pre_best = serial
     if not file_exists(path_to_pre_best):
         path_to_pre_best = None
     else:
-        serial_of_pre_best = int(path_to_pre_best[:-4].split('-')[-1])
+        serial_of_pre_best = int(path_to_pre_best.split('-')[-1])
 
     # save
     model.save_pretrained(path_to_save)
@@ -138,7 +138,8 @@ def serialized_save(
     getLogger(__name__).debug(f'Soft link now are pointing to serial: "{serial_of_soft_link}"')
     if 0 <= serial_to_delete < serial:
         path_to_delete = os.path.abspath(path_without_extension + get_tag(tag, serial_to_delete))
-        os.removedirs(path_to_delete)
+        if os.path.exists(path_to_delete):
+            os.removedirs(path_to_delete)
 
     # update soft link
     pre_best_goes_beyond = ((max_save - 1) * serial_intervals < serial - serial_of_pre_best)

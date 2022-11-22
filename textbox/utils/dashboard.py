@@ -428,7 +428,6 @@ class SummaryTracker:
 
     def flush_text(self):
         r"""Manually flush temporary text added."""
-        print(self._tables)
         wandb.log(self._tables)
         self._tables = dict()
 

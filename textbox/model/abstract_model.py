@@ -1,6 +1,9 @@
+import torch
 import torch.nn as nn
 from textbox import CLM_MODELS, SEQ2SEQ_MODELS, RNN_MODELS, PLM_MODELS
-
+import os
+from typing import List, Optional, Tuple, Union
+from transformers.modeling_utils import get_parameter_dtype
 
 class AbstractModel(nn.Module):
     r"""Base class for all models
@@ -133,11 +136,6 @@ class AbstractModel(nn.Module):
 
         # Attach architecture to the config
         self.configuration.architectures = [self.model.__class__.__name__]
-
-        # If we have a custom model, we copy the file defining it in the folder and set the attributes so it can be
-        # loaded from the Hub.
-        if self._auto_class is not None:
-            custom_object_save(self, save_directory, config=self.config)
 
         # Save the config
         if is_main_process:

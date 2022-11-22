@@ -98,7 +98,7 @@ class Experiment:
 
         if self.do_train:
             if self.config['load_experiment'] is not None:
-                self.trainer.resume_checkpoint(resume_file=self.config['load_experiment'])
+                self.trainer.resume_checkpoint(resume_dir=self.config['load_experiment'])
             train_data = self.train_data
             valid_data = self.valid_data if self.do_valid else None
 

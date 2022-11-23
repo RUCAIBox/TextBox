@@ -116,7 +116,7 @@ def serialized_save(
     """
 
     # deal with naming
-    path_to_save = os.path.abspath(path_without_extension + get_tag(tag, serial)) # saving fold 
+    path_to_save = os.path.abspath(path_without_extension + get_tag(tag, serial))  # saving fold
     getLogger(__name__).debug(f'Saving files to "{path_to_save}"')
 
     # read soft link
@@ -130,7 +130,7 @@ def serialized_save(
 
     # save
     model.save_pretrained(path_to_save)
-    torch.save(source, os.path.join(path_to_save,'checkpoint.pt'))
+    torch.save(source, os.path.join(path_to_save, 'checkpoint.pt'))
 
     # delete the file beyond the max_save
     soft_link_goes_beyond = ((max_save - 1) * serial_intervals < serial - serial_of_soft_link)
@@ -198,7 +198,7 @@ def get_tokenizer(config):
     if model_name in PLM_MODELS or model_name in RNN_MODELS:
         tokenizer_kwargs = config['tokenizer_kwargs'] or {}
         tokenizer_path = config['tokenizer_path'] or config['model_path']
-        if (config['model_name'] in ['chinese-bart', 'chinese-pegasus', 'chinese-gpt2','cpt']):
+        if (config['model_name'] in ['chinese-bart', 'chinese-pegasus', 'cpt']):
             tokenizer = BertTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
         elif config['model_name'] == "unilm":
             tokenizer = UnilmTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)

@@ -380,7 +380,7 @@ class SummaryTracker:
             raise ValueError('Value is nan.')
         self.add_scalar("loss/" + self._current_mode, loss)
         self._current_epoch._append_loss(loss)
-    
+
     @property
     def epoch_loss(self) -> float:
         r"""Loss of this epoch. Average loss will be calculated and returned.
@@ -392,7 +392,7 @@ class SummaryTracker:
         if results is None:
             return
         tag = 'metrics/' if self._current_mode != 'eval' else 'test/'
-        for metric, result in results.items():         
+        for metric, result in results.items():
             if isinstance(result, str):
                 self.add_text(tag + metric, result)
             else:
@@ -422,7 +422,7 @@ class SummaryTracker:
         r"""Add text to summary. The text will automatically upload to W&B at the end of experiment
         with `on_experiment_end()`. It may also be manually upload with `flush_text()`"""
         if self._is_local_main_process and self.axes is not None:
-            if tag not in self._tables:          
+            if tag not in self._tables:
                 self._tables[tag] = wandb.Table(columns=[train_step, tag])
             self._tables[tag].add_data(self.axes.train_step, text_string)
 

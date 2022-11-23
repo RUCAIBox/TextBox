@@ -66,7 +66,7 @@ class Trainer(AbstractTrainer):
 
     def __init__(self, config: Config, model: AbstractModel, accelerator: Accelerator):
         super(Trainer, self).__init__(config, model)
-        
+
         self.model_name = config['model_name']
         self.device: torch.device = config['device']
         self.filename = config['filename']
@@ -217,7 +217,7 @@ class Trainer(AbstractTrainer):
             for step, data in enumerate(train_data):
                 if step % self.accumulation_steps == 0:
                     self._summary_tracker.new_step()
-                    if self.max_steps is not None and self.timestamp.train_step == self.max_steps+1:
+                    if self.max_steps is not None and self.timestamp.train_step == self.max_steps + 1:
                         self.stopped = True
                         break
 
@@ -368,7 +368,6 @@ class Trainer(AbstractTrainer):
             extension_name='pth',
             max_save=self.max_save,
         )
-                                 
 
     def save_generated_text(self, generated_corpus: List[str], is_valid: bool = False):
         r"""Store the generated text by our model into `self.saved_text_filename`."""
@@ -386,7 +385,7 @@ class Trainer(AbstractTrainer):
         """
         # check
         self.logger.info("Resuming checkpoint from {}...".format(resume_dir))
-        resume_checkpoint = os.path.join(resume_dir,'checkpoint.pt')
+        resume_checkpoint = os.path.join(resume_dir, 'checkpoint.pt')
         if os.path.isfile(resume_checkpoint):
             checkpoint = torch.load(resume_checkpoint, map_location=self.device)
         else:
@@ -398,7 +397,7 @@ class Trainer(AbstractTrainer):
         self._summary_tracker.axes = checkpoint['timestamp']
         self.stopping_count = checkpoint['stopping_count']
         self._summary_tracker.best_valid_score = checkpoint['best_valid_score']
-        self.valid_result_dict = {self._summary_tracker.axes.valid_epoch:checkpoint['summary']}
+        self.valid_result_dict = {self._summary_tracker.axes.valid_epoch: checkpoint['summary']}
 
         if checkpoint['config']['seed']:
             init_seed(checkpoint['config']['seed'], checkpoint['config']['reproducibility'])
@@ -410,7 +409,7 @@ class Trainer(AbstractTrainer):
                 'Architecture configuration given in config file is different from that of checkpoint. '
                 'This may yield an exception while state_dict is being loaded.'
             )
-        self.model.load_state_dict(torch.load(os.path.join(resume_dir,'pytorch_model.bin'),map_location=self.device))
+        self.model.load_state_dict(torch.load(os.path.join(resume_dir, 'pytorch_model.bin'), map_location=self.device))
         self.model.tokenizer.from_pretrained(resume_dir)
 
         # load optimizer state from checkpoint only when optimizer type is not changed
@@ -420,7 +419,11 @@ class Trainer(AbstractTrainer):
                 'This may yield an exception while state_dict is being loaded.'
             )
         self.optimizer.load_state_dict(checkpoint['optimizer'])
-        self.logger.info('Checkpoint loaded. Resume training from epoch {} steps {}'.format(self.start_epoch,self._summary_tracker.axes.train_step+1))
+        self.logger.info(
+            'Checkpoint loaded. Resume training from epoch {} steps {}'.format(
+                self.start_epoch, self._summary_tracker.axes.train_step + 1
+            )
+        )
 
     def fit(
         self,
@@ -441,7 +444,7 @@ class Trainer(AbstractTrainer):
 
         self.logger.info("====== Start training ======")
         self.accelerator.wait_for_everyone()
-        for epoch_idx in range(self.start_epoch, self.epochs+1):
+        for epoch_idx in range(self.start_epoch, self.epochs + 1):
             # train
             loss = self._train_epoch(train_data, epoch_idx, valid_data)['loss']
             self.train_loss_list.append(loss)
@@ -496,7 +499,9 @@ class Trainer(AbstractTrainer):
         if load_best_model:
             checkpoint_dir = model_file or self.saved_model_filename + '_best'
             self.logger.info('Loading model structure and parameters from {} ...'.format(checkpoint_dir))
-            self.model.load_state_dict(torch.load(os.path.join(checkpoint_dir,'pytorch_model.bin'),map_location=self.device))
+            self.model.load_state_dict(
+                torch.load(os.path.join(checkpoint_dir, 'pytorch_model.bin'), map_location=self.device)
+            )
             self.model.tokenizer.from_pretrained(checkpoint_dir)
             self.accelerator.wait_for_everyone()
 

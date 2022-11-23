@@ -5,6 +5,7 @@ import os
 from typing import List, Optional, Tuple, Union
 from transformers.modeling_utils import get_parameter_dtype
 
+
 class AbstractModel(nn.Module):
     r"""Base class for all models
     """
@@ -140,7 +141,7 @@ class AbstractModel(nn.Module):
         # Save the config
         if is_main_process:
             self.configuration.save_pretrained(save_directory)
-        
+
         # Save the tokenizer
         if self.tokenizer is not None:
             self.tokenizer.save_pretrained(save_directory)
@@ -148,5 +149,5 @@ class AbstractModel(nn.Module):
         # Save the model
         if state_dict is None:
             state_dict = self.state_dict()
-        
-        torch.save(state_dict, os.path.join(save_directory,'pytorch_model.bin'))
+
+        torch.save(state_dict, os.path.join(save_directory, 'pytorch_model.bin'))

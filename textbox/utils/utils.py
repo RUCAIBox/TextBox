@@ -218,7 +218,7 @@ def get_tokenizer(config):
     if model_name in PLM_MODELS or model_name in RNN_MODELS:
         tokenizer_kwargs = config['tokenizer_kwargs'] or {}
         tokenizer_path = config['tokenizer_path'] or config['model_path']
-        if (config['model_name'] in ['chinese-bart', 'chinese-pegasus', 'cpt']):
+        if (config['model_name'] in ['chinese-bart', 'chinese-pegasus', 'chinese-gpt2','cpt']):
             tokenizer = BertTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
         elif config['model_name'] == "unilm":
             tokenizer = UnilmTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)

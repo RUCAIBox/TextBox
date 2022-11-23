@@ -21,13 +21,13 @@ This dataset is human-annotated conversational data in three domains (movie-tick
 Input
 
 ```
-
+'Belief state [X_SEP] I would like to have a taxi pick up tomorrow morning at 7 am at 1231 Church St in Reading PA'
 ```
 
 Output
 
 ```
-
+'[taxi] date tomorrow morning pickup time 7am pickup location 1231 Church St pickup location city Reading state PA'
 ```
 
 ## LeaderBoard

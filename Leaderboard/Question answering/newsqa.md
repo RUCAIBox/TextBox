@@ -10,6 +10,16 @@ Homepage: [Official](https://www.microsoft.com/en-us/research/project/newsqa-dat
 
 The NewsQA dataset is a crowd-sourced machine reading comprehension dataset of 120,000 question-answer pairs.
 
+- Documents are CNN news articles.
+- Questions are written by human users in natural language.
+- Answers may be multiword passages of the source text.
+- Questions may be unanswerable.
+- NewsQA is collected using a 3-stage, siloed process.
+- Questioners see only an article’s headline and highlights.
+- Answerers see the question and the full article, then select an answer passage.
+- Validators see the article, the question, and a set of answers that they rank.
+- NewsQA is more natural and more challenging than previous datasets.
+
 ### Overview
 
 | Dataset | Num Train | Num Valid | Num Test | Source Length (Avg) | Target Length (Avg) |
@@ -18,108 +28,16 @@ The NewsQA dataset is a crowd-sourced machine reading comprehension dataset of 1
 
 ### Data Sample
 
+Input
+
 ```
-{'storyId': './cnn/stories/42d01e187213e86f5fe617fe32e716ff7fa3afc4.story',
- 'text': 'NEW DELHI, India (CNN) -- A high court in northern India on Friday acquitted a wealthy businessman facing the death sentence for the killing of a teen in a case dubbed "the house of horrors."\n\n\n\nMoninder Singh Pandher was sentenced to death by a lower court in February.\n\n\n\nThe teen was one of 19 victims -- children and young women -- in one of the most gruesome serial killings in India in recent years.\n\n\n\nThe Allahabad high court has acquitted Moninder Singh Pandher, his lawyer Sikandar B. Kochar told CNN.\n\n\n\nPandher and his domestic employee Surinder Koli were sentenced to death in February by a lower court for the rape and murder of the 14-year-old.\n\n\n\nThe high court upheld Koli\'s death sentence, Kochar said.\n\n\n\nThe two were arrested two years ago after body parts packed in plastic bags were found near their home in Noida, a New Delhi suburb. Their home was later dubbed a "house of horrors" by the Indian media.\n\n\n\nPandher was not named a main suspect by investigators initially, but was summoned as co-accused during the trial, Kochar said.\n\n\n\nKochar said his client was in Australia when the teen was raped and killed.\n\n\n\nPandher faces trial in the remaining 18 killings and could remain in custody, the attorney said.',
- 'type': 'train',
- 'questions': {'q': ['What was the amount of children murdered?',
-   'When was Pandher sentenced to death?',
-   'The court aquitted Moninder Singh Pandher of what crime?',
-   'who was acquitted',
-   'who was sentenced',
-   'What was Moninder Singh Pandher acquitted for?',
-   'Who was sentenced to death in February?',
-   'how many people died',
-   'How many children and young women were murdered?'],
-  'isAnswerAbsent': [0, 0, 0, 0, 0, 0, 0, 0, 0],
-  'isQuestionBad': [0, 0, 0, 0, 0, 0, 0, 0, 0],
-  'consensus': [{'s': 294, 'e': 297, 'badQuestion': False, 'noAnswer': False},
-   {'s': 261, 'e': 271, 'badQuestion': False, 'noAnswer': False},
-   {'s': 624, 'e': 640, 'badQuestion': False, 'noAnswer': False},
-   {'s': 195, 'e': 218, 'badQuestion': False, 'noAnswer': False},
-   {'s': 195, 'e': 218, 'badQuestion': False, 'noAnswer': False},
-   {'s': 129, 'e': 151, 'badQuestion': False, 'noAnswer': False},
-   {'s': 195, 'e': 218, 'badQuestion': False, 'noAnswer': False},
-   {'s': 294, 'e': 297, 'badQuestion': False, 'noAnswer': False},
-   {'s': 294, 'e': 297, 'badQuestion': False, 'noAnswer': False}],
-  'answers': [{'sourcerAnswers': [{'s': [294],
-      'e': [297],
-      'badQuestion': [False],
-      'noAnswer': [False]},
-     {'s': [0], 'e': [0], 'badQuestion': [False], 'noAnswer': [True]},
-     {'s': [0], 'e': [0], 'badQuestion': [False], 'noAnswer': [True]}]},
-   {'sourcerAnswers': [{'s': [261],
-      'e': [271],
-      'badQuestion': [False],
-      'noAnswer': [False]},
-     {'s': [258], 'e': [271], 'badQuestion': [False], 'noAnswer': [False]},
-     {'s': [261], 'e': [271], 'badQuestion': [False], 'noAnswer': [False]}]},
-   {'sourcerAnswers': [{'s': [26],
-      'e': [33],
-      'badQuestion': [False],
-      'noAnswer': [False]},
-     {'s': [0], 'e': [0], 'badQuestion': [False], 'noAnswer': [True]},
-     {'s': [624], 'e': [640], 'badQuestion': [False], 'noAnswer': [False]}]},
-   {'sourcerAnswers': [{'s': [195],
-      'e': [218],
-      'badQuestion': [False],
-      'noAnswer': [False]},
-     {'s': [195], 'e': [218], 'badQuestion': [False], 'noAnswer': [False]}]},
-   {'sourcerAnswers': [{'s': [0],
-      'e': [0],
-      'badQuestion': [False],
-      'noAnswer': [True]},
-     {'s': [195, 232],
-      'e': [218, 271],
-      'badQuestion': [False, False],
-      'noAnswer': [False, False]},
-     {'s': [0], 'e': [0], 'badQuestion': [False], 'noAnswer': [True]}]},
-   {'sourcerAnswers': [{'s': [129],
-      'e': [192],
-      'badQuestion': [False],
-      'noAnswer': [False]},
-     {'s': [129], 'e': [151], 'badQuestion': [False], 'noAnswer': [False]},
-     {'s': [133], 'e': [151], 'badQuestion': [False], 'noAnswer': [False]}]},
-   {'sourcerAnswers': [{'s': [195],
-      'e': [218],
-      'badQuestion': [False],
-      'noAnswer': [False]},
-     {'s': [195], 'e': [218], 'badQuestion': [False], 'noAnswer': [False]}]},
-   {'sourcerAnswers': [{'s': [294],
-      'e': [297],
-      'badQuestion': [False],
-      'noAnswer': [False]},
-     {'s': [294], 'e': [297], 'badQuestion': [False], 'noAnswer': [False]}]},
-   {'sourcerAnswers': [{'s': [294],
-      'e': [297],
-      'badQuestion': [False],
-      'noAnswer': [False]},
-     {'s': [294], 'e': [297], 'badQuestion': [False], 'noAnswer': [False]}]}],
-  'validated_answers': [{'s': [0, 294],
-    'e': [0, 297],
-    'badQuestion': [False, False],
-    'noAnswer': [True, False],
-    'count': [1, 2]},
-   {'s': [], 'e': [], 'badQuestion': [], 'noAnswer': [], 'count': []},
-   {'s': [624],
-    'e': [640],
-    'badQuestion': [False],
-    'noAnswer': [False],
-    'count': [2]},
-   {'s': [], 'e': [], 'badQuestion': [], 'noAnswer': [], 'count': []},
-   {'s': [195],
-    'e': [218],
-    'badQuestion': [False],
-    'noAnswer': [False],
-    'count': [2]},
-   {'s': [129],
-    'e': [151],
-    'badQuestion': [False],
-    'noAnswer': [False],
-    'count': [2]},
-   {'s': [], 'e': [], 'badQuestion': [], 'noAnswer': [], 'count': []},
-   {'s': [], 'e': [], 'badQuestion': [], 'noAnswer': [], 'count': []},
-   {'s': [], 'e': [], 'badQuestion': [], 'noAnswer': [], 'count': []}]}}
+"What is going live on Tuesday ? [X_SEP] ( CNN ) -- Comcast rolled out a Web-based on-demand television and movie service on Tuesday that gives customers access to more than 2,000 hours of television and movies . The move comes as users increasingly are bypassing their TV sets and heading straight to the Web -- both legally and illegally -- to watch their favorite shows . The service , named Fancast XFINITY TV ( formerly called TV Everywhere ) , is the biggest cable industry initiative to keep people from skipping traditional TV service in the United States . `` I watch TV online every day . I find it more convenient than my regular TV ... , '' Michael Heard , a self-employed computer repairman from Atlanta , Georgia , said via e-mail . `` I 'm usually watching TV on one window while reading e-mail or tweets on another . `` And also my time is important , so sitting down and watching a show at 8 or 9 p.m. is n't convenient . Online TV allows me to watch what I want when I want . '' Networks have tried for the past couple of years to find a way to reach Web-watching audiences by streaming content on their Web sites or making partnerships with Hulu , one of the larger online TV sites . Now , Comcast is hoping it can make a dent in the market by serving up premium content . It is available to all Comcast customers , so long as they subscribe to both Internet and Cable service . Heard said he does n't expect to give up Hulu , though many of the same episodes and Web clips will be available on Fancast . Heard , trying out the site Tuesday after it went live , tweeted that he thought the service was `` awesome , '' and he finally had a place where he could watch the entire series of `` The Sopranos . '' `` The quality , it 's really clear and loads fast , '' he said , though he noted there were still some bugs in the product . Heard occasionally had to reload the site , and felt that installing the video player and authorizing the computer took a bit more time and was harder than simply pressing play on Hulu . The service is getting mixed reviews on Twitter , with customers giving instant feedback about their experiences . Some complained that high-definition videos , which are available on Hulu , are not available on Comcast 's service . Others complained about having to download a separate video player , the service not being compatible with the Linux operating system , and only being able to authorize the service on a total of three computers . Comcast hopes to wow customers even more in the future . In the next six months , after the service has gone through more beta testing , the company plans to open the service to a broader customer base . Customers will be able to access all content -- depending on the tiered level of service they subscribe to . Those not paying for HBO regularly , for example , wo n't be able to snag the newest episode of `` Curb Your Enthusiasm '' online . In addition to catching up with sites like Hulu and Clicker , Comcast executives told media outlets they expect to serve up a feature that Tivo fans have come to love -- allowing customers to program their DVR from afar . Executives said they hope the service would be available in about six months . To access the content , users simply need to log in with their Comcast e-mail address at fancast.com . The site is offering live online help , including help retrieving those addresses ."
+```
+
+Output
+
+```
+'Web-based on-demand television and movie service'
 ```
 
 ## LeaderBoard

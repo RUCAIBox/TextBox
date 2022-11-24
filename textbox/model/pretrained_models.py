@@ -19,6 +19,8 @@ r"""
     blenderbot, blenderbot-small: Recipes for building an open-domain chatbot
     m2m_100: Beyond English-Centric Multilingual Machine Translation
     prophetnet: ProphetNet: Predicting Future N-gram for Sequence-to-Sequence Pre-training
+    unilm: Unified Language Model Pre-training for Natural Language Understanding and Generation
+    mass: MASS: Masked Sequence to Sequence Pre-training for Language Generation
 """
 
 import copy
@@ -32,6 +34,8 @@ from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForSeq2SeqLM
 from transformers.models.encoder_decoder.configuration_encoder_decoder import EncoderDecoderConfig
 from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
 from transformers.models.unilm.modeling_unilm import UnilmConfig, UnilmForSeq2Seq
+from transformers.models.mass.modeling_mass import MassForConditionalGeneration
+from transformers.models.mass.configuration_mass import MassConfig
 from ..utils.argument_list import efficient_kwargs_dict
 '''
 # Model for Causal LM mapping
@@ -71,6 +75,8 @@ class Pretrained_Models(AbstractModel):
                 config_kwargs["label_smoothing"] = self.label_smoothing
                 self.label_smoothing = 0.
                 self.configuration = UnilmConfig.from_pretrained(config_path, **config_kwargs)
+            elif self.model_name == "mass":
+                self.configuration = MassConfig.from_pretrained(config_path, **config_kwargs)
             else:
                 self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
         if config['efficient_methods']:
@@ -102,6 +108,8 @@ class Pretrained_Models(AbstractModel):
             self.model = UnilmForSeq2Seq.from_pretrained(model_path, config=self.configuration)
             mask_word_id, eos_word_ids, sos_word_id = tokenizer.convert_tokens_to_ids(["[MASK]", "[SEP]", "[S2S_SOS]"])
             self.model.additional_init(mask_word_id, eos_word_ids, sos_word_id)
+        elif self.model_name == 'mass':
+            self.model = MassForConditionalGeneration.from_pretrained(model_path, config=self.configuration)
         elif self.is_casual_model:
             self.configuration.is_decoder = True
             if model_path:
@@ -164,14 +172,15 @@ class Pretrained_Models(AbstractModel):
         xlm-roberta: [<s>, src, </s>; </s>, tgt, </s>], decoder_start_token_id: </s>
         xlm-prophetnet: [src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [SEP]
         nllb: [src_lang_id, src, </s>], [tgt_lang_id, tgt, </s>], decoder_start_token_id: </s>
-        unilm : [[CLS], src, [SEP]], [tgt, [SEP], decoder_start_token_id: [SEP]
+        unilm: [[CLS], src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [SEP]
+        mass: [src, [SEP]], [tgt, [SEP]], decoder_start_token_id: [SEP]
         """
         # configuration needs to add pad token
         if self.model_name in ['ctrl', 'gpt2', 'gpt_neo', 'openai-gpt']:
             self.configuration.pad_token_id = self.tokenizer.eos_token_id
 
         # init `forced_bos_token_id` token
-        if self.model_name in ['bart', 'led', 'mvp']:
+        if self.model_name in ['bart', 'led', 'mvp', 'mass']:
             self.configuration.forced_bos_token_id = self.tokenizer.bos_token_id
         elif self.model_name == 'm2m_100':
             self.configuration.forced_bos_token_id = self.tokenizer.get_lang_id(self.config['tgt_lang'])

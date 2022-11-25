@@ -22,7 +22,7 @@ r"""
     unilm: Unified Language Model Pre-training for Natural Language Understanding and Generation
     mass: MASS: Masked Sequence to Sequence Pre-training for Language Generation
 """
-
+import os
 import copy
 import torch
 import torch.nn as nn
@@ -98,31 +98,43 @@ class Pretrained_Models(AbstractModel):
         self._init_params()
 
         # loading model
+        model_class = None
         if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
-            self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(
-                model_path, model_path, config=self.configuration
-            )
+            model_class = EncoderDecoderModel
         elif self.model_name == 'cpt':
-            self.model = CPTForConditionalGeneration.from_pretrained(model_path, config=self.configuration)
+            model_class = CPTForConditionalGeneration
         elif self.model_name == "unilm":
-            self.model = UnilmForSeq2Seq.from_pretrained(model_path, config=self.configuration)
+            model_class = UnilmForSeq2Seq
+        elif self.model_name == 'mass':
+            model_class = MassForConditionalGeneration
+        elif self.is_casual_model:
+            model_class = AutoModelForCausalLM
+            self.configuration.is_decoder = True
+        else:
+            model_class = AutoModelForSeq2SeqLM
+
+        if model_path:
+            if model_path.startswith(config['saved_dir']):
+                self.model = model_class.from_config(self.configuration)
+                path_to_load = os.path.join(model_path, 'pytorch_model.bin')
+                model_load = torch.load(path_to_load, map_location=self.device)
+                self.load_state_dict(model_load)
+                del model_load
+                warnings.warn(f"Initialize {self.model_name} from checkpoint {model_path}")
+            else:
+                if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
+                    self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(
+                        model_path, model_path, config=self.configuration
+                    )
+                else:
+                    self.model = model_class.from_pretrained(model_path, config=self.configuration)
+        else:
+            warnings.warn(f"Initialize {self.model_name} from scratch")
+            self.model = model_class.from_config(self.configuration)
+
+        if self.model_name == 'unilm':
             mask_word_id, eos_word_ids, sos_word_id = tokenizer.convert_tokens_to_ids(["[MASK]", "[SEP]", "[S2S_SOS]"])
             self.model.additional_init(mask_word_id, eos_word_ids, sos_word_id)
-        elif self.model_name == 'mass':
-            self.model = MassForConditionalGeneration.from_pretrained(model_path, config=self.configuration)
-        elif self.is_casual_model:
-            self.configuration.is_decoder = True
-            if model_path:
-                self.model = AutoModelForCausalLM.from_pretrained(model_path, config=self.configuration)
-            else:
-                warnings.warn(f"Initialize {self.model_name} from scratch")
-                self.model = AutoModelForCausalLM.from_config(self.configuration)
-        else:
-            if model_path:
-                self.model = AutoModelForSeq2SeqLM.from_pretrained(model_path, config=self.configuration)
-            else:
-                warnings.warn(f"Initialize {self.model_name} from scratch")
-                self.model = AutoModelForSeq2SeqLM.from_config(self.configuration)
 
         if self.model_name not in ['bert2bert', 'unilm', 'xlm-roberta', 'xlm']:
             self.model.resize_token_embeddings(len(self.tokenizer))

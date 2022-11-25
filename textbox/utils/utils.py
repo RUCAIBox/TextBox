@@ -83,8 +83,10 @@ def get_tag(_tag: Optional[str], _serial: Optional[int]):
         _tag += '-' + str(_serial)
     return _tag
 
+
 def serialized_save(
     model: torch.nn.Module,
+    optimizer,
     source: Union[dict, list],
     serial: Optional[int],
     serial_of_soft_link: Optional[int],
@@ -131,7 +133,10 @@ def serialized_save(
 
     # save
     model.save_pretrained(path_to_save)
-    torch.save(source, os.path.join(path_to_save, 'checkpoint.pt'))
+    optim_path = os.path.join(path_to_save, 'optimizer.pt')
+    config_path = os.path.join(path_to_save, 'textbox_configuration.pt')
+    torch.save(optimizer.state_dict(), optim_path)
+    torch.save(source, config_path)
 
     # delete the file beyond the max_save
     soft_link_goes_beyond = ((max_save - 1) * serial_intervals < serial - serial_of_soft_link)
@@ -199,7 +204,7 @@ def get_tokenizer(config):
     if model_name in PLM_MODELS or model_name in RNN_MODELS:
         tokenizer_kwargs = config['tokenizer_kwargs'] or {}
         tokenizer_path = config['tokenizer_path'] or config['model_path']
-        if (config['model_name'] in ['chinese-bart', 'chinese-pegasus', 'chinese-gpt2','cpt']):
+        if (config['model_name'] in ['chinese-bart', 'chinese-pegasus', 'chinese-gpt2', 'cpt']):
             tokenizer = BertTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
         elif config['model_name'] == "unilm":
             tokenizer = UnilmTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)

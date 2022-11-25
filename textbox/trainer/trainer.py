@@ -66,8 +66,6 @@ class Trainer(AbstractTrainer):
 
     def __init__(self, config: Config, model: AbstractModel, accelerator: Accelerator):
         super(Trainer, self).__init__(config, model)
-
-        self.model_name = config['model_name']
         self.device: torch.device = config['device']
         self.filename = config['filename']
         self.post_processing = config['post_processing']
@@ -109,7 +107,7 @@ class Trainer(AbstractTrainer):
         # Functionality
         self.saved_dir = os.path.join(config['saved_dir'], self.filename)
         self.saved_model_filename = os.path.join(self.saved_dir, 'checkpoint')
-        self.saved_text_filename: str = os.path.join(self.saved_dir, 'test_generation')
+        self.saved_text_filename: str = os.path.join(self.saved_dir, 'generation.txt')
 
         self.max_save = config['max_save'] if config['max_save'] is not None else 2
         if self.max_save == 0:
@@ -342,8 +340,6 @@ class Trainer(AbstractTrainer):
         # get optimizer, config and validation summary
         checkpoint = {
             # parameters that needed to be loaded
-            # 'state_dict': _state_dict,
-            'optimizer': self.optimizer.state_dict(),
             'stopping_count': self.stopping_count,
             'best_valid_score': self._summary_tracker.best_valid_score,
             'epoch': self.timestamp.train_epoch,
@@ -360,6 +356,7 @@ class Trainer(AbstractTrainer):
         serial_of_soft_link = self.best_valid_timestamp.valid_epoch
         serialized_save(
             self.model,
+            self.optimizer,
             self._get_checkpoint(),
             serial=serial_idx,
             serial_of_soft_link=serial_of_soft_link,
@@ -371,11 +368,16 @@ class Trainer(AbstractTrainer):
 
     def save_generated_text(self, generated_corpus: List[str], is_valid: bool = False):
         r"""Store the generated text by our model into `self.saved_text_filename`."""
+        saved_text_filename = self.saved_text_filename
         if not is_valid:
             self._summary_tracker.add_corpus('test', generated_corpus)
-            with open(self.saved_text_filename, 'w') as fout:
-                for text in generated_corpus:
-                    fout.write(text + '\n')
+        else:
+            path_to_save = self.saved_model_filename + '_epoch-' + str(self.timestamp.valid_epoch)
+            saved_text_filename = os.path.join(path_to_save, 'generation.txt')
+            os.makedirs(path_to_save, exist_ok=True)
+        with open(saved_text_filename, 'w') as fout:
+            for text in generated_corpus:
+                fout.write(text + '\n')
 
     def resume_checkpoint(self, resume_dir: str):
         r"""Load the model parameters information and training information.
@@ -385,9 +387,17 @@ class Trainer(AbstractTrainer):
         """
         # check
         self.logger.info("Resuming checkpoint from {}...".format(resume_dir))
-        resume_checkpoint = os.path.join(resume_dir, 'checkpoint.pt')
+        resume_checkpoint = os.path.join(resume_dir, 'textbox_configuration.pt')
+        resume_optimizer = os.path.join(resume_dir, 'optimizer.pt')
         if os.path.isfile(resume_checkpoint):
             checkpoint = torch.load(resume_checkpoint, map_location=self.device)
+        else:
+            self.logger.warning('Checkpoint file "{}" not found. Resuming stopped.'.format(resume_dir))
+            return
+        if os.path.isfile(resume_optimizer):
+            optim_state_dict = torch.load(resume_optimizer, map_location=self.device)
+            self.optimizer.load_state_dict(optim_state_dict)
+            del optim_state_dict
         else:
             self.logger.warning('Checkpoint file "{}" not found. Resuming stopped.'.format(resume_dir))
             return
@@ -409,8 +419,11 @@ class Trainer(AbstractTrainer):
                 'Architecture configuration given in config file is different from that of checkpoint. '
                 'This may yield an exception while state_dict is being loaded.'
             )
-        self.model.load_state_dict(torch.load(os.path.join(resume_dir, 'pytorch_model.bin'), map_location=self.device))
-        self.model.tokenizer.from_pretrained(resume_dir)
+            model_path = os.path.join(resume_dir, 'pytorch_model.bin')
+            model_load = torch.load(model_path, map_location=self.device)
+            self.model.load_state_dict(model_load)
+            self.model.tokenizer.from_pretrained(resume_dir)
+            del model_load
 
         # load optimizer state from checkpoint only when optimizer type is not changed
         if checkpoint['config']['optimizer'].lower() != self.config['optimizer']:
@@ -499,11 +512,12 @@ class Trainer(AbstractTrainer):
         if load_best_model:
             checkpoint_dir = model_file or self.saved_model_filename + '_best'
             self.logger.info('Loading model structure and parameters from {} ...'.format(checkpoint_dir))
-            self.model.load_state_dict(
-                torch.load(os.path.join(checkpoint_dir, 'pytorch_model.bin'), map_location=self.device)
-            )
+            model_path = os.path.join(checkpoint_dir, 'pytorch_model.bin')
+            model_load = torch.load(model_path, map_location=self.device)
+            self.model.load_state_dict(model_load)
             self.model.tokenizer.from_pretrained(checkpoint_dir)
             self.accelerator.wait_for_everyone()
+            del model_load
 
         if not is_valid:
             self.model = self.accelerator.prepare(self.model)

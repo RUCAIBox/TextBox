@@ -164,7 +164,8 @@ def padSeqs(sequences, maxlen=None, truncated=False, pad_method='post', trunc_me
     lengths = []
     for x in sequences:
         if not hasattr(x, '__len__'):
-            raise ValueError('`sequences` must be a list of iterables. ' 'Found non-iterable: ' + str(x))
+            raise ValueError('`sequences` must be a list of iterables. '
+                             'Found non-iterable: ' + str(x))
         lengths.append(len(x))
 
     num_samples = len(sequences)

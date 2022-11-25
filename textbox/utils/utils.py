@@ -10,6 +10,7 @@ from transformers import AutoTokenizer, BertTokenizer
 
 from .enum_type import PLM_MODELS, RNN_MODELS
 from transformers.models.unilm.tokenization_unilm import UnilmTokenizer
+from transformers.models.mass.tokenization_mass import MassTokenizer
 
 
 def get_local_time() -> str:
@@ -202,6 +203,8 @@ def get_tokenizer(config):
             tokenizer = BertTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
         elif config['model_name'] == "unilm":
             tokenizer = UnilmTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
+        elif config['model_name'] == "mass":
+            tokenizer = MassTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
         else:
             tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, **tokenizer_kwargs)
 

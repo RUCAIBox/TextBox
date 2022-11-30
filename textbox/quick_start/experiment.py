@@ -84,12 +84,13 @@ class Experiment:
         self.model = get_model(config['model'])(config, self.tokenizer).to(config['device'])
         self.logger.info(self.model)
         self.trainer: Trainer = get_trainer(config['model'])(config, self.model, self.accelerator)
-
         self.do_train = config['do_train']
         self.do_valid = config['do_valid']
         self.do_test = config['do_test']
         self.valid_result: Optional[ResultType] = None
         self.test_result: Optional[ResultType] = None
+        if config['model_path'] and config['model_path'].startswith(config['saved_dir']):
+            self.trainer.resume_checkpoint(config['model_path'])
 
     def _do_train_and_valid(self):
 
@@ -115,12 +116,12 @@ class Experiment:
 
     def _on_experiment_end(self):
         if self.config['max_save'] == 0:
-            saved_filename = os.path.abspath(
-                os.path.join(self.config['saved_dir'], self.config['filename'], 'checkpoint-best') + '.pth'
+            saved_dir = os.path.abspath(
+                os.path.join(self.config['saved_dir'], self.config['filename'], 'checkpoint_best')
             )
-            saved_link = os.readlink(saved_filename) if os.path.exists(saved_filename) else ''
+            saved_link = os.readlink(saved_dir) if os.path.exists(saved_dir) else ''
             from ..utils import safe_remove
-            safe_remove(saved_filename)
+            safe_remove(saved_dir)
             safe_remove(saved_link)
         self.__extended_config = None
 

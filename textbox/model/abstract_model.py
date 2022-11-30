@@ -140,5 +140,6 @@ class AbstractModel(nn.Module):
             self.tokenizer.save_pretrained(save_directory)
 
         state_dict = self.cpu().state_dict()
+        self.to(self.device)
         torch.save(state_dict, os.path.join(save_directory, 'pytorch_model.bin'))
         del state_dict

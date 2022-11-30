@@ -84,10 +84,10 @@ class Trainer(AbstractTrainer):
 
         # Training strategy
         self.quick_test = bool(config['quick_test'])
-        self.max_steps = config['max_steps']  # max training batch step
+        self.max_steps = config['max_steps'] or 10000000000# max training batch step
         self.start_epoch = 1
         r"""Start epoch index. That is, `epoch_idx` iterates through `range(self.start_epoch, self.epochs)`"""
-        self.epochs = config['epochs'] if not self.max_steps else 10000000000
+        self.epochs = config['epochs'] if self.max_steps==10000000000 else 10000000000
         r"""End epoch index + 1, aka max iteration times. That is, `epoch_idx` iterates through 
         `range(self.start_epoch, self.epochs)`"""
 
@@ -215,7 +215,7 @@ class Trainer(AbstractTrainer):
             for step, data in enumerate(train_data):
                 if step % self.accumulation_steps == 0:
                     self._summary_tracker.new_step()
-                    if self.max_steps is not None and self.timestamp.train_step == self.max_steps + 1:
+                    if self.timestamp.train_step == self.max_steps + 1:
                         self.stopped = True
                         break
 
@@ -394,6 +394,11 @@ class Trainer(AbstractTrainer):
         else:
             self.logger.warning('Checkpoint file "{}" not found. Resuming stopped.'.format(resume_dir))
             return
+        if checkpoint['config']['optimizer'].lower() != self.config['optimizer']:
+            self.logger.warning(
+                'Optimizer configuration given in config file is different from that of checkpoint. '
+                'This may yield an exception while state_dict is being loaded.'
+            )
         if os.path.isfile(resume_optimizer):
             optim_state_dict = torch.load(resume_optimizer, map_location=self.device)
             self.optimizer.load_state_dict(optim_state_dict)
@@ -419,19 +424,14 @@ class Trainer(AbstractTrainer):
                 'Architecture configuration given in config file is different from that of checkpoint. '
                 'This may yield an exception while state_dict is being loaded.'
             )
-            model_path = os.path.join(resume_dir, 'pytorch_model.bin')
-            model_load = torch.load(model_path, map_location=self.device)
-            self.model.load_state_dict(model_load)
-            self.model.tokenizer.from_pretrained(resume_dir)
-            del model_load
+            # model_path = os.path.join(resume_dir, 'pytorch_model.bin')
+            # model_load = torch.load(model_path, map_location=self.device)
+            # self.model.load_state_dict(model_load)
+            # self.model.tokenizer.from_pretrained(resume_dir)
+            # del model_load
 
         # load optimizer state from checkpoint only when optimizer type is not changed
-        if checkpoint['config']['optimizer'].lower() != self.config['optimizer']:
-            self.logger.warning(
-                'Optimizer configuration given in config file is different from that of checkpoint. '
-                'This may yield an exception while state_dict is being loaded.'
-            )
-        self.optimizer.load_state_dict(checkpoint['optimizer'])
+        
         self.logger.info(
             'Checkpoint loaded. Resume training from epoch {} steps {}'.format(
                 self.start_epoch, self._summary_tracker.axes.train_step + 1
@@ -469,7 +469,7 @@ class Trainer(AbstractTrainer):
             if self.stopped:
                 if self.stopping_steps:
                     self.logger.info(f'Early stopped at {self.stopping_count} non-best validation.')
-                elif self.max_steps:
+                elif self.max_steps < 10000000000:
                     self.logger.info(f'Stopped at max_steps {self.max_steps}.')
                 break
 

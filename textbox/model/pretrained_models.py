@@ -120,7 +120,6 @@ class Pretrained_Models(AbstractModel):
                 model_load = torch.load(path_to_load, map_location=self.device)
                 self.load_state_dict(model_load)
                 del model_load
-                warnings.warn(f"Initialize {self.model_name} from checkpoint {model_path}")
             else:
                 if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
                     self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(

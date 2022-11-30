@@ -89,8 +89,8 @@ class BleuEvaluator(AbstractEvaluator):
         elif self.bleu_type == 'sacrebleu':
             import sacrebleu
 
-            reference_corpus = list(zip_longest(*reference_corpus))
-            bleu = sacrebleu.corpus_bleu(generate_corpus.text, reference_corpus.text)
+            reference_corpus = list(zip_longest(*reference_corpus.text))
+            bleu = sacrebleu.corpus_bleu(generate_corpus.text, reference_corpus)
             results['bleu'] = bleu.score
             results['bleu-precisions'] = bleu.prec_str
 

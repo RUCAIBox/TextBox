@@ -6,16 +6,13 @@ from logging import getLogger
 import math
 import os
 from time import time
-from typing import Dict, Iterable, Optional, Set, Union, List, Callable, Tuple
+from typing import Iterable, Optional, Set, Union, Callable
 import traceback
 
 import pandas as pd
-from pandas.core.resample import f
 import torch
 import wandb
 from wandb import AlertLevel
-from wandb.data_types import Table
-from wandb.sdk.wandb_run import Run
 from textbox.config.configurator import Config
 
 train_step = 'train/step'

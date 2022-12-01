@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from textbox import CLM_MODELS, SEQ2SEQ_MODELS, RNN_MODELS, PLM_MODELS
+from transformers import EncoderDecoderModel
 import os
 from typing import List, Optional, Tuple, Union
 from transformers.modeling_utils import get_parameter_dtype
@@ -117,7 +118,19 @@ class AbstractModel(nn.Module):
             'attention_mask': batch['source_mask'].to(self.device),
         }
         return inputs
-
+    
+    def from_pretrained(
+        self,
+        save_directory: Union[str, os.PathLike]
+    ):
+        if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
+            self.model = EncoderDecoderModel.from_pretrained(save_directory)
+        else:
+            model_path = os.path.join(save_directory, 'pytorch_model.bin')
+            model_load = torch.load(model_path, map_location=self.device)
+            self.load_state_dict(model_load)
+            del model_load
+            
     def save_pretrained(
         self,
         save_directory: Union[str, os.PathLike],
@@ -138,8 +151,11 @@ class AbstractModel(nn.Module):
         # Save the tokenizer
         if self.tokenizer is not None:
             self.tokenizer.save_pretrained(save_directory)
-
-        state_dict = self.cpu().state_dict()
-        self.to(self.device)
-        torch.save(state_dict, os.path.join(save_directory, 'pytorch_model.bin'))
-        del state_dict
+        
+        if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
+            self.model.save_pretrained(save_directory)
+        else:
+            state_dict = self.cpu().state_dict()
+            self.to(self.device)
+            torch.save(state_dict, os.path.join(save_directory, 'pytorch_model.bin'))
+            del state_dict

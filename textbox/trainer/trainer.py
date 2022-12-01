@@ -412,6 +412,7 @@ class Trainer(AbstractTrainer):
         self._summary_tracker.axes = checkpoint['timestamp']
         self.stopping_count = checkpoint['stopping_count']
         self._summary_tracker.best_valid_score = checkpoint['best_valid_score']
+        self._summary_tracker.best_valid_timestamp = self._summary_tracker.axes
         self.valid_result_dict = {self._summary_tracker.axes.valid_epoch: checkpoint['summary']}
 
         if checkpoint['config']['seed']:
@@ -472,8 +473,9 @@ class Trainer(AbstractTrainer):
                 elif self.max_steps < 10000000000:
                     self.logger.info(f'Stopped at max_steps {self.max_steps}.')
                 break
+    
 
-        file = self.saved_model_filename + ".pth"
+        file = self.saved_model_filename + '_best'
         if os.path.exists(file):
             self.logger.info(f'Soft link created: {file} -> {os.readlink(file)}')
         self.logger.info(
@@ -512,12 +514,9 @@ class Trainer(AbstractTrainer):
         if load_best_model:
             checkpoint_dir = model_file or self.saved_model_filename + '_best'
             self.logger.info('Loading model structure and parameters from {} ...'.format(checkpoint_dir))
-            model_path = os.path.join(checkpoint_dir, 'pytorch_model.bin')
-            model_load = torch.load(model_path, map_location=self.device)
-            self.model.load_state_dict(model_load)
+            self.model.from_pretrained(checkpoint_dir)
             self.model.tokenizer.from_pretrained(checkpoint_dir)
             self.accelerator.wait_for_everyone()
-            del model_load
 
         if not is_valid:
             self.model = self.accelerator.prepare(self.model)

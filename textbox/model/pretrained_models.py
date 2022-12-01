@@ -100,36 +100,43 @@ class Pretrained_Models(AbstractModel):
         # loading model
         model_class = None
         if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
-            model_class = EncoderDecoderModel
-        elif self.model_name == 'cpt':
-            model_class = CPTForConditionalGeneration
-        elif self.model_name == "unilm":
-            model_class = UnilmForSeq2Seq
-        elif self.model_name == 'mass':
-            model_class = MassForConditionalGeneration
-        elif self.is_casual_model:
-            model_class = AutoModelForCausalLM
-            self.configuration.is_decoder = True
-        else:
-            model_class = AutoModelForSeq2SeqLM
-
-        if model_path:
-            if model_path.startswith(config['saved_dir']):
-                self.model = model_class.from_config(self.configuration)
-                path_to_load = os.path.join(model_path, 'pytorch_model.bin')
-                model_load = torch.load(path_to_load, map_location=self.device)
-                self.load_state_dict(model_load)
-                del model_load
+            if model_path and model_path.startswith(config['saved_dir']):
+                self.model = EncoderDecoderModel.from_pretrained(model_path)
             else:
-                if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
-                    self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(
-                        model_path, model_path, config=self.configuration
-                    )
-                else:
-                    self.model = model_class.from_pretrained(model_path, config=self.configuration)
+                self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(
+                    model_path, model_path, config=self.configuration
+                )
         else:
-            warnings.warn(f"Initialize {self.model_name} from scratch")
-            self.model = model_class.from_config(self.configuration)
+            if self.model_name == 'cpt':
+                model_class = CPTForConditionalGeneration
+            elif self.model_name == "unilm":
+                model_class = UnilmForSeq2Seq
+            elif self.model_name == 'mass':
+                model_class = MassForConditionalGeneration
+            elif self.is_casual_model:
+                model_class = AutoModelForCausalLM
+                self.configuration.is_decoder = True
+            else:
+                model_class = AutoModelForSeq2SeqLM
+
+            if model_path:
+                if model_path.startswith(config['saved_dir']):
+                    if hasattr(model_class,'from_config'):
+                        self.model = model_class.from_config(self.configuration)
+                    else:
+                        self.model = model_class(self.configuration)
+                    path_to_load = os.path.join(model_path, 'pytorch_model.bin')
+                    model_load = torch.load(path_to_load, map_location=self.device)
+                    self.load_state_dict(model_load)
+                    del model_load
+                else:
+                    if hasattr(model_class,'from_config'):
+                        self.model = model_class.from_config(self.configuration)
+                    else:
+                        self.model = model_class(self.configuration)
+            else:
+                warnings.warn(f"Initialize {self.model_name} from scratch")
+                self.model = model_class.from_config(self.configuration)
 
         if self.model_name == 'unilm':
             mask_word_id, eos_word_ids, sos_word_id = tokenizer.convert_tokens_to_ids(["[MASK]", "[SEP]", "[S2S_SOS]"])

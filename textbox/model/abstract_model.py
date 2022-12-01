@@ -118,11 +118,8 @@ class AbstractModel(nn.Module):
             'attention_mask': batch['source_mask'].to(self.device),
         }
         return inputs
-    
-    def from_pretrained(
-        self,
-        save_directory: Union[str, os.PathLike]
-    ):
+
+    def from_pretrained(self, save_directory: Union[str, os.PathLike]):
         if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
             self.model = EncoderDecoderModel.from_pretrained(save_directory)
         else:
@@ -130,7 +127,7 @@ class AbstractModel(nn.Module):
             model_load = torch.load(model_path, map_location=self.device)
             self.load_state_dict(model_load)
             del model_load
-            
+
     def save_pretrained(
         self,
         save_directory: Union[str, os.PathLike],
@@ -151,7 +148,7 @@ class AbstractModel(nn.Module):
         # Save the tokenizer
         if self.tokenizer is not None:
             self.tokenizer.save_pretrained(save_directory)
-        
+
         if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
             self.model.save_pretrained(save_directory)
         else:

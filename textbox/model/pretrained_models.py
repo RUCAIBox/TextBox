@@ -121,7 +121,7 @@ class Pretrained_Models(AbstractModel):
 
             if model_path:
                 if model_path.startswith(config['saved_dir']):
-                    if hasattr(model_class,'from_config'):
+                    if hasattr(model_class, 'from_config'):
                         self.model = model_class.from_config(self.configuration)
                     else:
                         self.model = model_class(self.configuration)
@@ -130,7 +130,7 @@ class Pretrained_Models(AbstractModel):
                     self.load_state_dict(model_load)
                     del model_load
                 else:
-                    if hasattr(model_class,'from_config'):
+                    if hasattr(model_class, 'from_config'):
                         self.model = model_class.from_config(self.configuration)
                     else:
                         self.model = model_class(self.configuration)

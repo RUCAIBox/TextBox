@@ -84,10 +84,10 @@ class Trainer(AbstractTrainer):
 
         # Training strategy
         self.quick_test = bool(config['quick_test'])
-        self.max_steps = config['max_steps'] or 10000000000# max training batch step
+        self.max_steps = config['max_steps'] or 10000000000  # max training batch step
         self.start_epoch = 1
         r"""Start epoch index. That is, `epoch_idx` iterates through `range(self.start_epoch, self.epochs)`"""
-        self.epochs = config['epochs'] if self.max_steps==10000000000 else 10000000000
+        self.epochs = config['epochs'] if self.max_steps == 10000000000 else 10000000000
         r"""End epoch index + 1, aka max iteration times. That is, `epoch_idx` iterates through 
         `range(self.start_epoch, self.epochs)`"""
 
@@ -432,7 +432,7 @@ class Trainer(AbstractTrainer):
             # del model_load
 
         # load optimizer state from checkpoint only when optimizer type is not changed
-        
+
         self.logger.info(
             'Checkpoint loaded. Resume training from epoch {} steps {}'.format(
                 self.start_epoch, self._summary_tracker.axes.train_step + 1
@@ -473,7 +473,6 @@ class Trainer(AbstractTrainer):
                 elif self.max_steps < 10000000000:
                     self.logger.info(f'Stopped at max_steps {self.max_steps}.')
                 break
-    
 
         file = self.saved_model_filename + '_best'
         if os.path.exists(file):

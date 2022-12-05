@@ -89,8 +89,10 @@ class Experiment:
         self.do_test = config['do_test']
         self.valid_result: Optional[ResultType] = None
         self.test_result: Optional[ResultType] = None
-        if config['model_path'] and config['model_path'].startswith(config['saved_dir']):
+        if config['model_path'] and os.path.exists(os.path.join(config['model_path'],'textbox_configuration.pt')):
             self.trainer.resume_checkpoint(config['model_path'])
+            if config['model_name'] not in ['bert2bert', 'xlm-roberta', 'xlm']:
+                self.model.from_pretrained(config['model_path'])
 
     def _do_train_and_valid(self):
 

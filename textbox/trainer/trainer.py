@@ -425,11 +425,6 @@ class Trainer(AbstractTrainer):
                 'Architecture configuration given in config file is different from that of checkpoint. '
                 'This may yield an exception while state_dict is being loaded.'
             )
-            # model_path = os.path.join(resume_dir, 'pytorch_model.bin')
-            # model_load = torch.load(model_path, map_location=self.device)
-            # self.model.load_state_dict(model_load)
-            # self.model.tokenizer.from_pretrained(resume_dir)
-            # del model_load
 
         # load optimizer state from checkpoint only when optimizer type is not changed
 

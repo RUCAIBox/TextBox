@@ -100,12 +100,14 @@ class Pretrained_Models(AbstractModel):
         # loading model
         model_class = None
         if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
-            if model_path and model_path.startswith(config['saved_dir']):
+            if model_path and os.path.exists(os.path.join(model_path,'textbox_configuration.pt')):
                 self.model = EncoderDecoderModel.from_pretrained(model_path)
             else:
                 self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(
                     model_path, model_path, config=self.configuration
                 )
+            self.model.config.decoder_start_token_id = self.tokenizer.cls_token_id
+            self.model.config.pad_token_id = self.tokenizer.pad_token_id
         else:
             if self.model_name == 'cpt':
                 model_class = CPTForConditionalGeneration
@@ -119,24 +121,16 @@ class Pretrained_Models(AbstractModel):
             else:
                 model_class = AutoModelForSeq2SeqLM
 
-            if model_path:
-                if model_path.startswith(config['saved_dir']):
-                    if hasattr(model_class, 'from_config'):
-                        self.model = model_class.from_config(self.configuration)
-                    else:
-                        self.model = model_class(self.configuration)
-                    path_to_load = os.path.join(model_path, 'pytorch_model.bin')
-                    model_load = torch.load(path_to_load, map_location=self.device)
-                    self.load_state_dict(model_load)
-                    del model_load
-                else:
-                    if hasattr(model_class, 'from_config'):
-                        self.model = model_class.from_config(self.configuration)
-                    else:
-                        self.model = model_class(self.configuration)
+            if model_path and not os.path.exists(os.path.join(model_path,'textbox_configuration.pt')):
+                    self.model = model_class.from_pretrained(model_path, config=self.configuration)
             else:
-                warnings.warn(f"Initialize {self.model_name} from scratch")
-                self.model = model_class.from_config(self.configuration)
+                if hasattr(model_class, 'from_config'):
+                    self.model = model_class.from_config(self.configuration)
+                else:
+                    self.model = model_class(self.configuration)
+            
+        if not model_path:
+            warnings.warn(f"Initialize {self.model_name} from scratch")
 
         if self.model_name == 'unilm':
             mask_word_id, eos_word_ids, sos_word_id = tokenizer.convert_tokens_to_ids(["[MASK]", "[SEP]", "[S2S_SOS]"])
@@ -144,9 +138,6 @@ class Pretrained_Models(AbstractModel):
 
         if self.model_name not in ['bert2bert', 'unilm', 'xlm-roberta', 'xlm']:
             self.model.resize_token_embeddings(len(self.tokenizer))
-        elif self.model_name not in ['unilm']:
-            self.model.config.decoder_start_token_id = self.tokenizer.cls_token_id
-            self.model.config.pad_token_id = self.tokenizer.pad_token_id
 
         if self.is_prompt_tuning:
             self.prompt_length = self.model.config.prompt_length

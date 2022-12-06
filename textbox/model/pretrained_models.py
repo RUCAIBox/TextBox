@@ -56,6 +56,7 @@ class Pretrained_Models(AbstractModel):
     def __init__(self, config, tokenizer):
         super(Pretrained_Models, self).__init__(config, tokenizer)
         model_path = config['model_path']
+        load_type = config['load_type']
 
         # loading config
         config_path = config['config_path'] or model_path or None
@@ -100,41 +101,42 @@ class Pretrained_Models(AbstractModel):
         # loading model
         model_class = None
         if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
-            if model_path and os.path.exists(os.path.join(model_path,'textbox_configuration.pt')):
-                self.model = EncoderDecoderModel.from_pretrained(model_path)
-            else:
+            model_class = EncoderDecoderModel      
+        if self.model_name == 'cpt':
+            model_class = CPTForConditionalGeneration
+        elif self.model_name == "unilm":
+            model_class = UnilmForSeq2Seq
+        elif self.model_name == 'mass':
+            model_class = MassForConditionalGeneration
+        elif self.is_casual_model:
+            model_class = AutoModelForCausalLM
+            self.configuration.is_decoder = True
+        else:
+            model_class = AutoModelForSeq2SeqLM
+
+        if load_type == 'from_pretrained':
+            if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
                 self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(
                     model_path, model_path, config=self.configuration
                 )
-            self.model.config.decoder_start_token_id = self.tokenizer.cls_token_id
-            self.model.config.pad_token_id = self.tokenizer.pad_token_id
+            else:
+                self.model = model_class.from_pretrained(model_path, config=self.configuration)
         else:
-            if self.model_name == 'cpt':
-                model_class = CPTForConditionalGeneration
-            elif self.model_name == "unilm":
-                model_class = UnilmForSeq2Seq
-            elif self.model_name == 'mass':
-                model_class = MassForConditionalGeneration
-            elif self.is_casual_model:
-                model_class = AutoModelForCausalLM
-                self.configuration.is_decoder = True
+            if hasattr(model_class, 'from_config'):
+                self.model = model_class.from_config(self.configuration)
             else:
-                model_class = AutoModelForSeq2SeqLM
-
-            if model_path and not os.path.exists(os.path.join(model_path,'textbox_configuration.pt')):
-                    self.model = model_class.from_pretrained(model_path, config=self.configuration)
-            else:
-                if hasattr(model_class, 'from_config'):
-                    self.model = model_class.from_config(self.configuration)
-                else:
-                    self.model = model_class(self.configuration)
+                self.model = model_class(self.configuration)
             
-        if not model_path:
+        if load_type == 'from_scratch':
             warnings.warn(f"Initialize {self.model_name} from scratch")
 
         if self.model_name == 'unilm':
             mask_word_id, eos_word_ids, sos_word_id = tokenizer.convert_tokens_to_ids(["[MASK]", "[SEP]", "[S2S_SOS]"])
             self.model.additional_init(mask_word_id, eos_word_ids, sos_word_id)
+            
+        if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
+            self.model.config.decoder_start_token_id = self.tokenizer.cls_token_id
+            self.model.config.pad_token_id = self.tokenizer.pad_token_id
 
         if self.model_name not in ['bert2bert', 'unilm', 'xlm-roberta', 'xlm']:
             self.model.resize_token_embeddings(len(self.tokenizer))

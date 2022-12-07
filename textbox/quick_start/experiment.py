@@ -84,12 +84,14 @@ class Experiment:
         self.model = get_model(config['model'])(config, self.tokenizer).to(config['device'])
         self.logger.info(self.model)
         self.trainer: Trainer = get_trainer(config['model'])(config, self.model, self.accelerator)
-
         self.do_train = config['do_train']
         self.do_valid = config['do_valid']
         self.do_test = config['do_test']
         self.valid_result: Optional[ResultType] = None
         self.test_result: Optional[ResultType] = None
+        if config['load_type'] == 'resume':
+            self.trainer.resume_checkpoint(config['model_path'])
+            self.model.from_pretrained(config['model_path'])
 
     def _do_train_and_valid(self):
 
@@ -98,7 +100,7 @@ class Experiment:
 
         if self.do_train:
             if self.config['load_experiment'] is not None:
-                self.trainer.resume_checkpoint(resume_file=self.config['load_experiment'])
+                self.trainer.resume_checkpoint(resume_dir=self.config['load_experiment'])
             train_data = self.train_data
             valid_data = self.valid_data if self.do_valid else None
 
@@ -115,12 +117,12 @@ class Experiment:
 
     def _on_experiment_end(self):
         if self.config['max_save'] == 0:
-            saved_filename = os.path.abspath(
-                os.path.join(self.config['saved_dir'], self.config['filename'], self.config['filename']) + '.pth'
+            saved_dir = os.path.abspath(
+                os.path.join(self.config['saved_dir'], self.config['filename'], 'checkpoint_best')
             )
-            saved_link = os.readlink(saved_filename) if os.path.exists(saved_filename) else ''
+            saved_link = os.readlink(saved_dir) if os.path.exists(saved_dir) else ''
             from ..utils import safe_remove
-            safe_remove(saved_filename)
+            safe_remove(saved_dir)
             safe_remove(saved_link)
         self.__extended_config = None
 

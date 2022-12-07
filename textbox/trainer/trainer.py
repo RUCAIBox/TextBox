@@ -21,6 +21,7 @@ from torch.utils.data import DataLoader
 from ..evaluator import BaseEvaluator
 from ..model.abstract_model import AbstractModel
 from ..utils import serialized_save, init_seed
+from ..utils.enum_type import PLM_MODELS, RNN_MODELS
 
 
 class AbstractTrainer:
@@ -65,7 +66,6 @@ class Trainer(AbstractTrainer):
 
     def __init__(self, config: Config, model: AbstractModel, accelerator: Accelerator):
         super(Trainer, self).__init__(config, model)
-
         self.device: torch.device = config['device']
         self.filename = config['filename']
         self.post_processing = config['post_processing']
@@ -84,10 +84,10 @@ class Trainer(AbstractTrainer):
 
         # Training strategy
         self.quick_test = bool(config['quick_test'])
-        self.max_steps = config['max_steps']  # max training batch step
-        self.start_epoch = 0
+        self.max_steps = config['max_steps'] or 10000000000  # max training batch step
+        self.start_epoch = 1
         r"""Start epoch index. That is, `epoch_idx` iterates through `range(self.start_epoch, self.epochs)`"""
-        self.epochs = config['epochs'] if not self.max_steps else 1e10
+        self.epochs = config['epochs'] if self.max_steps == 10000000000 else 10000000000
         r"""End epoch index + 1, aka max iteration times. That is, `epoch_idx` iterates through 
         `range(self.start_epoch, self.epochs)`"""
 
@@ -106,8 +106,8 @@ class Trainer(AbstractTrainer):
 
         # Functionality
         self.saved_dir = os.path.join(config['saved_dir'], self.filename)
-        self.saved_model_filename = os.path.join(self.saved_dir, self.filename)
-        self.saved_text_filename: str = os.path.join(self.saved_dir, self.filename)
+        self.saved_model_filename = os.path.join(self.saved_dir, 'checkpoint')
+        self.saved_text_filename: str = os.path.join(self.saved_dir, 'generation.txt')
 
         self.max_save = config['max_save'] if config['max_save'] is not None else 2
         if self.max_save == 0:
@@ -215,7 +215,7 @@ class Trainer(AbstractTrainer):
             for step, data in enumerate(train_data):
                 if step % self.accumulation_steps == 0:
                     self._summary_tracker.new_step()
-                    if self.timestamp.train_step == self.max_steps:
+                    if self.timestamp.train_step == self.max_steps + 1:
                         self.stopped = True
                         break
 
@@ -231,7 +231,7 @@ class Trainer(AbstractTrainer):
                     self.optimizer.zero_grad()
                     if not self.disable_tqdm:
                         train_tqdm.update(1)
-                        train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss())
+                        train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
                     if valid_data:
                         self.stopped |= self._valid(valid_data, 'step')
                     if self.stopped:
@@ -291,7 +291,7 @@ class Trainer(AbstractTrainer):
                     losses += loss
                     self._summary_tracker.append_loss(loss)
                     if not self.disable_tqdm:
-                        valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss())
+                        valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
                 valid_results = {'loss': losses / len(valid_tqdm)}
             else:
                 valid_results = self.evaluate(valid_data, is_valid=True)
@@ -340,8 +340,6 @@ class Trainer(AbstractTrainer):
         # get optimizer, config and validation summary
         checkpoint = {
             # parameters that needed to be loaded
-            'state_dict': _state_dict,
-            'optimizer': self.optimizer.state_dict(),
             'stopping_count': self.stopping_count,
             'best_valid_score': self._summary_tracker.best_valid_score,
             'epoch': self.timestamp.train_epoch,
@@ -356,8 +354,9 @@ class Trainer(AbstractTrainer):
     def save_checkpoint(self):
         serial_idx = self.timestamp.valid_epoch
         serial_of_soft_link = self.best_valid_timestamp.valid_epoch
-
         serialized_save(
+            self.model,
+            self.optimizer,
             self._get_checkpoint(),
             serial=serial_idx,
             serial_of_soft_link=serial_of_soft_link,
@@ -369,31 +368,43 @@ class Trainer(AbstractTrainer):
 
     def save_generated_text(self, generated_corpus: List[str], is_valid: bool = False):
         r"""Store the generated text by our model into `self.saved_text_filename`."""
-        if is_valid:
-            self._summary_tracker.add_corpus('valid-' + str(self._valid_count), generated_corpus)
-        else:
+        saved_text_filename = self.saved_text_filename
+        if not is_valid:
             self._summary_tracker.add_corpus('test', generated_corpus)
-            serialized_save(
-                generated_corpus,
-                serial=None,
-                serial_of_soft_link=None,
-                path_without_extension=self.saved_text_filename,
-                tag=None,
-                extension_name='txt',
-            )
+        else:
+            path_to_save = self.saved_model_filename + '_epoch-' + str(self.timestamp.valid_epoch)
+            saved_text_filename = os.path.join(path_to_save, 'generation.txt')
+            os.makedirs(path_to_save, exist_ok=True)
+        with open(saved_text_filename, 'w') as fout:
+            for text in generated_corpus:
+                fout.write(text + '\n')
 
-    def resume_checkpoint(self, resume_file: str):
+    def resume_checkpoint(self, resume_dir: str):
         r"""Load the model parameters information and training information.
 
         Args:
-            resume_file: the checkpoint file (specific by `load_experiment`).
+            resume_dir: the checkpoint file (specific by `load_experiment`).
         """
         # check
-        self.logger.info("Resuming checkpoint from {}...".format(resume_file))
-        if os.path.isfile(resume_file):
-            checkpoint = torch.load(resume_file, map_location=self.device)
+        self.logger.info("Resuming checkpoint from {}...".format(resume_dir))
+        resume_checkpoint = os.path.join(resume_dir, 'textbox_configuration.pt')
+        resume_optimizer = os.path.join(resume_dir, 'optimizer.pt')
+        if os.path.isfile(resume_checkpoint):
+            checkpoint = torch.load(resume_checkpoint, map_location=self.device)
         else:
-            self.logger.warning('Checkpoint file "{}" not found. Resuming stopped.'.format(resume_file))
+            self.logger.warning('Checkpoint file "{}" not found. Resuming stopped.'.format(resume_dir))
+            return
+        if checkpoint['config']['optimizer'].lower() != self.config['optimizer']:
+            self.logger.warning(
+                'Optimizer configuration given in config file is different from that of checkpoint. '
+                'This may yield an exception while state_dict is being loaded.'
+            )
+        if os.path.isfile(resume_optimizer):
+            optim_state_dict = torch.load(resume_optimizer, map_location=self.device)
+            self.optimizer.load_state_dict(optim_state_dict)
+            del optim_state_dict
+        else:
+            self.logger.warning('Checkpoint file "{}" not found. Resuming stopped.'.format(resume_dir))
             return
 
         # load start epoch and early stopping
@@ -401,7 +412,8 @@ class Trainer(AbstractTrainer):
         self._summary_tracker.axes = checkpoint['timestamp']
         self.stopping_count = checkpoint['stopping_count']
         self._summary_tracker.best_valid_score = checkpoint['best_valid_score']
-        self.valid_result_dict = checkpoint['summary']
+        self._summary_tracker.best_valid_timestamp = self._summary_tracker.axes
+        self.valid_result_dict = {self._summary_tracker.axes.valid_epoch: checkpoint['summary']}
 
         if checkpoint['config']['seed']:
             init_seed(checkpoint['config']['seed'], checkpoint['config']['reproducibility'])
@@ -413,16 +425,14 @@ class Trainer(AbstractTrainer):
                 'Architecture configuration given in config file is different from that of checkpoint. '
                 'This may yield an exception while state_dict is being loaded.'
             )
-        self.model.load_state_dict(checkpoint['state_dict'])
 
         # load optimizer state from checkpoint only when optimizer type is not changed
-        if checkpoint['config']['optimizer'].lower() != self.config['optimizer']:
-            self.logger.warning(
-                'Optimizer configuration given in config file is different from that of checkpoint. '
-                'This may yield an exception while state_dict is being loaded.'
+
+        self.logger.info(
+            'Checkpoint loaded. Resume training from epoch {} steps {}'.format(
+                self.start_epoch, self._summary_tracker.axes.train_step + 1
             )
-        self.optimizer.load_state_dict(checkpoint['optimizer'])
-        self.logger.info('Checkpoint loaded. Resume training from epoch {}'.format(self.start_epoch))
+        )
 
     def fit(
         self,
@@ -443,7 +453,7 @@ class Trainer(AbstractTrainer):
 
         self.logger.info("====== Start training ======")
         self.accelerator.wait_for_everyone()
-        for epoch_idx in range(self.start_epoch, self.epochs):
+        for epoch_idx in range(self.start_epoch, self.epochs + 1):
             # train
             loss = self._train_epoch(train_data, epoch_idx, valid_data)['loss']
             self.train_loss_list.append(loss)
@@ -455,11 +465,11 @@ class Trainer(AbstractTrainer):
             if self.stopped:
                 if self.stopping_steps:
                     self.logger.info(f'Early stopped at {self.stopping_count} non-best validation.')
-                elif self.max_steps:
+                elif self.max_steps < 10000000000:
                     self.logger.info(f'Stopped at max_steps {self.max_steps}.')
                 break
 
-        file = self.saved_model_filename + ".pth"
+        file = self.saved_model_filename + '_best'
         if os.path.exists(file):
             self.logger.info(f'Soft link created: {file} -> {os.readlink(file)}')
         self.logger.info(
@@ -496,18 +506,11 @@ class Trainer(AbstractTrainer):
             load_best_model = False
 
         if load_best_model:
-            checkpoint_file = model_file or self.saved_model_filename + '.pth'
-            if not os.path.isfile(checkpoint_file):
-                self.logger.error(
-                    f'Failed to evaluate model: "{checkpoint_file}" not found. '
-                    f'(You may specify it with `load_experiment`)'
-                )
-                return None
-            self.logger.info('Loading model structure and parameters from {} ...'.format(checkpoint_file))
-            checkpoint = torch.load(checkpoint_file, map_location=self.device)
-            self.model.load_state_dict(checkpoint['state_dict'])
+            checkpoint_dir = model_file or self.saved_model_filename + '_best'
+            self.logger.info('Loading model structure and parameters from {} ...'.format(checkpoint_dir))
+            self.model.from_pretrained(checkpoint_dir)
+            self.model.tokenizer.from_pretrained(checkpoint_dir)
             self.accelerator.wait_for_everyone()
-            del checkpoint
 
         if not is_valid:
             self.model = self.accelerator.prepare(self.model)

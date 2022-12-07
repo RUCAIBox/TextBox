@@ -101,7 +101,7 @@ class Pretrained_Models(AbstractModel):
         # loading model
         model_class = None
         if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
-            model_class = EncoderDecoderModel      
+            model_class = EncoderDecoderModel
         if self.model_name == 'cpt':
             model_class = CPTForConditionalGeneration
         elif self.model_name == "unilm":
@@ -126,14 +126,14 @@ class Pretrained_Models(AbstractModel):
                 self.model = model_class.from_config(self.configuration)
             else:
                 self.model = model_class(self.configuration)
-            
+
         if load_type == 'from_scratch':
             warnings.warn(f"Initialize {self.model_name} from scratch")
 
         if self.model_name == 'unilm':
             mask_word_id, eos_word_ids, sos_word_id = tokenizer.convert_tokens_to_ids(["[MASK]", "[SEP]", "[S2S_SOS]"])
             self.model.additional_init(mask_word_id, eos_word_ids, sos_word_id)
-            
+
         if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
             self.model.config.decoder_start_token_id = self.tokenizer.cls_token_id
             self.model.config.pad_token_id = self.tokenizer.pad_token_id

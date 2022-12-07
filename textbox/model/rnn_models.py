@@ -502,8 +502,3 @@ class RNN_Models(AbstractModel):
         )
         self.model = RNNSeq2Seq(config['model_name'], self.configuration)
         self.generate_setting(config)
-        if config['model_path']:
-            path_to_load = os.path.join(config['model_path'], 'pytorch_model.bin')
-            model_load = torch.load(path_to_load, map_location=self.device)
-            self.load_state_dict(model_load)
-            del model_load

@@ -94,13 +94,10 @@ class Experiment:
             self.model.from_pretrained(config['model_path'])
 
     def _do_train_and_valid(self):
-
         if not self.do_train and self.do_valid:
             raise ValueError('Cannot execute validation without training.')
 
         if self.do_train:
-            if self.config['load_experiment'] is not None:
-                self.trainer.resume_checkpoint(resume_dir=self.config['load_experiment'])
             train_data = self.train_data
             valid_data = self.valid_data if self.do_valid else None
 
@@ -109,7 +106,7 @@ class Experiment:
     def _do_test(self):
         if self.do_test:
             with self.summary_tracker.new_epoch('eval'):
-                self.test_result = self.trainer.evaluate(self.test_data, model_file=self.config['load_experiment'])
+                self.test_result = self.trainer.evaluate(self.test_data, load_best_model=self.do_train)
                 self.summary_tracker.set_metrics_results(self.test_result)
                 self.logger.info(
                     'Evaluation result:\n{}'.format(self.summary_tracker._current_epoch.as_str(sep=",\n", indent=" "))

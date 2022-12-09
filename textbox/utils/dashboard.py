@@ -117,14 +117,6 @@ class EpochTracker:
         self._accumulate_step += 1
         self._has_loss = True
 
-    @property
-    def avg_loss(self) -> float:
-        """Get the average of losses in each step."""
-        if self._accumulate_step == 0:
-            logger.warning("Trying to access epoch average loss before append any.")
-            return math.inf
-        return self._avg_loss
-
     def _update_metrics(self, results: Optional[dict] = None, **kwargs):
         """Update metrics result of this epoch."""
         for results_dict in (results, kwargs):
@@ -136,7 +128,7 @@ class EpochTracker:
         """Return the epoch result as a dict"""
         results = {}
         if self._has_loss:
-            results.update(loss=self.avg_loss)
+            results.update(loss=self._avg_loss)
         if self._has_score:
             results.update(score=self.calc_score())
             results.update(self._metrics_results)
@@ -150,7 +142,7 @@ class EpochTracker:
         """
 
         if 'loss' in self.metrics_for_best_model:
-            return -self.avg_loss
+            return -self._avg_loss
         if 'score' in self._metrics_results:
             return self._metrics_results['score']
 
@@ -386,10 +378,11 @@ class SummaryTracker:
         self.add_scalar("loss/" + self._current_mode, loss)
         self._current_epoch._append_loss(loss)
 
+    @property
     def epoch_loss(self) -> float:
         r"""Loss of this epoch. Average loss will be calculated and returned.
         """
-        return self._current_epoch.avg_loss
+        return self._current_epoch._avg_loss
 
     def set_metrics_results(self, results: Optional[dict]):
         r"""Record the metrics results."""
@@ -397,8 +390,10 @@ class SummaryTracker:
             return
         tag = 'metrics/' if self._current_mode != 'eval' else 'test/'
         for metric, result in results.items():
-            self.add_any(tag + metric, result)
-            if not isinstance(result, str):
+            if isinstance(result, str):
+                self.add_text(tag + metric, result)
+            else:
+                self.add_scalar(tag + metric, result)
                 self._current_epoch._update_metrics({metric: result})
 
         self.is_best_valid = False
@@ -439,13 +434,6 @@ class SummaryTracker:
         # info.update(self.axes.as_dict())
         if self._is_local_main_process and not self.tracker_finished and self.axes is not None:
             wandb.log(info, step=self.axes.train_step, commit=False)
-
-    def add_any(self, tag: str, any_value: Union[str, float, int]):
-        r"""Add a metric of any type (`float`, `int` and `str` supported) to summary."""
-        if isinstance(any_value, str):
-            self.add_text(tag, any_value)
-        elif isinstance(any_value, (float, int)):
-            self.add_scalar(tag, any_value)
 
     def add_corpus(self, tag: str, corpus: Iterable[str]):
         r"""Add a corpus to summary."""

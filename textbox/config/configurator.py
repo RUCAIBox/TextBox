@@ -69,6 +69,7 @@ class Config(object):
         self._load_internal_config_dict(self.model, self.dataset)
         self.final_config_dict = self._get_final_config_dict()
         self._set_default_parameters()
+        self.check_load_type()
 
     def _init_parameters_category(self):
         self.parameters: Dict[str, Iterable[str]] = dict()
@@ -219,7 +220,6 @@ class Config(object):
 
         if os.path.isfile(model_init_file):
             model_config_dict = self._update_internal_config_dict(model_init_file)
-            #print(model_config_dict)
             self.parameters['Model'] += list(set(model_config_dict.keys()) - self.all_parameters)
             self.all_parameters.update(self.parameters['Model'])
 
@@ -299,6 +299,14 @@ class Config(object):
             return _default
         else:
             return self.final_config_dict[_key]
+
+    def check_load_type(self):
+        if not self.final_config_dict.get('model_path', None):
+            self.final_config_dict['load_type'] = 'from_scratch'
+        elif os.path.exists(os.path.join(self.final_config_dict['model_path'], 'textbox_configuration.pt')):
+            self.final_config_dict['load_type'] = 'resume'
+        else:
+            self.final_config_dict['load_type'] = 'from_pretrained'
 
     def update(self, _m, **kwargs):
         self.final_config_dict.update(_m, **kwargs)

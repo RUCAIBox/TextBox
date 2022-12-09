@@ -1,5 +1,10 @@
+import torch
 import torch.nn as nn
 from textbox import CLM_MODELS, SEQ2SEQ_MODELS, RNN_MODELS, PLM_MODELS
+from transformers import EncoderDecoderModel
+import os
+from typing import List, Optional, Tuple, Union
+from transformers.modeling_utils import get_parameter_dtype
 
 
 class AbstractModel(nn.Module):
@@ -113,3 +118,41 @@ class AbstractModel(nn.Module):
             'attention_mask': batch['source_mask'].to(self.device),
         }
         return inputs
+
+    def from_pretrained(self, save_directory: Union[str, os.PathLike]):
+        if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
+            self.model = EncoderDecoderModel.from_pretrained(save_directory)
+        else:
+            model_path = os.path.join(save_directory, 'pytorch_model.bin')
+            model_load = torch.load(model_path, map_location=self.device)
+            self.load_state_dict(model_load)
+            del model_load
+
+    def save_pretrained(
+        self,
+        save_directory: Union[str, os.PathLike],
+        is_main_process: bool = True,
+    ):
+        # save the string version of dtype to the config, e.g. convert torch.float32 => "float32"
+        # we currently don't use this setting automatically, but may start to use with v5
+        dtype = get_parameter_dtype(self)
+        self.configuration.torch_dtype = str(dtype).split(".")[1]
+
+        # Attach architecture to the config
+        self.configuration.architectures = [self.model.__class__.__name__]
+
+        # Save the config
+        if is_main_process:
+            self.configuration.save_pretrained(save_directory)
+
+        # Save the tokenizer
+        if self.tokenizer is not None:
+            self.tokenizer.save_pretrained(save_directory)
+
+        if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
+            self.model.save_pretrained(save_directory)
+        else:
+            state_dict = self.cpu().state_dict()
+            self.to(self.device)
+            torch.save(state_dict, os.path.join(save_directory, 'pytorch_model.bin'))
+            del state_dict

@@ -4,6 +4,7 @@ import importlib
 from logging import getLogger
 from typing import Union, Optional
 
+import shutil
 import torch
 from accelerate.utils import set_seed
 from transformers import AutoTokenizer, BertTokenizer
@@ -145,7 +146,7 @@ def serialized_save(
     if 0 <= serial_to_delete < serial:
         path_to_delete = os.path.abspath(path_without_extension + get_tag(tag, serial_to_delete))
         if os.path.exists(path_to_delete):
-            os.removedirs(path_to_delete)
+            shutil.rmtree(path_to_delete)
 
     # update soft link
     pre_best_goes_beyond = ((max_save - 1) * serial_intervals < serial - serial_of_pre_best)

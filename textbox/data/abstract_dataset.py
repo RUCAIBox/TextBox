@@ -1,10 +1,13 @@
 import os
 import torch, warnings
+import math
 from torch.utils.data import DataLoader, Dataset
 from textbox import CLM_MODELS
 from typing import List
 from torch.nn.utils.rnn import pad_sequence
 from textbox.data.misc import load_data, _pad_sequence
+
+MAX_TOKENIZE_NUM = 1000000
 
 
 class AbstractDataset(Dataset):
@@ -18,27 +21,30 @@ class AbstractDataset(Dataset):
         self.set = set
         source_filename = os.path.join(config["data_path"], f"{set}.src")
         target_filename = os.path.join(config["data_path"], f"{set}.tgt")
+
         self.source_text = load_data(source_filename, max_length=self.quick_test)
-        self.target_text = load_data(target_filename, max_length=self.quick_test)
+        self.pretraining = config['pretrain_task']
+        if self.pretraining is None:
+            self.target_text = load_data(target_filename, max_length=self.quick_test)
         self.source_length = self.config["src_len"]
         self.target_length = self.config["tgt_len"]
         self.paired_text = bool(
             set == "train" or (self.set == 'valid' and self.config['metrics_for_best_model'] == ['loss'])
         )
-        if self.paired_text:
+        if self.paired_text and self.pretraining is None:
             assert len(self.source_text) == len(self.target_text)
 
     def __len__(self):
-        return len(self.source_text)
+        return len(self.source_ids)
 
     def __getitem__(self, idx):
         sample = {
-            "source_text": self.source_text[idx],
             "source_ids": self.source_ids[idx],
-            "target_text": self.target_text[idx],
         }
-        if self.paired_text:
-            sample.update({"target_ids": self.target_ids[idx]})
+        if self.pretraining is None:
+            sample.update({"source_text": self.source_text[idx], "target_text": self.target_text[idx]})
+            if self.paired_text:
+                sample.update({"target_ids": self.target_ids[idx]})
         return sample
 
     def _init_process(self):
@@ -96,18 +102,24 @@ class AbstractDataset(Dataset):
         self.tokenizer = tokenizer
         self._init_process()
         self._process_prompt()
+
         self.source_ids = []
-        source_ids = tokenizer(
-            self.source_text,
-            add_special_tokens=False,
-            return_token_type_ids=False,
-            return_attention_mask=False,
-        )["input_ids"]
+        source_ids = []
+        bsz_num = math.ceil(len(self.source_text) / MAX_TOKENIZE_NUM)
+        for i in range(bsz_num):
+            ids = tokenizer(
+                self.source_text[i * MAX_TOKENIZE_NUM:(i + 1) * MAX_TOKENIZE_NUM],
+                add_special_tokens=False,
+                return_token_type_ids=False,
+                return_attention_mask=False,
+            )["input_ids"]
+            source_ids.extend(ids)
         for ids in source_ids:
             ids = ids[:self.source_max_length] if self.config["truncate"] == "tail" else ids[-self.source_max_length:]
             ids = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + ids + self.suffix_ids)
             self.source_ids.append(torch.tensor(ids, dtype=torch.long))
-        if self.paired_text:
+
+        if self.paired_text and self.pretraining is None:
             self.target_ids = []
             with tokenizer.as_target_tokenizer():
                 target_ids = tokenizer(

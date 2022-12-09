@@ -26,3 +26,4 @@ facebook/
 *.swp
 test/
 textbox/evaluator/test_evaluator.py
+transformers/

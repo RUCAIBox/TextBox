@@ -34,15 +34,16 @@ git clone https://github.com/RUCAIBox/TextBox.git && cd TextBox
 bash install.sh
 ```
 
-### W&B Dashboard Configuration
-
-Weights&Biases dashboard is intergrated. For the first run, follow the prompt to register an account and log in with [API key](https://wandb.ai/authorize). See [advanced configuration](#wb-dashboard-advanced-configuration) for more information.
-
-<!-- ===================== Quick Start ===================== -->
+<details>
+<summary>W&B Dashboard Configuration</summary>
+Weights&Biases dashboard is integrated. For the first run, follow the prompt to register an account and log in with [API key](https://wandb.ai/authorize). See [advanced configuration](#wb-dashboard-advanced-configuration) for more information.
+</details>
 
 ## Quick Start
 
-The script below will run the facebook `BART-base` model on the `samsum` dataset. The yielded files mainly include a log file like [example.log](asset/example.log) in `log` and checkpoint files in `saved`. See [Model Parameters](#model-parameters) for more detail of `model_path`.
+<!--change example.log-->
+
+The script below will run the facebook `BART-base` model on the `samsum` dataset. The instruction of each model can be found in [our respository](instructions). The yielded files mainly include a log file like [example.log](asset/example.log) and checkpoint files in `saved`. See [Pre-trained Model Parameters](#pretrained-model-parameters) for more detail of `model_path`.
 
 ```bash
 python run_textbox.py --model_path=facebook/bart-base
@@ -50,7 +51,10 @@ python run_textbox.py --model_path=facebook/bart-base
 
 ### Specify Model and Dataset
 
-Substitute `<xxx>` with your choices. See [Model](#Model), [Dataset](#Dataset) for a full support list.
+Substitute `--model=<xxx>` and `--dataset=<xxx>` with your choices. See [Model](#Model), [Dataset](#Dataset) for a full support list.
+
+<details>
+<summary>Usage</summary>
 
 ```bash
 python run_textbox.py --model=<model-name> --dataset=<dataset-name> --model_path=<hf-or-local-path> ...
@@ -58,22 +62,35 @@ python run_textbox.py --model=<model-name> --dataset=<dataset-name> --model_path
 python run_textbox.py --model=BART --dataset=samsum --model_path=facebook/bart-base
 ```
 
+</details>
+
 ### Load from Config Files
 
-You may also want to load your own configurations in the local files:
+You may also want to load your own configurations in the local files.
+
+<details>
+<summary>Usage</summary>
 
 ```bash
 python run_textbox.py ... --config_files <config-file-one> <config-file-two>
 ```
 
+</details>
+
 ### Partial Experiment
 
-You can run partial experiment with `do_train`, `do_valid`, `do_test`. Yan test your pipeline and debug with `quick_test=<amount-of-data-to-load>` to load just a few examples. In some cases, `load_experiment=<path-to-checkpoint>` is needed to load model beforehand.
+You can run partial experiment with `do_train`, `do_valid`, `do_test`. And you can test your pipeline and debug with `quick_test=<amount-of-data-to-load>` to load just a few examples. In some cases, `load_experiment=<path-to-checkpoint>` is needed to load model beforehand.
+
+<details>
+<summary>Usage</summary>
 
 The following script loads the trained model `example.pth` and conducts generation and evaluation.
+
 ```bash
 python run_textbox.py ... --do_train=False --load_experiment=example.pth --quick_test=16
 ```
+
+</details>
 
 <!-- ===================== Training ===================== -->
 
@@ -81,13 +98,13 @@ python run_textbox.py ... --do_train=False --load_experiment=example.pth --quick
 
 ### Basics
 
-You can choose optimizer and scheduler through `optimizer=<optimizer-name>` and `scheduler=<scheduler-name>`. We provide a wrapper around **pytorch optimizer**, which means parameters like `epsilon` or `warmup_steps` can be specified with keyword dictionaries `optimizer_kwargs={'epsilon': ... }` and `scheduler_kwargs={'warmup_steps': ... }`. See [pytorch optimizer](https://pytorch.org/docs/stable/optim.html#algorithms) and [scheduler]() for a complete tutorial.  <!-- TODO -->
+You can choose optimizer and scheduler through `optimizer=<optimizer-name>` and `scheduler=<scheduler-name>`. We provide a wrapper around **pytorch optimizer**, which means parameters like `epsilon` or `warmup_steps` can be specified with keyword dictionaries `optimizer_kwargs={'epsilon': ... }` and `scheduler_kwargs={'warmup_steps': ... }`. See [pytorch optimizer](https://pytorch.org/docs/stable/optim.html#algorithms) and [scheduler](https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate) for a complete tutorial.  <!-- TODO -->
 
 Validation frequency is introduced to validate the model **at each specific batch-steps or epochs**. Specify `valid_strategy` (either `'step'` or `'epoch'`) and `valid_intervals=<int>` to adjust the pace. Specifically, traditional train-validate paradigm is a special case with `valid_strategy=epoch` and `valid_intervals=1`.
 
-`max_save=<int>` indicates **the maximal amount of saved files** (checkpoint and generated corpus during evaluation). `-1`: save every file, `0`: do not save any file, `1`: only save the file with best score, and `n`: save both the best and the last $n−1$ files.
+`max_save=<int>` indicates **the maximal amount of saved files** (checkpoint and generated corpus during evaluation). `-1`: save every file, `0`: do not save any file, `1`: only save the file with the best score, and `n`: save both the best and the last $n−1$ files.
 
-Evaluation metrics can be specified with `metrics` ([full list](#Evaluation)), and produce a dictionaries of results:
+Evaluation metrics can be specified with `metrics` ([full list](#Evaluation)), and produce a dictionary of results:
 
 ```bash
 python run_textbox.py ... --metrics=\[\'rouge\'\]
@@ -111,9 +128,12 @@ Other commonly used parameters includes `epochs=<int>` and `max_steps=<int>` (in
 
 ### Pre-trained Model Parameters
 
-`model_path` receives a name of model on [huggingface](https://huggingface.co/models) like [`facebook/bart-base`](https://huggingface.co/models?search=facebook%2Fbart-base) or just a local path.
+`model_path` , `model_path` and `config_path`receive a name of model on [huggingface](https://huggingface.co/models) like [`facebook/bart-base`](https://huggingface.co/models?search=facebook%2Fbart-base) or just a local path.
 
-Not only `model_path`, but `config_path` and `tokenizer_path` (same value with `model_path` by default) also receive a huggingface model or a local path. Besides, `config_kwargs` and `tokenizer_kwargs` are useful when additional parameters are required.
+`config_kwargs` and `tokenizer_kwargs` are useful when additional parameters are required.
+
+<details>
+<summary>Example</summary>
 
 For example, when building a *Task-oriented Dialogue System*, special tokens can be added with `additional_special_tokens`; fast tokenization can also be switched with `use_fast`:
 
@@ -122,31 +142,37 @@ config_kwargs: {}
 tokenizer_kwargs: { 'use_fast': False, 'additional_special_tokens': ['[db_0]', '[db_1]', '[db_2]'] }
 ```
 
-Other commonly used parameters includes `label_smoothing`
+</details>
 
-```yaml
-label_smoothing: <smooth-loss-weight>
-```
+Other commonly used parameters include `label_smoothing: <smooth-loss-weight>`
 
-The full keyword arguments should be found in [PreTrainedTokenizer](https://huggingface.co/docs/transformers/v4.21.0/en/main_classes/tokenizer#transformers.PreTrainedTokenizer) or documents of corresponding tokenizer.
+The full keyword arguments should be found in [PreTrainedTokenizer](https://huggingface.co/docs/transformers/v4.21.0/en/main_classes/tokenizer#transformers.PreTrainedTokenizer) or documents of corresponding tokenizer
 
 ### Generation Parameters
 
-Pre-trained model is able to perform generation using various methods by combining different [parameters](https://huggingface.co/docs/transformers/main/en/main_classes/text_generation#transformers.generation_utils.GenerationMixin.generate). By default, beam search is adapted:
+Pre-trained model is able to perform generation using various methods by combining different [parameters](https://huggingface.co/docs/transformers/main/en/main_classes/text_generation#transformers.generation_utils.GenerationMixin.generate). 
+
+<details>
+<summary>By default, beam search is adapted</summary>
 
 ```yaml
 generation_kwargs: {'num_beams': 5, 'early_stopping': True}
 ```
 
-Nucleus sampling is also supported by pre-trained model:
+</details>
+
+<details>
+<summary>Nucleus sampling is also supported by pre-trained model</summary>
 
 ```yaml
 generation_kwargs: {'do_sample': True, 'top_k': 10, 'top_p': 0.9}
 ```
 
+</details>
+
 ### Dataset Parameters
 
-`src_len`, `tgt_len`, and `truncate` restricts the maximal length of source/target sentence and the positional to be truncated (`head` or `tail`). For some models used for translation task like m2m100, you need to specify source language and target language:
+`src_len`, `tgt_len`, and `truncate` restrict the maximal length of source/target sentence and the position to be truncated (`head` or `tail`). For some models used for translation task like m2m100, you need to specify source language and target language:
 
 ```yaml
 # m2m100: en -> zh
@@ -479,7 +505,7 @@ We also support you to run our model using your own dataset. Just follow the thr
 
 ## Evaluation
 
-15 mainstream evaluation metrics are intergrated:
+15 mainstream evaluation metrics are integrated:
 
 <div class="tg-wrap"><table>
 <thead>

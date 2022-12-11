@@ -121,22 +121,21 @@ class AbstractDataset(Dataset):
 
         if self.paired_text and self.pretraining is None:
             self.target_ids = []
-            with tokenizer.as_target_tokenizer():
-                target_ids = tokenizer(
-                    self.target_text,
-                    add_special_tokens=False,
-                    return_token_type_ids=False,
-                    return_attention_mask=False,
-                )["input_ids"]
-                for ids in target_ids:
-                    if self.config["truncate"] == "tail":
-                        ids = ids[:self.target_max_length]
-                    else:
-                        ids = ids[-self.target_max_length:]
-                    ids = self.tokenizer.build_inputs_with_special_tokens(ids)
-                    if self.config["model_name"] in ["bert2bert", "opt", "unilm", "xlm"]:
-                        ids = ids[1:]
-                    self.target_ids.append(torch.tensor(ids, dtype=torch.long))
+            target_ids = tokenizer(
+                text_target=self.target_text,
+                add_special_tokens=False,
+                return_token_type_ids=False,
+                return_attention_mask=False,
+            )["input_ids"]
+            for ids in target_ids:
+                if self.config["truncate"] == "tail":
+                    ids = ids[:self.target_max_length]
+                else:
+                    ids = ids[-self.target_max_length:]
+                ids = self.tokenizer.build_inputs_with_special_tokens(ids)
+                if self.config["model_name"] in ["bert2bert", "opt", "unilm", "xlm"]:
+                    ids = ids[1:]
+                self.target_ids.append(torch.tensor(ids, dtype=torch.long))
 
 
 class AbstractCollate:

@@ -377,7 +377,7 @@ class Trainer(AbstractTrainer):
         r"""Load the model parameters information and training information.
 
         Args:
-            resume_dir: the checkpoint file (specific by `load_experiment`).
+            resume_dir: the checkpoint file (specific by `model_path`).
         """
         # check
         self.logger.info("Resuming checkpoint from {}...".format(resume_dir))
@@ -480,7 +480,6 @@ class Trainer(AbstractTrainer):
         self,
         eval_data: DataLoader,
         load_best_model: bool = True,
-        model_file: Optional[str] = None,
         is_valid: bool = False,
     ) -> Optional[dict]:
         r"""Evaluate the model based on the `eval_data`.
@@ -500,7 +499,7 @@ class Trainer(AbstractTrainer):
             load_best_model = False
 
         if load_best_model:
-            checkpoint_dir = model_file or self.saved_model_filename + '_best'
+            checkpoint_dir = self.saved_model_filename + '_best'
             self.logger.info('Loading model structure and parameters from {} ...'.format(checkpoint_dir))
             self.model.from_pretrained(checkpoint_dir)
             self.model.tokenizer.from_pretrained(checkpoint_dir)

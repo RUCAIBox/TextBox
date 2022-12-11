@@ -9,6 +9,7 @@ textbox.utils.logger
 
 import logging
 import os
+from accelerate.logging import get_logger
 from textbox.utils.utils import ensure_dir
 from collections import defaultdict
 from colorama import init, Fore, Style
@@ -85,8 +86,5 @@ def init_logger(filename: str, log_level: Optional[str], enabled: bool = True, s
     stream_handler.setFormatter(ColorFormatter('stream'))
 
     logging.basicConfig(level=log_level, handlers=[file_handler, stream_handler])
-    textbox_logger = logging.getLogger('textbox')
+    textbox_logger = get_logger('textbox')
     textbox_logger.setLevel(log_level)
-
-    if not enabled:
-        textbox_logger.disabled = True

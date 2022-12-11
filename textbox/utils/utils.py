@@ -1,9 +1,10 @@
 import os
 import datetime
 import importlib
-from logging import getLogger
+from accelerate.logging import get_logger
 from typing import Union, Optional
 
+import shutil
 import torch
 from accelerate.utils import set_seed
 from transformers import AutoTokenizer, BertTokenizer
@@ -47,11 +48,11 @@ def safe_remove(dir_path: Optional[str], overwrite: bool = True):
     """
     if file_exists(dir_path) or link_exists(dir_path):
         if overwrite:
-            getLogger(__name__).debug(f'Removing "{dir_path}"')
+            get_logger(__name__).debug(f'Removing "{dir_path}"')
             os.remove(dir_path)
         else:
             new_path = dir_path + get_local_time() + '.swp'
-            getLogger(__name__).debug(f'Renaming "{dir_path}" to "{new_path}"')
+            get_logger(__name__).debug(f'Renaming "{dir_path}" to "{new_path}"')
             os.rename(dir_path, new_path)
 
 
@@ -120,7 +121,7 @@ def serialized_save(
 
     # deal with naming
     path_to_save = os.path.abspath(path_without_extension + get_tag(tag, serial))  # saving fold
-    getLogger(__name__).debug(f'Saving files to "{path_to_save}"')
+    get_logger(__name__).debug(f'Saving files to "{path_to_save}"')
 
     # read soft link
     path_to_link = os.path.abspath(path_without_extension + '_best')
@@ -141,11 +142,11 @@ def serialized_save(
     # delete the file beyond the max_save
     soft_link_goes_beyond = ((max_save - 1) * serial_intervals < serial - serial_of_soft_link)
     serial_to_delete = serial - (max_save - int(soft_link_goes_beyond)) * serial_intervals
-    getLogger(__name__).debug(f'Soft link now are pointing to serial: "{serial_of_soft_link}"')
+    get_logger(__name__).debug(f'Soft link now are pointing to serial: "{serial_of_soft_link}"')
     if 0 <= serial_to_delete < serial:
         path_to_delete = os.path.abspath(path_without_extension + get_tag(tag, serial_to_delete))
         if os.path.exists(path_to_delete):
-            os.removedirs(path_to_delete)
+            shutil.rmtree(path_to_delete)
 
     # update soft link
     pre_best_goes_beyond = ((max_save - 1) * serial_intervals < serial - serial_of_pre_best)

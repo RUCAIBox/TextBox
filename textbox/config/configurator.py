@@ -286,7 +286,7 @@ class Config(object):
             else:
                 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
-        self.external_config_dict['device'] = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
+        # self.external_config_dict['device'] = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
 
     def setdefault(self, _key: str, _default: Any):
         """

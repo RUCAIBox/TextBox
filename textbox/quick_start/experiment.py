@@ -1,7 +1,8 @@
 import os
 import logging
 from copy import copy
-from logging import getLogger
+from accelerate.logging import get_logger
+
 from typing import Optional, Tuple, Any, List, Dict
 
 from accelerate import Accelerator
@@ -38,8 +39,11 @@ class Experiment:
         self.config = Config(model, dataset, config_file_list, config_dict)
         self.__extended_config = None
 
-        self.accelerator = Accelerator()
-        self.config.update({'_is_local_main_process': self.accelerator.is_local_main_process})
+        self.accelerator = Accelerator(gradient_accumulation_steps=self.config['accumulation_steps'])
+        self.config.update({
+            '_is_local_main_process': self.accelerator.is_local_main_process,
+            'device': self.accelerator.device
+        })
         self.logger = self.init_logger(self.config)
         self.summary_tracker = SummaryTracker.basicConfig(self.get_config())
         self.train_data, self.valid_data, self.test_data, self.tokenizer = \
@@ -61,7 +65,7 @@ class Experiment:
             enabled=config['_is_local_main_process'],
             saved_dir=config['saved_dir']
         )
-        logger = getLogger(__name__)
+        logger = get_logger(__name__)
         logger.info(config)
 
         return logger

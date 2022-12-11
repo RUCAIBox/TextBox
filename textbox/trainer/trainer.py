@@ -1,6 +1,6 @@
 import collections
 import os
-from logging import getLogger
+from accelerate.logging import get_logger
 from typing import Optional, Union, List, Dict
 import math
 
@@ -33,7 +33,7 @@ class AbstractTrainer:
     def __init__(self, config: Config, model: AbstractModel):
         self.config = config
         self.model = model
-        self.logger = getLogger(__name__)
+        self.logger = get_logger(__name__)
 
     def fit(self, train_data: DataLoader):
         r"""Train the model based on the train data.
@@ -181,9 +181,6 @@ class Trainer(AbstractTrainer):
         """Retrieve timestamp of best valid result."""
         return self._summary_tracker.best_valid_timestamp
 
-    def is_save(self) -> bool:
-        return self.accelerator.is_local_main_process
-
     def _train_epoch(
         self,
         train_data: DataLoader,
@@ -213,29 +210,31 @@ class Trainer(AbstractTrainer):
 
         with self._summary_tracker.new_epoch('train'):
             for step, data in enumerate(train_data):
-                if step % self.accumulation_steps == 0:
-                    self._summary_tracker.new_step()
-                    if self.timestamp.train_step == self.max_steps + 1:
-                        self.stopped = True
-                        break
+                with self.accelerator.accumulate(self.model):
+                    if step % self.accumulation_steps == 0:
+                        self._summary_tracker.new_step()
+                        if self.timestamp.train_step == self.max_steps + 1:
+                            self.stopped = True
+                            break
 
-                loss = self.model(data, epoch_idx=epoch_idx)
-                # loss = self.accelerator.gather(loss).mean().item()
-                self._summary_tracker.append_loss(loss.item())
-                self.accelerator.backward(loss / self.accumulation_steps)
-
-                if (step + 1) % self.accumulation_steps == 0 or (step + 1) == len(train_data):
-                    if self.grad_clip is not None:
+                    self.optimizer.zero_grad()
+                    loss = self.model(data, epoch_idx=epoch_idx)
+                    # avg_loss = self.accelerator.gather(loss).mean().item()
+                    avg_loss = loss.item()
+                    self._summary_tracker.append_loss(avg_loss)
+                    self.accelerator.backward(loss)
+                    if self.accelerator.sync_gradients:
                         self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
                     self.optimizer.step()
-                    self.optimizer.zero_grad()
-                    if not self.disable_tqdm:
-                        train_tqdm.update(1)
-                        train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
-                    if valid_data:
-                        self.stopped |= self._valid(valid_data, 'step')
-                    if self.stopped:
-                        break
+
+                    if self.accelerator.sync_gradients:
+                        if not self.disable_tqdm:
+                            train_tqdm.update(1)
+                            train_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
+                        if valid_data:
+                            self.stopped |= self._valid(valid_data, 'step')
+                        if self.stopped:
+                            break
 
             if not self.disable_tqdm:
                 train_tqdm.close()
@@ -282,17 +281,14 @@ class Trainer(AbstractTrainer):
                 else:
                     valid_tqdm = valid_data
 
-                losses = 0
                 for data in valid_tqdm:
                     self._summary_tracker.new_step()
                     loss = self.model(data)
-                    loss = self.accelerator.gather(loss)
-                    loss = loss.mean().item()
-                    losses += loss
-                    self._summary_tracker.append_loss(loss)
+                    avg_loss = self.accelerator.gather(loss).mean().item()
+                    self._summary_tracker.append_loss(avg_loss)
                     if not self.disable_tqdm:
                         valid_tqdm.set_postfix(loss=self._summary_tracker.epoch_loss)
-                valid_results = {'loss': losses / len(valid_tqdm)}
+                valid_results = self._summary_tracker.epoch_dict()
             else:
                 valid_results = self.evaluate(valid_data, is_valid=True)
             self._summary_tracker.set_metrics_results(valid_results)
@@ -303,9 +299,10 @@ class Trainer(AbstractTrainer):
 
         stopped = bool(self.stopping_steps) and self._early_stopping(self._summary_tracker.is_best_valid)
 
-        if self.is_save():
-            self.save_checkpoint()
         self.accelerator.wait_for_everyone()
+        if self.accelerator.is_local_main_process:
+            # os.system('sleep 10s')
+            self.save_checkpoint()
 
         return stopped
 
@@ -334,9 +331,6 @@ class Trainer(AbstractTrainer):
             self.logger.warning('Get checkpoint failed. No validation has been performed.')
             return None
 
-        # construct state_dict and parameters
-        _state_dict = self.accelerator.unwrap_model(self.model).state_dict()
-
         # get optimizer, config and validation summary
         checkpoint = {
             # parameters that needed to be loaded
@@ -355,7 +349,7 @@ class Trainer(AbstractTrainer):
         serial_idx = self.timestamp.valid_epoch
         serial_of_soft_link = self.best_valid_timestamp.valid_epoch
         serialized_save(
-            self.model,
+            self.accelerator.unwrap_model(self.model),
             self.optimizer,
             self._get_checkpoint(),
             serial=serial_idx,
@@ -402,7 +396,6 @@ class Trainer(AbstractTrainer):
         if os.path.isfile(resume_optimizer):
             optim_state_dict = torch.load(resume_optimizer, map_location=self.device)
             self.optimizer.load_state_dict(optim_state_dict)
-            del optim_state_dict
         else:
             self.logger.warning('Checkpoint file "{}" not found. Resuming stopped.'.format(resume_dir))
             return
@@ -449,7 +442,8 @@ class Trainer(AbstractTrainer):
              dict: the best valid score and best valid result.
         """
 
-        self.model, self.optimizer = self.accelerator.prepare(self.model, self.optimizer)
+        self.model = self.accelerator.prepare(self.model)
+        self.optimizer = self.accelerator.prepare(self.optimizer)
 
         self.logger.info("====== Start training ======")
         self.accelerator.wait_for_everyone()
@@ -568,7 +562,7 @@ class Trainer(AbstractTrainer):
                     gen = gen[last:].strip()
                 generate_corpus[i] = gen
 
-        if self.is_save():
+        if self.accelerator.is_local_main_process:
             self.save_generated_text(generate_corpus, is_valid)
 
         result = self.evaluator.evaluate(generate_corpus, reference_dataset)

@@ -2,7 +2,6 @@ import os, math
 import torch
 import numpy as np
 from numpy.random import permutation, poisson
-from logging import getLogger
 from textbox import SpecialTokens
 from typing import Optional, List, Union, Dict, Tuple
 from textbox import CLM_MODELS

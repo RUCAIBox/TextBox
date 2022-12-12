@@ -35,14 +35,14 @@ class AbstractDataset(Dataset):
             assert len(self.source_text) == len(self.target_text)
 
     def __len__(self):
-        return len(self.source_ids)
+        return len(self.source_text)
 
     def __getitem__(self, idx):
         sample = {
-            "source_ids": self.source_ids[idx],
+            "source_text": self.source_text[idx],
         }
         if self.pretraining is None:
-            sample.update({"source_text": self.source_text[idx], "target_text": self.target_text[idx]})
+            sample.update({"source_ids": self.source_ids[idx], "target_text": self.target_text[idx]})
             if self.paired_text:
                 sample.update({"target_ids": self.target_ids[idx]})
         return sample
@@ -102,6 +102,9 @@ class AbstractDataset(Dataset):
         self.tokenizer = tokenizer
         self._init_process()
         self._process_prompt()
+
+        if self.pretraining:
+            return
 
         self.source_ids = []
         source_ids = []

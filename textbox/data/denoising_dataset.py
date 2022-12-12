@@ -40,12 +40,19 @@ class DenoisingCollate:
         """
         # Handle dict or lists with proper padding and conversion to tensor.
         batch = {}
-        source_ids = []
+        source_text = [sample["source_text"] for sample in samples]
+        source_ids = self.tokenizer(
+            source_text,
+            max_length=self.config['src_len'],
+            truncation=True,
+            padding=True,
+            return_attention_mask=False,
+            return_tensors='pt'
+        )['input_ids']
 
-        for sample in samples:
-            source_ids.append(sample["source_ids"])
-        source_ids = _pad_sequence(source_ids, self.tokenizer.pad_token_id)
-        batch["target_ids"] = _pad_sequence(source_ids, -100)
+        target_ids = source_ids.clone()
+        target_ids[torch.eq(target_ids, self.tokenizer.pad_token_id)] = -100
+        batch["target_ids"] = target_ids
 
         if self.permutate_sentence_ratio > 0.0:
             source_ids = self.permutate_sentences(source_ids)

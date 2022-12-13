@@ -1,7 +1,7 @@
 src_len: 16
 tgt_len: 32
 metrics: ['bleu', 'cider', 'spice']
-metrics_for_best_model: ['bleu', 'cider', 'spice']
+metrics_for_best_model: ['spice']
 bleu_type: pycocoevalcap
 
 train_batch_size: 96

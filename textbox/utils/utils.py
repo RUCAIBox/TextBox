@@ -49,7 +49,7 @@ def safe_remove(dir_path: Optional[str], overwrite: bool = True):
     if file_exists(dir_path) or link_exists(dir_path):
         if overwrite:
             get_logger(__name__).debug(f'Removing "{dir_path}"')
-            os.remove(dir_path)
+            shutil.rmtree(dir_path)
         else:
             new_path = dir_path + get_local_time() + '.swp'
             get_logger(__name__).debug(f'Renaming "{dir_path}" to "{new_path}"')

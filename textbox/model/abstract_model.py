@@ -106,11 +106,8 @@ class AbstractModel(nn.Module):
         return generated_text
 
     def process_forward_inputs(self, batch):
-        inputs = {
-            'input_ids': batch['source_ids'].to(self.device),
-            'attention_mask': batch['source_mask'].to(self.device),
-            'labels': batch['target_ids'].to(self.device)
-        }
+        inputs = self.process_generate_inputs(batch)
+        inputs.update({'labels': batch['target_ids'].to(self.device)})
         return inputs
 
     def process_generate_inputs(self, batch):

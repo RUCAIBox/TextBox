@@ -54,7 +54,7 @@ from ..utils.argument_list import efficient_kwargs_dict
 class Pretrained_Models(AbstractModel):
 
     def __init__(self, config, tokenizer):
-        super(Pretrained_Models, self).__init__(config, tokenizer)
+        super().__init__(config, tokenizer)
         model_path = config['model_path']
         load_type = config['load_type']
 
@@ -233,7 +233,7 @@ class Pretrained_Models(AbstractModel):
 
     def process_forward_inputs(self, batch):
         if self.model_name != 'unilm':
-            return super(Pretrained_Models, self).process_forward_inputs(batch)
+            return super().process_forward_inputs(batch)
         inputs = {
             'input_ids': batch['source_ids'].to(self.device),
             'attention_mask': batch['source_mask'].to(self.device),
@@ -246,7 +246,7 @@ class Pretrained_Models(AbstractModel):
 
     def process_generate_inputs(self, batch):
         if self.model_name != 'unilm':
-            return super(Pretrained_Models, self).process_generate_inputs(batch)
+            return super().process_generate_inputs(batch)
         inputs = {
             'input_ids': batch['source_ids'].to(self.device),
             'attention_mask': batch['source_mask'].to(self.device),

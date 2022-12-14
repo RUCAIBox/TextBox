@@ -36,24 +36,20 @@ def ensure_dir(dir_path: str):
     os.makedirs(dir_path, exist_ok=True)
 
 
-def safe_remove(dir_path: Optional[str], overwrite: bool = True):
+def safe_remove(dir_path: Optional[str]):
     """
     `safe_remove` is a function that removes a file or soft link at a given path, and if the file or soft link doesn't
     exist, it does nothing
 
     Args:
         dir_path: The path to the directory you want to remove
-        overwrite: (default = True) If True, the file will be deleted.
-            If False, the file will be renamed with the current time.
     """
     if file_exists(dir_path) or link_exists(dir_path):
-        if overwrite:
-            get_logger(__name__).debug(f'Removing "{dir_path}"')
+        get_logger(__name__).debug(f'Removing "{dir_path}"')
+        if os.path.isdir(dir_path) and not os.path.islink(dir_path):
             shutil.rmtree(dir_path)
         else:
-            new_path = dir_path + get_local_time() + '.swp'
-            get_logger(__name__).debug(f'Renaming "{dir_path}" to "{new_path}"')
-            os.rename(dir_path, new_path)
+            os.remove(dir_path)
 
 
 def file_exists(dir_path: Optional[str]) -> bool:
@@ -94,7 +90,6 @@ def serialized_save(
     path_without_extension: str,
     tag: Optional[str] = None,
     extension_name: Optional[str] = None,
-    overwrite: bool = True,
     serial_intervals: int = 1,
     max_save: int = -1,
 ):
@@ -112,7 +107,6 @@ def serialized_save(
             This should remain the same within the sequence.
         extension_name: (default = None) The extension name of file. This can also
             be specific automatically if leave blank.
-        overwrite: (default = True) Whether to overwrite the file to be saved.
         serial_interval: (default = 1) The interval of serial indices.
         max_save: (default = -1) The maximal amount of files. If -1, every file
             will be saved. 1: only the file with serial number same as `serial_
@@ -121,7 +115,17 @@ def serialized_save(
 
     # deal with naming
     path_to_save = os.path.abspath(path_without_extension + get_tag(tag, serial))  # saving fold
+    safe_remove(path_to_save)  # behavior of torch.save is not clearly defined.
     get_logger(__name__).debug(f'Saving files to "{path_to_save}"')
+
+    # not serialized saving
+    if serial is None or serial_of_soft_link is None or max_save == -1:
+        torch.save(source, path_to_save)
+        return
+
+    # no new file to save
+    if max_save == 0 or (max_save == 1 and serial_of_soft_link != serial):
+        return
 
     # read soft link
     path_to_link = os.path.abspath(path_without_extension + '_best')
@@ -145,8 +149,7 @@ def serialized_save(
     get_logger(__name__).debug(f'Soft link now are pointing to serial: "{serial_of_soft_link}"')
     if 0 <= serial_to_delete < serial:
         path_to_delete = os.path.abspath(path_without_extension + get_tag(tag, serial_to_delete))
-        if os.path.exists(path_to_delete):
-            shutil.rmtree(path_to_delete)
+        safe_remove(path_to_delete)
 
     # update soft link
     pre_best_goes_beyond = ((max_save - 1) * serial_intervals < serial - serial_of_pre_best)

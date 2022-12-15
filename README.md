@@ -43,7 +43,7 @@ Weights&Biases dashboard is integrated. For the first run, follow the prompt to 
 
 ## Quick Start
 
-The script below will run the facebook `BART-base` model on the `samsum` dataset. The instruction for other models can be found in [our respository](instructions). The yielded files mainly include a log file like [example.log](asset/example.log) and checkpoint files in `saved`. See [Pre-trained Model Parameters](#pretrained-model-parameters) for more detail of `model_path`.
+The script below will run the facebook `BART-base` model on the `samsum` dataset. The instruction for other models can be found in [our respository](instructions). The yielded files mainly include a log file like [example.log](asset/example.log) and checkpoint files in `saved`. See [Pre-trained Model Parameters](#pre-trained-model-parameters) for more detail of `model_path`.
 
 ```bash
 python run_textbox.py --model_path=facebook/bart-base

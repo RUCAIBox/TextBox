@@ -13,7 +13,7 @@ TextBox 2.0 is an up-to-date text generation library based on Python and PyTorch
 - From a **training** perspective, we support 4 pre-training objectives and 4 efficient and robust training strategies, such as distributed data parallel and efficient generation.
 
 
-Compared with previous version of TextBox, this extension mainly focuses on building a unified, flexible and standardized framework for better supporting PLM-based text generation models. There are three advantages in TextBox 2.0:
+Compared with the previous version of TextBox, this extension mainly focuses on building a unified, flexible and standardized framework for better supporting PLM-based text generation models. There are three advantages in TextBox 2.0:
 
 - It is a significant innovation focusing on comprehensive tasks and PLMs.
 - It is designed to be unified in implementation and interface.
@@ -24,6 +24,7 @@ Compared with previous version of TextBox, this extension mainly focuses on buil
   <br>
   The Overall Framework of TextBox 2.0
 </p>
+
 
 <!-- ===================== Installation ===================== -->
 
@@ -36,14 +37,13 @@ bash install.sh
 
 <details>
 <summary>W&B Dashboard Configuration</summary>
+
 Weights&Biases dashboard is integrated. For the first run, follow the prompt to register an account and log in with [API key](https://wandb.ai/authorize). See [advanced configuration](#wb-dashboard-advanced-configuration) for more information.
 </details>
 
 ## Quick Start
 
-<!--change example.log-->
-
-The script below will run the facebook `BART-base` model on the `samsum` dataset. The instruction of each model can be found in [our respository](instructions). The yielded files mainly include a log file like [example.log](asset/example.log) and checkpoint files in `saved`. See [Pre-trained Model Parameters](#pretrained-model-parameters) for more detail of `model_path`.
+The script below will run the facebook `BART-base` model on the `samsum` dataset. The instruction for other models can be found in [our respository](instructions). The yielded files mainly include a log file like [example.log](asset/example.log) and checkpoint files in `saved`. See [Pre-trained Model Parameters](#pretrained-model-parameters) for more detail of `model_path`.
 
 ```bash
 python run_textbox.py --model_path=facebook/bart-base
@@ -56,6 +56,7 @@ Substitute `--model=<xxx>` and `--dataset=<xxx>` with your choices. See [Model](
 <details>
 <summary>Usage</summary>
 
+
 ```bash
 python run_textbox.py --model=<model-name> --dataset=<dataset-name> --model_path=<hf-or-local-path> ...
 # Example (equivalent of default configuration):
@@ -66,10 +67,11 @@ python run_textbox.py --model=BART --dataset=samsum --model_path=facebook/bart-b
 
 ### Load from Config Files
 
-You may also want to load your own configurations in the local files.
+You can also load your own configurations in the local files by setting `config_files`.
 
 <details>
 <summary>Usage</summary>
+
 
 ```bash
 python run_textbox.py ... --config_files <config-file-one> <config-file-two>
@@ -83,6 +85,7 @@ You can run partial experiment with `do_train`, `do_valid`, `do_test`. And you c
 
 <details>
 <summary>Usage</summary>
+
 
 The following script loads the trained model `example.pth` and conducts generation and evaluation.
 
@@ -98,20 +101,20 @@ python run_textbox.py ... --do_train=False --load_experiment=example.pth --quick
 
 ### Basics
 
-You can choose optimizer and scheduler through `optimizer=<optimizer-name>` and `scheduler=<scheduler-name>`. We provide a wrapper around **pytorch optimizer**, which means parameters like `epsilon` or `warmup_steps` can be specified with keyword dictionaries `optimizer_kwargs={'epsilon': ... }` and `scheduler_kwargs={'warmup_steps': ... }`. See [pytorch optimizer](https://pytorch.org/docs/stable/optim.html#algorithms) and [scheduler](https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate) for a complete tutorial.  <!-- TODO -->
+**[optimizer and scheduler]** can be set through `optimizer=<optimizer-name>` and `scheduler=<scheduler-name>`. We provide a wrapper around **pytorch optimizer**, which means parameters like `epsilon` or `warmup_steps` can be specified with keyword dictionaries `optimizer_kwargs={'epsilon': ... }` and `scheduler_kwargs={'warmup_steps': ... }`. See [pytorch optimizer](https://pytorch.org/docs/stable/optim.html#algorithms) and [scheduler](https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate) for a complete tutorial. 
 
-Validation frequency is introduced to validate the model **at each specific batch-steps or epochs**. Specify `valid_strategy` (either `'step'` or `'epoch'`) and `valid_intervals=<int>` to adjust the pace. Specifically, traditional train-validate paradigm is a special case with `valid_strategy=epoch` and `valid_intervals=1`.
+**[Validation frequency]** is introduced to validate the model **at each specific batch-steps or epochs**. Specify `valid_strategy` (either `'step'` or `'epoch'`) and `valid_intervals=<int>` to adjust the pace. Specifically, traditional train-validate paradigm is a special case with `valid_strategy=epoch` and `valid_intervals=1`.
 
-`max_save=<int>` indicates **the maximal amount of saved files** (checkpoint and generated corpus during evaluation). `-1`: save every file, `0`: do not save any file, `1`: only save the file with the best score, and `n`: save both the best and the last $n−1$ files.
+**[Maximal amount of saved files]** (checkpoint and generated corpus during evaluation) can be configured with `max_save=<int>`. `-1`: save every file, `0`: do not save any file, `1`: only save the file with the best score, and `n`: save both the best and the last $n−1$ files.
 
-Evaluation metrics can be specified with `metrics` ([full list](#Evaluation)), and produce a dictionary of results:
+**[Evaluation metrics]** can be specified with `metrics` ([full list](#Evaluation)), and produce a dictionary of results:
 
 ```bash
 python run_textbox.py ... --metrics=\[\'rouge\'\]
 # results: { 'rouge-1': xxx, 'rouge-2': xxx, 'rouge-l': xxx, 'rouge-w': xxx, ... }
 ```
 
-**Early stopping** can be configured with `metrics_for_best_model=<list-of-metrics-entries>`, which is used to calculate score, and `stopping_steps=<int>`, which specifies the amount of validation steps:
+**[Early stopping]** can be configured with `metrics_for_best_model=<list-of-metrics-entries>`, which is used to calculate score, and `stopping_steps=<int>`, which specifies the amount of validation steps:
 
 ```bash
 python run_textbox.py ... --stopping_steps=8 --metrics_for_best_model=\[\'rouge-1\', \'rouge-w\'\]
@@ -124,16 +127,17 @@ stopping_steps: 8
 metrics_for_best_model: ['rouge-1', 'rouge-w']
 ```
 
-Other commonly used parameters includes `epochs=<int>` and `max_steps=<int>` (indicating maximum iteration of epochs and batch steps), `learning_rate=<float>`, `train_batch_size=<int>`, `weight_decay=<bool>`, and `grad_clip=<bool>`.
+**[Other commonly used parameters]** include `epochs=<int>` and `max_steps=<int>` (indicating maximum iteration of epochs and batch steps), `learning_rate=<float>`, `train_batch_size=<int>`, `weight_decay=<bool>`, and `grad_clip=<bool>`.
 
 ### Pre-trained Model Parameters
 
-`model_path` , `model_path` and `config_path`receive a name of model on [huggingface](https://huggingface.co/models) like [`facebook/bart-base`](https://huggingface.co/models?search=facebook%2Fbart-base) or just a local path.
+`model_path` , `model_path` and `config_path` receive a name of model on [huggingface](https://huggingface.co/models) like [`facebook/bart-base`](https://huggingface.co/models?search=facebook%2Fbart-base) or just a local path.
 
 `config_kwargs` and `tokenizer_kwargs` are useful when additional parameters are required.
 
 <details>
 <summary>Example</summary>
+
 
 For example, when building a *Task-oriented Dialogue System*, special tokens can be added with `additional_special_tokens`; fast tokenization can also be switched with `use_fast`:
 
@@ -146,29 +150,25 @@ tokenizer_kwargs: { 'use_fast': False, 'additional_special_tokens': ['[db_0]', '
 
 Other commonly used parameters include `label_smoothing: <smooth-loss-weight>`
 
-The full keyword arguments should be found in [PreTrainedTokenizer](https://huggingface.co/docs/transformers/v4.21.0/en/main_classes/tokenizer#transformers.PreTrainedTokenizer) or documents of corresponding tokenizer
+The full keyword arguments should be found in [PreTrainedTokenizer](https://huggingface.co/docs/transformers/v4.21.0/en/main_classes/tokenizer#transformers.PreTrainedTokenizer) or documents of the corresponding tokenizer.
 
 ### Generation Parameters
 
 Pre-trained model is able to perform generation using various methods by combining different [parameters](https://huggingface.co/docs/transformers/main/en/main_classes/text_generation#transformers.generation_utils.GenerationMixin.generate). 
 
-<details>
-<summary>By default, beam search is adapted</summary>
+**[Beam search]** is adapted by default:
+
 
 ```yaml
 generation_kwargs: {'num_beams': 5, 'early_stopping': True}
 ```
 
-</details>
+[**Nucleus sampling]** is also supported by pre-trained model:
 
-<details>
-<summary>Nucleus sampling is also supported by pre-trained model</summary>
 
 ```yaml
 generation_kwargs: {'do_sample': True, 'top_k': 10, 'top_p': 0.9}
 ```
-
-</details>
 
 ### Dataset Parameters
 
@@ -208,7 +208,7 @@ suffix_prompt: ' (Write a story)'
 
 #### Parameter-efficient Prompting
 
-Besides human instruction, parameter-efficient prompting is also supported，though only for `BART`, `T5`, and `GPT-2` model, with methods including `lora`, `prefix-tuning` (equivalent to `p-tuning-v2`), `adapter`, and `prompt-tuning`:
+Besides human instruction, parameter-efficient prompting is also supported, though only for `BART`, `T5`, and `GPT-2` model, with methods including `lora`, `prefix-tuning` (equivalent to `p-tuning-v2`), `adapter`, and `prompt-tuning`:
 
 ```yaml
 efficient_methods: ['adapter', 'prompt-tuning']
@@ -244,7 +244,7 @@ python run_textbox.py ... --pretrain_task=<task-name>
 
 TextBox supports to train models with multiple GPUs and FP16 method based on `accelerate`. Configurate and test (not always necessary) [accelerate](https://github.com/huggingface/accelerate) with `accelerate config` and `accelerate test` in shell ([example](asset/accelerate.md)). 
 
-Once running `accelerate config`, you can run code in the same configuration without setting config again. If you want to change the configuration of `accelerate`, just re-run `accelerate config` to reset the configuration. If you don't want to use `accelerate`, run code using `python` command as .
+Once running `accelerate config`, you can run code in the same configuration without setting config again. To change the configuration of `accelerate`, just re-run `accelerate config` to reset the configuration. If you don't want to use `accelerate`, run code using `python` command as.
 
 To accelerate multi-gpu training with `accelerate`, run the script below. Note that the main process of `accelerate` listen to port `main_process_port`. If you run multiple TextBox instances on a single machine with FSDP (Fully Sharded Data Parallel) enabled, please manually set to a different port.
 
@@ -287,7 +287,7 @@ If you are running your code in jupyter environments, you may want to login by s
 %env WANDB_API_KEY=<your-key>
 ```
 
-If you are debugging your model, you may want to **disable W&B** with `wandb disabled` in the command line and **none of the metrics** will be recorded. To re-enable it, use `wandb enabled`.
+To **disable W&B**, run `wandb disabled` in the command line and **none of the metrics** will be recorded. To re-enable it, use `wandb enabled`.
 
 You can also disable **sync only** with `wandb offline` and enable it again with `wandb online`. The local files can be uploaded by executing `wandb sync`.
 
@@ -374,6 +374,7 @@ After configuration, you can throttle wandb prompts by defining environment vari
     <td align="center">LongT5</td>
     <td align="center"><a href="https://arxiv.org/pdf/2112.07916">(Guo et al., 2021)</a></td>
   </tr>
+
 
 
   <tr>
@@ -478,6 +479,7 @@ After configuration, you can throttle wandb prompts by defining environment vari
 ## Dataset
 
 Now we support 13 generation tasks and corresponding datasets (the item in the bracket is the name used in `--dataset`):
+
 - Text summarization: CNN/Daily Mail (cnndm), XSum (xsum), SAMSum (samsum), WLE (wle), Newsroom (nr), WikiHow (wikihow), MicroSoft News (msn), MediaSum (mediasum), and English Gigaword (eg).
 - Machine Translation: WMT14 English-French (wmt14-fr-en), WMT16 Romanian-English (wmt16-ro-en), WMT16 German-English (wmt16-de-en), WMT19 Czech-English (wmt19-cs-en), WMT13 Spanish-English (wmt13-es-en), WMT19 Chinese-English (wmt19-zh-en), and WMT19 Russian-English (wmt19-ru-en).
 - Open-ended dialogue system: PersonaChat (pc), DailyDialog (dd), DSTC7-AVSD (da), SGD (sgd), Topical-Chat (tc), Wizard of Wikipedia (wow), Movie Dialog (md), Cleaned OpenSubtitles Dialogs (cos), Empathetic Dialogues (ed), Curiosity (curio), CMU Document Grounded Conversations (cmudog), MuTual (mutual), OpenDialKG (odkg), and DREAM (dream).
@@ -539,6 +541,7 @@ We also support you to run our model using your own dataset. Just follow the thr
 </table></div>
 
 
+
 > **Warning**
 > Backslashes and no-extra-space are required when inputting a list of string like `\[\'bleu\',\'rouge\'\]` in command line. As a result, a preset run configuration is more recommended.
 
@@ -547,7 +550,7 @@ We also support you to run our model using your own dataset. Just follow the thr
 
 <!-- TODO -->
 
-| Releases |    Date    |    Features   |
+| Releases |    Date    |   Features    |
 | :------: | :--------: | :-----------: |
 |  v2.0.0  | 20/08/2022 |    TextBox    |
 |  v0.2.1  | 15/04/2021 |    TextBox    |

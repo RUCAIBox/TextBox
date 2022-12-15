@@ -2,7 +2,7 @@ from torch.utils.data import DataLoader
 from textbox.data.denoising_dataset import DenoisingCollate
 from ..data.unilm_dataset import UnilmCollate
 from textbox.data.abstract_dataset import AbstractDataset, AbstractCollate
-from logging import getLogger
+from accelerate.logging import get_logger
 
 collate_options = {'disabled': AbstractCollate, 'denoising': DenoisingCollate, 'unilm': UnilmCollate}
 
@@ -12,7 +12,7 @@ def data_preparation(config, tokenizer):
     if config['model_name'] == 'unilm':
         collate_name = 'unilm'
     collate_fn = collate_options.get(collate_name, AbstractCollate)
-    logger = getLogger(__name__)
+    logger = get_logger(__name__)
     logger.info(f'Pretrain type: {collate_fn.get_type()}')
 
     if config['dataset'] == 'multiwoz':

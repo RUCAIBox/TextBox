@@ -2,7 +2,7 @@
 """
 from contextlib import contextmanager
 from copy import copy
-from logging import getLogger
+from accelerate.logging import get_logger
 import math
 import os
 from time import time
@@ -21,7 +21,7 @@ valid_step = 'valid/step'
 valid_epoch = 'valid/epoch'
 metrics_labels = (train_step, train_epoch, valid_step, valid_epoch)
 
-logger = getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class Timestamp:
@@ -40,7 +40,7 @@ class Timestamp:
         if isinstance(value, int):
             setattr(self, axe, value + 1)
         else:
-            getLogger(__name__).warning(f'Failed when updating axe {axe}')
+            get_logger(__name__).warning(f'Failed when updating axe {axe}')
 
     def as_dict(self) -> dict:
         """Get the timestamp as a dictionary. The entries are also metrics labels shown in W&B."""

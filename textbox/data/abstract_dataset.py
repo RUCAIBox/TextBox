@@ -35,14 +35,14 @@ class AbstractDataset(Dataset):
             assert len(self.source_text) == len(self.target_text)
 
     def __len__(self):
-        return len(self.source_ids)
+        return len(self.source_text)
 
     def __getitem__(self, idx):
         sample = {
-            "source_ids": self.source_ids[idx],
+            "source_text": self.source_text[idx],
         }
         if self.pretraining is None:
-            sample.update({"source_text": self.source_text[idx], "target_text": self.target_text[idx]})
+            sample.update({"source_ids": self.source_ids[idx], "target_text": self.target_text[idx]})
             if self.paired_text:
                 sample.update({"target_ids": self.target_ids[idx]})
         return sample
@@ -103,6 +103,9 @@ class AbstractDataset(Dataset):
         self._init_process()
         self._process_prompt()
 
+        if self.pretraining:
+            return
+
         self.source_ids = []
         source_ids = []
         bsz_num = math.ceil(len(self.source_text) / MAX_TOKENIZE_NUM)
@@ -121,22 +124,21 @@ class AbstractDataset(Dataset):
 
         if self.paired_text and self.pretraining is None:
             self.target_ids = []
-            with tokenizer.as_target_tokenizer():
-                target_ids = tokenizer(
-                    self.target_text,
-                    add_special_tokens=False,
-                    return_token_type_ids=False,
-                    return_attention_mask=False,
-                )["input_ids"]
-                for ids in target_ids:
-                    if self.config["truncate"] == "tail":
-                        ids = ids[:self.target_max_length]
-                    else:
-                        ids = ids[-self.target_max_length:]
-                    ids = self.tokenizer.build_inputs_with_special_tokens(ids)
-                    if self.config["model_name"] in ["bert2bert", "opt", "unilm", "xlm"]:
-                        ids = ids[1:]
-                    self.target_ids.append(torch.tensor(ids, dtype=torch.long))
+            target_ids = tokenizer(
+                text_target=self.target_text,
+                add_special_tokens=False,
+                return_token_type_ids=False,
+                return_attention_mask=False,
+            )["input_ids"]
+            for ids in target_ids:
+                if self.config["truncate"] == "tail":
+                    ids = ids[:self.target_max_length]
+                else:
+                    ids = ids[-self.target_max_length:]
+                ids = self.tokenizer.build_inputs_with_special_tokens(ids)
+                if self.config["model_name"] in ["bert2bert", "opt", "unilm", "xlm"]:
+                    ids = ids[1:]
+                self.target_ids.append(torch.tensor(ids, dtype=torch.long))
 
 
 class AbstractCollate:

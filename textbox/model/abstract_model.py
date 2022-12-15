@@ -5,6 +5,7 @@ from transformers import EncoderDecoderModel
 import os
 from typing import List, Optional, Tuple, Union
 from transformers.modeling_utils import get_parameter_dtype
+from collections import OrderedDict
 
 
 class AbstractModel(nn.Module):
@@ -105,11 +106,8 @@ class AbstractModel(nn.Module):
         return generated_text
 
     def process_forward_inputs(self, batch):
-        inputs = {
-            'input_ids': batch['source_ids'].to(self.device),
-            'attention_mask': batch['source_mask'].to(self.device),
-            'labels': batch['target_ids'].to(self.device)
-        }
+        inputs = self.process_generate_inputs(batch)
+        inputs.update({'labels': batch['target_ids'].to(self.device)})
         return inputs
 
     def process_generate_inputs(self, batch):
@@ -126,7 +124,6 @@ class AbstractModel(nn.Module):
             model_path = os.path.join(save_directory, 'pytorch_model.bin')
             model_load = torch.load(model_path, map_location=self.device)
             self.load_state_dict(model_load)
-            del model_load
 
     def save_pretrained(
         self,
@@ -152,7 +149,5 @@ class AbstractModel(nn.Module):
         if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
             self.model.save_pretrained(save_directory)
         else:
-            state_dict = self.cpu().state_dict()
-            self.to(self.device)
+            state_dict = OrderedDict([(k, v.detach().cpu()) for k, v in self.state_dict().items()])
             torch.save(state_dict, os.path.join(save_directory, 'pytorch_model.bin'))
-            del state_dict

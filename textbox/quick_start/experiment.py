@@ -1,7 +1,8 @@
 import os
 import logging
 from copy import copy
-from logging import getLogger
+from accelerate.logging import get_logger
+
 from typing import Optional, Tuple, Any, List, Dict
 
 from accelerate import Accelerator
@@ -38,8 +39,11 @@ class Experiment:
         self.config = Config(model, dataset, config_file_list, config_dict)
         self.__extended_config = None
 
-        self.accelerator = Accelerator()
-        self.config.update({'_is_local_main_process': self.accelerator.is_local_main_process})
+        self.accelerator = Accelerator(gradient_accumulation_steps=self.config['accumulation_steps'])
+        self.config.update({
+            '_is_local_main_process': self.accelerator.is_local_main_process,
+            'device': self.accelerator.device
+        })
         self.logger = self.init_logger(self.config)
         self.summary_tracker = SummaryTracker.basicConfig(self.get_config())
         self.train_data, self.valid_data, self.test_data, self.tokenizer = \
@@ -61,7 +65,7 @@ class Experiment:
             enabled=config['_is_local_main_process'],
             saved_dir=config['saved_dir']
         )
-        logger = getLogger(__name__)
+        logger = get_logger(__name__)
         logger.info(config)
 
         return logger
@@ -94,13 +98,10 @@ class Experiment:
             self.model.from_pretrained(config['model_path'])
 
     def _do_train_and_valid(self):
-
         if not self.do_train and self.do_valid:
             raise ValueError('Cannot execute validation without training.')
 
         if self.do_train:
-            if self.config['load_experiment'] is not None:
-                self.trainer.resume_checkpoint(resume_dir=self.config['load_experiment'])
             train_data = self.train_data
             valid_data = self.valid_data if self.do_valid else None
 
@@ -109,7 +110,7 @@ class Experiment:
     def _do_test(self):
         if self.do_test:
             with self.summary_tracker.new_epoch('eval'):
-                self.test_result = self.trainer.evaluate(self.test_data, model_file=self.config['load_experiment'])
+                self.test_result = self.trainer.evaluate(self.test_data, load_best_model=self.do_train)
                 self.summary_tracker.set_metrics_results(self.test_result)
                 self.logger.info(
                     'Evaluation result:\n{}'.format(self.summary_tracker._current_epoch.as_str(sep=",\n", indent=" "))

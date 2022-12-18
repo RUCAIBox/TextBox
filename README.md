@@ -1,4 +1,4 @@
-![TextBox Logo](asset/logo.png)
+`![TextBox Logo](asset/logo.png)
 
 ---
 
@@ -38,12 +38,13 @@ bash install.sh
 <details>
 <summary>W&B Dashboard Configuration</summary>
 
+
 Weights&Biases dashboard is integrated. For the first run, follow the prompt to register an account and log in with [API key](https://wandb.ai/authorize). See [advanced configuration](#wb-dashboard-advanced-configuration) for more information.
 </details>
 
 ## Quick Start
 
-The script below will run the facebook `BART-base` model on the `samsum` dataset. The instruction for other models can be found in [our respository](instructions). The yielded files mainly include a log file like [example.log](asset/example.log) and checkpoint files in `saved`. See [Pre-trained Model Parameters](#pre-trained-model-parameters) for more detail of `model_path`.
+The script below will run the facebook `BART-base` model on the `samsum` dataset. The instruction for other models can be found in [our respository](instructions). The yielded files mainly include a log file like [example.log](asset/example.log) and checkpoint files in `saved`. See [Pre-trained Model Parameters](#pretrained-model-parameters) for more detail of `model_path`.
 
 ```bash
 python run_textbox.py --model_path=facebook/bart-base
@@ -85,6 +86,7 @@ You can run partial experiment with `do_train`, `do_valid`, `do_test`. And you c
 
 <details>
 <summary>Usage</summary>
+
 
 
 The following script loads the trained model `example.pth` and conducts generation and evaluation.
@@ -227,7 +229,7 @@ Pre-training models from scratch or continue pre-training from existing checkpoi
 
 Currently, we support pre-training tasks from BART paper, including Text Infilling and Sentence Permutation (which is sufficient to reproduce BART results from the original paper according to this [Github Issue](https://github.com/facebookresearch/fairseq/issues/1899#issuecomment-1069429320) from BART author).
 
-To enable pre-training, simply set `--pretrain_task` to `denoising` or `text_infilling`(by default, pre-training is disabled and thus set to `disabled`). We plan to add more pre-training tasks at `textbox/data/utils.py`.
+To enable pre-training, simply set `--pretrain_task` to `denoising`(by default, pre-training is disabled and thus set to `disabled`). We plan to add more pre-training tasks at `textbox/data/utils.py`.
 
 ```bash
 python run_textbox.py ... --pretrain_task=<task-name>
@@ -242,17 +244,17 @@ python run_textbox.py ... --pretrain_task=<task-name>
 
 #### Multi-GPU Training & FP16
 
-TextBox supports to train models with multiple GPUs and FP16 method based on `accelerate`. Configurate and test (not always necessary) [accelerate](https://github.com/huggingface/accelerate) with `accelerate config` and `accelerate test` in shell ([example](asset/accelerate.md)). 
+TextBox supports training models with multiple GPUs and FP16 method based on `accelerate`. Configurate and test (not always necessary) [accelerate](https://github.com/huggingface/accelerate) with `accelerate config` and `accelerate test` in shell ([example](asset/accelerate.md)). 
 
 Once running `accelerate config`, you can run code in the same configuration without setting config again. To change the configuration of `accelerate`, just re-run `accelerate config` to reset the configuration. If you don't want to use `accelerate`, run code using `python` command as.
 
-To accelerate multi-gpu training with `accelerate`, run the script below. Note that the main process of `accelerate` listen to port `main_process_port`. If you run multiple TextBox instances on a single machine with FSDP (Fully Sharded Data Parallel) enabled, please manually set to a different port.
+To accelerate multi-GPU training with `accelerate`, run the script below. Note that the main process of `accelerate` listen to port `main_process_port`. If you run multiple TextBox instances on a single machine with FSDP (Fully Sharded Data Parallel) enabled, please manually set to a different port.
 
 ```bash
 accelerate launch [--main_process_port <port-number>] run_textbox.py ...
 ```
 
-In multi-GPU training, you should set the hyper-parameter `gpu_id` to decide the devices in training. And the number of GPUs set in `gpu_id` is necessary greater or equal to the number of GPUs set in `accelerate`. 
+In multi-GPU training, you should set the hyper-parameter `gpu_id` to decide the devices in training. And the number of GPUs set in `gpu_id` is necessarily greater or equal to the number of GPUs set in `accelerate`. 
 
 ```bash
 accelerate launch [--main_process_port <port-number>] \
@@ -278,6 +280,14 @@ python run_multi_seed.py --multi_seed=16  --model_path=facebook/bart-base --metr
 ```
 
 Specify `seed` parameter to reproduce generation of multiple seeds.
+
+### Advanced Analysis
+
+For the generated results, `run_analysis.py` is provided for advanced analysis. 
+
+```bash
+python run_analysis.py --dataset=cnndm  BART_output.txt T5_output.txt
+```
 
 ### W&B Dashboard Advanced Configuration
 
@@ -496,7 +506,7 @@ Now we support 13 generation tasks and corresponding datasets (the item in the b
 
 These datasets can be downloaded at [https://huggingface.co/RUCAIBox](https://huggingface.co/RUCAIBox). The leaderboard of each dataset can be found in [our respository](Leaderboard).
 
-We also support you to run our model using your own dataset. Just follow the three steps:
+We also support you to run our model using your own dataset. Just follow the two steps:
 
 1. Create a new folder under the `dataset` folder to put your own corpus file which includes a sequence per line, e.g. `dataset/YOUR_DATASET`;
 2. Write a YAML configuration file using the same file name to set the hyper-parameters of your dataset, e.g. `textbox/properties/dataset/YOUR_DATASET.yaml`.
@@ -507,7 +517,7 @@ We also support you to run our model using your own dataset. Just follow the thr
 
 ## Evaluation
 
-15 mainstream evaluation metrics are integrated:
+16 mainstream evaluation metrics are integrated:
 
 <div class="tg-wrap"><table>
 <thead>
@@ -521,21 +531,24 @@ We also support you to run our model using your own dataset. Just follow the thr
     <td align="center">bleu</td>
     <td align="center">chrf</td>
     <td align="center">chrf+</td>
-    <td align="center">chrf++</td>
   </tr>
   <tr>
+    <td align="center">chrf++</td>
     <td align="center">cider</td>
     <td align="center">distinct</td>
-    <td align="center">meteor</td>
-    <td align="center">nist</td>
-    <td align="center">qa</td>
+    <td align="center">meteor</td>  
   </tr>
   <tr>
+    <td align="center">nist</td>
+    <td align="center">qa</td>
     <td align="center">rouge</td>
     <td align="center">self_bleu</td>
+  </tr>
+  <tr>
     <td align="center">spice</td>
     <td align="center">ter</td>
     <td align="center">unique</td>
+    <td align="center">multiwoz</td>
   </tr>
 </tbody>
 </table></div>

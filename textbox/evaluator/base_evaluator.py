@@ -15,6 +15,7 @@ evaluator_list = {
     'rouge',
     'self_bleu',
     'spice',
+    'style',
     'ter',
     'unique',
 }
@@ -114,6 +115,9 @@ class BaseEvaluator():
             elif metric == 'spice':
                 from .spice_evaluator import SpiceEvaluator
                 evaluator = SpiceEvaluator(self.config)
+            elif metric == 'style':
+                from .style_evaluator import StyleEvaluator
+                evaluator = StyleEvaluator(self.config)
             elif metric == 'ter':
                 from .ter_evaluator import TerEvaluator
                 evaluator = TerEvaluator(self.config)
@@ -121,7 +125,8 @@ class BaseEvaluator():
                 from .unique_evaluator import UniqueEvaluator
                 evaluator = UniqueEvaluator(self.config)
 
-            self.evaluators.append(evaluator)
+            if metric != 'hm':
+                self.evaluators.append(evaluator)
 
     def _process_corpus(self, generate_corpus, reference_dataset):
         reference_corpus = reference_dataset.target_text
@@ -150,4 +155,6 @@ class BaseEvaluator():
         for evaluator in self.evaluators:
             metric_result = evaluator.evaluate(generate_corpus, reference_corpus, avg=avg)
             result_dict.update(metric_result)
+        if 'hm' in self.metrics:
+            result_dict['hm'] = 2 / (1 / result_dict['bleu'] + 1 / result_dict['style'])
         return result_dict

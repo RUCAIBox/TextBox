@@ -522,7 +522,7 @@ We also support you to run our model using your own dataset. Just follow the two
 <div class="tg-wrap"><table>
 <thead>
   <tr>
-    <th colspan="5" align="center">Evaluation</th>
+    <th colspan="8" align="center">Evaluation</th>
   </tr>
 </thead>
 <tbody>
@@ -531,8 +531,6 @@ We also support you to run our model using your own dataset. Just follow the two
     <td align="center">bleu</td>
     <td align="center">chrf</td>
     <td align="center">chrf+</td>
-  </tr>
-  <tr>
     <td align="center">chrf++</td>
     <td align="center">cider</td>
     <td align="center">distinct</td>
@@ -543,8 +541,6 @@ We also support you to run our model using your own dataset. Just follow the two
     <td align="center">qa</td>
     <td align="center">rouge</td>
     <td align="center">self_bleu</td>
-  </tr>
-  <tr>
     <td align="center">spice</td>
     <td align="center">ter</td>
     <td align="center">unique</td>

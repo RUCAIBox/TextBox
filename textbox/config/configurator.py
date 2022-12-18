@@ -262,6 +262,7 @@ class Config(object):
         self.setdefault('valid_strategy', 'epoch')
         self.setdefault('valid_steps', 1)
         self.setdefault('disable_tqdm', False)
+        self.setdefault('resume_training',True)
         self._simplify_parameter('optimizer')
         self._simplify_parameter('scheduler')
         self._simplify_parameter('src_lang')
@@ -304,7 +305,10 @@ class Config(object):
         if not self.final_config_dict.get('model_path', None):
             self.final_config_dict['load_type'] = 'from_scratch'
         elif os.path.exists(os.path.join(self.final_config_dict['model_path'], 'textbox_configuration.pt')):
-            self.final_config_dict['load_type'] = 'resume'
+            if self.final_config_dict.get('resume_all'):
+                self.final_config_dict['load_type'] = 'resume '
+            else:
+                self.final_config_dict['load_type'] = 'resume'
         else:
             self.final_config_dict['load_type'] = 'from_pretrained'
 

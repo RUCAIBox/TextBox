@@ -94,7 +94,8 @@ class Experiment:
         self.valid_result: Optional[ResultType] = None
         self.test_result: Optional[ResultType] = None
         if config['load_type'] == 'resume':
-            self.trainer.resume_checkpoint(config['model_path'])
+            if config['resume_training']:
+                self.trainer.resume_checkpoint(config['model_path'])
             self.model.from_pretrained(config['model_path'])
 
     def _do_train_and_valid(self):

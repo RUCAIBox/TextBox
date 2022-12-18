@@ -435,14 +435,6 @@ class SummaryTracker:
         if self._is_local_main_process and not self.tracker_finished and self.axes is not None:
             wandb.log(info, step=self.axes.train_step, commit=False)
 
-    def add_corpus(self, tag: str, corpus: Iterable[str]):
-        r"""Add a corpus to summary."""
-        if tag.startswith('valid'):
-            self._current_epoch._update_metrics({'generated_corpus': '\n'.join(corpus)})
-        if self._is_local_main_process and not self.tracker_finished:
-            _corpus = wandb.Table(columns=[tag], data=pd.DataFrame(corpus))
-            wandb.log({tag: _corpus}, step=self.axes.train_step)
-
 
 root = None
 

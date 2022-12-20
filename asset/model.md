@@ -211,7 +211,7 @@ To support the rapid progress of PLMs on text generation, TextBox 2.0 incorporat
   </tr>
 
   <tr>
-    <td rowspan="2" colspan="2" align="center">**Non Pre-training Models**</strong></td>
+    <td rowspan="2" colspan="2" align="center"><strong>Non Pre-training Models</strong></td>
     <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/transformer.md">Transformer</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/1706.03762">(Vaswani et al., 2017b)</a></td>
   </tr>

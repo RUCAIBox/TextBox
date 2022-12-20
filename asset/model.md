@@ -2,9 +2,7 @@
 
 ### Model List
 
-<!--MASS pplm lightweight6 rnn-->
-
-To support the rapid progress of PLMs on text generation, TextBox 2.0 incorporates 47 models/modules. The following table lists the name and reference of each model/module. Click the model/module name for detailed [usage instructions](https://github.com/Xiaoxue-xx/TextBox/tree/2.0.0/instructions).
+To support the rapid progress of PLMs on text generation, TextBox 2.0 incorporates 47 models/modules. The following table lists the name and reference of each model/module. Click the model/module name for detailed [usage instructions](https://github.com/RUCAIBox/TextBox/tree/2.0.0/instructions).
 
 <!-- Thanks for table generatros https://www.tablesgenerator.com/html_tables -->
 
@@ -81,7 +79,7 @@ To support the rapid progress of PLMs on text generation, TextBox 2.0 incorporat
     <td align="center"><a href="https://arxiv.org/pdf/2112.07916">(Guo et al., 2021)</a></td>
   </tr>
   <tr>
-    <td align="center">PegasusX</td>
+      <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Seq2Seq/Pegasus_X.md">PegasusX</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/2208.04347">(Phang et al., 2022)</a></td>
   </tr>
 
@@ -89,136 +87,136 @@ To support the rapid progress of PLMs on text generation, TextBox 2.0 incorporat
 
   <tr>
     <td rowspan="8" colspan="2" align="center"><strong>Multilingual Models</strong></td>
-    <td align="center">[mBART](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/mBART.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/mBART.md">mBART</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/2001.08210">(Liu et al., 2020)</a></td>
   </tr>
   <tr>
-    <td align="center">[mT5](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/mT5.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/mT5.md">mT5</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/2010.11934">(Xue et al., 2020)</a></td>
   </tr>
   <tr>
-    <td align="center">[Marian](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/Marian.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/Marian.md">Marian</a></td>
     <td align="center"><a href="https://aclanthology.org/2020.eamt-1.61.pdf">(Tiedemann et al., 2020)</a></td>
   </tr>
   <tr>
-    <td align="center">[M2M_100](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/M2M_100.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/M2M_100.md">M2M_100</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/2010.11125">(Fan et al., 2020)</a></td>
   </tr>
   <tr>
-    <td align="center">[NLLB](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/NLLB.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/NLLB.md">NLLB</a></td>
     <td align="center"><a href="https://arxiv.org/ftp/arxiv/papers/2207/2207.04672.pdf">(NLLB Team, 2022)</a></td>
   </tr>
   <tr>
-    <td align="center">[XLM](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/XLM.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/XLM.md">XLM</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/1901.07291">(Lample et al., 2019)</a></td>
   </tr>
   <tr>
-    <td align="center">[XLM-RoBERTa](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/XLM-RoBERTa.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/XLM-RoBERTa.md">XLM-RoBERTa</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/1911.02116">(Conneau et al., 2019)</a></td>
   </tr>
   <tr>
-    <td align="center">[XLM-ProphetNet](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/XLM-ProphetNet.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Multilingual%20Models/XLM-ProphetNet.md">XLM-ProphetNet</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/2001.04063">(Qi et al., 2020)</a></td>
   </tr>
 
   <tr>
   <td rowspan="6" colspan="2" align="center"><strong>Chinese Models</strong></td>
-    <td align="center">[CPM](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Chinese%20Models/CPM.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Chinese%20Models/CPM.md">CPM</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/2012.00413">(Zhang et al., 2020)</a></td>
   </tr>
   <tr>
-    <td align="center">[CPT](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Chinese%20Models/CPT.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Chinese%20Models/CPT.md">CPT</a></td>
     <td align="center" rowspan="2"><a href="https://arxiv.org/pdf/2109.05729">(Shao et al., 2021)</a></td>
   </tr>
   <tr>
-    <td align="center">[Chinese-BART](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Chinese%20Models/Chinese-BART.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Chinese%20Models/Chinese-BART.md">Chinese-BART</a></td>
   </tr>
   <tr>
-    <td align="center">[Chinese-GPT2](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Chinese%20Models/Chinese-GPT2.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Chinese%20Models/Chinese-GPT2.md">Chinese-GPT2</a></td>
     <td align="center" rowspan="3"><a href="https://arxiv.org/pdf/1909.05658">(Zhao et al., 2019)</a></td>
   </tr>
   <tr>
-    <td align="center">[Chinese-T5](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Chinese%20Models/Chinese-T5.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Chinese%20Models/Chinese-T5.md">Chinese-T5</a></td>
   </tr>
   <tr>
-    <td align="center">[Chinese-Pegasus](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Chinese%20Models/Chinese-Pegasus.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Chinese%20Models/Chinese-Pegasus.md">Chinese-Pegasus</a></td>
   </tr>
 
   <tr>
     <td rowspan="3" colspan="2" align="center"><strong>Dialogue Models</strong></td>
-    <td align="center">[Blenderbot](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Dialogue%20Models/Blenderbot.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Dialogue%20Models/Blenderbot.md">Blenderbot</a></td>
     <td align="center" rowspan="2"><a href="https://arxiv.org/pdf/2004.13637">(Roller et al., 2020)</a></td>
   </tr>
   <tr>
-    <td align="center">[Blenderbot-Small](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Dialogue%20Models/Blenderbot-Small.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Dialogue%20Models/Blenderbot-Small.md">Blenderbot-Small</a></td>
   </tr>
   <tr>
-    <td align="center">[DialoGPT](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Dialogue%20Models/DialoGPT.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Dialogue%20Models/DialoGPT.md">DialoGPT</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/1911.00536">(Zhang et al., 2019)</a></td>
   </tr>
 
   <tr>
     <td rowspan="2" colspan="2" align="center"><strong>Conditional Models</strong></td>
-    <td align="center">[CTRL](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Conditional%20Models/CTRL.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Conditional%20Models/CTRL.md">CTRL</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/1909.05858">(Keskar et al., 2019)</a></td>
   </tr>
   <tr>
-    <td align="center">PPLM</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Conditional%20Models/PPLM.md">PPLM</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/1912.02164">(Dathathri et al., 2019)</a></td>
   </tr>
 
   <tr>
     <td rowspan="2" colspan="2" align="center"><strong>Distilled Models</strong></td>
-    <td align="center">[DistilGPT2](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Distilled%20Models/DistilGPT2.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Distilled%20Models/DistilGPT2.md">DistilGPT2</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/1910.01108">(Sanh et al., 2019)</a></td>
   </tr>
   <tr>
-    <td align="center">[DistilBART](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Distilled%20Models/DistilBART.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Distilled%20Models/DistilBART.md">DistilBART</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/2010.13002">(Shleifer et al., 2020)</a></td>
   </tr>
 
   <tr>
-    <td rowspan="2" colspan="2" align="center">**Prompting Models**</strong></td>
-    <td align="center">PTG</td>
+    <td rowspan="2" colspan="2" align="center"><strong>Prompting Models</strong></td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Prompting%20Models/PTG.md">PTG</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/2205.01543">(Li et al., 2022a)</a></td>
   </tr>
   <tr>
-    <td align="center">Context-Tuning</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Prompting%20Models/Context-Tuning.md">Context-Tuning</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/2201.08670">(Tang et al., 2022)</a></td>
   </tr>
 
   <tr>
   <td rowspan="6" colspan="2" align="center"><strong>Lightweight Modules</strong></td>
-    <td align="center">Adapter</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Lightweight%20Modules/Adapter.md">Adapter</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/1902.00751">(Houlsby et al., 2019)</a></td>
   </tr>
   <tr>
-    <td align="center">Prefix-tuning</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Lightweight%20Modules/Prefix-tuning.md">Prefix-tuning</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/2101.00190">(Li and Liang, 2021)</a></td>
   </tr>
   <tr>
-    <td align="center">Prompt tuning</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Lightweight%20Modules/Prompt%20tuning.md">Prompt tuning</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/2104.08691">(Lester et al., 2021)</a></td>
   <tr>
-    <td align="center">LoRA</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Lightweight%20Modules/LoRA.md">LoRA</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/2106.09685">(Hu et al., 2021)</a></td>
   </tr>
   <tr>
-    <td align="center">BitFit</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Lightweight%20Modules/BitFit.md">BitFit</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/2106.10199">(Ben-Zaken et al. ,2021)</a></td>
   </tr>
   <tr>
-    <td align="center">P-Tuning v2</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/Lightweight%20Modules/P-Tuning%20v2.md">P-Tuning v2</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/2110.07602">(Liu et al., 2021a)</a></td>
   </tr>
 
   <tr>
     <td rowspan="2" colspan="2" align="center">**Non Pre-training Models**</strong></td>
-    <td align="center">[Transformer](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/transformer.md)</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/transformer.md">Transformer</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/1706.03762">(Vaswani et al., 2017b)</a></td>
   </tr>
   <tr>
-    <td align="center">RNN</td>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/RNN.md">RNN</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/1409.3215">(Sutskever et al., 2014)</a></td>
   </tr>
 

@@ -13,7 +13,7 @@ To conduct evaluations, 17 evaluation metrics belonging to 4 categories are inte
 
 ### Evaluation Parameters
 
-Evaluation metrics can be specified with `metrics` ([full list](https://github.com/RUCAIBox/TextBox#Evaluation)), and produce a dictionary of results:
+Evaluation metrics can be specified with `metrics` ([full list](###evaluation-metrics)), and produce a dictionary of results:
 
 ```
 python run_textbox.py ... --metrics=\[\'rouge\'\]
@@ -39,6 +39,6 @@ Other evaluation metrics observe the same naming rules.
 
 Besides the analysis using automatic metrics, TextBox 2.0 provides several visualization tools to explore and analyze the generated texts in various dimensions. A separate script `run_analysis.py` is provided for advanced analysis.
 
-```python
+```bash
 python run_analysis.py --dataset=cnndm  BART_output.txt T5_output.txt
 ```

@@ -22,7 +22,7 @@ These datasets can be downloaded at https://huggingface.co/RUCAIBox.
 
 ### Leaderboard
 
-For each dataset, we report their details including the dataset description, basic statistics, and training/validation/testing samples. In addition, we build a [leaderboard](https://github.com/Xiaoxue-xx/TextBox/tree/2.0.0/Leaderboard) for each dataset by collecting the automatic results and generated texts of the latest research. We also encourage community users to collaboratively maintain the leaderboard and submit their model results.
+For each dataset, we report their details including the dataset description, basic statistics, and training/validation/testing samples. In addition, we build a [leaderboard](https://github.com/RUCAIBox/TextBox/tree/2.0.0/Leaderboard) for each dataset by collecting the automatic results and generated texts of the latest research. We also encourage community users to collaboratively maintain the leaderboard and submit their model results.
 
 ### Dataset Parameters
 

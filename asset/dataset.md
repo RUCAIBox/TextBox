@@ -36,13 +36,20 @@ src_lang: 'en'
 tgt_lang: 'zh'
 ```
 
-#### Prompting
+### Prompting
 
-To prompt at `prefix` or `suffix`, pass strings to the following parameters:
+To prompt (instruction) at `prefix` or `suffix`, pass strings to the following parameters:
 
 ```
 prefix_prompt: 'Summarize: '
 suffix_prompt: ' (Write a story)'
 ```
 
-### 
+### New Dataset 
+
+We also support you to run our model using your own dataset. 
+
+Usage
+
+1. Create a new folder under the `dataset` folder to put your own corpus file which includes a sequence per line, e.g. `dataset/YOUR_DATASET`;
+2. Write a YAML configuration file using the same file name to set the hyper-parameters of your dataset, e.g. `textbox/properties/dataset/YOUR_DATASET.yaml`.

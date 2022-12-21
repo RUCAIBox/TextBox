@@ -9,7 +9,7 @@
 TextBox 2.0 is an up-to-date text generation library based on Python and PyTorch focusing on building a unified and standardized pipeline for applying Pre-trained language models to text generation:
 
 - From a **task** perspective, we consider 13 common text generation tasks such as translation, story generation and style transfer, and their corresponding 83 widely-used datasets. 
-- From a **model** perspective, we incorporate 45 PLMs along with transformer and RNN covering the categories of general, translation, dialogue, controllable, distilled, Chinese, and light-weight modules.
+- From a **model** perspective, we incorporate 47 PLMs/modules covering the categories of general, translation, dialogue, controllable, distilled, Chinese, and light-weight PLMs.
 - From a **training** perspective, we support 4 pre-training objectives and 4 efficient and robust training strategies, such as distributed data parallel and efficient generation.
 
 

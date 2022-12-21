@@ -25,6 +25,7 @@ Compared with the previous version of TextBox, this extension mainly focuses on 
   The Overall Framework of TextBox 2.0
 </p>
 
+
 <!-- ===================== Installation ===================== -->
 
 ## Installation
@@ -42,7 +43,7 @@ The script below will run the facebook `BART-base` model on the `samsum` dataset
 python run_textbox.py --model_path=facebook/bart-base
 ```
 
-Substitute `--model=<xxx>` ,  `--dataset=<xxx>` and `--model_path=<xxx>` with your choices. See [Model](https://github.com/RUCAIBox/TextBox/blob/2.0.0/asset/model.md#model-list), [Dataset](https://github.com/RUCAIBox/TextBox/blob/2.0.0/asset/dataset.md#dataset-list) for a full support list. See [Pre-trained Model Parameters](https://github.com/RUCAIBox/TextBox/blob/2.0.0/asset/model.md#pre-trained-model-parameters) for more detail of `model_path`.
+Substitute `--model=<xxx>` ,  `--dataset=<xxx>` and `--model_path=<xxx>` with your choices. See [Model](asset/model.md#model-list), [Dataset](asset/dataset.md#dataset-list) for a full support list. See [Pre-trained Model Parameters](asset/model.md#pre-trained-model-parameters) for more detail of `model_path`.
 
 
 ```bash
@@ -72,7 +73,7 @@ Four useful training methods are provided for improving the optimization of PLMs
 
 ## Model
 
-To support the rapid progress of PLMs on text generation, TextBox 2.0 incorporates 47 Models/Modules, covering the categories of general, translation, Chinese, dialogue, controllable, distilled, prompting, and lightweight models (modules). See [model doc](asset/model.md) for information on detailed [usage instructions of each model/module](https://github.com/RUCAIBox/TextBox/blob/2.0.0/asset/model.md#model-list), [pre-trained model parameters](https://github.com/RUCAIBox/TextBox/blob/2.0.0/asset/model.md#pre-trained-model-parameters), and [generation parameters](https://github.com/RUCAIBox/TextBox/blob/2.0.0/asset/model.md#generation-parameters).
+To support the rapid progress of PLMs on text generation, TextBox 2.0 incorporates 47 Models/Modules, covering the categories of general, translation, Chinese, dialogue, controllable, distilled, prompting, and lightweight models (modules). See [model doc](asset/model.md) for information on detailed [usage instructions of each model/module](asset/model.md#model-list), [pre-trained model parameters](asset/model.md#pre-trained-model-parameters), and [generation parameters](asset/model.md#generation-parameters).
 
 <!-- ===================== Dataset ===================== -->
 
@@ -85,6 +86,7 @@ We also support you to run our model using your own dataset.
 
 <details>
 <summary>Usage</summary>
+
 
 
 1. Create a new folder under the `dataset` folder to put your own corpus file which includes a sequence per line, e.g. `dataset/YOUR_DATASET`;
@@ -143,4 +145,3 @@ TextBox is developed and maintained by [AI Box](http://aibox.ruc.edu.cn/).
 ## License
 
 TextBox uses [MIT License](./LICENSE).
-

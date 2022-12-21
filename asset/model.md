@@ -211,13 +211,13 @@ To support the rapid progress of PLMs on text generation, TextBox 2.0 incorporat
   </tr>
 
   <tr>
-    <td rowspan="2" colspan="2" align="center"><strong>Non Pre-training Models</strong></td>
-    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/transformer.md">Transformer</a></td>
-    <td align="center"><a href="https://arxiv.org/pdf/1706.03762">(Vaswani et al., 2017b)</a></td>
-  </tr>
-  <tr>
+    <td rowspan="2" colspan="2" align="center"><strong>Non-Pre-training Models</strong></td>
     <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/RNN.md">RNN</a></td>
     <td align="center"><a href="https://arxiv.org/pdf/1409.3215">(Sutskever et al., 2014)</a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/transformer.md">Transformer</a></td>
+    <td align="center"><a href="https://arxiv.org/pdf/1706.03762">(Vaswani et al., 2017b)</a></td>
   </tr>
 
 </tbody>
@@ -233,7 +233,7 @@ For example, when building a *Task-oriented Dialogue System*, special tokens can
 
 ```bash
 config_kwargs: {}
-tokenizer_kwargs: { 'use_fast': False, 'additional_special_tokens': ['[db_0]', '[db_1]', '[db_2]'] }
+tokenizer_kwargs: {'use_fast': False, 'additional_special_tokens': ['[db_0]', '[db_1]', '[db_2]'] }
 ```
 
 Other commonly used parameters include `label_smoothing: <smooth-loss-weight>`

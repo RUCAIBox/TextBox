@@ -1,250 +1,358 @@
-Sun 11 Apr 2021 13:45:26 INFO 
-General Hyper Parameters: 
-gpu_id=0
-use_gpu=True
-DDP=False
-seed=2020
-state=INFO
-reproducibility=True
-data_path=dataset/COCO
-checkpoint_dir=saved/
-generated_text_dir=generated/
+Fri 09 Dec 2022 15:44:51 INFO 63 parameters found.
+================================================================================
 
-Training Hyper Parameters: 
-epochs=50
-train_batch_size=64
-learner=adam
-learning_rate=0.001
-eval_step=1
-stopping_step=3
-grad_clip=5.0
+# General Hyper Parameters: 
 
-Evaluation Hyper Parameters: 
-metrics=['bleu', 'self_bleu']
-n_grams=[1, 2, 3, 4, 5]
-eval_batch_size=64
-
-Model Hyper Parameters: 
-embedding_size=64
-hidden_size=128
-num_dec_layers=2
-dropout_ratio=0.2
-rnn_type=gru
-
-Dataset Hyper Parameters: 
-max_vocab_size=5000
-max_seq_length=40
-split_strategy=load_split
-overlength_strategy=drop
-tokenize_strategy=by_space
-language=English
-task_type=unconditional
+gpu_id: 0
+use_gpu: True
+device: cuda
+seed: 2020
+reproducibility: True
+cmd: run_textbox.py --model_path=facebook/bart-base
+filename: BART-samsum-2022-Dec-09_15-44-51
+saved_dir: saved/
+state: INFO
 
 
-Sun 11 Apr 2021 13:45:26 INFO Loading data from scratch
-Sun 11 Apr 2021 13:45:27 INFO Dump finished!
-Sun 11 Apr 2021 13:45:27 INFO Vocab size: 5000
-Sun 11 Apr 2021 13:45:27 INFO train: 10000 cases, dev: 10000 cases, test: 10000 cases
+# Training Hyper Parameters: 
 
-Sun 11 Apr 2021 13:45:27 INFO Build [unconditional] DataLoader for [train]
-Sun 11 Apr 2021 13:45:27 INFO batch_size = [64], shuffle = [True], drop_last = [True]
+do_train: True
+do_valid: True
+optimizer: adamw
+adafactor_kwargs: {'lr': 0.001, 'scale_parameter': False, 'relative_step': False, 'warmup_init': False}
+optimizer_kwargs: {}
+valid_steps: 1
+valid_strategy: epoch
+stopping_steps: 2
+epochs: 50
+learning_rate: 3e-05
+train_batch_size: 4
+grad_clip: 0.1
+accumulation_steps: 48
+disable_tqdm: False
 
-Sun 11 Apr 2021 13:45:27 INFO Build [unconditional] DataLoader for [valid]
-Sun 11 Apr 2021 13:45:27 INFO batch_size = [64], shuffle = [True], drop_last = [True]
 
-Sun 11 Apr 2021 13:45:27 INFO Build [unconditional] DataLoader for [test]
-Sun 11 Apr 2021 13:45:27 INFO batch_size = [64], shuffle = [False], drop_last = [False]
+# Evaluation Hyper Parameters: 
 
-Sun 11 Apr 2021 13:45:30 INFO RNN(
-  (token_embedder): Embedding(5000, 64, padding_idx=0)
-  (decoder): BasicRNNDecoder(
-    (decoder): GRU(64, 128, num_layers=2, batch_first=True, dropout=0.2)
+do_test: True
+lower_evaluation: True
+multiref_strategy: max
+bleu_max_ngrams: 4
+bleu_type: nltk
+smoothing_function: 0
+corpus_bleu: False
+rouge_max_ngrams: 2
+rouge_type: files2rouge
+meteor_type: pycocoevalcap
+chrf_type: m-popovic
+distinct_max_ngrams: 4
+inter_distinct: True
+unique_max_ngrams: 4
+self_bleu_max_ngrams: 4
+tgt_lang: en
+metrics: ['rouge']
+eval_batch_size: 16
+corpus_meteor: True
+
+
+# Model Hyper Parameters: 
+
+model: BART
+model_name: bart
+model_path: facebook/bart-base
+config_kwargs: {}
+tokenizer_kwargs: {'use_fast': True}
+generation_kwargs: {'num_beams': 5, 'no_repeat_ngram_size': 3, 'early_stopping': True}
+efficient_kwargs: {}
+efficient_methods: []
+efficient_unfreeze_model: False
+label_smoothing: 0.1
+
+
+# Dataset Hyper Parameters: 
+
+dataset: samsum
+data_path: dataset/samsum
+tgt_lang: en
+src_len: 1024
+tgt_len: 128
+truncate: tail
+prefix_prompt: Summarize: 
+metrics_for_best_model: ['rouge-1', 'rouge-2', 'rouge-l']
+
+[33m
+# Unrecognized Hyper Parameters: 
+
+load_type: from_pretrained
+tokenizer_add_tokens: []
+[39m
+================================================================================
+Fri 09 Dec 2022 15:44:51 INFO Pretrain type: pretrain disabled
+Fri 09 Dec 2022 15:45:03 INFO Pretrained_Models(
+  (model): BartForConditionalGeneration(
+    (model): BartModel(
+      (shared): Embedding(50265, 768, padding_idx=1)
+      (encoder): BartEncoder(
+        (embed_tokens): Embedding(50265, 768, padding_idx=1)
+        (embed_positions): BartLearnedPositionalEmbedding(1026, 768)
+        (layers): ModuleList(
+          (0): BartEncoderLayer(
+            (self_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (self_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (activation_fn): GELUActivation()
+            (fc1): Linear(in_features=768, out_features=3072, bias=True)
+            (fc2): Linear(in_features=3072, out_features=768, bias=True)
+            (final_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+          )
+          (1): BartEncoderLayer(
+            (self_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (self_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (activation_fn): GELUActivation()
+            (fc1): Linear(in_features=768, out_features=3072, bias=True)
+            (fc2): Linear(in_features=3072, out_features=768, bias=True)
+            (final_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+          )
+          (2): BartEncoderLayer(
+            (self_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (self_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (activation_fn): GELUActivation()
+            (fc1): Linear(in_features=768, out_features=3072, bias=True)
+            (fc2): Linear(in_features=3072, out_features=768, bias=True)
+            (final_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+          )
+          (3): BartEncoderLayer(
+            (self_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (self_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (activation_fn): GELUActivation()
+            (fc1): Linear(in_features=768, out_features=3072, bias=True)
+            (fc2): Linear(in_features=3072, out_features=768, bias=True)
+            (final_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+          )
+          (4): BartEncoderLayer(
+            (self_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (self_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (activation_fn): GELUActivation()
+            (fc1): Linear(in_features=768, out_features=3072, bias=True)
+            (fc2): Linear(in_features=3072, out_features=768, bias=True)
+            (final_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+          )
+          (5): BartEncoderLayer(
+            (self_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (self_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (activation_fn): GELUActivation()
+            (fc1): Linear(in_features=768, out_features=3072, bias=True)
+            (fc2): Linear(in_features=3072, out_features=768, bias=True)
+            (final_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+          )
+        )
+        (layernorm_embedding): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+      )
+      (decoder): BartDecoder(
+        (embed_tokens): Embedding(50265, 768, padding_idx=1)
+        (embed_positions): BartLearnedPositionalEmbedding(1026, 768)
+        (layers): ModuleList(
+          (0): BartDecoderLayer(
+            (self_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (activation_fn): GELUActivation()
+            (self_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (encoder_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (encoder_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (fc1): Linear(in_features=768, out_features=3072, bias=True)
+            (fc2): Linear(in_features=3072, out_features=768, bias=True)
+            (final_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+          )
+          (1): BartDecoderLayer(
+            (self_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (activation_fn): GELUActivation()
+            (self_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (encoder_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (encoder_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (fc1): Linear(in_features=768, out_features=3072, bias=True)
+            (fc2): Linear(in_features=3072, out_features=768, bias=True)
+            (final_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+          )
+          (2): BartDecoderLayer(
+            (self_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (activation_fn): GELUActivation()
+            (self_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (encoder_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (encoder_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (fc1): Linear(in_features=768, out_features=3072, bias=True)
+            (fc2): Linear(in_features=3072, out_features=768, bias=True)
+            (final_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+          )
+          (3): BartDecoderLayer(
+            (self_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (activation_fn): GELUActivation()
+            (self_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (encoder_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (encoder_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (fc1): Linear(in_features=768, out_features=3072, bias=True)
+            (fc2): Linear(in_features=3072, out_features=768, bias=True)
+            (final_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+          )
+          (4): BartDecoderLayer(
+            (self_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (activation_fn): GELUActivation()
+            (self_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (encoder_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (encoder_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (fc1): Linear(in_features=768, out_features=3072, bias=True)
+            (fc2): Linear(in_features=3072, out_features=768, bias=True)
+            (final_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+          )
+          (5): BartDecoderLayer(
+            (self_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (activation_fn): GELUActivation()
+            (self_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (encoder_attn): BartAttention(
+              (k_proj): Linear(in_features=768, out_features=768, bias=True)
+              (v_proj): Linear(in_features=768, out_features=768, bias=True)
+              (q_proj): Linear(in_features=768, out_features=768, bias=True)
+              (out_proj): Linear(in_features=768, out_features=768, bias=True)
+            )
+            (encoder_attn_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+            (fc1): Linear(in_features=768, out_features=3072, bias=True)
+            (fc2): Linear(in_features=3072, out_features=768, bias=True)
+            (final_layer_norm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+          )
+        )
+        (layernorm_embedding): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+    (lm_head): Linear(in_features=768, out_features=50265, bias=False)
   )
-  (dropout): Dropout(p=0.2, inplace=False)
-  (vocab_linear): Linear(in_features=128, out_features=5000, bias=True)
-  (loss): CrossEntropyLoss()
 )
-Trainable parameters: 1138568
-Sun 11 Apr 2021 13:45:33 INFO epoch 0 training [time: 1.14s, train loss: 5.5448]
-Sun 11 Apr 2021 13:45:33 INFO epoch 0 evaluating [time: 0.29s, valid_loss: 5.669350]
-Sun 11 Apr 2021 13:45:33 INFO valid ppl: 289.84601045101675
-Sun 11 Apr 2021 13:45:33 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:34 INFO epoch 1 training [time: 1.06s, train loss: 4.8657]
-Sun 11 Apr 2021 13:45:35 INFO epoch 1 evaluating [time: 0.30s, valid_loss: 5.419634]
-Sun 11 Apr 2021 13:45:35 INFO valid ppl: 225.79640993157645
-Sun 11 Apr 2021 13:45:35 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:36 INFO epoch 2 training [time: 1.07s, train loss: 4.5211]
-Sun 11 Apr 2021 13:45:36 INFO epoch 2 evaluating [time: 0.35s, valid_loss: 5.092756]
-Sun 11 Apr 2021 13:45:36 INFO valid ppl: 162.83798437634823
-Sun 11 Apr 2021 13:45:36 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:37 INFO epoch 3 training [time: 1.07s, train loss: 4.2757]
-Sun 11 Apr 2021 13:45:38 INFO epoch 3 evaluating [time: 0.29s, valid_loss: 4.975996]
-Sun 11 Apr 2021 13:45:38 INFO valid ppl: 144.89302902498005
-Sun 11 Apr 2021 13:45:38 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:39 INFO epoch 4 training [time: 1.06s, train loss: 4.1359]
-Sun 11 Apr 2021 13:45:39 INFO epoch 4 evaluating [time: 0.29s, valid_loss: 4.883359]
-Sun 11 Apr 2021 13:45:39 INFO valid ppl: 132.07356980437012
-Sun 11 Apr 2021 13:45:39 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:40 INFO epoch 5 training [time: 1.12s, train loss: 4.0365]
-Sun 11 Apr 2021 13:45:40 INFO epoch 5 evaluating [time: 0.29s, valid_loss: 4.839234]
-Sun 11 Apr 2021 13:45:40 INFO valid ppl: 126.37253925653629
-Sun 11 Apr 2021 13:45:40 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:42 INFO epoch 6 training [time: 1.08s, train loss: 3.9653]
-Sun 11 Apr 2021 13:45:42 INFO epoch 6 evaluating [time: 0.29s, valid_loss: 4.784440]
-Sun 11 Apr 2021 13:45:42 INFO valid ppl: 119.63433236683932
-Sun 11 Apr 2021 13:45:42 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:43 INFO epoch 7 training [time: 1.08s, train loss: 3.9023]
-Sun 11 Apr 2021 13:45:43 INFO epoch 7 evaluating [time: 0.37s, valid_loss: 4.770255]
-Sun 11 Apr 2021 13:45:43 INFO valid ppl: 117.94934334212408
-Sun 11 Apr 2021 13:45:43 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:44 INFO epoch 8 training [time: 1.07s, train loss: 3.8395]
-Sun 11 Apr 2021 13:45:45 INFO epoch 8 evaluating [time: 0.29s, valid_loss: 4.707025]
-Sun 11 Apr 2021 13:45:45 INFO valid ppl: 110.72223674592775
-Sun 11 Apr 2021 13:45:45 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:46 INFO epoch 9 training [time: 1.07s, train loss: 3.7789]
-Sun 11 Apr 2021 13:45:46 INFO epoch 9 evaluating [time: 0.29s, valid_loss: 4.664611]
-Sun 11 Apr 2021 13:45:46 INFO valid ppl: 106.1242922755794
-Sun 11 Apr 2021 13:45:46 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:47 INFO epoch 10 training [time: 1.14s, train loss: 3.7269]
-Sun 11 Apr 2021 13:45:48 INFO epoch 10 evaluating [time: 0.29s, valid_loss: 4.651439]
-Sun 11 Apr 2021 13:45:48 INFO valid ppl: 104.7355994315951
-Sun 11 Apr 2021 13:45:48 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:49 INFO epoch 11 training [time: 1.07s, train loss: 3.6813]
-Sun 11 Apr 2021 13:45:49 INFO epoch 11 evaluating [time: 0.29s, valid_loss: 4.630409]
-Sun 11 Apr 2021 13:45:49 INFO valid ppl: 102.55603941878772
-Sun 11 Apr 2021 13:45:49 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:50 INFO epoch 12 training [time: 1.07s, train loss: 3.6375]
-Sun 11 Apr 2021 13:45:50 INFO epoch 12 evaluating [time: 0.29s, valid_loss: 4.591345]
-Sun 11 Apr 2021 13:45:50 INFO valid ppl: 98.6270387626493
-Sun 11 Apr 2021 13:45:50 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:52 INFO epoch 13 training [time: 1.15s, train loss: 3.5950]
-Sun 11 Apr 2021 13:45:52 INFO epoch 13 evaluating [time: 0.29s, valid_loss: 4.556892]
-Sun 11 Apr 2021 13:45:52 INFO valid ppl: 95.2869133444253
-Sun 11 Apr 2021 13:45:52 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:53 INFO epoch 14 training [time: 1.07s, train loss: 3.5507]
-Sun 11 Apr 2021 13:45:53 INFO epoch 14 evaluating [time: 0.29s, valid_loss: 4.533381]
-Sun 11 Apr 2021 13:45:53 INFO valid ppl: 93.07274984586007
-Sun 11 Apr 2021 13:45:53 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:54 INFO epoch 15 training [time: 1.07s, train loss: 3.5108]
-Sun 11 Apr 2021 13:45:55 INFO epoch 15 evaluating [time: 0.36s, valid_loss: 4.517976]
-Sun 11 Apr 2021 13:45:55 INFO valid ppl: 91.6498977981405
-Sun 11 Apr 2021 13:45:55 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:56 INFO epoch 16 training [time: 1.08s, train loss: 3.4760]
-Sun 11 Apr 2021 13:45:56 INFO epoch 16 evaluating [time: 0.35s, valid_loss: 4.485015]
-Sun 11 Apr 2021 13:45:56 INFO valid ppl: 88.67829299709717
-Sun 11 Apr 2021 13:45:56 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:57 INFO epoch 17 training [time: 1.19s, train loss: 3.4445]
-Sun 11 Apr 2021 13:45:58 INFO epoch 17 evaluating [time: 0.29s, valid_loss: 4.465607]
-Sun 11 Apr 2021 13:45:58 INFO valid ppl: 86.97383038850113
-Sun 11 Apr 2021 13:45:58 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:45:59 INFO epoch 18 training [time: 1.13s, train loss: 3.4121]
-Sun 11 Apr 2021 13:45:59 INFO epoch 18 evaluating [time: 0.30s, valid_loss: 4.455512]
-Sun 11 Apr 2021 13:45:59 INFO valid ppl: 86.10018453487336
-Sun 11 Apr 2021 13:45:59 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:00 INFO epoch 19 training [time: 1.08s, train loss: 3.3831]
-Sun 11 Apr 2021 13:46:01 INFO epoch 19 evaluating [time: 0.29s, valid_loss: 4.443372]
-Sun 11 Apr 2021 13:46:01 INFO valid ppl: 85.06125399224123
-Sun 11 Apr 2021 13:46:01 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:02 INFO epoch 20 training [time: 1.06s, train loss: 3.3558]
-Sun 11 Apr 2021 13:46:02 INFO epoch 20 evaluating [time: 0.29s, valid_loss: 4.438803]
-Sun 11 Apr 2021 13:46:02 INFO valid ppl: 84.67355967512198
-Sun 11 Apr 2021 13:46:02 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:03 INFO epoch 21 training [time: 1.14s, train loss: 3.3309]
-Sun 11 Apr 2021 13:46:03 INFO epoch 21 evaluating [time: 0.29s, valid_loss: 4.429376]
-Sun 11 Apr 2021 13:46:03 INFO valid ppl: 83.87904863495683
-Sun 11 Apr 2021 13:46:03 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:04 INFO epoch 22 training [time: 1.06s, train loss: 3.3040]
-Sun 11 Apr 2021 13:46:05 INFO epoch 22 evaluating [time: 0.29s, valid_loss: 4.409546]
-Sun 11 Apr 2021 13:46:05 INFO valid ppl: 82.232127369177
-Sun 11 Apr 2021 13:46:05 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:06 INFO epoch 23 training [time: 1.07s, train loss: 3.2798]
-Sun 11 Apr 2021 13:46:06 INFO epoch 23 evaluating [time: 0.35s, valid_loss: 4.410728]
-Sun 11 Apr 2021 13:46:06 INFO valid ppl: 82.32940509135057
-Sun 11 Apr 2021 13:46:07 INFO epoch 24 training [time: 1.07s, train loss: 3.2550]
-Sun 11 Apr 2021 13:46:08 INFO epoch 24 evaluating [time: 0.29s, valid_loss: 4.367911]
-Sun 11 Apr 2021 13:46:08 INFO valid ppl: 78.87865064197278
-Sun 11 Apr 2021 13:46:08 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:09 INFO epoch 25 training [time: 1.07s, train loss: 3.2317]
-Sun 11 Apr 2021 13:46:09 INFO epoch 25 evaluating [time: 0.29s, valid_loss: 4.364034]
-Sun 11 Apr 2021 13:46:09 INFO valid ppl: 78.57348449132438
-Sun 11 Apr 2021 13:46:09 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:10 INFO epoch 26 training [time: 1.12s, train loss: 3.2078]
-Sun 11 Apr 2021 13:46:10 INFO epoch 26 evaluating [time: 0.29s, valid_loss: 4.373085]
-Sun 11 Apr 2021 13:46:10 INFO valid ppl: 79.28782721622912
-Sun 11 Apr 2021 13:46:11 INFO epoch 27 training [time: 1.06s, train loss: 3.1824]
-Sun 11 Apr 2021 13:46:12 INFO epoch 27 evaluating [time: 0.29s, valid_loss: 4.354047]
-Sun 11 Apr 2021 13:46:12 INFO valid ppl: 77.79264435887436
-Sun 11 Apr 2021 13:46:12 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:13 INFO epoch 28 training [time: 1.07s, train loss: 3.1594]
-Sun 11 Apr 2021 13:46:13 INFO epoch 28 evaluating [time: 0.32s, valid_loss: 4.343450]
-Sun 11 Apr 2021 13:46:13 INFO valid ppl: 76.97261284386869
-Sun 11 Apr 2021 13:46:13 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:15 INFO epoch 29 training [time: 1.30s, train loss: 3.1325]
-Sun 11 Apr 2021 13:46:15 INFO epoch 29 evaluating [time: 0.35s, valid_loss: 4.342149]
-Sun 11 Apr 2021 13:46:15 INFO valid ppl: 76.87255458276947
-Sun 11 Apr 2021 13:46:15 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:16 INFO epoch 30 training [time: 1.09s, train loss: 3.1088]
-Sun 11 Apr 2021 13:46:16 INFO epoch 30 evaluating [time: 0.29s, valid_loss: 4.321829]
-Sun 11 Apr 2021 13:46:16 INFO valid ppl: 75.32629136876486
-Sun 11 Apr 2021 13:46:16 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:17 INFO epoch 31 training [time: 1.07s, train loss: 3.0851]
-Sun 11 Apr 2021 13:46:18 INFO epoch 31 evaluating [time: 0.35s, valid_loss: 4.315658]
-Sun 11 Apr 2021 13:46:18 INFO valid ppl: 74.86286775385295
-Sun 11 Apr 2021 13:46:18 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:19 INFO epoch 32 training [time: 1.08s, train loss: 3.0604]
-Sun 11 Apr 2021 13:46:19 INFO epoch 32 evaluating [time: 0.29s, valid_loss: 4.310413]
-Sun 11 Apr 2021 13:46:19 INFO valid ppl: 74.47126515525555
-Sun 11 Apr 2021 13:46:19 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:20 INFO epoch 33 training [time: 1.07s, train loss: 3.0358]
-Sun 11 Apr 2021 13:46:21 INFO epoch 33 evaluating [time: 0.29s, valid_loss: 4.311233]
-Sun 11 Apr 2021 13:46:21 INFO valid ppl: 74.53229815927983
-Sun 11 Apr 2021 13:46:22 INFO epoch 34 training [time: 1.20s, train loss: 3.0093]
-Sun 11 Apr 2021 13:46:22 INFO epoch 34 evaluating [time: 0.29s, valid_loss: 4.317193]
-Sun 11 Apr 2021 13:46:22 INFO valid ppl: 74.97789306810432
-Sun 11 Apr 2021 13:46:23 INFO epoch 35 training [time: 1.12s, train loss: 2.9857]
-Sun 11 Apr 2021 13:46:23 INFO epoch 35 evaluating [time: 0.29s, valid_loss: 4.293910]
-Sun 11 Apr 2021 13:46:23 INFO valid ppl: 73.25235861049404
-Sun 11 Apr 2021 13:46:23 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:25 INFO epoch 36 training [time: 1.11s, train loss: 2.9597]
-Sun 11 Apr 2021 13:46:25 INFO epoch 36 evaluating [time: 0.30s, valid_loss: 4.296787]
-Sun 11 Apr 2021 13:46:25 INFO valid ppl: 73.46339270820806
-Sun 11 Apr 2021 13:46:26 INFO epoch 37 training [time: 1.28s, train loss: 2.9367]
-Sun 11 Apr 2021 13:46:26 INFO epoch 37 evaluating [time: 0.34s, valid_loss: 4.280163]
-Sun 11 Apr 2021 13:46:26 INFO valid ppl: 72.25219777502323
-Sun 11 Apr 2021 13:46:27 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:28 INFO epoch 38 training [time: 1.14s, train loss: 2.9113]
-Sun 11 Apr 2021 13:46:28 INFO epoch 38 evaluating [time: 0.29s, valid_loss: 4.286918]
-Sun 11 Apr 2021 13:46:28 INFO valid ppl: 72.74192567845913
-Sun 11 Apr 2021 13:46:29 INFO epoch 39 training [time: 1.07s, train loss: 2.8884]
-Sun 11 Apr 2021 13:46:29 INFO epoch 39 evaluating [time: 0.37s, valid_loss: 4.318699]
-Sun 11 Apr 2021 13:46:29 INFO valid ppl: 75.09084124911202
-Sun 11 Apr 2021 13:46:30 INFO epoch 40 training [time: 1.06s, train loss: 2.8639]
-Sun 11 Apr 2021 13:46:31 INFO epoch 40 evaluating [time: 0.29s, valid_loss: 4.280973]
-Sun 11 Apr 2021 13:46:31 INFO valid ppl: 72.31074849880329
-Sun 11 Apr 2021 13:46:32 INFO epoch 41 training [time: 1.07s, train loss: 2.8430]
-Sun 11 Apr 2021 13:46:32 INFO epoch 41 evaluating [time: 0.29s, valid_loss: 4.271697]
-Sun 11 Apr 2021 13:46:32 INFO valid ppl: 71.64312095457417
-Sun 11 Apr 2021 13:46:32 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:33 INFO epoch 42 training [time: 1.12s, train loss: 2.8191]
-Sun 11 Apr 2021 13:46:34 INFO epoch 42 evaluating [time: 0.29s, valid_loss: 4.277106]
-Sun 11 Apr 2021 13:46:34 INFO valid ppl: 72.03168550287613
-Sun 11 Apr 2021 13:46:35 INFO epoch 43 training [time: 1.08s, train loss: 2.7991]
-Sun 11 Apr 2021 13:46:35 INFO epoch 43 evaluating [time: 0.29s, valid_loss: 4.266312]
-Sun 11 Apr 2021 13:46:35 INFO valid ppl: 71.25836052106814
-Sun 11 Apr 2021 13:46:35 INFO Saving current best: saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:46:36 INFO epoch 44 training [time: 1.07s, train loss: 2.7775]
-Sun 11 Apr 2021 13:46:36 INFO epoch 44 evaluating [time: 0.29s, valid_loss: 4.281027]
-Sun 11 Apr 2021 13:46:36 INFO valid ppl: 72.3146776088258
-Sun 11 Apr 2021 13:46:37 INFO epoch 45 training [time: 1.12s, train loss: 2.7552]
-Sun 11 Apr 2021 13:46:38 INFO epoch 45 evaluating [time: 0.29s, valid_loss: 4.287505]
-Sun 11 Apr 2021 13:46:38 INFO valid ppl: 72.78464764541333
-Sun 11 Apr 2021 13:46:39 INFO epoch 46 training [time: 1.07s, train loss: 2.7366]
-Sun 11 Apr 2021 13:46:39 INFO epoch 46 evaluating [time: 0.29s, valid_loss: 4.289144]
-Sun 11 Apr 2021 13:46:39 INFO valid ppl: 72.90404936703531
-Sun 11 Apr 2021 13:46:40 INFO epoch 47 training [time: 1.08s, train loss: 2.7188]
-Sun 11 Apr 2021 13:46:41 INFO epoch 47 evaluating [time: 0.36s, valid_loss: 4.302683]
-Sun 11 Apr 2021 13:46:41 INFO valid ppl: 73.89782739837867
-Sun 11 Apr 2021 13:46:41 INFO Finished training, best eval result in epoch 43
-Sun 11 Apr 2021 13:46:41 INFO best valid loss: 4.266312152911455, best valid ppl: 71.25836052106814
-Sun 11 Apr 2021 13:46:41 INFO Loading model structure and parameters from saved/RNN-COCO-Apr-11-2021_13-45-26.pth
-Sun 11 Apr 2021 13:48:07 INFO test result: {'bleu-1': 0.9207, 'bleu-2': 0.5489, 'bleu-3': 0.2362, 'bleu-4': 0.0893, 'bleu-5': 0.0359, 'self_bleu-1': 0.9947, 'self_bleu-2': 0.785, 'self_bleu-3': 0.4549, 'self_bleu-4': 0.2167, 'self_bleu-5': 0.0926, 'nll_test': 53.16388765565909}
+Trainable parameters: 139420416
+Fri 09 Dec 2022 15:45:03 INFO ====== Start training ======
+Fri 09 Dec 2022 15:50:29 INFO Train epoch  1 [time: 326.07s, loss: 3.41]
+Fri 09 Dec 2022 15:51:20 INFO  Validation  1 (best) [time: 51.16s, score: 117.32, <rouge-1: 48.53>, <rouge-2: 24.30>, <rouge-l: 44.49>, rouge-w-1.2: 28.47]
+Fri 09 Dec 2022 15:56:54 INFO Train epoch  2 [time: 330.45s, loss: 3.12]
+Fri 09 Dec 2022 15:57:42 INFO  Validation  2 (best) [time: 48.73s, score: 117.93, <rouge-1: 48.53>, <rouge-2: 25.08>, <rouge-l: 44.32>, rouge-w-1.2: 28.52]
+Fri 09 Dec 2022 16:03:12 INFO Train epoch  3 [time: 325.99s, loss: 3.02]
+Fri 09 Dec 2022 16:04:05 INFO  Validation  3 (best) [time: 53.34s, score: 122.68, <rouge-1: 50.16>, <rouge-2: 26.52>, <rouge-l: 46.00>, rouge-w-1.2: 29.76]
+Fri 09 Dec 2022 16:09:33 INFO Train epoch  4 [time: 324.05s, loss: 2.94]
+Fri 09 Dec 2022 16:10:29 INFO  Validation  4 (best) [time: 55.77s, score: 124.26, <rouge-1: 50.76>, <rouge-2: 26.74>, <rouge-l: 46.76>, rouge-w-1.2: 30.15]
+Fri 09 Dec 2022 16:15:57 INFO Train epoch  5 [time: 324.84s, loss: 2.88]
+Fri 09 Dec 2022 16:16:55 INFO  Validation  5 (best) [time: 57.61s, score: 126.32, <rouge-1: 51.63>, <rouge-2: 27.22>, <rouge-l: 47.47>, rouge-w-1.2: 30.56]
+Fri 09 Dec 2022 16:22:22 INFO Train epoch  6 [time: 323.36s, loss: 2.83]
+Fri 09 Dec 2022 16:23:21 INFO  Validation  6 [time: 58.63s, score: 126.14, <rouge-1: 51.50>, <rouge-2: 27.23>, <rouge-l: 47.41>, rouge-w-1.2: 30.55]
+Fri 09 Dec 2022 16:28:48 INFO Train epoch  7 [time: 323.50s, loss: 2.78]
+Fri 09 Dec 2022 16:29:47 INFO  Validation  7 (best) [time: 59.67s, score: 127.92, <rouge-1: 52.06>, <rouge-2: 27.87>, <rouge-l: 47.99>, rouge-w-1.2: 30.93]
+Fri 09 Dec 2022 16:35:15 INFO Train epoch  8 [time: 323.74s, loss: 2.74]
+Fri 09 Dec 2022 16:36:15 INFO  Validation  8 [time: 59.68s, score: 127.78, <rouge-1: 52.11>, <rouge-2: 27.82>, <rouge-l: 47.85>, rouge-w-1.2: 30.81]
+Fri 09 Dec 2022 16:41:42 INFO Train epoch  9 [time: 323.96s, loss: 2.71]
+Fri 09 Dec 2022 16:42:42 INFO  Validation  9 (best) [time: 59.61s, score: 128.16, <rouge-1: 52.14>, <rouge-2: 27.96>, <rouge-l: 48.06>, rouge-w-1.2: 30.96]
+Fri 09 Dec 2022 16:48:08 INFO Train epoch  10 [time: 322.24s, loss: 2.67]
+Fri 09 Dec 2022 16:49:06 INFO  Validation  10 [time: 57.98s, score: 127.88, <rouge-1: 52.06>, <rouge-2: 27.93>, <rouge-l: 47.89>, rouge-w-1.2: 30.89]
+Fri 09 Dec 2022 16:54:34 INFO Train epoch  11 [time: 324.77s, loss: 2.63]
+Fri 09 Dec 2022 16:55:33 INFO  Validation  11 (best) [time: 58.91s, score: 128.39, <rouge-1: 52.33>, <rouge-2: 27.98>, <rouge-l: 48.08>, rouge-w-1.2: 31.04]
+Fri 09 Dec 2022 17:01:02 INFO Train epoch  12 [time: 324.97s, loss: 2.60]
+Fri 09 Dec 2022 17:01:59 INFO  Validation  12 (best) [time: 56.78s, score: 128.98, <rouge-1: 52.45>, <rouge-2: 28.26>, <rouge-l: 48.27>, rouge-w-1.2: 31.10]
+Fri 09 Dec 2022 17:07:26 INFO Train epoch  13 [time: 323.31s, loss: 2.57]
+Fri 09 Dec 2022 17:08:25 INFO  Validation  13 (best) [time: 59.21s, score: 129.41, <rouge-1: 52.81>, <rouge-2: 28.26>, <rouge-l: 48.34>, rouge-w-1.2: 31.12]
+Fri 09 Dec 2022 17:13:49 INFO Train epoch  14 [time: 320.75s, loss: 2.54]
+Fri 09 Dec 2022 17:14:44 INFO  Validation  14 (best) [time: 54.68s, score: 129.77, <rouge-1: 52.68>, <rouge-2: 28.71>, <rouge-l: 48.38>, rouge-w-1.2: 31.22]
+Fri 09 Dec 2022 17:20:09 INFO Train epoch  15 [time: 321.07s, loss: 2.51]
+Fri 09 Dec 2022 17:21:09 INFO  Validation  15 [time: 59.75s, score: 129.43, <rouge-1: 52.78>, <rouge-2: 28.29>, <rouge-l: 48.36>, rouge-w-1.2: 31.22]
+Fri 09 Dec 2022 17:26:31 INFO Train epoch  16 [time: 318.45s, loss: 2.48]
+Fri 09 Dec 2022 17:27:34 INFO  Validation  16 [time: 63.13s, score: 129.65, <rouge-1: 52.96>, <rouge-2: 28.28>, <rouge-l: 48.41>, rouge-w-1.2: 31.26]
+Fri 09 Dec 2022 17:32:58 INFO Train epoch  17 [time: 320.43s, loss: 2.46]
+Fri 09 Dec 2022 17:33:57 INFO  Validation  17 [time: 58.72s, score: 128.53, <rouge-1: 52.45>, <rouge-2: 28.04>, <rouge-l: 48.04>, rouge-w-1.2: 30.94]
+Fri 09 Dec 2022 17:34:01 INFO Early stopped at 3 non-best validation.
+Fri 09 Dec 2022 17:34:01 INFO Soft link created: saved/BART-samsum-2022-Dec-09_15-44-51/checkpoint_best -> /root/autodl-tmp/TextBox/saved/BART-samsum-2022-Dec-09_15-44-51/checkpoint_epoch-14
+Fri 09 Dec 2022 17:34:01 INFO ====== Finished training, best validation result at train epoch 14 ======
+Fri 09 Dec 2022 17:34:01 INFO Best valid result: score: 129.77, <rouge-1: 52.68>, <rouge-2: 28.71>, <rouge-l: 48.38>, rouge-w-1.2: 31.22
+Fri 09 Dec 2022 17:34:01 INFO Loading model structure and parameters from saved/BART-samsum-2022-Dec-09_15-44-51/checkpoint_best ...
+Fri 09 Dec 2022 17:34:57 INFO Evaluation result:
+ score: 126.13,
+ <rouge-1: 51.87>,
+ <rouge-2: 27.21>,
+ <rouge-l: 47.05>,
+ rouge-w-1.2: 30.11
+Fri 09 Dec 2022 17:34:57 INFO Epoch   [time: 56.00s, score: 126.13, <rouge-1: 51.87>, <rouge-2: 27.21>, <rouge-l: 47.05>, rouge-w-1.2: 30.11]

@@ -1,11 +1,9 @@
-import os, math
+import math
 import torch
-import numpy as np
-from numpy.random import permutation, poisson
-from textbox import SpecialTokens
-from typing import Optional, List, Union, Dict, Tuple
-from textbox import CLM_MODELS
-from textbox.data.misc import load_data, _pad_sequence, _collate_batch
+import random
+from typing import List, Dict
+from nltk import sent_tokenize
+from textbox.data.misc import _pad_sequence
 
 
 class DenoisingCollate:
@@ -22,7 +20,7 @@ class DenoisingCollate:
         self.set = set
         self.mask_ratio = config['mask_ratio'] or 0.3
         self.poisson_lambda = config['poisson_lambda'] or 3.5
-        self.permutate_sentence_ratio = config['permutate_sentence_ratio'] or 0.0
+        self.permutate_sentence_ratio = config['permutate_sentence_ratio'] or 1.0
         self.poisson_distribution = torch.distributions.Poisson(rate=self.poisson_lambda)
 
     @classmethod
@@ -54,8 +52,20 @@ class DenoisingCollate:
         target_ids[torch.eq(target_ids, self.tokenizer.pad_token_id)] = -100
         batch["target_ids"] = target_ids
 
-        if self.permutate_sentence_ratio > 0.0:
-            source_ids = self.permutate_sentences(source_ids)
+        if self.permutate_sentence_ratio:
+            new_source_text = []
+            for text in source_text:
+                texts = sent_tokenize(text)
+                random.shuffle(texts)
+                new_source_text.append(' '.join(texts))
+            source_ids = self.tokenizer(
+                new_source_text,
+                max_length=self.config['src_len'],
+                truncation=True,
+                padding=True,
+                return_attention_mask=False,
+                return_tensors='pt'
+            )['input_ids']
 
         if self.mask_ratio > 0.0:
             source_ids = self.add_whole_word_mask(source_ids)
@@ -64,34 +74,6 @@ class DenoisingCollate:
         batch["source_mask"] = source_ids.ne(self.tokenizer.pad_token_id)
 
         return batch
-
-    def permutate_sentences(self, inputs):
-        results = inputs.copy()
-
-        full_stops = inputs == self.tokenizer.eos_token_id
-
-        sentence_ends = np.argwhere(full_stops[:, 1:] * ~full_stops[:, :-1])
-        sentence_ends[:, 1] += 2
-        num_sentences = np.unique(sentence_ends[:, 0], return_counts=True)[1]
-        num_to_permute = np.ceil((num_sentences * 2 * self.permutate_sentence_ratio) / 2.0).astype(int)
-
-        sentence_ends = np.split(
-            sentence_ends[:, 1],
-            np.unique(sentence_ends[:, 0], return_index=True)[1][1:],
-        )
-
-        for i in range(inputs.size(0)):
-            substitutions = np.random.permutation(num_sentences[i])[:num_to_permute[i]]
-
-            ordering = np.arange(0, num_sentences[i])
-            ordering[substitutions] = substitutions[np.random.permutation(num_to_permute[i])]
-
-            index = 0
-            for j in ordering:
-                sentence = inputs[i, (sentence_ends[i][j - 1] if j > 0 else 0):sentence_ends[i][j]]
-                results[i, index:index + sentence.size(0)] = sentence
-                index += sentence.size(0)
-        return results
 
     def add_whole_word_mask(self, inputs):
         bsz, seq_len = inputs.size()

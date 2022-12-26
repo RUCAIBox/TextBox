@@ -1,6 +1,6 @@
 ## UniLM
 
-You can fine-tune a T5 model from HuggingFace through ``model=T5``, ``model_path=<hf-or-local-path>``, ``dataset=<dataset-name>``. 
+You can fine-tune a UniLM model from HuggingFace through ``model=UniLM``, ``model_path=<hf-or-local-path>``, ``dataset=<dataset-name>``. 
 
 Example usage:
 

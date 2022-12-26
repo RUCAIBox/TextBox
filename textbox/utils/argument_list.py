@@ -21,6 +21,7 @@ general_parameters = [
     '_hyper_tuning',  # hyper tuning
     'multi_seed',  # multiple random seed
     'romanian_postprocessing',
+    'wandb'
 ]
 
 training_parameters = [

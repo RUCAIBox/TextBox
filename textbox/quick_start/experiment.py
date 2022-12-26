@@ -37,6 +37,8 @@ class Experiment:
         config_dict: Optional[Dict[str, Any]] = None,
     ):
         self.config = Config(model, dataset, config_file_list, config_dict)
+        wandb_setting = 'wandb ' + self.config['wandb']
+        os.system(wandb_setting)
         self.__extended_config = None
 
         self.accelerator = Accelerator(gradient_accumulation_steps=self.config['accumulation_steps'])

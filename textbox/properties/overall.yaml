@@ -5,6 +5,7 @@ seed: 2020
 state: INFO
 reproducibility: True
 data_path: 'dataset/'
+wandb: 'online'
 
 # training settings
 epochs: 50

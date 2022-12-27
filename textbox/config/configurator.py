@@ -306,9 +306,6 @@ class Config(object):
         if not self.final_config_dict.get('model_path', None):
             self.final_config_dict['load_type'] = 'from_scratch'
         elif os.path.exists(os.path.join(self.final_config_dict['model_path'], 'textbox_configuration.pt')):
-            if self.final_config_dict.get('resume_all'):
-                self.final_config_dict['load_type'] = 'resume '
-            else:
                 self.final_config_dict['load_type'] = 'resume'
         else:
             self.final_config_dict['load_type'] = 'from_pretrained'

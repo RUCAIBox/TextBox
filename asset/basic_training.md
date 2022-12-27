@@ -1,6 +1,6 @@
 # Basic Training
 ## config
-You may want to load your own configurations in equivalent ways:
+You may want to load your configurations in equivalent ways:
 * cmd
 * config files
 * yaml
@@ -26,19 +26,19 @@ You can also modify configurations through the local files:
 python run_textbox.py ... --config_files <config-file-one> <config-file-two>
 ```
 
-Every config file is an additional yaml files like:
+Every config file is an additional yaml file like:
 
 ```yaml
 efficient_methods: ['prompt-tuning']
 ```
-It's suitable for **a large number of** modifications or **long-term** modification with cmd like:
+It's suitable for **a large number of** modifications or **long-term** modifications with cmd like:
 * ``efficient_methods``
 * ``efficient_kwargs``
 * ...
 
 ### yaml 
 
-The original configurations are in the yaml files. You can check the values there, but it's not recommended to modify the files except for **permanently** modification the dataset. These files are in the path ``textbox\properties``:
+The original configurations are in the yaml files. You can check the values there, but it's not recommended to modify the files except for **permanent** modification of the dataset. These files are in the path ``textbox\properties``:
 * ``overall.yaml``
 * ``dataset\*.yaml``
 * ``model\*yaml``
@@ -46,13 +46,13 @@ The original configurations are in the yaml files. You can check the values ther
 
 ## trainer
 
-You can choose optimizer and scheduler through `optimizer=<optimizer-name>` and `scheduler=<scheduler-name>`. We provide a wrapper around **pytorch optimizer**, which means parameters like `epsilon` or `warmup_steps` can be specified with keyword dictionaries `optimizer_kwargs={'epsilon': ... }` and `scheduler_kwargs={'warmup_steps': ... }`. See [pytorch optimizer](https://pytorch.org/docs/stable/optim.html#algorithms) and scheduler for a complete tutorial.  <!-- TODO -->
+You can choose an optimizer and scheduler through `optimizer=<optimizer-name>` and `scheduler=<scheduler-name>`. We provide a wrapper around **pytorch optimizer**, which means parameters like `epsilon` or `warmup_steps` can be specified with keyword dictionaries `optimizer_kwargs={'epsilon': ... }` and `scheduler_kwargs={'warmup_steps': ... }`. See [pytorch optimizer](https://pytorch.org/docs/stable/optim.html#algorithms) and scheduler for a complete tutorial.  <!-- TODO -->
 
-Validation frequency is introduced to validate the model **at each specific batch-steps or epochs**. Specify `valid_strategy` (either `'step'` or `'epoch'`) and `valid_steps=<int>` to adjust the pace. Specifically, traditional train-validate paradigm is a special case with `valid_strategy=epoch` and `valid_steps=1`.
+Validation frequency is introduced to validate the model **at each specific batch-steps or epoch**. Specify `valid_strategy` (either `'step'` or `'epoch'`) and `valid_steps=<int>` to adjust the pace. Specifically, the traditional train-validate paradigm is a special case with `valid_strategy=epoch` and `valid_steps=1`.
 
-`max_save=<int>` indicates **the maximal amount of saved files** (checkpoint and generated corpus during evaluation). `-1`: save every file, `0`: do not save any file, `1`: only save the file with best score, and `n`: save both the best and the last $n−1$ files.
+`max_save=<int>` indicates **the maximal amount of saved files** (checkpoint and generated corpus during evaluation). `-1`: save every file, `0`: do not save any file, `1`: only save the file with the best score, and `n`: save both the best and the last $n−1$ files.
 
-According to ``metrics_for_best_model``, thr score of current checkpoint will be calculated, and evaluatin metrics specified with ``metrics``([full list](evaluation.md)) will be chosen. **Early stopping** can be configured with `stopping_steps=<int>` and score of every checkpoint. 
+According to ``metrics_for_best_model``, the score of the current checkpoint will be calculated, and evaluation metrics specified with ``metrics``([full list](evaluation.md)) will be chosen. **Early stopping** can be configured with `stopping_steps=<int>` and score of every checkpoint. 
 
 
 ```bash
@@ -61,30 +61,35 @@ python run_textbox.py ... --stopping_steps=8 \\
   --metrics=\[\'rouge\'\]
 ```
 
-You can resume from a **previous checkpoint** through  ``model_path=<checkpoint_path>``.When you want to restrore **all trainer parameters** like optimizer and start_epoch, you can set ``resume_training=True``. Otherwise, only **model and tokenizer** will be loaded.
+You can resume from a **previous checkpoint** through ``model_path=<checkpoint_path>``.When you want to restore **all trainer parameters** like optimizer and start_epoch, you can set ``resume_training=True``. Otherwise, only **model and tokenizer** will be loaded. The script below will resume training from checkpoint in the path ``saved/BART-samsum-2022-Dec-18_20-57-47/checkpoint_best``
 
-Other commonly used parameters includes `epochs=<int>` and `max_steps=<int>` (indicating maximum iteration of epochs and batch steps, if you set `max_steps`, `epochs` will be invalid), `learning_rate=<float>`, `train_batch_size=<int>`, `weight_decay=<bool>`, and `grad_clip=<bool>`.
+```bash
+python run_textbox --model_path=saved/BART-samsum-2022-Dec-18_20-57-47/checkpoint_best \\
+--resume_training=True
+```
+
+Other commonly used parameters include `epochs=<int>` and `max_steps=<int>` (indicating maximum iteration of epochs and batch steps, if you set `max_steps`, `epochs` will be invalid), `learning_rate=<float>`, `train_batch_size=<int>`, `weight_decay=<bool>`, and `grad_clip=<bool>`.
 
 ### Partial Experiment
 
-You can run partial experiment with `do_train`, `do_valid`, `do_test`. You can test your pipeline and debug with `quick_test=<amount-of-data-to-load>` to load just a few examples. 
+You can run the partial experiment with `do_train`, `do_valid`and `do_test`. You can test your pipeline and debug with `quick_test=<amount-of-data-to-load>` to load just a few examples. 
 
-The following script loads the trained model from path `example` and conducts generation and evaluation without training and evaluation.
+The following script loads the trained model from a local path and conducts generation and evaluation without training and evaluation.
 ```bash
-python run_textbox.py ... --do_train=False --do_valid=False \\
---model_path=example --quick_test=16
+python run_textbox.py --model_path=saved/BART-samsum-2022-Dec-18_20-57-47/checkpoint_best \\
+--do_train=False --do_valid=False
 ```
 
 ## wandb
 
-If you are running your code in jupyter environments, you may want to login by simply setting an environment variable (your key may be stored in plain text):
+If you are running your code in jupyter environments, you may want to log in by simply setting an environment variable (your key may be stored in plain text):
 
 ```python
 %env WANDB_API_KEY=<your-key>
 ```
 Here you can set wandb with `wandb`.
 
-If you are debugging your model, you may want to **disable W&B** with `--wandb=disabled` and **none of the metrics** will be recorded.You can also disable **sync only** with `--wandb=offline` and enable it again with `--wandb=online` to upload to the cloud. Meanwhile, the parameter can be configured in the yaml file like:
+If you are debugging your model, you may want to **disable W&B** with `--wandb=disabled`, and **none of the metrics** will be recorded. You can also disable **sync only** with `--wandb=offline` and enable it again with `--wandb=online` to upload to the cloud. Meanwhile, the parameter can be configured in the yaml file like:
 
 ```yaml
 wandb: online
@@ -92,4 +97,4 @@ wandb: online
 
 The local files can be uploaded by executing `wandb sync` in the command line.
 
-After configuration, you can throttle wandb prompts by defining environment variable `export WANDB_SILENT=false`. For more information, see [documentation](docs.wandb.ai).
+After configuration, you can throttle wandb prompts by defining the environment variable `export WANDB_SILENT=false`. For more information, see [documentation](docs.wandb.ai).

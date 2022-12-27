@@ -1,13 +1,9 @@
 # Basic Training
 ## config
-You may want to load your own configurations in different ways:
+You may want to load your own configurations in equivalent ways:
 * cmd
 * config files
 * yaml
-
-These ways are equivalent. However, we recommend using **cmd** first, followed by **config files**.
-
-
 
 ### cmd 
 You may want to change configurations in the command line like ``--xx=yy``. ``xx`` is the name of the parameters and ``yy`` is the corresponding value. for example:

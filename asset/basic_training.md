@@ -1,6 +1,4 @@
 # Basic Training
-
-
 ## config
 You may want to load your own configurations in different ways:
 * cmd
@@ -80,8 +78,6 @@ metrics_for_best_model: ['rouge-1', 'rouge-w']
 
 Other commonly used parameters includes `epochs=<int>` and `max_steps=<int>` (indicating maximum iteration of epochs and batch steps, if you set `max_steps`, `epochs` will be invalid), `learning_rate=<float>`, `train_batch_size=<int>`, `weight_decay=<bool>`, and `grad_clip=<bool>`.
 
-
-
 ### Partial Experiment
 
 You can run partial experiment with `do_train`, `do_valid`, `do_test`. You can test your pipeline and debug with `quick_test=<amount-of-data-to-load>` to load just a few examples. 
@@ -91,13 +87,6 @@ The following script loads the trained model from path `example` and conducts ge
 python run_textbox.py ... --do_train=False --do_valid=False \\
 --model_path=example --quick_test=16
 ```
-
-
-
-
-
-
-
 
 ## wandb
 
@@ -114,10 +103,6 @@ If you are debugging your model, you may want to **disable W&B** with `--wandb=d
 wandb: online
 ```
 
-
 The local files can be uploaded by executing `wandb sync` in the command line.
 
 After configuration, you can throttle wandb prompts by defining environment variable `export WANDB_SILENT=false`. For more information, see [documentation](docs.wandb.ai).
-
-
-<!-- ===================== Model ===================== -->

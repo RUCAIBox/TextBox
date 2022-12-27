@@ -21,7 +21,7 @@ It's suitable for **a few temporary** modifications with cmd like:
 
 ### config files
 
-You can also modify configurations in the local files:
+You can also modify configurations through the local files:
 ```bash
 python run_textbox.py ... --config_files <config-file-one> <config-file-two>
 ```
@@ -46,31 +46,22 @@ The original configurations are in the yaml files. You can check the values ther
 
 ## trainer
 
-You can choose optimizer and scheduler through `optimizer=<optimizer-name>` and `scheduler=<scheduler-name>`. We provide a wrapper around **pytorch optimizer**, which means parameters like `epsilon` or `warmup_steps` can be specified with keyword dictionaries `optimizer_kwargs={'epsilon': ... }` and `scheduler_kwargs={'warmup_steps': ... }`. See [pytorch optimizer](https://pytorch.org/docs/stable/optim.html#algorithms) and [scheduler]() for a complete tutorial.  <!-- TODO -->
+You can choose optimizer and scheduler through `optimizer=<optimizer-name>` and `scheduler=<scheduler-name>`. We provide a wrapper around **pytorch optimizer**, which means parameters like `epsilon` or `warmup_steps` can be specified with keyword dictionaries `optimizer_kwargs={'epsilon': ... }` and `scheduler_kwargs={'warmup_steps': ... }`. See [pytorch optimizer](https://pytorch.org/docs/stable/optim.html#algorithms) and scheduler for a complete tutorial.  <!-- TODO -->
 
 Validation frequency is introduced to validate the model **at each specific batch-steps or epochs**. Specify `valid_strategy` (either `'step'` or `'epoch'`) and `valid_steps=<int>` to adjust the pace. Specifically, traditional train-validate paradigm is a special case with `valid_strategy=epoch` and `valid_steps=1`.
 
 `max_save=<int>` indicates **the maximal amount of saved files** (checkpoint and generated corpus during evaluation). `-1`: save every file, `0`: do not save any file, `1`: only save the file with best score, and `n`: save both the best and the last $n−1$ files.
 
-Evaluation metrics can be specified with `metrics` ([full list](evaluation.md)), and produce a dictionaries of results:
+According to ``metrics_for_best_model``, thr score of current checkpoint will be calculated, and evaluatin metrics specified with ``metrics``([full list](evaluation.md)) will be chosen. **Early stopping** can be configured with `stopping_steps=<int>` and score of every checkpoint. 
+
 
 ```bash
-python run_textbox.py ... --metrics=\[\'rouge\'\]
-# results: { 'rouge-1': xxx, 'rouge-2': xxx, 'rouge-l': xxx, 'rouge-w': xxx, ... }
+python run_textbox.py ... --stopping_steps=8 \\
+  --metrics_for_best_model=\[\'rouge-1\', \'rouge-w\'\] \\
+  --metrics=\[\'rouge\'\]
 ```
 
-**Early stopping** can be configured with `metrics_for_best_model=<list-of-metrics-entries>`, which is used to calculate score, and `stopping_steps=<int>`, which specifies the amount of validation steps:
-
-```bash
-python run_textbox.py ... --stopping_steps=8 --metrics_for_best_model=\[\'rouge-1\', \'rouge-w\'\]
-```
-
-or yaml equivalent:
-
-```yaml
-stopping_steps: 8
-metrics_for_best_model: ['rouge-1', 'rouge-w']
-```
+You can resume from a **previous checkpoint** through  ``model_path=<checkpoint_path>``.When you want to restrore **all trainer parameters** like optimizer and start_epoch, you can set ``resume_training=True``. Otherwise, only **model and tokenizer** will be loaded.
 
 Other commonly used parameters includes `epochs=<int>` and `max_steps=<int>` (indicating maximum iteration of epochs and batch steps, if you set `max_steps`, `epochs` will be invalid), `learning_rate=<float>`, `train_batch_size=<int>`, `weight_decay=<bool>`, and `grad_clip=<bool>`.
 

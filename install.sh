@@ -35,7 +35,7 @@ esac
 
 echo "Installation may take a few minutes."
 echo -e "\033[0;32mInstalling torch ...\033[0m"
-conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
 
 echo -e "\033[0;32mInstalling requirements ...\033[0m"
 pip install -r requirements.txt
@@ -75,16 +75,6 @@ chmod +rx $F2RExpDIR/WordNet-2.0.exc.db
 pip uninstall py-rouge
 pip install rouge > /dev/null
 
-echo -e "\033[0;32mInstalling requirements (libxml) ...\033[0m"
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    brewinstall libxml2 cpanminus
-    cpanm --force XML::Parser
-else
-    if [ -x "$(command -v apt-get)" ];  then sudo apt-get install libxml-parser-perl
-    elif [ -x "$(command -v yum)" ];    then sudo yum install -y "perl(XML::LibXML)"
-    else echo -e '\033[0;31mFailed to install libxml. See https://github.com/pltrdy/files2rouge/issues/9 for more information.\033[0m' && exit;
-    fi
-fi
 
 echo -e "\033[0;32mInstalling requirements (transformers) ...\033[0m"
 git clone https://github.com/RUCAIBox/transformers.git

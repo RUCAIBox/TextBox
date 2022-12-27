@@ -364,18 +364,15 @@ class Trainer(AbstractTrainer):
     def save_generated_text(self, generated_corpus: List[str], is_valid: bool = False):
         r"""Store the generated text by our model into `self.saved_text_filename`."""
         saved_text_filename = self.saved_text_filename
-        if not is_valid:
-            self._summary_tracker.add_corpus('test', generated_corpus)
-        else:
-            path_to_save = self.saved_model_filename + '_epoch-' + str(self.timestamp.valid_epoch)
-            saved_text_filename = os.path.join(path_to_save, 'generation.txt')
-            os.makedirs(path_to_save, exist_ok=True)
+        path_to_save = self.saved_model_filename + '_epoch-' + str(self.timestamp.valid_epoch)
+        saved_text_filename = os.path.join(path_to_save, 'generation.txt')
+        os.makedirs(path_to_save, exist_ok=True)
         with open(saved_text_filename, 'w') as fout:
             for text in generated_corpus:
                 fout.write(text + '\n')
 
     def resume_checkpoint(self, resume_dir: str):
-        r"""Load the model parameters information and training information.
+        r"""Load training information.
 
         Args:
             resume_dir: the checkpoint file (specific by `model_path`).

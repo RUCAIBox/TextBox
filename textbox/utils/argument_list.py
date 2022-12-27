@@ -21,6 +21,7 @@ general_parameters = [
     '_hyper_tuning',  # hyper tuning
     'multi_seed',  # multiple random seed
     'romanian_postprocessing',
+    'wandb'
 ]
 
 training_parameters = [
@@ -43,7 +44,8 @@ training_parameters = [
     'weight_decay',  # common parameters
     'accumulation_steps',  # accelerator
     'disable_tqdm',  # tqdm
-    'pretrain_task'  # pretraining
+    'pretrain_task',  # pretraining
+    'resume_training'
 ]
 
 evaluation_parameters = [

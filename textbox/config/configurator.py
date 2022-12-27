@@ -262,6 +262,8 @@ class Config(object):
         self.setdefault('valid_strategy', 'epoch')
         self.setdefault('valid_steps', 1)
         self.setdefault('disable_tqdm', False)
+        self.setdefault('resume_training',True)
+        self.setdefault('wandb', 'online')
         self._simplify_parameter('optimizer')
         self._simplify_parameter('scheduler')
         self._simplify_parameter('src_lang')

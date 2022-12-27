@@ -37,6 +37,8 @@ class Experiment:
         config_dict: Optional[Dict[str, Any]] = None,
     ):
         self.config = Config(model, dataset, config_file_list, config_dict)
+        wandb_setting = 'wandb ' + self.config['wandb']
+        os.system(wandb_setting)
         self.__extended_config = None
 
         self.accelerator = Accelerator(gradient_accumulation_steps=self.config['accumulation_steps'])
@@ -94,7 +96,8 @@ class Experiment:
         self.valid_result: Optional[ResultType] = None
         self.test_result: Optional[ResultType] = None
         if config['load_type'] == 'resume':
-            self.trainer.resume_checkpoint(config['model_path'])
+            if config['resume_training']:
+                self.trainer.resume_checkpoint(config['model_path'])
             self.model.from_pretrained(config['model_path'])
 
     def _do_train_and_valid(self):

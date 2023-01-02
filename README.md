@@ -6,6 +6,8 @@
 
 *“李太白少时，梦所用之笔头上生花后天才赡逸，名闻天下。”——王仁裕《开元天宝遗事·梦笔头生花》*
 
+[*TextBox 2.0: A Text Generation Library with Pre-trained Language Models*](https://arxiv.org/abs/2212.13005)
+
 TextBox 2.0 is an up-to-date text generation library based on Python and PyTorch focusing on building a unified and standardized pipeline for applying pre-trained language models to text generation:
 
 - From a **task** perspective, we consider 13 common text generation tasks such as translation, story generation, and style transfer, and their corresponding 83 widely-used datasets. 
@@ -122,9 +124,17 @@ TextBox uses [MIT License](./LICENSE).
 
 ## Reference
 
-If you find TextBox 2.0 useful for your research or development, please cite the following [paper](https://arxiv.org/abs/2101.02046):
+If you find TextBox 2.0 useful for your research or development, please cite the following papers:
 
 ```
+@article{textbox2.0,
+    title = "TextBox 2.0: A Text Generation Library with Pre-trained Language Models",
+    author = "Tang, Tianyi  and Li, Junyi  and Chen, Zhipeng  and Hu, Yiwen  and  Yu, Zhuohao  and Dai, Wenxun  and Dong, Zican  and Cheng, Xiaoxue  and Wang, Yuhao  and Zhao, Wayne Xin  and Nie, Jian-Yun  and Wen, Ji-Rong",
+    journal = "arXiv preprint arXiv:2212.13005",
+    url = "http://arxiv.org/abs/2212.13005",
+    year = "2022"
+}
+
 @inproceedings{textbox,
     title = "{T}ext{B}ox: A Unified, Modularized, and Extensible Framework for Text Generation",
     author = "Li, Junyi  and Tang, Tianyi  and He, Gaole  and Jiang, Jinhao  and Hu, Xiaoxuan  and Xie, Puzhao  and Chen, Zhipeng  and Yu, Zhuohao  and Zhao, Wayne Xin  and Wen, Ji-Rong",

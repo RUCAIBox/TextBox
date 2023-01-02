@@ -225,7 +225,7 @@ To support the rapid progress of PLMs on text generation, TextBox 2.0 incorporat
 
 ### Pre-trained Model Parameters
 
-TextBox 2.0 is compatible with Hugging Face, so `model_path` receives a name of model on [huggingface](https://huggingface.co/models) like [`facebook/bart-base`](https://huggingface.co/models?search=facebook%2Fbart-base) or just a local path.  `config_path` and `tokenizer_path` (same value as `model_path` by default) also receive a huggingface model or a local path. 
+TextBox 2.0 is compatible with Hugging Face, so `model_path` receives a name of model on [Hugging Face](https://huggingface.co/models) like [`facebook/bart-base`](https://huggingface.co/models?search=facebook%2Fbart-base) or just a local path.  `config_path` and `tokenizer_path` (same value as `model_path` by default) also receive a Hugging Face model or a local path. 
 
 Besides, `config_kwargs` and `tokenizer_kwargs` are useful when additional parameters are required.
 

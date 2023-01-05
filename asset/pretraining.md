@@ -12,5 +12,5 @@ To enable pre-training, simply set `--pretrain_task` (by default, pre-training i
 The following example shows an example that pre-trains a Chinese BART on the WuDaoCorpora using the denoising pre-training objective.
 
 ```bash
-python run_textbox.py --model=BART --dataset=wudao --pretrain_task=denoising
+python run_textbox.py --model=BART --dataset=wudao --pretrain_task=denoising --do_test=True
 ```

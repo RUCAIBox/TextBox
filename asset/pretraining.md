@@ -19,8 +19,8 @@ The WuDaoCorpora can be found at the link: https://resource.wudaoai.cn/home. The
 
 Moreover, the above script will pre-train a randomly initialized transformer, which has the same size as `bart-base`. If you want to modify the size, please refer to the instructions for the [transformer](https://github.com/RUCAIBox/TextBox/blob/2.0.0/instructions/transformer.md).
 
-If you want to continue pre-training a model, such as `bart-base`, on your dataset `xxx`, you can change the `--model` and `--model_path` options.
+If you want to continue pre-training a model, such as `bart-large`, on your dataset `xxx`, you can change the `--model` and `--model_path` options.
 
 ```bash
-python run_textbox.py --model=BART --model_path=facebook/bart-base --dataset=xxx --pretrain_task=denoising
+python run_textbox.py --model=BART --model_path=facebook/bart-large --dataset=xxx --pretrain_task=denoising
 ```

@@ -303,7 +303,7 @@ class Config(object):
             return self.final_config_dict[_key]
 
     def _set_associated_parameters(self):
-        if not self.final_config_dict.get('model_path', None):
+        if 'model_path' not in self.final_config_dict:
             self.final_config_dict['load_type'] = 'from_scratch'
         elif os.path.exists(os.path.join(self.final_config_dict['model_path'], 'textbox_configuration.pt')):
             self.final_config_dict['load_type'] = 'resume'
@@ -314,7 +314,7 @@ class Config(object):
             self.final_config_dict['optimizer'] = 'adafactor'
             self.final_config_dict['grad_clip'] = None
         
-        if self.final_config_dict['pretrain_task']:
+        if 'pretrain_task' in self.final_config_dict:
             self.final_config_dict['do_test'] = False
             self.final_config_dict['metrics_for_best_model'] = ['loss']
 

@@ -223,7 +223,7 @@ class Trainer(AbstractTrainer):
                     avg_loss = loss.item()
                     self._summary_tracker.append_loss(avg_loss)
                     self.accelerator.backward(loss)
-                    if self.accelerator.sync_gradients:
+                    if self.accelerator.sync_gradients and self.grad_clip is not None:
                         self.accelerator.clip_grad_norm_(self.model.parameters(), self.grad_clip)
                     self.optimizer.step()
 

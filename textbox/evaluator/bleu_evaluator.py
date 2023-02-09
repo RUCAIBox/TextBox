@@ -23,8 +23,8 @@ class BleuEvaluator(AbstractEvaluator):
         self.sacrebleu_romanian = self.config['sacrebleu_romanian']
         if self.bleu_type == 'nltk' and self.smoothing_function > 0 and config['dataset'] in ['pc', 'dd']:
             nltk_version = version.parse(nltk.__version__)
-            if nltk_version < version.parse('3.2.2') or nltk_version > version.parse('3.5'):
-                warnings.warn("The version of `NLTK` should be between to reproduce results.")
+            if nltk_version != version.parse('3.5'):
+                warnings.warn("The version of `NLTK` should be 3.5 to reproduce results.")
         self._generate_weights()
 
     def _generate_weights(self):

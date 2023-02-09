@@ -262,7 +262,7 @@ class Config(object):
         self.setdefault('valid_strategy', 'epoch')
         self.setdefault('valid_steps', 1)
         self.setdefault('disable_tqdm', False)
-        self.setdefault('resume_training',True)
+        self.setdefault('resume_training', True)
         self.setdefault('wandb', 'online')
         self._simplify_parameter('optimizer')
         self._simplify_parameter('scheduler')
@@ -309,11 +309,11 @@ class Config(object):
             self.final_config_dict['load_type'] = 'resume'
         else:
             self.final_config_dict['load_type'] = 'from_pretrained'
-        
+
         if self.final_config_dict['model_name'].find('t5') != -1:
             self.final_config_dict['optimizer'] = 'adafactor'
             self.final_config_dict['grad_clip'] = None
-        
+
         if 'pretrain_task' in self.final_config_dict:
             self.final_config_dict['do_test'] = False
             self.final_config_dict['metrics_for_best_model'] = ['loss']

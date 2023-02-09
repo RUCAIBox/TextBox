@@ -51,5 +51,5 @@ We also support you to run our model using your own dataset.
 
 Usage
 
-1. Create a new folder under the `dataset` folder to put your own corpus files (`train.src`, `train.tgt`, `valid.src`, `valid.tgt`, `test.src`, `test.tgt`) which include a sequence per line, e.g. `dataset/YOUR_DATASET`;
+1. Create a new folder under the `dataset` folder (i.e. `dataset/YOUR_DATASET`) to put your own corpus files (`train.src`, `train.tgt`, `valid.src`, `valid.tgt`, `test.src`, `test.tgt`) which include a sequence per line.
 2. Write a YAML configuration file using the same file name to set the hyper-parameters of your dataset, e.g. `textbox/properties/dataset/YOUR_DATASET.yaml`.

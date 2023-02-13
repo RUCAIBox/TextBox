@@ -21,6 +21,17 @@ accelerate launch [--main_process_port <port-number>] \
 
 Note that `gpu_ids` is the usable GPU id list (such as `0,1,2,3`).
 
+If you face an issue about `find_unused_parameters`:
+```
+RuntimeError: Expected to have finished reduction in the prior iteration before starting a new one. This error indicates that your module has parameters that were not used in producing loss. You can enable unused parameter detection by passing the keyword argument `find_unused_parameters=True` to `torch.nn.parallel.DistributedDataParallel`, and by
+making sure all `forward` function outputs participate in calculating loss.
+```
+You should follow the advice to pass `find_unused_parameters=True` in the command line:
+```bash
+accelerate launch [--main_process_port <port-number>] \
+        run_textbox.py ... --gpu_id=<gpu-ids> --find_unused_parameters=True
+```
+
 ### Efficient Decoding
 
 To further accelerate the decoding efficiency, we integrate FastSeq to optimize the decoding process by attention cache optimization, repeated n-gram detection, and asynchronous parallel I/O.

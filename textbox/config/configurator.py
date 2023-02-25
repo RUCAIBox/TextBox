@@ -314,7 +314,7 @@ class Config(object):
             self.final_config_dict['optimizer'] = 'adafactor'
             self.final_config_dict['grad_clip'] = None
 
-        if 'pretrain_task' in self.final_config_dict:
+        if 'pretrain_task' in self.final_config_dict and self.final_config_dict['pretrain_task'] != 'disabled':
             self.final_config_dict['do_test'] = False
             self.final_config_dict['metrics_for_best_model'] = ['loss']
 

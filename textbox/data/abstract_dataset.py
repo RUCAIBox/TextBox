@@ -24,7 +24,7 @@ class AbstractDataset(Dataset):
 
         self.source_text = load_data(source_filename, max_length=self.quick_test)
         self.pretraining = config['pretrain_task']
-        if self.pretraining is None:
+        if self.pretraining is None and self.pretraining != 'disabled':
             self.target_text = load_data(target_filename, max_length=self.quick_test)
         self.source_length = self.config["src_len"]
         self.target_length = self.config["tgt_len"]
@@ -59,16 +59,17 @@ class AbstractDataset(Dataset):
                 f"The max length of target text {self.target_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and will be set to {self.tokenizer.model_max_length}."
             )
             self.target_length = self.tokenizer.model_max_length
-        if self.config["model_name"] == "unilm":
+        if self.config["model_name"] in ["unilm"] + CLM_MODELS:
             if self.source_length + self.target_length > self.tokenizer.model_max_length:
+                tgt_len = math.floor(self.target_length / (self.source_length + self.target_length) * self.tokenizer.model_max_length)
+                src_len = self.tokenizer.model_max_length - tgt_len
                 warnings.warn(
                     f"The max length of the sum of source text {self.source_length} and target text {self.target_length}"
                     f" exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, "
-                    f"and will be set to {self.tokenizer.model_max_length - self.tokenizer.model_max_length // 4} and "
-                    f"{self.tokenizer.model_max_length // 4}."
+                    f"and will be set to {src_len} and {tgt_len}, respectively."
                 )
-                self.target_length = self.tokenizer.model_max_length // 4
-                self.source_length = self.tokenizer.model_max_length - self.target_length
+                self.target_length = tgt_len
+                self.source_length = src_len
 
         if (self.config["efficient_methods"] and "prompt-tuning" in self.config["efficient_methods"]):
             prompt_length = self.config["efficient_kwargs"]["prompt_length"]

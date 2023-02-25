@@ -24,7 +24,7 @@ class AbstractDataset(Dataset):
 
         self.source_text = load_data(source_filename, max_length=self.quick_test)
         self.pretraining = config['pretrain_task']
-        if self.pretraining is None:
+        if self.pretraining is None and self.pretraining != 'disabled':
             self.target_text = load_data(target_filename, max_length=self.quick_test)
         self.source_length = self.config["src_len"]
         self.target_length = self.config["tgt_len"]

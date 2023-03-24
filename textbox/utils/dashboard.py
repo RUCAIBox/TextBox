@@ -9,7 +9,6 @@ from time import time
 from typing import Iterable, Optional, Set, Union, Callable
 import traceback
 
-import pandas as pd
 import torch
 import wandb
 from wandb import AlertLevel

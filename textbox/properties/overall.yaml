@@ -19,6 +19,7 @@ grad_clip: 0.1
 optimizer_kwargs: {}
 accumulation_steps: 1
 adafactor_kwargs: {'lr': 1e-3, 'scale_parameter': False, 'relative_step': False, 'warmup_init': False}
+find_unused_parameters: False
 
 # evaluation settings
 metrics: ["bleu"]

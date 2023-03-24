@@ -1,27 +1,3 @@
-r"""
-################################################
-    Integration of casual models and encoder-decoder models in Transformers API
-
-    Summary of Related Papers:
-    gpt2: Language Models are Unsupervised Multitask Learners
-    openai-gpt: Improving Language Understanding by Generative Pre-Training
-    cpm: CPM: A Large-scale Generative Chinese Pre-trained Language Model
-    ctrl: CTRL: A Conditional Transformer Language Model for Controllable Generation
-    gpt_neo: The Pile: An 800GB Dataset of Diverse Text for Language Modeling
-
-    t5: Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer
-    mt5: mT5: A massively multilingual pre-trained text-to-text transformer
-    bart: BART: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension
-    led: Longformer: The Long-Document Transformer
-    mbart: Multilingual Denoising Pre-training for Neural Machine Translation
-    bert2bert: Leveraging Pre-trained Checkpoints for Sequence Generation Tasks
-    pegasus: PEGASUS: Pre-training with Extracted Gap-sentences for Abstractive Summarization
-    blenderbot, blenderbot-small: Recipes for building an open-domain chatbot
-    m2m_100: Beyond English-Centric Multilingual Machine Translation
-    prophetnet: ProphetNet: Predicting Future N-gram for Sequence-to-Sequence Pre-training
-    unilm: Unified Language Model Pre-training for Natural Language Understanding and Generation
-    mass: MASS: Masked Sequence to Sequence Pre-training for Language Generation
-"""
 import os
 import copy
 import torch
@@ -32,23 +8,7 @@ from .abstract_model import AbstractModel
 
 from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForSeq2SeqLM, EncoderDecoderModel
 from transformers.models.encoder_decoder.configuration_encoder_decoder import EncoderDecoderConfig
-from transformers.models.cpt.modeling_cpt import CPTForConditionalGeneration
-from transformers.models.unilm.modeling_unilm import UnilmConfig, UnilmForSeq2Seq
-from transformers.models.mass.modeling_mass import MassForConditionalGeneration
-from transformers.models.mass.configuration_mass import MassConfig
 from ..utils.argument_list import efficient_kwargs_dict
-'''
-# Model for Causal LM mapping
-("xlm", "XLMWithLMHeadModel"),
-("xlm-roberta", "XLMRobertaForCausalLM"),
-("xlnet", "XLNetLMHeadModel"),
-
-# Model for Seq2Seq Causal LM mapping
-("longt5", "LongT5ForConditionalGeneration"),
-("marian", "MarianMTModel"),
-("xlm-prophetnet", "XLMProphetNetForConditionalGeneration"),
-("nllb", "M2M100ForConditionalGeneration"),
-'''
 
 
 class Pretrained_Models(AbstractModel):
@@ -74,12 +34,8 @@ class Pretrained_Models(AbstractModel):
             # loading config from config_path
             if self.model_name == "unilm":
                 config_kwargs["label_smoothing"] = self.label_smoothing
-                self.label_smoothing = 0.
-                self.configuration = UnilmConfig.from_pretrained(config_path, **config_kwargs)
-            elif self.model_name == "mass":
-                self.configuration = MassConfig.from_pretrained(config_path, **config_kwargs)
-            else:
-                self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
+                self.label_smoothing = 0
+            self.configuration = AutoConfig.from_pretrained(config_path, **config_kwargs)
         if config['efficient_methods']:
             hard_efficient_methods = [
                 m for m in ['prefix-tuning', 'p-tuning-v2', 'adapter', 'lora'] if m in config['efficient_methods']
@@ -103,11 +59,8 @@ class Pretrained_Models(AbstractModel):
         if self.model_name in ['bert2bert', 'xlm-roberta', 'xlm']:
             model_class = EncoderDecoderModel
         if self.model_name == 'cpt':
+            from transformers.models.cpt import CPTForConditionalGeneration
             model_class = CPTForConditionalGeneration
-        elif self.model_name == "unilm":
-            model_class = UnilmForSeq2Seq
-        elif self.model_name == 'mass':
-            model_class = MassForConditionalGeneration
         elif self.is_casual_model:
             model_class = AutoModelForCausalLM
             self.configuration.is_decoder = True

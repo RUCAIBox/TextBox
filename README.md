@@ -33,10 +33,18 @@ Compared with the previous version of TextBox, this extension mainly focuses on 
 
 ## Installation
 
+Considering that a modified version of transformers will be installed, it is recommended to create a new conda environment:
+```bash
+conda create -n TextBox python=3.8
+```
+
+Then, you can clone our repository and install it with one-click.
 ```bash
 git clone https://github.com/RUCAIBox/TextBox.git && cd TextBox
 bash install.sh
 ```
+
+If you face a issue `ROUGE-1.5.5.pl - XML::Parser dependency error` when installing `files2rouge`, you can refer to this [issue](https://github.com/pltrdy/files2rouge/issues/9).
 
 ## Quick Start
 
@@ -46,7 +54,11 @@ This is a script template to run TextBox 2.0 in an end-to-end pipeline:
 python run_textbox.py --model=<model-name> --dataset=<dataset-name> --model_path=<hf-or-local-path>
 ```
 
-Substitute `--model=<xxx>` ,  `--dataset=<xxx>` and `--model_path=<xxx>` with your choices. See [Model](asset/model.md#model-list), [Dataset](asset/dataset.md#dataset-list) for a full support list. See [Pre-trained Model Parameters](asset/model.md#pre-trained-model-parameters) for more detail of `model_path`.
+Substitute `--model=<xxx>` ,  `--dataset=<xxx>` and `--model_path=<xxx>` with your choices.
+
+The choices of `model` and `model_path` can be found in [Model](asset/model.md#model-list). We provide the detailed instruction of each model in that page.
+
+The choices of `dataset` can be found in [Dataset](asset/dataset.md#dataset-list). You should download the dataset at [https://huggingface.co/RUCAIBox](https://huggingface.co/RUCAIBox) and put the downloaded dataset under the `dataset` folder just like [samsum](https://github.com/RUCAIBox/TextBox/tree/2.0.0/dataset/samsum). If your want to use your own dataset, please refer to [here](asset/dataset.md#new-dataset).
 
 
 The script below will run the Facebook `BART-base` model on the `samsum` dataset:
@@ -127,17 +139,22 @@ TextBox uses [MIT License](./LICENSE).
 If you find TextBox 2.0 useful for your research or development, please cite the following papers:
 
 ```
-@article{textbox2.0,
-    title = "TextBox 2.0: A Text Generation Library with Pre-trained Language Models",
-    author = "Tang, Tianyi  and Li, Junyi  and Chen, Zhipeng  and Hu, Yiwen  and  Yu, Zhuohao  and Dai, Wenxun  and Dong, Zican  and Cheng, Xiaoxue  and Wang, Yuhao  and Zhao, Wayne Xin  and Nie, Jian-Yun  and Wen, Ji-Rong",
-    journal = "arXiv preprint arXiv:2212.13005",
-    url = "http://arxiv.org/abs/2212.13005",
-    year = "2022"
+@inproceedings{tang-etal-2022-textbox,
+    title = "{T}ext{B}ox 2.0: A Text Generation Library with Pre-trained Language Models",
+    author = "Tang, Tianyi  and  Li, Junyi  and  Chen, Zhipeng  and  Hu, Yiwen  and  Yu, Zhuohao  and  Dai, Wenxun  and  Zhao, Wayne Xin  and  Nie, Jian-yun  and  Wen, Ji-rong",
+    booktitle = "Proceedings of the The 2022 Conference on Empirical Methods in Natural Language Processing: System Demonstrations",
+    month = dec,
+    year = "2022",
+    address = "Abu Dhabi, UAE",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2022.emnlp-demos.42",
+    pages = "435--444",
 }
+
 
 @inproceedings{textbox,
     title = "{T}ext{B}ox: A Unified, Modularized, and Extensible Framework for Text Generation",
-    author = "Li, Junyi  and Tang, Tianyi  and He, Gaole  and Jiang, Jinhao  and Hu, Xiaoxuan  and Xie, Puzhao  and Chen, Zhipeng  and Yu, Zhuohao  and Zhao, Wayne Xin  and Wen, Ji-Rong",
+    author = "Li, Junyi  and  Tang, Tianyi  and  He, Gaole  and  Jiang, Jinhao  and  Hu, Xiaoxuan  and  Xie, Puzhao  and  Chen, Zhipeng  and  Yu, Zhuohao  and  Zhao, Wayne Xin  and  Wen, Ji-Rong",
     booktitle = "Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing: System Demonstrations",
     month = aug,
     year = "2021",

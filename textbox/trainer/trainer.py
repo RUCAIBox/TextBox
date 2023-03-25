@@ -500,9 +500,11 @@ class Trainer(AbstractTrainer):
         if load_best_model:
             checkpoint_dir = self.saved_model_filename + '_best'
             self.logger.info('Loading model structure and parameters from {} ...'.format(checkpoint_dir))
-            self.model.from_pretrained(checkpoint_dir)
-            self.model.tokenizer.from_pretrained(checkpoint_dir)
             self.accelerator.wait_for_everyone()
+            unwrap_model = self.accelerator.unwrap_model(self.model)
+            unwrap_model.from_pretrained(checkpoint_dir)
+            unwrap_model.tokenizer.from_pretrained(checkpoint_dir)
+            
 
         if not is_valid:
             self.model = self.accelerator.prepare(self.model)

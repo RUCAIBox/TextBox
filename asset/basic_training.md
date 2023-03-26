@@ -72,9 +72,7 @@ Other commonly used parameters include `epochs=<int>` and `max_steps=<int>` (ind
 
 ### Partial Experiment
 
-You can run the partial experiment with `do_train`, `do_valid`and `do_test`. You can test your pipeline and debug with `quick_test=<amount-of-data-to-load>` to load just a few examples. 
-
-The following script loads the trained model from a local path and conducts generation and evaluation without training and evaluation.
+You can run the partial experiment with `do_train=False`, `do_valid=False`and `do_test=True`. The following script loads the trained model from a local path and conducts generation and evaluation without training and evaluation.
 ```bash
 python run_textbox.py --model_path=saved/BART-samsum-2022-Dec-18_20-57-47/checkpoint_best \\
 --do_train=False --do_valid=False

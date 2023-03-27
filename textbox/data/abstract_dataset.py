@@ -24,6 +24,7 @@ class AbstractDataset(Dataset):
 
         self.source_text = load_data(source_filename, max_length=self.quick_test)
         self.pretraining = config['pretrain_task']
+        self.is_casual_model = bool(config["model_name"] in CLM_MODELS)
         if self.pretraining is None and self.pretraining != 'disabled':
             self.target_text = load_data(target_filename, max_length=self.quick_test)
         self.source_length = self.config["src_len"]
@@ -120,7 +121,9 @@ class AbstractDataset(Dataset):
             source_ids.extend(ids)
         for ids in source_ids:
             ids = ids[:self.source_max_length] if self.config["truncate"] == "tail" else ids[-self.source_max_length:]
-            ids = self.tokenizer.build_inputs_with_special_tokens(self.prefix_ids + ids + self.suffix_ids)
+            ids = self.prefix_ids + ids + self.suffix_ids
+            if not self.is_casual_model:
+                ids = self.tokenizer.build_inputs_with_special_tokens(ids)
             self.source_ids.append(torch.tensor(ids, dtype=torch.long))
 
         if self.paired_text and self.pretraining is None:

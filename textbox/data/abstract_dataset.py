@@ -86,6 +86,9 @@ class AbstractDataset(Dataset):
                 )
                 self.source_length = self.tokenizer.model_max_length - prompt_length
 
+        self.config["src_len"] = self.source_length
+        self.config["tgt_len"] = self.target_length
+
     def _process_prompt(self):
         prefix = self.config["prefix_prompt"] or ""
         suffix = self.config["suffix_prompt"] or ""

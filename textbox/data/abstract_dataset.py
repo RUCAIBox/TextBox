@@ -62,7 +62,9 @@ class AbstractDataset(Dataset):
             self.target_length = self.tokenizer.model_max_length
         if self.config["model_name"] in ["unilm"] + CLM_MODELS:
             if self.source_length + self.target_length > self.tokenizer.model_max_length:
-                tgt_len = math.floor(self.target_length / (self.source_length + self.target_length) * self.tokenizer.model_max_length)
+                tgt_len = math.floor(
+                    self.target_length / (self.source_length + self.target_length) * self.tokenizer.model_max_length
+                )
                 src_len = self.tokenizer.model_max_length - tgt_len
                 warnings.warn(
                     f"The max length of the sum of source text {self.source_length} and target text {self.target_length}"

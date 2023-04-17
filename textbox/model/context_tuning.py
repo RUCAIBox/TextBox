@@ -32,7 +32,9 @@ class Context_Tuning(Pretrained_Models):
                     para.requires_grad_(False)
 
     def truncate_input(self, texts, tokenizer):
-        return tokenizer.batch_decode(tokenizer(texts, max_length=self.config['src_len'], truncation=True, add_special_tokens=False)['input_ids'])
+        return tokenizer.batch_decode(
+            tokenizer(texts, max_length=self.config['src_len'], truncation=True, add_special_tokens=False)['input_ids']
+        )
 
     def _process_prompt_tuning_input(self, inputs, batch):
         batch_size = len(batch['source_text'])

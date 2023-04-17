@@ -62,7 +62,9 @@ class AbstractDataset(Dataset):
             self.target_length = self.tokenizer.model_max_length
         if self.config["model_name"] in ["unilm"] + CLM_MODELS:
             if self.source_length + self.target_length > self.tokenizer.model_max_length:
-                tgt_len = math.floor(self.target_length / (self.source_length + self.target_length) * self.tokenizer.model_max_length)
+                tgt_len = math.floor(
+                    self.target_length / (self.source_length + self.target_length) * self.tokenizer.model_max_length
+                )
                 src_len = self.tokenizer.model_max_length - tgt_len
                 warnings.warn(
                     f"The max length of the sum of source text {self.source_length} and target text {self.target_length}"
@@ -85,6 +87,9 @@ class AbstractDataset(Dataset):
                     f"The length of source text {self.source_length} and prompt {prompt_length} exceeds the max length {self.tokenizer.model_max_length} of {self.config['model']} model, and the max length of source sentence will be set to {self.tokenizer.model_max_length - prompt_length}."
                 )
                 self.source_length = self.tokenizer.model_max_length - prompt_length
+
+        self.config["src_len"] = self.source_length
+        self.config["tgt_len"] = self.target_length
 
     def _process_prompt(self):
         prefix = self.config["prefix_prompt"] or ""

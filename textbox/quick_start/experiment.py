@@ -43,7 +43,9 @@ class Experiment:
 
         from accelerate import DistributedDataParallelKwargs
         ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=self.config['find_unused_parameters'])
-        self.accelerator = Accelerator(gradient_accumulation_steps=self.config['accumulation_steps'], kwargs_handlers=[ddp_kwargs])
+        self.accelerator = Accelerator(
+            gradient_accumulation_steps=self.config['accumulation_steps'], kwargs_handlers=[ddp_kwargs]
+        )
         self.config.update({
             '_is_local_main_process': self.accelerator.is_local_main_process,
             'device': self.accelerator.device

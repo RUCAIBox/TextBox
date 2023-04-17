@@ -31,12 +31,18 @@ class Context_Tuning(Pretrained_Models):
                 if len(para.shape) > 1:
                     para.requires_grad_(False)
 
+    def truncate_input(self, texts, tokenizer):
+        return tokenizer.batch_decode(
+            tokenizer(texts, max_length=self.config['src_len'], truncation=True, add_special_tokens=False)['input_ids']
+        )
+
     def _process_prompt_tuning_input(self, inputs, batch):
         batch_size = len(batch['source_text'])
 
         if self.prompt_generator == 'bert':
             masks = self.bert_tokenizer.mask_token * self.prompt_length
-            texts = [masks + self.prefix_prompt + t + self.suffix_prompt + masks for t in batch['source_text']]
+            tmp_source_text = self.truncate_input(batch['source_text'], self.bert_tokenizer)
+            texts = [masks + self.prefix_prompt + t + self.suffix_prompt + masks for t in tmp_source_text]
             bert_inputs = self.bert_tokenizer(
                 texts,
                 max_length=self.bert_tokenizer.model_max_length,
@@ -56,7 +62,8 @@ class Context_Tuning(Pretrained_Models):
             prompt_embeds = prompt_embeds.reshape(batch_size, 2, self.prompt_length, -1)  # b, 2, pl, e
         elif self.prompt_generator == 'roberta':
             masks = self.roberta_tokenizer.mask_token * self.prompt_length
-            texts = [masks + self.prefix_prompt + t + self.suffix_prompt + masks for t in batch['source_text']]
+            tmp_source_text = self.truncate_input(batch['source_text'], self.roberta_tokenizer)
+            texts = [masks + self.prefix_prompt + t + self.suffix_prompt + masks for t in tmp_source_text]
             roberta_inputs = self.roberta_tokenizer(
                 texts,
                 max_length=self.roberta_tokenizer.model_max_length,
@@ -73,7 +80,8 @@ class Context_Tuning(Pretrained_Models):
             prompt_embeds = prompt_embeds.reshape(batch_size, 2, self.prompt_length, -1)  # b, 2, pl, e
         elif self.prompt_generator == 'bart':
             masks = self.tokenizer.mask_token * self.prompt_length
-            texts = [masks + self.prefix_prompt + t + self.suffix_prompt + masks for t in batch['source_text']]
+            tmp_source_text = self.truncate_input(batch['source_text'], self.tokenizer)
+            texts = [masks + self.prefix_prompt + t + self.suffix_prompt + masks for t in tmp_source_text]
             bart_inputs = self.tokenizer(
                 texts, max_length=self.tokenizer.model_max_length, padding=True, truncation=True, return_tensors="pt"
             )

@@ -31,6 +31,7 @@ class Text:
         self.text = text.lower() if lower else text
         if tokenizer:
             self.text = tokenizer.decode(tokenizer.encode(self.text), skip_special_tokens=True)
+        self.text = self.text or 'UNK'
         self.tokens = word_tokenize(self.text)
         if remove_punc:
             self.tokenized_text = ' '.join([token for token in self.tokens if token not in PUNCTUATIONS])

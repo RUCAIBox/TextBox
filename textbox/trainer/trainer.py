@@ -268,7 +268,7 @@ class Trainer(AbstractTrainer):
             return False
         self.temp_mode = self._summary_tracker._current_mode
         self.temp_epoch = self._summary_tracker._current_epoch
-        state=torch.default_generator.get_state()
+        state = torch.default_generator.get_state()
         with self._summary_tracker.new_epoch('valid'):
             if 'loss' in self.metrics_for_best_model:
                 self.model.eval()
@@ -505,7 +505,6 @@ class Trainer(AbstractTrainer):
             unwrap_model = self.accelerator.unwrap_model(self.model)
             unwrap_model.from_pretrained(checkpoint_dir)
             unwrap_model.tokenizer.from_pretrained(checkpoint_dir)
-            
 
         if not is_valid:
             self.model = self.accelerator.prepare(self.model)
@@ -519,7 +518,7 @@ class Trainer(AbstractTrainer):
         # generate
         generate_corpus = []
         eval_tqdm = tqdm(eval_data, desc="generating", dynamic_ncols=True) if not self.disable_tqdm else eval_data
-        state=torch.default_generator.get_state()
+        state = torch.default_generator.get_state()
         for i, batch_data in enumerate(eval_tqdm):
             if self.config['dataset'] != 'multiwoz':
                 generated = self.accelerator.unwrap_model(self.model).generate(batch_data, self.accelerator)

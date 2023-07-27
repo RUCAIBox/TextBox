@@ -64,10 +64,38 @@ class AbstractModel(nn.Module):
 
     def forward(self, batch, epoch_idx=-1):
         inputs = self.process_forward_inputs(batch)
+        #print("inputs:", self.tokenizer.batch_decode(inputs["input_ids"]))
+        #print("batch:", batch["source_text"])
+
+        # run only with bi-decoder
+        if self.model_name == "cpt" and self.config["is_bi_dec"] is True:
+            inputs.update({"decoder_attention_mask": batch["target_mask"].to(self.device),
+                            "encoder_labels": batch["enc_labels"].to(self.device),
+                            "labels": batch["dec_labels"].to(self.device)})
+
+        # run on stage1/2: bi-decoder mixed with uni-decoder
+        elif self.model_name == "cpt" and ("is_stage1" in batch or "is_stage2" in batch):
+            inputs['bi'].update({"decoder_attention_mask": batch["bi"]["target_mask"].to(self.device),
+                            "encoder_labels": batch["bi"]["enc_labels"].to(self.device),
+                            "labels": batch["bi"]["dec_labels"].to(self.device)})
 
         if self.is_prompt_tuning:
             inputs = self._process_prompt_tuning_input(inputs, batch)
-        outputs = self.model(**inputs)
+        
+        if self.config["is_bi_dec"]:
+            outputs = self.model(**inputs, is_bi_dec=True)
+        elif "is_stage1" in batch or "is_stage2" in batch:
+            outputs_uni = self.model(**(inputs["uni"]))
+            outputs_bi = self.model(**(inputs["bi"]), is_bi_dec=True)
+
+            #uni_weight = self.config["uni_weight"] if self.config["uni_weight"] is not None else 0.5
+            weight1 = self.config["uni_weight"] if self.config["uni_weight"] is not None else 1
+            weight2 = self.config["bi_weight"] if self.config["bi_weight"] is not None else 1
+            return weight1 * outputs_uni.loss + weight2 * outputs_bi.loss
+        else:
+            #print("translate!!!!!!!!!!!!!!!!!")
+            #print(self.tokenizer.batch_decode(inputs["input_ids"]))
+            outputs = self.model(**inputs)
 
         if self.label_smoothing:
             loss_fct = nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
@@ -76,6 +104,12 @@ class AbstractModel(nn.Module):
                 logits = outputs.logits[..., :-1, :].contiguous()
                 labels = inputs['labels'][..., 1:].contiguous()
             else:
+                # if self.model_name == "cpt" and self.config["is_bi_dec"]:
+                    # dec_logits, enc_logits = outputs.logits[0], output.logits[1]
+                    # enc_loss = loss_fct(enc_logits.view(-1, vocab_size), batch["enc_labels"].view(-1))
+                    # dec_loss = loss_fct(dec_logits.view(-1, vocab_size), batch["dec_labels"].view(-1))
+                    # enc_loss_weight = self.config["enc_loss_weight"]
+                    # return enc_loss_weight * enc_loss + (1 - enc_loss_weight) * dec_loss
                 logits = outputs.logits
                 labels = inputs['labels']
             return loss_fct(logits.view(-1, vocab_size), labels.view(-1))
@@ -107,14 +141,27 @@ class AbstractModel(nn.Module):
 
     def process_forward_inputs(self, batch):
         inputs = self.process_generate_inputs(batch)
-        inputs.update({'labels': batch['target_ids'].to(self.device)})
+        if not ("is_stage1" in batch or "is_stage2" in batch):
+            inputs.update({'labels': batch['target_ids'].to(self.device)})
+        else:
+            inputs['uni'].update({'labels': batch['uni']['target_ids'].to(self.device)})
+            inputs['bi'].update({'labels': batch['bi']['target_ids'].to(self.device)})
         return inputs
 
     def process_generate_inputs(self, batch):
-        inputs = {
-            'input_ids': batch['source_ids'].to(self.device),
-            'attention_mask': batch['source_mask'].to(self.device),
-        }
+        if not ("is_stage1" in batch or "is_stage2" in batch):
+            inputs = {
+                'input_ids': batch['source_ids'].to(self.device),
+                'attention_mask': batch['source_mask'].to(self.device),
+            }
+        else:
+            inputs = {
+                'uni':{'input_ids': batch['uni']['source_ids'].to(self.device),
+                'attention_mask': batch['uni']['source_mask'].to(self.device)},
+                
+                'bi':{'input_ids': batch['bi']['source_ids'].to(self.device),
+                'attention_mask': batch['bi']['source_mask'].to(self.device)}
+            }
         return inputs
 
     def from_pretrained(self, save_directory: Union[str, os.PathLike]):

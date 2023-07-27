@@ -2,10 +2,11 @@ from torch.utils.data import DataLoader
 from textbox.data.denoising_dataset import DenoisingCollate
 from ..data.unilm_dataset import UnilmCollate
 from textbox.data.abstract_dataset import AbstractDataset, AbstractCollate
+from textbox.data.para_dataset import TranslateDataset, ParaCollate
+
 from accelerate.logging import get_logger
 
-collate_options = {'disabled': AbstractCollate, 'denoising': DenoisingCollate, 'unilm': UnilmCollate}
-
+collate_options = {'para':ParaCollate, 'disabled': AbstractCollate, 'denoising': DenoisingCollate, 'unilm': UnilmCollate}
 
 def data_preparation(config, tokenizer):
     collate_name = config['pretrain_task']
@@ -20,7 +21,10 @@ def data_preparation(config, tokenizer):
 
     dataloaders = []
     if config['do_train']:
-        train_dataset = AbstractDataset(config, 'train')
+        if collate_name=='para':
+            train_dataset = TranslateDataset(config, 'train')
+        else:
+            train_dataset = AbstractDataset(config, 'train')
         train_dataset.tokenize(tokenizer)
         train_dataloader = DataLoader(
             train_dataset,
@@ -34,7 +38,10 @@ def data_preparation(config, tokenizer):
         dataloaders.append(None)
 
     if config['do_valid']:
-        valid_dataset = AbstractDataset(config, 'valid')
+        if collate_name=='para':
+            valid_dataset = TranslateDataset(config, 'valid')
+        else:
+            valid_dataset = AbstractDataset(config, 'valid')
         valid_dataset.tokenize(tokenizer)
         valid_dataloader = DataLoader(
             valid_dataset,
@@ -48,7 +55,10 @@ def data_preparation(config, tokenizer):
         dataloaders.append(None)
 
     if config['do_test']:
-        test_dataset = AbstractDataset(config, 'test')
+        if collate_name=='para':
+            test_dataset=TranslateDataset(config, 'test')
+        else:
+            test_dataset = AbstractDataset(config, 'test')
         test_dataset.tokenize(tokenizer)
         test_dataloader = DataLoader(
             test_dataset,
